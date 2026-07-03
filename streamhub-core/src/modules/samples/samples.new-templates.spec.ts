@@ -18,7 +18,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { SamplesService } from './samples.service';
-import { SAMPLE_FILES } from './sample-templates';
+import { SAMPLE_FILES, TEMPLATES } from './sample-templates';
 import { AppsService } from '../apps/apps.service';
 import { S3Service } from '../s3/s3.service';
 import { SecretsStore } from '../s3/secrets.store';
@@ -129,5 +129,34 @@ describe('SamplesService — G4 vertical templates', () => {
     // Default room prefix == app name for a freshly-created app.
     const html = onDisk('shop', 'cctv-grid.html');
     expect(html).toContain('value="shop"');
+  });
+
+  // INVARIANT — livekit-client CDN pin. server 1.8.4 <-> client 2.15.7 is the
+  // validated pair; an unpinned/major-floating jsdelivr URL silently upgrades the
+  // client on the next publish (2.20+ today) and breaks publishing against the
+  // pinned server. Lock every CDN reference to the exact pinned version.
+  describe('livekit-client CDN pin', () => {
+    // Matches any jsdelivr livekit-client script URL; group 1 = the version
+    // spec after `@`, or undefined when the URL is unpinned.
+    const CDN_RE = /cdn\.jsdelivr\.net\/npm\/livekit-client(?:@([^/]+))?\//g;
+
+    it('every template pins a livekit-client CDN URL to exactly 2.15.7', () => {
+      const offenders: string[] = [];
+      for (const [name, tpl] of Object.entries(TEMPLATES)) {
+        for (const m of tpl.matchAll(CDN_RE)) {
+          if (m[1] !== '2.15.7') offenders.push(`${name}: ${m[0]}`);
+        }
+      }
+      // No unpinned (`livekit-client/`) or major-floating (`livekit-client@2/`)
+      // references may exist anywhere in the template set.
+      expect(offenders).toEqual([]);
+    });
+
+    it('the WebRTC templates actually reference the pinned client (regex sanity)', () => {
+      // Guards against the invariant above vacuously passing if the CDN URL is
+      // renamed/removed: these publish/subscribe pages MUST ship livekit-client.
+      expect(TEMPLATES['webrtc-publish.html']).toContain('livekit-client@2.15.7/');
+      expect(TEMPLATES['webrtc-play.html']).toContain('livekit-client@2.15.7/');
+    });
   });
 });

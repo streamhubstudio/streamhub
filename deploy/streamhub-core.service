@@ -10,7 +10,7 @@ EnvironmentFile=/opt/streamhub-core/.env
 ExecStart=/usr/bin/node dist/main.js
 Restart=on-failure
 RestartSec=3
-User=streamhub
+User=ploi
 LimitNOFILE=200000
 
 [Install]

@@ -3,7 +3,9 @@ import {
   Logger as NestLogger,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import * as path from 'path';
 import pino from 'pino';
 
@@ -14,6 +16,8 @@ import {
   LogLevel,
   LogQuery,
   LogsServiceContract,
+  MQTT_SERVICE,
+  MqttServiceContract,
 } from '../../shared/contracts';
 import { RotatingFileStream } from './rotating-file-stream';
 
@@ -90,12 +94,21 @@ export class LogsService
     { id: number | null; exp: number }
   >();
 
+  /**
+   * Lazily-resolved MQTT sink (per-app log forwarding). `undefined` = not yet
+   * looked up, `null` = unavailable in this process (module set is static, so
+   * a miss is cached forever). Resolved via ModuleRef instead of constructor
+   * injection to avoid a provider cycle (MqttService itself logs through us).
+   */
+  private mqttSink: MqttServiceContract | null | undefined;
+
   private purgeKickoff?: ReturnType<typeof setTimeout>;
   private purgeTimer?: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly config: ConfigService,
     private readonly db: DbService,
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {
     // Structured console output. Synchronous destination on fd 1 keeps lines
     // ordered and avoids worker-thread transports (the framework logger handles
@@ -190,6 +203,44 @@ export class LogsService
       this.fallback.error(
         `server_logs insert failed: ${(err as Error).message}`,
       );
+    }
+
+    // 4) per-app MQTT log forwarding (mqtt.logs) — only app-attributed lines.
+    //    The sink itself gates on enabled/level and skips source 'mqtt' (loop
+    //    guard). Fire-and-forget: MQTT trouble never breaks logging.
+    if (typeof meta?.app === 'string' && src !== 'mqtt') {
+      const sink = this.resolveMqttSink();
+      if (sink) {
+        try {
+          void sink
+            .publishLog(meta.app, lvl, src, message, meta)
+            .catch(() => undefined);
+        } catch {
+          /* never throw from the logging pipeline */
+        }
+      }
+    }
+  }
+
+  /**
+   * Resolve + memoize the optional MQTT sink. No ModuleRef (bare unit
+   * construction) → cached null. A ModuleRef miss (e.g. very early boot,
+   * before MqttService is instantiated) is NOT cached, so later writes retry.
+   */
+  private resolveMqttSink(): MqttServiceContract | null {
+    if (this.mqttSink !== undefined) return this.mqttSink;
+    if (!this.moduleRef) {
+      this.mqttSink = null;
+      return null;
+    }
+    try {
+      const sink = this.moduleRef.get<MqttServiceContract>(MQTT_SERVICE, {
+        strict: false,
+      });
+      if (sink) this.mqttSink = sink;
+      return sink ?? null;
+    } catch {
+      return null; // not instantiated yet — retry on a later write
     }
   }
 

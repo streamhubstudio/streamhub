@@ -1,0 +1,7 @@
+{
+  "overlay": {
+    "ariaLabel_one": "Face obfuscation active — {{count}} face masked",
+    "ariaLabel_other": "Face obfuscation active — {{count}} faces masked",
+    "scoreTitle": "Face detection confidence"
+  }
+}

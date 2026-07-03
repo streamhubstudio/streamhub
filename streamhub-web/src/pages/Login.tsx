@@ -229,21 +229,13 @@ export default function Login() {
                 {t('login.totp.back')}
               </button>
             ) : (
-              <>
-                <Link
-                  to="/auth/reset"
-                  className="text-primary-500 transition hover:text-primary-600"
-                >
-                  {t('login.forgotPassword')}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => goAdmin(false)}
-                  className="text-fg-subtle transition hover:text-fg"
-                >
-                  {t('login.admin.back')}
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => goAdmin(false)}
+                className="text-fg-subtle transition hover:text-fg"
+              >
+                {t('login.admin.back')}
+              </button>
             )}
           </div>
         </>
@@ -335,13 +327,6 @@ export default function Login() {
           )}
 
           <div className="mt-6 flex items-center justify-center gap-3 text-sm text-fg-subtle">
-            <Link
-              to="/auth/reset"
-              className="transition hover:text-fg"
-            >
-              {t('login.setPassword')}
-            </Link>
-            <span aria-hidden="true">·</span>
             <button
               type="button"
               onClick={() => goAdmin(true)}

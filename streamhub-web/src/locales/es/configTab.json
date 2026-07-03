@@ -1,6 +1,6 @@
 {
   "advanced": {
-    "summary": "Avanzado — fuente de verdad (config.yaml)",
+    "summary": "Avanzado",
     "hint": "Editor YAML crudo y backups. Los controles de arriba son atajos que escriben acá."
   },
   "presets": {

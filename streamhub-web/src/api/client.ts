@@ -67,10 +67,7 @@ import type {
   MagicLinkResponse,
   MagicVerifyRequest,
   MagicVerifyResponse,
-  ResetRequestRequest,
-  ResetRequestResponse,
-  ResetPasswordRequest,
-  ResetPasswordResponse,
+  SessionInfo,
   SignupRequest,
   LogQuery,
   LogsPage,
@@ -82,6 +79,8 @@ import type {
   RegenerateSamplesResult,
   Sample,
   S3Config,
+  MqttConfig,
+  UpdateMqttRequest,
   RecordStopResult,
   AddRestreamRequest,
   RestreamTarget,
@@ -153,30 +152,6 @@ const auth = {
    */
   magicVerify(payload: MagicVerifyRequest): Promise<MagicVerifyResponse> {
     return request<MagicVerifyResponse>('/auth/magic/verify', {
-      method: 'POST',
-      body: payload,
-      auth: false,
-    })
-  },
-  /**
-   * POST /auth/reset-request — email a signed password-reset link (SMTP). No
-   * bearer required. Always resolves on 2xx even for unknown emails
-   * (anti-enumeration), mirroring magic-link.
-   */
-  resetRequest(payload: ResetRequestRequest): Promise<ResetRequestResponse> {
-    return request<ResetRequestResponse>('/auth/reset-request', {
-      method: 'POST',
-      body: payload,
-      auth: false,
-    })
-  },
-  /**
-   * POST /auth/reset — set a new password using the token from the emailed
-   * link's ?token=. Throws ApiRequestError on invalid/expired tokens
-   * (400/401/410). No bearer required.
-   */
-  reset(payload: ResetPasswordRequest): Promise<ResetPasswordResponse> {
-    return request<ResetPasswordResponse>('/auth/reset', {
       method: 'POST',
       body: payload,
       auth: false,
@@ -370,6 +345,26 @@ const apps = {
    */
   putS3(name: string, payload: UpdateS3Request): Promise<S3Config> {
     return request<S3Config>(`/apps/${encodeURIComponent(name)}/s3`, {
+      method: 'PUT',
+      body: payload,
+    })
+  },
+
+  // --- Per-app MQTT event publishing ----------------------------------------
+
+  /** GET /apps/:app/mqtt → config with the broker password masked. */
+  getMqtt(name: string, signal?: AbortSignal): Promise<MqttConfig> {
+    return request<MqttConfig>(`/apps/${encodeURIComponent(name)}/mqtt`, {
+      signal,
+    })
+  },
+  /**
+   * PUT /apps/:app/mqtt — writes the mqtt/latency_alert blocks to config.yaml,
+   * the password to secrets.json, and reconnects the app's MQTT client. Omit
+   * password to keep the stored one.
+   */
+  putMqtt(name: string, payload: UpdateMqttRequest): Promise<MqttConfig> {
+    return request<MqttConfig>(`/apps/${encodeURIComponent(name)}/mqtt`, {
       method: 'PUT',
       body: payload,
     })
@@ -935,6 +930,24 @@ const account = {
       method: 'POST',
       body: { code },
     })
+  },
+  /** GET /auth/sessions — my active login sessions (ip, dates, `current`). */
+  sessions(signal?: AbortSignal): Promise<SessionInfo[]> {
+    return request<SessionInfo[]>('/auth/sessions', { signal })
+  },
+  /**
+   * DELETE /auth/sessions/:id — revoke one of my sessions. Revoking the current
+   * session signs me out (the response `current` flag says which happened).
+   */
+  revokeSession(id: string): Promise<{ revoked: boolean; current: boolean }> {
+    return request<{ revoked: boolean; current: boolean }>(
+      `/auth/sessions/${encodeURIComponent(id)}`,
+      { method: 'DELETE' },
+    )
+  },
+  /** DELETE /auth/sessions — sign out every OTHER session, keeping this one. */
+  revokeOtherSessions(): Promise<{ revoked: number }> {
+    return request<{ revoked: number }>('/auth/sessions', { method: 'DELETE' })
   },
 }
 

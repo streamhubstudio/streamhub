@@ -13,18 +13,26 @@ system (no external IdP required):
   signed with `STREAMHUB_JWT_SECRET`, `sub` = user id). The SPA stores it and
   sends it back as `Authorization: Bearer <jwt>`.
 - **Passwordless magic-link** (`/auth/magic-link` → `/auth/magic/verify`) with a
-  **60s resend cooldown per email** (429 + `retryAfterSeconds`).
+  **60s resend cooldown per email** (429 + `retryAfterSeconds`) — the default
+  sign-in flow. **There is no password-recovery flow**: a user who forgets their
+  password just signs in with a magic link (password login stays only for
+  accounts that set one at signup, and the break-glass admin).
 - **2FA (TOTP)** per account: enrol from "Mi cuenta" (QR + authenticator app);
   when enabled, BOTH password login and magic-link verify demand a 6-digit
   `code` (401 `totp_required` / `totp_invalid`).
+- **Active sessions** (`/auth/sessions`): every human sign-in mints a revocable
+  session (id embedded in the JWT as `sid`); the owner can list them (IP + dates)
+  and revoke any from "Mi cuenta". The validator rejects a token whose session
+  was revoked, so "sign out this device" takes effect everywhere.
 - **"Mi cuenta" self-service** (`/account`): profile (name/email), password
-  change, 2FA management — always scoped to the caller's own user.
+  change, 2FA management, and active sessions — always scoped to the caller's
+  own user.
 - **Email invitations** (`/tenant/invites`): a team owner invites by email; the
   invitee gets a 72h single-use link and lands in the team as a member.
 - **Break-glass superadmin**: `ADMIN_USER`/`ADMIN_PASS` (constant-time compare) —
   the platform owner can never be locked out. Logs in via the same `/auth/login`,
-  yields a superadmin JWT. **Exempt from 2FA** and excluded from email resets;
-  its email/password are env-managed (the account API refuses to change them).
+  yields a superadmin JWT. **Exempt from 2FA**; its email/password are
+  env-managed (the account API refuses to change them).
 - **Teams are isolated by construction**: a user only ever sees their own tenant.
   Team is taken from the resolved `AuthContext`, never a path param.
 - **Roles** (per membership): `owner`, `editor`, `viewer`. Plus global
@@ -67,6 +75,9 @@ Enforcement is **phased** via `STREAMHUB_AUTHZ_ENFORCE`: `off` (no checks),
 | POST | `/account/2fa/setup` | Bearer (human) | Start TOTP enrolment (secret + otpauth + QR) |
 | POST | `/account/2fa/enable` | Bearer (human) | Verify a live code → activate 2FA |
 | POST | `/account/2fa/disable` | Bearer (human) | Verify a live code → disable 2FA |
+| GET | `/auth/sessions` | Bearer (human) | List my active sessions (ip, dates, `current`) |
+| DELETE | `/auth/sessions/{id}` | Bearer (human) | Revoke one of my sessions (current = sign out) |
+| DELETE | `/auth/sessions` | Bearer (human) | Revoke every OTHER session, keep this one |
 | GET | `/teams/mine` | usage:read | My team: tenant + members + quota usage |
 | POST | `/teams/mine/members` | tenant:write (owner/superadmin) | Invite/attach a member (no email) |
 | GET | `/tenant/invites` | owner/superadmin | Pending email invitations of my tenant |
@@ -157,7 +168,8 @@ the cooldown. Owner-issued **invite links do not count** against either.
 
 The invitee clicks the link → `/auth/magic` verifies it → their pending user is
 promoted to active with the membership already in place. They can set a
-password later via signup (invite completion) or the reset flow.
+password later by completing signup with the same email (otherwise they keep
+signing in with magic links).
 `GET /tenant/invites` lists pending invitations; `DELETE /tenant/invites/{userId}`
 revokes one (membership removed, outstanding links invalidated, and the user
 row deleted when it was invite-born and never accepted).
@@ -171,6 +183,28 @@ updates the profile (email uniqueness enforced). `POST /account/password
 { currentPassword, newPassword }` changes the password. All of it is
 self-scoped (the principal comes from the JWT); `sk_` API tokens get 403, and
 the break-glass admin's email/password are env-managed (400 on change).
+
+### Active sessions (`/auth/sessions`)
+
+Every human sign-in (password login, magic-link, signup — 2FA rides inside
+those) creates a row in the global `sessions` table (`id`, `user_id`, `email`,
+`ip`, `user_agent`, `created_at`, `last_seen`, `revoked_at`). Its id is embedded
+in the JWT as the `sid` claim, and the validator does a cheap (TTL-cached)
+lookup on every request: a token whose `sid` is **revoked or missing** is
+rejected (401). Legacy tokens minted before this feature (no `sid`) still work,
+so shipping it never mass-logs-out live sessions. The client IP is the
+`X-Forwarded-For` first hop (core sits behind Caddy/nginx with `trust proxy`).
+
+- `GET /auth/sessions` → `{ data: [ { id, ip, userAgent, createdAt, lastSeen,
+  current } ] }` — the caller's own live sessions, newest first; `current` marks
+  the one backing this request.
+- `DELETE /auth/sessions/{id}` → revoke one of your own sessions (revoking the
+  current one signs this device out). Revoking a session that isn't yours (or
+  doesn't exist) → 404.
+- `DELETE /auth/sessions` → revoke every OTHER session, keeping the current one
+  (`{ data: { revoked: <count> } }`).
+
+All three are human-only: an `sk_` API token has no session and gets 403.
 
 ### GET /auth/me — response
 

@@ -31,6 +31,7 @@ one `vods.db`/`app.db` per app) and media in S3 per app.
 | [restream.md](restream.md) | Restream multi-destino: forward a live stream to N RTMP targets at once |
 | [players.md](players.md) | WebRTC LivePlayer, HLS video.js, VOD player, public `/play` + `/embed` |
 | [callbacks.md](callbacks.md) | HMAC-signed outbound webhooks + event taxonomy |
+| [mqtt.md](mqtt.md) | Per-app MQTT event publishing (topics, envelope, log forwarding) + high-latency alerts |
 | [chat-reactions-viewers.md](chat-reactions-viewers.md) | Data-channel chat, animated reactions, viewer counter |
 | [transcoding-gpu.md](transcoding-gpu.md) | Adaptive ladder, GPU detection, `hwaccel` auto/gpu/cpu |
 | [db-maintenance.md](db-maintenance.md) | Per-app SQLite health / optimize / purge |

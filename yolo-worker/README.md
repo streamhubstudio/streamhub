@@ -112,7 +112,7 @@ YOLO is a heavy convnet. **Real-time detection needs a GPU.**
 - **GPU (CUDA):** set `cuda` on (`YOLO_DEVICE=cuda`), use an `nvidia/cuda` base
   image + CUDA torch wheels, run with `--gpus all`. Even `yolov8m/l/x` can keep
   up with several FPS.
-- **CPU (hosts without a GPU):** stick to **`yolov8n`/`yolov8s`**
+- **CPU (e.g. `your-server`, which has no GPU):** stick to **`yolov8n`/`yolov8s`**
   and a **low `fps` (1–3)**. Larger models or high FPS will fall behind the live
   edge — the reader drops to the newest segment on reconnect, so you still get
   recent frames, just not every one. Treat CPU as "sampled monitoring", not

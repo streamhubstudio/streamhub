@@ -198,6 +198,56 @@ describe('cluster/ClusterService', () => {
       ({ ctx, svc } = make());
       expect(() => svc.heartbeat('does-not-exist')).toThrow(NotFoundException);
     });
+
+    // Operator status is authoritative: a heartbeat clears staleness but must
+    // never undo a drain/disable (the PoC bug — one heartbeat un-drained a node).
+    it('keeps an operator-set draining status but still refreshes last_seen', () => {
+      ({ ctx, svc } = make());
+      const { payload } = svc.join({ name: 'drain', ip: '203.0.113.7' });
+      svc.updateNode(payload.nodeId, { status: 'draining' });
+      ctx.db
+        .global()
+        .prepare("UPDATE nodes SET last_seen_at='1999-01-01 00:00:00' WHERE id = ?")
+        .run(payload.nodeId);
+
+      svc.heartbeat(payload.nodeId, { cpu: 0.2 });
+
+      const row = nodeRow(ctx, payload.nodeId)!;
+      expect(row.status).toBe('draining'); // NOT reverted to active
+      expect(row.last_seen_at).not.toBe('1999-01-01 00:00:00'); // staleness cleared
+      expect(row.stats_json).toBe('{"cpu":0.2}'); // stats still written
+    });
+
+    it('keeps an operator-set disabled status on a bare ping too', () => {
+      ({ ctx, svc } = make());
+      const { payload } = svc.join({ name: 'off', ip: '203.0.113.8' });
+      svc.updateNode(payload.nodeId, { status: 'disabled' });
+      svc.heartbeat(payload.nodeId); // bare ping (no stats)
+      expect(nodeRow(ctx, payload.nodeId)!.status).toBe('disabled');
+    });
+
+    it('promotes a non-operator status (down/unknown) back to active', () => {
+      ({ ctx, svc } = make());
+      const { payload } = svc.join({ name: 'flap', ip: '203.0.113.9' });
+      ctx.db
+        .global()
+        .prepare("UPDATE nodes SET status='down' WHERE id = ?")
+        .run(payload.nodeId);
+      svc.heartbeat(payload.nodeId);
+      expect(nodeRow(ctx, payload.nodeId)!.status).toBe('active');
+    });
+
+    it('PATCH active restores a drained node; heartbeat then keeps it active', () => {
+      ({ ctx, svc } = make());
+      const { payload } = svc.join({ name: 'cycle', ip: '203.0.113.10' });
+      svc.updateNode(payload.nodeId, { status: 'draining' });
+      svc.heartbeat(payload.nodeId);
+      expect(nodeRow(ctx, payload.nodeId)!.status).toBe('draining');
+
+      svc.updateNode(payload.nodeId, { status: 'active' }); // operator un-drains
+      svc.heartbeat(payload.nodeId);
+      expect(nodeRow(ctx, payload.nodeId)!.status).toBe('active');
+    });
   });
 
   describe('listNodes', () => {
@@ -290,6 +340,70 @@ describe('cluster/ClusterService', () => {
         PayloadTooLargeException,
       );
       expect(nodeRow(ctx, payload.nodeId)!.stats_json).toBeNull();
+    });
+  });
+
+  describe('onModuleInit (origin self-register)', () => {
+    it('inserts a stable `origin` row (id/name/region origin, active) with cpu/mem/cores stats', () => {
+      ({ ctx, svc } = make()); // FULL_ENV sets STREAMHUB_CLUSTER_TOKEN
+      svc.onModuleInit();
+
+      const row = nodeRow(ctx, 'origin')!;
+      expect(row).toMatchObject({
+        id: 'origin',
+        name: 'origin',
+        region: 'origin',
+        status: 'active',
+      });
+      expect(row.last_seen_at).toBeTruthy();
+
+      const node = svc.listNodes().find((n) => n.id === 'origin')!;
+      expect(node.stale).toBe(false);
+      expect(node.stats).toMatchObject({ role: 'origin' });
+      // cpu/mem/cores are all present and numeric.
+      for (const k of ['cores', 'cpu', 'memTotal', 'memFree']) {
+        expect(typeof node.stats![k]).toBe('number');
+      }
+    });
+
+    it('is a no-op when clustering is disabled (no token)', () => {
+      ({ ctx, svc } = make({
+        STREAMHUB_CLUSTER_TOKEN: '',
+        LIVEKIT_API_KEY: 'k',
+        LIVEKIT_API_SECRET: 's',
+      }));
+      svc.onModuleInit();
+      expect(nodeRow(ctx, 'origin')).toBeUndefined();
+      expect(svc.listNodes()).toEqual([]);
+    });
+
+    it('is idempotent across restarts: one row, id stable, last_seen refreshed', () => {
+      ({ ctx, svc } = make());
+      svc.onModuleInit();
+      ctx.db
+        .global()
+        .prepare("UPDATE nodes SET last_seen_at='1999-01-01 00:00:00' WHERE id='origin'")
+        .run();
+
+      svc.onModuleInit(); // "restart"
+
+      const count = ctx.db
+        .global()
+        .prepare("SELECT COUNT(*) AS n FROM nodes WHERE id='origin'")
+        .get() as { n: number };
+      expect(count.n).toBe(1);
+      const row = nodeRow(ctx, 'origin')!;
+      expect(row.last_seen_at! > '1999-01-01 00:00:00').toBe(true);
+    });
+
+    it('preserves an operator-set draining status across a later restart', () => {
+      ({ ctx, svc } = make());
+      svc.onModuleInit();
+      svc.updateNode('origin', { status: 'draining' });
+
+      svc.onModuleInit(); // origin restarts while operator-drained
+
+      expect(nodeRow(ctx, 'origin')!.status).toBe('draining');
     });
   });
 

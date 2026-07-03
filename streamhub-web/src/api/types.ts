@@ -76,28 +76,20 @@ export interface MagicVerifyResponse {
   token: string
 }
 
-/** POST /auth/reset-request — ask the backend to email a password-reset link. */
-export interface ResetRequestRequest {
-  email: string
-}
-
 /**
- * Response for a reset request. Like magic-link, the backend always answers 200
- * (even for unknown emails, to avoid account enumeration); `sent` is best-effort.
+ * One active login session (GET /auth/sessions). Every human sign-in mints a
+ * row; the owner can revoke any of them from "Mi cuenta".
  */
-export interface ResetRequestResponse {
-  sent?: boolean
-}
-
-/** POST /auth/reset — set a new password using the emailed token. */
-export interface ResetPasswordRequest {
-  token: string
-  password: string
-}
-
-/** Password successfully reset. The user then signs in with the new password. */
-export interface ResetPasswordResponse {
-  ok?: boolean
+export interface SessionInfo {
+  id: string
+  /** Client IP captured at sign-in (X-Forwarded-For first hop), or null. */
+  ip: string | null
+  /** Raw User-Agent captured at sign-in, or null. */
+  userAgent?: string | null
+  createdAt: string
+  lastSeen: string | null
+  /** True for the session backing the current token (this device). */
+  current: boolean
 }
 
 /** POST /auth/signup — create an account (and optionally its team). */
@@ -201,7 +193,7 @@ export interface AccountInfo {
     email: string | null
     name: string | null
     isSuperadmin: boolean
-    /** True when a password is set (magic-link accounts set one via reset). */
+    /** True when a password is set (magic-link accounts sign in without one). */
     hasPassword: boolean
     twoFactorEnabled: boolean
     status: string
@@ -572,6 +564,56 @@ export interface UpdateS3Request {
   public_url?: string
   key?: string
   secret?: string
+}
+
+// ---------------------------------------------------------------------------
+// Per-app MQTT event publishing (+ latency alert)
+// ---------------------------------------------------------------------------
+
+/** GET/PUT /apps/:app/mqtt — masked view (password never in clear). */
+export interface MqttConfig {
+  enabled?: boolean
+  url?: string
+  username?: string
+  topicPrefix?: string
+  qos?: number
+  tls?: boolean
+  /** ['all'] or an explicit list of event names. */
+  events?: string[]
+  logs?: { enabled?: boolean; level?: string }
+  /** Masked password (display only). */
+  password?: string
+  hasPassword?: boolean
+  configured?: boolean
+  latencyAlert?: {
+    enabled?: boolean
+    thresholdMs?: number
+    cooldownSeconds?: number
+    intervalSeconds?: number
+  }
+  [k: string]: unknown
+}
+
+/**
+ * PUT /apps/:app/mqtt — writes the mqtt/latency_alert blocks to config.yaml
+ * and the password to secrets.json. Omit password to KEEP the stored one.
+ */
+export interface UpdateMqttRequest {
+  enabled?: boolean
+  url?: string
+  username?: string
+  password?: string
+  topicPrefix?: string
+  qos?: number
+  tls?: boolean
+  events?: string[]
+  logs?: { enabled?: boolean; level?: string }
+  latencyAlert?: {
+    enabled?: boolean
+    thresholdMs?: number
+    cooldownSeconds?: number
+    intervalSeconds?: number
+  }
 }
 
 // ---------------------------------------------------------------------------

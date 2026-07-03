@@ -105,14 +105,21 @@ services:
     restart: unless-stopped
     # Egress runs a headless Chrome to composite rooms; it needs shared memory
     # and the SYS_ADMIN cap for the sandbox.
+    # NOTE: do NOT override `user:` — the image runs as uid 1001 ("egress",
+    # gid 0) and its entrypoint starts pulseaudio, which refuses to run as
+    # root (silent crash-loop). Local writes work because core creates every
+    # output dir group-0-writable (umask 002 in core-entrypoint.sh).
     shm_size: "1gb"
     cap_add: [SYS_ADMIN]
     # Resource caps (compose v2 non-swarm keys). The headless Chrome egress uses
     # to composite a room can balloon RAM/CPU under multi-track/high-res rooms,
-    # so we hard-cap it — the single biggest OOM risk on a small host. Defaults
-    # target an 8GB/8c box; raise EGRESS_MEM_LIMIT/EGRESS_CPUS for heavier rooms.
+    # so we hard-cap it — the single biggest OOM risk on a small host. Raise
+    # EGRESS_MEM_LIMIT/EGRESS_CPUS for heavier rooms. NOTE: livekit-egress
+    # refuses room-composite jobs (HLS/recording) below 4 available CPUs, so
+    # the cap must never be set under 4 or every such egress fails with
+    # "no response from servers".
     mem_limit: ${EGRESS_MEM_LIMIT:-2g}
-    cpus: ${EGRESS_CPUS:-2}
+    cpus: ${EGRESS_CPUS:-4}
     depends_on: [redis, livekit]
     environment:
       EGRESS_CONFIG_BODY: |
@@ -139,6 +146,11 @@ services:
     container_name: streamhub-core
     network_mode: host
     restart: unless-stopped
+    # GPU (optional): on a host with an NVIDIA card + nvidia-container-toolkit,
+    # uncomment to expose it to the core — /api/v1/system/gpu then reports it
+    # and ffmpeg gains h264_nvenc/hevc_nvenc (validated on a T4: 10+ realtime
+    # 1080p->720p sessions).
+    # gpus: all
     depends_on: [redis, livekit]
     env_file: .env
     volumes:
@@ -160,6 +172,10 @@ services:
         condition: service_healthy
     environment:
       STREAMHUB_DOMAIN: ${STREAMHUB_DOMAIN:-localhost}
+      # Caddy site address = the scheme+host Caddy serves. Defaults to the bare
+      # domain (auto-TLS, unchanged). The installer sets it to http://<domain-or-ip>
+      # under --no-tls / an IP origin so Caddy serves plain HTTP (no cert attempt).
+      STREAMHUB_SITE_ADDRESS: ${STREAMHUB_SITE_ADDRESS:-${STREAMHUB_DOMAIN:-localhost}}
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro

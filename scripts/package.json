@@ -1,0 +1,12 @@
+{
+  "name": "streamhub-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Dev/CI helper scripts for StreamHub (not shipped in the core image).",
+  "scripts": {
+    "smoke:conference": "node conference-smoke.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

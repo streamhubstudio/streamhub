@@ -14,6 +14,7 @@ import { verifyJwt } from '../../shared/auth';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { AuthService } from './auth.service';
 import { LoginController } from './login.controller';
+import { SessionService } from './session.service';
 import { TotpService } from './totp.service';
 
 const SECRET = 'test-jwt-secret-do-not-use-in-prod';
@@ -34,7 +35,16 @@ function makeAuth(allowSignup: string): Harness {
   const tenancy = ctx.newService(TenancyService, ctx.db, ctx.config);
   tenancy.onModuleInit();
   const totp = ctx.newService(TotpService, ctx.config, tenancy);
-  const auth = ctx.newService(AuthService, ctx.db, ctx.config, tenancy, totp);
+  const sessions = ctx.newService(SessionService, ctx.db);
+  sessions.onModuleInit();
+  const auth = ctx.newService(
+    AuthService,
+    ctx.db,
+    ctx.config,
+    tenancy,
+    totp,
+    sessions,
+  );
   return { ctx, tenancy, auth };
 }
 

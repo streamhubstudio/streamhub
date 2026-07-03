@@ -1,0 +1,7 @@
+{
+  "overlay": {
+    "ariaLabel_one": "Ofuscación de rostros activa — {{count}} rostro enmascarado",
+    "ariaLabel_other": "Ofuscación de rostros activa — {{count}} rostros enmascarados",
+    "scoreTitle": "Confianza de la detección facial"
+  }
+}

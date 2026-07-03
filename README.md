@@ -39,6 +39,15 @@ Everything runs from one `docker compose up`.
 - **REST API** (global + per-app) with Swagger at `/api/v1/docs`, guarded by `sk_` bearer tokens.
 - **React dashboard** (Vite + Tailwind) with a break-glass admin login (JWT).
 - **RBAC + quotas** with a safe phased rollout (`off` → `log` → `on`).
+- **Plugins** (auto-discovered, no central registry to edit) — including a **face-blur (deface)**
+  plugin that obfuscates faces in real time as a player overlay, plus object detection (YOLO); a
+  plugin can own its own worker process, with lifecycle managed by the framework.
+- **Per-app MQTT events** — publish stream-lifecycle events and **high-latency alerts** to your
+  broker, with optional per-app log forwarding.
+- **Active sessions** — list and revoke dashboard login sessions from *My account*.
+- **Meet-style conference sample** — a turnkey multi-party WebRTC room with chat, generated per app.
+- **GPU / NVENC-ready image** — the core image ships `ffmpeg`; uncomment `gpus: all` (with
+  `nvidia-container-toolkit`) to enable NVENC transcode and CUDA CV inference.
 
 ## Quick start
 

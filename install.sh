@@ -39,7 +39,7 @@ fi
 
 set -euo pipefail
 
-VERSION="2.0.0"
+VERSION="2.1.0"
 REPO_URL="${STREAMHUB_REPO_URL:-https://github.com/streamhubstudio/streamhub.git}"
 INSTALL_DIR="${STREAMHUB_DIR:-/opt/streamhub}"
 SELF_URL="${STREAMHUB_INSTALL_URL:-https://www.streamhub.studio/install.sh}"
@@ -50,6 +50,18 @@ ok()   { printf "${c_ok}[streamhub]${c_off} %s\n" "$*"; }
 warn() { printf "${c_warn}[streamhub]${c_off} %s\n" "$*"; }
 die()  { printf "${c_err}[streamhub] ERROR:${c_off} %s\n" "$*" >&2; exit 1; }
 rand() { openssl rand -base64 96 | tr -dc 'A-Za-z0-9' | head -c "${1:-40}"; }
+
+# True when the argument looks like a bare IP literal (IPv4 or IPv6) rather than
+# a DNS name — Let's Encrypt can't issue a cert for an IP, and nginx wants a
+# catch-all server block instead of a name-based vhost.
+is_ip() {
+  case "${1:-}" in
+    *:*) return 0 ;;             # IPv6 (contains colons)
+    ''|*[!0-9.]*) return 1 ;;    # empty, or has a non-[0-9.] char → a name
+    *.*.*.*) return 0 ;;         # four dotted groups → IPv4
+    *) return 1 ;;
+  esac
+}
 
 usage() {
   cat <<'USAGE'
@@ -266,18 +278,78 @@ fi
 # tarball is the fallback so the one-liner works even while the repo is private.
 # GIT_TERMINAL_PROMPT=0: a private repo must fail fast, never hang on a prompt.
 SRC_URL="${STREAMHUB_SRC_URL:-https://www.streamhub.studio/streamhub-src.tar.gz}"
+
+# rsync is the surgical mirror path; ensure it, fall back to find+cp otherwise.
+ensure_rsync() {
+  command -v rsync >/dev/null 2>&1 && return 0
+  log "installing rsync (for a clean source refresh)"
+  apt-get install -y -qq rsync >/dev/null 2>&1 || true
+  command -v rsync >/dev/null 2>&1
+}
+
+# Extract the tarball into a FRESH temp dir and MIRROR it over the install dir
+# with deletion semantics, so files removed upstream (a deleted page/plugin dir)
+# disappear here too. A plain `tar x` on top resurrects them and breaks the
+# docker build (e.g. a stale streamhub-web/src/pages/*.tsx failing `tsc -b`).
+# PRESERVED (never touched): .env secrets, the bind-mounted data/ tree (sqlite,
+# recordings, HLS, redis, models, sdk), operator *.local overrides, and .git.
+# Works for a first install (empty dir → nothing to delete) and is idempotent.
 fetch_tarball() {
   log "downloading StreamHub source ($SRC_URL)"
   mkdir -p "$INSTALL_DIR"
-  curl -fsSL -m180 "$SRC_URL" -o /tmp/streamhub-src.tgz || return 1
-  tar xzf /tmp/streamhub-src.tgz -C "$INSTALL_DIR" && rm -f /tmp/streamhub-src.tgz
+  local tgz tmp src rc=0
+  tgz="$(mktemp)"
+  tmp="$(mktemp -d)"
+
+  if ! curl -fsSL -m180 "$SRC_URL" -o "$tgz"; then
+    rc=1
+  elif ! tar xzf "$tgz" -C "$tmp"; then
+    rc=1
+  else
+    # Source root: tarball is usually flat (docker-compose.yml at top) but may be
+    # wrapped in a single dir — accept either.
+    if [ -f "$tmp/docker-compose.yml" ]; then
+      src="$tmp"
+    else
+      src="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/docker-compose.yml' ';' -print 2>/dev/null | head -1)"
+    fi
+    if [ -z "${src:-}" ] || [ ! -f "$src/docker-compose.yml" ]; then
+      warn "tarball layout unexpected — docker-compose.yml not found in the archive"
+      rc=1
+    else
+      # Defensive: a stray state file inside the archive must never clobber real
+      # state (the excludes below also cover this, but strip it for find+cp too).
+      rm -f "$src/.env" "$src/.env.local"
+      find "$src" -maxdepth 1 -name '*.local' -exec rm -f {} + 2>/dev/null || true
+      if ensure_rsync; then
+        log "mirroring source over $INSTALL_DIR (rsync --delete — removed files pruned; .env/data/*.local/.git kept)"
+        rsync -a --delete \
+          --exclude='/.env' --exclude='/.env.local' --exclude='*.local' \
+          --exclude='/data/' --exclude='/.git/' \
+          "$src"/ "$INSTALL_DIR"/ || rc=1
+      else
+        warn "rsync unavailable — using a find-based mirror (delete stale top-level, then copy)"
+        # Remove every top-level entry that isn't preserved state, then lay the
+        # fresh tree down. Nested stale files vanish because their whole
+        # top-level dir (e.g. streamhub-web/) is removed and re-copied from src.
+        find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 \
+          ! -name .env ! -name '.env.local' ! -name '*.local' \
+          ! -name data ! -name .git \
+          -exec rm -rf {} + 2>/dev/null || true
+        cp -a "$src"/. "$INSTALL_DIR"/ || rc=1
+      fi
+    fi
+  fi
+
+  rm -rf "$tgz" "$tmp"
+  return "$rc"
 }
 if [ -d "$INSTALL_DIR/.git" ]; then
   log "updating existing checkout in $INSTALL_DIR"
   GIT_TERMINAL_PROMPT=0 git -C "$INSTALL_DIR" pull --ff-only \
     || warn "git pull failed — continuing with the current checkout"
 elif [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
-  log "refreshing $INSTALL_DIR from the source tarball (tarball install)"
+  log "refreshing $INSTALL_DIR from the source tarball (mirror + prune removed files)"
   fetch_tarball || warn "tarball refresh failed — continuing with the current copy"
 else
   log "fetching StreamHub into $INSTALL_DIR"
@@ -328,8 +400,20 @@ if [ "$MODE" = "origin" ]; then
   [ -n "${ADMIN_PASS:-}" ] || ADMIN_PASS="$(rand 20)"
   : "${ACME_EMAIL:=admin@example.com}"
 
+  # A bare IP can't get a Let's Encrypt cert → treat it as --no-tls so we don't
+  # advertise broken wss://<ip> / https://<ip> URLs and don't attempt certbot.
+  if [ "$STREAMHUB_DOMAIN" != "localhost" ] && is_ip "$STREAMHUB_DOMAIN" && [ "$NO_TLS" != "1" ]; then
+    warn "domain '$STREAMHUB_DOMAIN' is an IP — TLS/Let's Encrypt not possible; using plain HTTP (--no-tls implied)."
+    NO_TLS=1
+  fi
+
   if [ "$STREAMHUB_DOMAIN" = "localhost" ]; then
     PUBLIC_WS_URL="ws://127.0.0.1:7880"; RTMP_PUBLIC_HOST="127.0.0.1"; PUBLIC_URL="http://127.0.0.1:3020"
+  elif [ "$NO_TLS" = "1" ]; then
+    # No TLS (IP-only, or behind your own LB): LiveKit signaling is reached
+    # directly on :7880 (no proxy bridges wss→ws); the core/SPA is fronted by
+    # nginx/caddy on :80. Plain ws/http so the advertised URLs actually resolve.
+    PUBLIC_WS_URL="ws://$STREAMHUB_DOMAIN:7880"; RTMP_PUBLIC_HOST="$STREAMHUB_DOMAIN"; PUBLIC_URL="http://$STREAMHUB_DOMAIN"
   else
     PUBLIC_WS_URL="wss://$STREAMHUB_DOMAIN"; RTMP_PUBLIC_HOST="$STREAMHUB_DOMAIN"; PUBLIC_URL="https://$STREAMHUB_DOMAIN"
   fi
@@ -353,6 +437,12 @@ if [ "$MODE" = "origin" ]; then
   env_put STREAMHUB_AUTHZ_ENFORCE "log"
   env_set STREAMHUB_PUBLIC_URL    "$PUBLIC_URL"
   env_set STREAMHUB_APP_URL       "$PUBLIC_URL"
+  # Caddy site address: unset → the compose default is the bare domain (auto-TLS,
+  # unchanged). Under --no-tls we force the http:// scheme so Caddy serves plain
+  # HTTP instead of trying to provision a cert it can't get / you don't want.
+  if [ "$PROXY" = "caddy" ] && [ "$NO_TLS" = "1" ]; then
+    env_set STREAMHUB_SITE_ADDRESS "http://$STREAMHUB_DOMAIN"
+  fi
   env_put STREAMHUB_CLUSTER_TOKEN "clt_$(rand 32)"
   env_put DATA_DIR                "/data"
   env_put STREAMHUB_HOST_DATA_DIR "./data"
@@ -449,7 +539,117 @@ else # ---- join mode config ---------------------------------------------------
 fi
 
 DATA_HOST_DIR="$(env_get STREAMHUB_HOST_DATA_DIR)"
-mkdir -p "${DATA_HOST_DIR:-./data}"
+mkdir -p "${DATA_HOST_DIR:-./data}/apps"
+# We run under umask 077 (for .env) — that would leave data/ mode 700 and the
+# egress worker (uid 1001, gid 0) could not even traverse it to write HLS/MP4s.
+# 755 restores traversal; g+rwX on apps/ lets egress write AND traverse (core
+# creates new dirs group-writable itself via umask 002 in its entrypoint, but
+# dirs made by older cores — and edge nodes, which run no core — need this).
+chmod 755 "${DATA_HOST_DIR:-./data}"
+chmod -R g+rwX "${DATA_HOST_DIR:-./data}/apps" 2>/dev/null || true
+
+# ---- 4b. egress CPU cap: clamp to the host (both origin + edge) --------------
+# livekit-egress refuses room-composite (HLS/recording) below 4 available CPUs,
+# so the compose default is EGRESS_CPUS=4 — but `cpus: 4` HARD-FAILS
+# `docker compose up` on a host with fewer vCPUs ("range of CPUs is 0.01 to N"),
+# killing the install mid-join on a 2-vCPU edge. Clamp to min(4, nproc): below 4
+# the egress self-reports insufficient CPU and simply never claims room-composite
+# jobs (correct degraded behavior — live playback/WebRTC/ingest are unaffected).
+# env_put = fill-if-missing, so an operator's explicit EGRESS_CPUS is respected.
+CPU_COUNT="$(nproc 2>/dev/null || echo 1)"
+case "$CPU_COUNT" in ''|*[!0-9]*) CPU_COUNT=1 ;; esac
+[ "$CPU_COUNT" -ge 1 ] || CPU_COUNT=1
+if [ "$CPU_COUNT" -lt 4 ]; then EGRESS_CPUS_VAL="$CPU_COUNT"; else EGRESS_CPUS_VAL=4; fi
+env_put EGRESS_CPUS "$EGRESS_CPUS_VAL"
+[ "$EGRESS_CPUS_VAL" -lt 4 ] && warn "host has ${CPU_COUNT} vCPU(s) — EGRESS_CPUS=${EGRESS_CPUS_VAL} (<4: egress declines HLS/recording room-composite; live playback/WebRTC unaffected)."
+
+# ---- 4c. heartbeat agent (systemd timer, every 60s) --------------------------
+# Without this, a node (edge OR origin) has no periodic liveness ping and goes
+# `stale=true` in the registry 90s after boot — the join / self-register is the
+# ONLY latch otherwise. Ships a tiny script + a systemd service+timer that POST
+# cpu/mem/cores stats to the master's /api/v1/cluster/heartbeat with the cluster
+# token. Idempotent: files are rewritten and the timer re-enabled on every run.
+install_heartbeat_agent() { # install_heartbeat_agent <api_base> <token> <node_id>
+  local hb_url="$1" hb_token="$2" hb_node="$3"
+  if ! command -v systemctl >/dev/null 2>&1; then
+    warn "systemd not available — skipping the heartbeat timer (node goes stale after 90s without an external heartbeat)"
+    return 0
+  fi
+  mkdir -p /etc/streamhub
+  # Reuse a previously-stored node id when this run couldn't determine one
+  # (e.g. a re-run while the master was unreachable).
+  if [ -z "$hb_node" ] && [ -r /etc/streamhub/heartbeat.env ]; then
+    hb_node="$(sed -n 's/^STREAMHUB_HB_NODE_ID=//p' /etc/streamhub/heartbeat.env | head -1)"
+  fi
+  if [ -z "$hb_url" ] || [ -z "$hb_token" ] || [ -z "$hb_node" ]; then
+    warn "heartbeat agent not configured (missing url/token/node id) — skipping"
+    return 0
+  fi
+
+  ( umask 077; cat > /etc/streamhub/heartbeat.env <<EOF
+STREAMHUB_HB_URL=$hb_url
+STREAMHUB_HB_TOKEN=$hb_token
+STREAMHUB_HB_NODE_ID=$hb_node
+EOF
+  )
+
+  cat > /usr/local/bin/streamhub-heartbeat.sh <<'HBEOF'
+#!/usr/bin/env bash
+# StreamHub cluster heartbeat — POST liveness + cpu/mem/cores stats to the master.
+# Config: /etc/streamhub/heartbeat.env (STREAMHUB_HB_URL / _TOKEN / _NODE_ID).
+set -eu
+[ -r /etc/streamhub/heartbeat.env ] && . /etc/streamhub/heartbeat.env
+: "${STREAMHUB_HB_URL:?}"; : "${STREAMHUB_HB_TOKEN:?}"; : "${STREAMHUB_HB_NODE_ID:?}"
+
+cores="$(nproc 2>/dev/null || echo 1)"
+load="$(awk '{print $1}' /proc/loadavg 2>/dev/null || echo 0)"
+# cpu = load normalized by core count (comparable across differently-sized nodes)
+cpu="$(awk -v l="$load" -v c="$cores" 'BEGIN{ if (c>0) printf "%.3f", l/c; else print 0 }')"
+memtotal="$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+memavail="$(awk '/^MemAvailable:/{print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+memused="$(awk -v t="$memtotal" -v a="$memavail" 'BEGIN{ if (t>0) printf "%.3f", (t-a)/t; else print 0 }')"
+
+body="$(printf '{"nodeId":"%s","stats":{"cores":%s,"loadavg1":%s,"cpu":%s,"memTotalKb":%s,"memAvailKb":%s,"memUsedRatio":%s}}' \
+  "$STREAMHUB_HB_NODE_ID" "$cores" "$load" "$cpu" "$memtotal" "$memavail" "$memused")"
+
+curl -fsS -m10 -X POST "$STREAMHUB_HB_URL/api/v1/cluster/heartbeat" \
+  -H 'Content-Type: application/json' -H "X-Cluster-Token: $STREAMHUB_HB_TOKEN" \
+  -d "$body" >/dev/null
+HBEOF
+  chmod 0755 /usr/local/bin/streamhub-heartbeat.sh
+
+  cat > /etc/systemd/system/streamhub-heartbeat.service <<'EOF'
+[Unit]
+Description=StreamHub cluster heartbeat (POST liveness + cpu/mem/cores to the master)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/streamhub/heartbeat.env
+ExecStart=/usr/local/bin/streamhub-heartbeat.sh
+Nice=10
+EOF
+
+  cat > /etc/systemd/system/streamhub-heartbeat.timer <<'EOF'
+[Unit]
+Description=Run the StreamHub cluster heartbeat every 60s
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+AccuracySec=5s
+Unit=streamhub-heartbeat.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl enable --now streamhub-heartbeat.timer >/dev/null 2>&1 \
+    || warn "could not enable streamhub-heartbeat.timer"
+  ok "heartbeat agent installed (systemd timer, 60s → $hb_url, node '$hb_node')"
+}
 
 # ---- 5. start services -------------------------------------------------------
 if [ "$MODE" = "origin" ]; then
@@ -474,13 +674,23 @@ if [ "$MODE" = "origin" ]; then
     | docker compose exec -T core node deploy/seed-token.js - bootstrap \
     || warn "token seed skipped (probably already seeded)"
 
-  # ---- TLS: nginx server-block + certbot ------------------------------------
+  # ---- proxy server-block + (optional) certbot ------------------------------
   DOMAIN="$(env_get STREAMHUB_DOMAIN)"
   if [ "$PROXY" = "nginx" ] && [ "$DOMAIN" != "localhost" ]; then
     AVAIL="/etc/nginx/sites-available/$DOMAIN"
     if [ ! -f "$AVAIL" ]; then
-      log "writing nginx server block for $DOMAIN"
-      sed "s/streamhub.example.com/$DOMAIN/" deploy/nginx-streamhub.conf > "$AVAIL"
+      if is_ip "$DOMAIN"; then
+        # IP origin: a catch-all default_server answers on :80 for ANY Host
+        # header, so edges/clients reach the core at http://<ip> (no name vhost).
+        log "writing nginx catch-all server block (IP origin $DOMAIN)"
+        sed -e 's/server_name streamhub\.example\.com;/server_name _;/' \
+            -e 's/listen 80;/listen 80 default_server;/' \
+            -e 's/listen \[::\]:80;/listen [::]:80 default_server;/' \
+            deploy/nginx-streamhub.conf > "$AVAIL"
+      else
+        log "writing nginx server block for $DOMAIN"
+        sed "s/streamhub.example.com/$DOMAIN/" deploy/nginx-streamhub.conf > "$AVAIL"
+      fi
       ln -sf "$AVAIL" "/etc/nginx/sites-enabled/$DOMAIN"
       rm -f /etc/nginx/sites-enabled/default
       nginx -t && systemctl reload nginx
@@ -489,6 +699,8 @@ if [ "$MODE" = "origin" ]; then
     fi
     if [ "$NO_TLS" = "1" ]; then
       warn "--no-tls: skipping certbot ($DOMAIN stays plain HTTP on :80)"
+    elif is_ip "$DOMAIN"; then
+      warn "domain is an IP ($DOMAIN) — skipping certbot (Let's Encrypt needs a DNS name); plain HTTP on :80."
     elif [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
       ok "Let's Encrypt cert for $DOMAIN already present (auto-renews via certbot.timer)"
     else
@@ -497,11 +709,20 @@ if [ "$MODE" = "origin" ]; then
         || warn "certbot failed — check the DNS A record for $DOMAIN and re-run this installer"
     fi
   fi
+
+  # Heartbeat itself: the origin self-registers as node 'origin' at boot (see
+  # cluster.service) and pings its OWN local core so it never goes stale.
+  install_heartbeat_agent "http://127.0.0.1:3020" "$(env_get STREAMHUB_CLUSTER_TOKEN)" "origin"
 else
   # --no-deps: an edge must NOT start a local redis (depends_on would) — it
   # coordinates through the ORIGIN's redis set in LIVEKIT_REDIS_ADDRESS.
   log "starting media services (livekit ingress egress) against the origin's Redis"
   docker compose up -d --no-deps livekit ingress egress
+
+  # Keep this edge fresh in the master's registry (60s systemd timer). NODE_ID
+  # comes from the join response above; a re-run reuses the stored id if the
+  # master was unreachable this time.
+  install_heartbeat_agent "$API_BASE" "$CLUSTER_TOKEN" "${NODE_ID:-}"
 fi
 
 # ---- 6. summary ---------------------------------------------------------------
@@ -513,7 +734,9 @@ reveal() {
 echo
 ok "============================================================"
 if [ "$MODE" = "origin" ]; then
-  DOMAIN="$(env_get STREAMHUB_DOMAIN)"; SCHEME="https"; [ "$DOMAIN" = "localhost" ] && { SCHEME="http"; DOMAIN="127.0.0.1:3020"; }
+  DOMAIN="$(env_get STREAMHUB_DOMAIN)"; SCHEME="https"
+  [ "$NO_TLS" = "1" ] && SCHEME="http"
+  [ "$DOMAIN" = "localhost" ] && { SCHEME="http"; DOMAIN="127.0.0.1:3020"; }
   ok "StreamHub origin node is running."
   echo "  Dashboard     : $SCHEME://$DOMAIN/          (login: $(env_get ADMIN_USER) / $(reveal "$(env_get ADMIN_PASS)"))"
   echo "  API + Swagger : $SCHEME://$DOMAIN/api/v1/docs"

@@ -43,7 +43,7 @@
       "title": "Password",
       "subtitle": "Change your password. You'll need the current one.",
       "noPassword": "This account signs in with magic links and has no known password yet.",
-      "setViaReset": "Set a password via the email reset flow →",
+      "noPasswordHint": "You sign in with magic links — no password is needed.",
       "currentLabel": "Current password",
       "newLabel": "New password",
       "confirmLabel": "Confirm new password",
@@ -75,6 +75,25 @@
       "disabling": "Disabling…",
       "errorCode": "Invalid code. Check your authenticator app and try again."
     }
+  },
+  "sessions": {
+    "title": "Active sessions",
+    "subtitle": "Devices and browsers currently signed in to your account. Sign out any you don't recognize.",
+    "loading": "Loading sessions…",
+    "loadError": "Couldn't load your sessions.",
+    "empty": "No active sessions.",
+    "signedIn": "Signed in",
+    "thisDevice": "This device",
+    "unknownIp": "Unknown IP",
+    "signOut": "Sign out",
+    "signOutOthers": "Sign out other sessions",
+    "cancel": "Cancel",
+    "confirmOneTitle": "Sign out this session?",
+    "confirmOneBody": "This session will be signed out immediately.",
+    "confirmCurrentBody": "This is your current session — signing it out will log you out of this device.",
+    "confirmOthersTitle": "Sign out other sessions?",
+    "confirmOthersBody": "Every other session will be signed out. This device stays signed in.",
+    "revokeError": "Couldn't sign out the session. Please try again."
   },
   "overview": {
     "tenantTitle": "Current tenant",

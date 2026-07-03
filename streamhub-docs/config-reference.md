@@ -71,6 +71,30 @@ callbacks:
   url: ""                       # POST signed events here (empty = disabled)
   secret: ""                    # HMAC-SHA256 signing secret
 
+# Per-app MQTT event publishing (in ADDITION to callbacks). The broker
+# password NEVER lives here — only the `password_env` REFERENCE; the value is
+# resolved from the environment / data/secrets.json (like the S3 credentials).
+mqtt:
+  enabled: false                # master switch
+  url: ""                       # mqtt:// | mqtts:// | ws:// | wss:// (path ok)
+  username: ""
+  password_env: APP_LIVE_MQTT_PASSWORD   # credential REFERENCE, not the value
+  topic_prefix: streamhub/live  # topics: <prefix>/<category>/<event>
+  qos: 0                        # 0 | 1 | 2
+  tls: false                    # force TLS (mqtt:// upgraded to mqtts://)
+  events: [all]                 # 'all' or an explicit list of event names
+  logs:
+    enabled: false              # forward app logs to <prefix>/log/<level>
+    level: info                 # minimum forwarded level
+
+# Stream latency/health alerting: emits stream.latency_high /
+# stream.latency_recovered through BOTH callbacks and MQTT.
+latency_alert:
+  enabled: false
+  threshold_ms: 1000            # probe-RTT breach threshold
+  cooldown_seconds: 60          # min seconds between alerts per room
+  interval_seconds: 10          # sampling interval
+
 # Wave-2 optional features (SPEC §16). All default to sensible off/safe values.
 features:
   rtmp_password: true           # require a password in addition to the stream key
@@ -177,6 +201,40 @@ pipeline architecture (what LiveKit egress does vs the ffmpeg post-transcode).
 | `secret` | string | `""` | Shared secret for `X-StreamHub-Signature` (HMAC-SHA256). Editable via `callbackSecret`. |
 
 See [webhooks.md](./webhooks.md) for envelope, headers, signing and retries.
+
+## `mqtt`
+
+Per-app MQTT event publishing — every callback event (plus, optionally, the app's
+log stream) is ALSO published as JSON to the app's broker. Editable via
+`GET/PUT /apps/{app}/mqtt` (password masked on read) or the raw editor (refs only).
+Full feature doc: [features/mqtt.md](./features/mqtt.md).
+
+| Key | Type | Default | Notes |
+|-----|------|---------|-------|
+| `enabled` | boolean | `false` | Master switch. Off = no connection is kept, nothing is published. |
+| `url` | string | `""` | Broker URL: `mqtt://`, `mqtts://`, `ws://` or `wss://` (path allowed, e.g. `wss://mqtt.example.com/mqtt`). Empty = off. |
+| `username` | string | `""` | Broker username (empty for anonymous brokers). |
+| `password_env` | string | `APP_<SLUG>_MQTT_PASSWORD` | **Name of the env var / secrets.json key** holding the broker password. The value is set via `PUT /apps/{app}/mqtt` (`password`) and NEVER stored in the yaml; on reads it is masked (like the S3 credentials). |
+| `topic_prefix` | string | `streamhub/<app>` | Topic root. Messages go to `<prefix>/<category>/<event>` (see features/mqtt.md for the category map). |
+| `qos` | `0` \| `1` \| `2` | `0` | Publish QoS for every message. |
+| `tls` | boolean | `false` | Force TLS: `mqtt://` is upgraded to `mqtts://` (and `ws://` to `wss://`) before connecting. `mqtts://`/`wss://` URLs already use TLS regardless. |
+| `events` | list | `[all]` | Event filter: `all` (whole taxonomy) or an explicit list of event names (e.g. `[vod_ready, stream.latency_high]`). |
+| `logs.enabled` | boolean | `false` | Forward the app's log stream to `<prefix>/log/<level>`. |
+| `logs.level` | level | `info` | Minimum forwarded level (`trace|debug|info|warn|error|fatal`). |
+
+## `latency_alert`
+
+Per-app stream health alerting (see [features/mqtt.md](./features/mqtt.md#high-latency-alert)
+for the metric). On breach the core emits `stream.latency_high` — and later
+`stream.latency_recovered` — through BOTH the callbacks pipeline and MQTT.
+Editable via `PUT /apps/{app}/mqtt` (`latencyAlert` block).
+
+| Key | Type | Default | Notes |
+|-----|------|---------|-------|
+| `enabled` | boolean | `false` | Master switch for the monitor. |
+| `threshold_ms` | number | `1000` | Breach threshold for the per-room probe RTT (ms). |
+| `cooldown_seconds` | number | `60` | Minimum seconds between successive `stream.latency_high` alerts for the same room. |
+| `interval_seconds` | number | `10` | Sampling interval per app (min 2). |
 
 ---
 

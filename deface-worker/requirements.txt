@@ -1,0 +1,18 @@
+# StreamHub deface worker runtime deps.
+#
+# CPU (default): onnxruntime runs CenterFace comfortably in real time at a few
+# FPS. For NVIDIA GPUs replace it with the GPU build and enable the plugin's
+# `cuda` toggle (DEFACE_EXECUTION_PROVIDER=cuda):
+#   pip uninstall onnxruntime && pip install onnxruntime-gpu
+#
+# onnx: needed once at load time to relax centerface.onnx's static input dims
+# to dynamic H/W (same trick deface uses).
+# opencv-python-headless: HLS frame decode via the bundled ffmpeg backend +
+# blobFromImage preprocessing; also the fallback DNN backend when onnxruntime
+# is not installed. Callback POST uses the stdlib (no requests).
+onnxruntime>=1.17
+onnx>=1.15
+opencv-python-headless>=4.9
+
+# Dev/test only (pure-logic tests need no onnxruntime/opencv):
+#   pip install pytest

@@ -2,16 +2,18 @@
 #   /rtc*  -> LiveKit signaling (wss, WebRTC)   127.0.0.1:7880
 #   /*     -> streamhub-core (NestJS: REST API + React SPA + HLS + /sdk)  127.0.0.1:3020
 #
-# STREAMHUB_DOMAIN / ACME_EMAIL are injected from the environment (see compose).
-# A real hostname gets a Let's Encrypt cert automatically. `localhost` gets a
-# local self-signed cert (browser will warn — fine for testing).
+# STREAMHUB_SITE_ADDRESS / ACME_EMAIL are injected from the environment (see
+# compose). It defaults to STREAMHUB_DOMAIN: a real hostname gets a Let's Encrypt
+# cert automatically; `localhost` gets a local self-signed cert (browser warns —
+# fine for testing). Under the installer's --no-tls (or an IP origin) it is set
+# to `http://<domain-or-ip>`, which makes Caddy serve PLAIN HTTP (no cert).
 # Media (UDP 7882) and RTMP (1935) bypass this proxy and hit the IP directly.
 
 {
 	email {$ACME_EMAIL}
 }
 
-{$STREAMHUB_DOMAIN} {
+{$STREAMHUB_SITE_ADDRESS:localhost} {
 	encode zstd gzip
 	request_body {
 		max_size 50MB

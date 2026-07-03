@@ -16,3 +16,4 @@ export const STREAMS_SERVICE = Symbol('STREAMS_SERVICE');
 export const CALLBACKS_SERVICE = Symbol('CALLBACKS_SERVICE');
 export const SAMPLES_SERVICE = Symbol('SAMPLES_SERVICE');
 export const RESTREAM_SERVICE = Symbol('RESTREAM_SERVICE');
+export const MQTT_SERVICE = Symbol('MQTT_SERVICE');

@@ -17,7 +17,7 @@
 # Usage:
 #   deploy/deploy-core.sh <core.tar.gz>
 #   CORE_TARBALL=/tmp/core.tgz deploy/deploy-core.sh
-#   APP_DIR=/opt/streamhub-core SERVICE_NAME=streamhub-core deploy/deploy-core.sh core.tgz
+#   APP_DIR=/opt/streamhub-core SERVICE_NAME=streamhub deploy/deploy-core.sh core.tgz
 #
 # The tarball must contain the core files at its ROOT, e.g. built with:
 #   tar czf core.tgz -C streamhub-core .
@@ -26,7 +26,7 @@
 #         --skip-backup    skip step 2 (NOT recommended)
 #         --no-restart     do everything except the systemctl restart
 #
-# Env:  APP_DIR (default /opt/streamhub-core) · SERVICE_NAME (default streamhub-core)
+# Env:  APP_DIR (default /opt/streamhub-core) · SERVICE_NAME (default streamhub)
 #       BACKUP_DATA_DIR (default <APP_DIR>/data) · PORT (default 3020)
 #
 # Exit codes: 0 ok · 1 usage · 2 preflight · 3 backup failed · 4 build failed
@@ -35,7 +35,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/streamhub-core}"
-SERVICE_NAME="${SERVICE_NAME:-streamhub-core}"
+SERVICE_NAME="${SERVICE_NAME:-streamhub}"
 PORT="${PORT:-3020}"
 CORE_TARBALL="${CORE_TARBALL:-}"
 SKIP_BACKUP=0

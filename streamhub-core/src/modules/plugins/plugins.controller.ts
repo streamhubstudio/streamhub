@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -146,6 +147,51 @@ export class PluginsController {
   @ApiParam({ name: 'id', description: 'Plugin id.' })
   async workerStatus(@Param('app') app: string, @Param('id') id: string) {
     return ok(await this.plugins.workerStatus(app, id));
+  }
+
+  @Post(':id/live')
+  @Public()
+  @ApiOperation({
+    summary: "Worker live-data ingest (framework channel, ingest-token auth).",
+    description:
+      'Called by the plugin WORKER process (not by clients). Auth is NOT the ' +
+      'Bearer guard: the worker echoes the per-start ingest token the ' +
+      'worker-hook injected as STREAMHUB_INGEST_TOKEN via the ' +
+      '`x-plugin-ingest-token` header — pushes without the CURRENT running ' +
+      "worker's token are rejected. Body: a JSON object carrying `room` plus " +
+      'the plugin-defined payload (size-capped). Stored in memory as the ' +
+      'LATEST payload per (app, plugin, room) for GET :id/live.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  async ingestLive(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Headers('x-plugin-ingest-token') token: string | undefined,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return ok(await this.plugins.ingestLive(app, id, token, body));
+  }
+
+  @Get(':id/live')
+  @Public()
+  @ApiOperation({
+    summary:
+      "Latest worker live data for an ENABLED player-overlay plugin (no auth).",
+    description:
+      'PUBLIC (no Bearer): polled by player overlays (incl. anonymous /play + ' +
+      '/embed) to render live worker output — e.g. deface face boxes. Answers ' +
+      'ONLY for installed + enabled `player-overlay` plugins (404 otherwise). ' +
+      'Returns { ts, ageMs, payload } (nulls when nothing was pushed yet) so ' +
+      'the client can apply its own staleness policy.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  @ApiQuery({ name: 'room', required: false, example: 'main' })
+  async liveData(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Query('room') room?: string,
+  ) {
+    return ok(await this.plugins.liveOverlayData(app, id, room ?? ''));
   }
 
   @Get(':id/logs')
