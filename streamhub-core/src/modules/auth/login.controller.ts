@@ -9,6 +9,7 @@ import type { Request } from 'express';
 import { Public } from '../../shared/auth';
 import { AuthContext, getAuthCtx } from '../../shared/auth-context';
 import { AuthService } from './auth.service';
+import { sessionContextFromRequest } from './session.service';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -52,12 +53,18 @@ export class LoginController {
       'complete signup — a brand-new email gets 403 `signup_disabled`.',
   })
   @ApiOkResponse({ type: LoginResponseDto })
-  async signup(@Body() dto: SignupDto): Promise<LoginResponseDto> {
-    const { token } = await this.auth.signup({
-      email: dto.email,
-      password: dto.password,
-      teamName: dto.teamName,
-    });
+  async signup(
+    @Body() dto: SignupDto,
+    @Req() req: Request,
+  ): Promise<LoginResponseDto> {
+    const { token } = await this.auth.signup(
+      {
+        email: dto.email,
+        password: dto.password,
+        teamName: dto.teamName,
+      },
+      sessionContextFromRequest(req),
+    );
     return { data: { token } };
   }
 
@@ -73,8 +80,16 @@ export class LoginController {
       'a TOTP `code` (401 `totp_required` otherwise).',
   })
   @ApiOkResponse({ type: LoginResponseDto })
-  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
-    const { token } = await this.auth.login(dto.user, dto.password, dto.code);
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+  ): Promise<LoginResponseDto> {
+    const { token } = await this.auth.login(
+      dto.user,
+      dto.password,
+      dto.code,
+      sessionContextFromRequest(req),
+    );
     return { data: { token } };
   }
 

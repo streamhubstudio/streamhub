@@ -39,11 +39,13 @@ import {
   ConfigBackup,
   ConfigDryRun,
   ConfigPresetInfo,
+  MaskedMqtt,
   MaskedS3,
   ReloadResult,
 } from './apps.service';
 import { CreateAppDto } from './dto/create-app.dto';
 import { PutRawConfigDto } from './dto/raw-config.dto';
+import { SetMqttDto } from './dto/set-mqtt.dto';
 import { SetS3Dto } from './dto/set-s3.dto';
 import { UpdateAppConfigDto } from './dto/update-app-config.dto';
 
@@ -146,11 +148,19 @@ export class AppsController {
   @ApiParam({ name: 'name', example: 'live' })
   @ApiOkResponse({ description: 'Merged app config.' })
   @ApiNotFoundResponse({ description: 'App not found.' })
-  patch(
+  async patch(
     @Param('name') name: string,
     @Body() dto: UpdateAppConfigDto,
   ): Promise<AppConfig> {
-    return this.apps.updateConfig(name, this.toConfigPatch(dto));
+    const merged = await this.apps.updateConfig(name, this.toConfigPatch(dto));
+    // Never return the resolved MQTT broker password in clear (masked-on-read
+    // like the S3 credentials; the full value stays in data/secrets.json).
+    return merged.mqtt
+      ? {
+          ...merged,
+          mqtt: { ...merged.mqtt, password: merged.mqtt.password ? '****' : '' },
+        }
+      : merged;
   }
 
   @Delete(':name')
@@ -357,6 +367,38 @@ export class AppsController {
     @Body() dto: SetS3Dto,
   ): Promise<Envelope<MaskedS3>> {
     return ok(await this.apps.setS3(name, dto));
+  }
+
+  // ---------------------------------------------------------------------------
+  // MQTT config setter / masked getter (per-app MQTT event publishing)
+  // ---------------------------------------------------------------------------
+
+  @Get(':name/mqtt')
+  @RequirePermission('config', 'read')
+  @ApiOperation({
+    summary: 'Get the app MQTT config (broker password masked).',
+  })
+  @ApiParam({ name: 'name', example: 'live' })
+  @ApiOkResponse({ description: 'Masked MQTT config (+ latencyAlert block).' })
+  @ApiNotFoundResponse({ description: 'App not found.' })
+  async getMqtt(@Param('name') name: string): Promise<Envelope<MaskedMqtt>> {
+    return ok(await this.apps.getMqtt(name));
+  }
+
+  @Put(':name/mqtt')
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary:
+      'Set the app MQTT block in config.yaml + broker password in secrets.json, then reconnect the MQTT client. Omit password to keep the stored one.',
+  })
+  @ApiParam({ name: 'name', example: 'live' })
+  @ApiOkResponse({ description: 'Masked MQTT config after the update.' })
+  @ApiNotFoundResponse({ description: 'App not found.' })
+  async setMqtt(
+    @Param('name') name: string,
+    @Body() dto: SetMqttDto,
+  ): Promise<Envelope<MaskedMqtt>> {
+    return ok(await this.apps.setMqtt(name, dto));
   }
 
   /** Map the flat UpdateAppConfigDto into a structured Partial<AppConfig>. */

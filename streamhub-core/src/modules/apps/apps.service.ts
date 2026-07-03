@@ -21,6 +21,12 @@ import {
   AppsServiceContract,
   CreateAppInput,
   DeleteAppOptions,
+  LatencyAlertConfig,
+  LogLevel,
+  MQTT_SERVICE,
+  MqttConfig,
+  MqttQos,
+  MqttServiceContract,
   S3Config,
   SAMPLES_SERVICE,
   SamplesServiceContract,
@@ -131,6 +137,55 @@ export interface MaskedS3 {
   publicWarning: string | null;
 }
 
+/** Masked MQTT view — the broker password is never returned in clear. */
+export interface MaskedMqtt {
+  enabled: boolean;
+  url: string;
+  username: string;
+  topicPrefix: string;
+  qos: MqttQos;
+  tls: boolean;
+  events: string[];
+  logs: { enabled: boolean; level: LogLevel };
+  /** Ref (env var name / secrets.json key) holding the password. */
+  passwordEnv: string;
+  /** Masked password (display only). */
+  password: string;
+  hasPassword: boolean;
+  /** Whether the block is usable (enabled + URL set). */
+  configured: boolean;
+  latencyAlert: LatencyAlertConfig;
+}
+
+/** Input for the MQTT config setter (PUT /apps/:app/mqtt). */
+export interface SetMqttInput {
+  enabled?: boolean;
+  url?: string;
+  username?: string;
+  /** Broker password — persisted to secrets.json, never the yaml. */
+  password?: string;
+  topicPrefix?: string;
+  qos?: number;
+  tls?: boolean;
+  events?: string[];
+  logs?: { enabled?: boolean; level?: string };
+  latencyAlert?: {
+    enabled?: boolean;
+    thresholdMs?: number;
+    cooldownSeconds?: number;
+    intervalSeconds?: number;
+  };
+}
+
+const MQTT_LOG_LEVELS: ReadonlySet<string> = new Set([
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'fatal',
+]);
+
 /** Fold-3 warning text shown whenever public_url is enabled. */
 const PUBLIC_VODS_WARNING =
   'VODs públicos: con public_url activo las grabaciones quedan accesibles ' +
@@ -194,6 +249,30 @@ interface DiskConfig {
   callbacks: {
     url: string;
     secret: string;
+  };
+  /**
+   * Per-app MQTT event publishing. `password_env` is a REF (like the s3
+   * `*_env` fields) — the real password lives in env / data/secrets.json.
+   */
+  mqtt: {
+    enabled: boolean;
+    url: string;
+    username: string;
+    /** Env var / secrets.json key holding the broker password. */
+    password_env: string;
+    topic_prefix: string;
+    qos: number;
+    tls: boolean;
+    /** ['all'] or an explicit list of event names. */
+    events: string[];
+    logs: { enabled: boolean; level: string };
+  };
+  /** Per-app stream latency alerting (emits stream.latency_high/_recovered). */
+  latency_alert: {
+    enabled: boolean;
+    threshold_ms: number;
+    cooldown_seconds: number;
+    interval_seconds: number;
   };
   /** Wave-2 feature flags (SPEC §16), snake_case on disk. */
   features: DiskFeatures;
@@ -399,6 +478,9 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
   async delete(name: string, options?: DeleteAppOptions): Promise<void> {
     const record = await this.get(name);
     if (!record) throw new NotFoundException(`app "${name}" not found`);
+
+    // Close the app's MQTT client (if any) before tearing anything down.
+    this.disconnectMqtt(name);
 
     // Release the per-app DB handle before any filesystem removal.
     this.db.closeApp(name);
@@ -747,6 +829,10 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       warnings.push(`s3 client re-init failed: ${(err as Error).message}`);
     }
 
+    // Drop the app's MQTT client so the next publish reconnects with the
+    // (possibly changed) broker settings. Best-effort.
+    this.disconnectMqtt(name);
+
     this.logger.log(`hot-reloaded app "${name}"`);
     return { reloaded: true, warnings };
   }
@@ -841,7 +927,15 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     if (input.provider !== undefined) disk.s3.provider = input.provider;
     if (input.bucket !== undefined) disk.s3.bucket = input.bucket;
     if (input.region !== undefined) disk.s3.region = input.region;
-    if (input.endpoint !== undefined) disk.s3.endpoint = input.endpoint;
+    if (input.endpoint !== undefined) {
+      disk.s3.endpoint = input.endpoint;
+    } else if (input.provider === 'aws') {
+      // Switching to provider "aws" without an explicit endpoint must clear
+      // any stale provider-specific endpoint (the scaffold defaults to
+      // Wasabi's) — otherwise uploads silently target the old provider with
+      // AWS creds. Empty → the AWS SDK's default regional endpoint.
+      disk.s3.endpoint = '';
+    }
     if (input.forcePathStyle !== undefined) {
       disk.s3.force_path_style = input.forcePathStyle;
     }
@@ -919,6 +1013,114 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     return `${value.slice(0, 2)}***${value.slice(-2)}`;
   }
 
+  // ---------------------------------------------------------------------------
+  // MQTT config setter / masked getter (same pattern as wave-4 §2 S3)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Write the `mqtt:` + `latency_alert:` blocks to config.yaml and the broker
+   * password to data/secrets.json (never the yaml), then drop the app's live
+   * MQTT client so the next publish reconnects with the new settings.
+   */
+  async setMqtt(name: string, input: SetMqttInput): Promise<MaskedMqtt> {
+    if (!(await this.get(name))) {
+      throw new NotFoundException(`app "${name}" not found`);
+    }
+    const disk = this.readDiskConfig(name);
+
+    if (input.enabled !== undefined) disk.mqtt.enabled = input.enabled;
+    if (input.url !== undefined) disk.mqtt.url = input.url.trim();
+    if (input.username !== undefined) disk.mqtt.username = input.username;
+    if (input.topicPrefix !== undefined) {
+      disk.mqtt.topic_prefix = input.topicPrefix.trim();
+    }
+    if (input.qos !== undefined) {
+      disk.mqtt.qos = input.qos === 1 || input.qos === 2 ? input.qos : 0;
+    }
+    if (input.tls !== undefined) disk.mqtt.tls = input.tls;
+    if (Array.isArray(input.events)) {
+      const events = input.events.map((e) => String(e).trim()).filter(Boolean);
+      disk.mqtt.events = events.length ? events : ['all'];
+    }
+    if (input.logs) {
+      if (input.logs.enabled !== undefined) {
+        disk.mqtt.logs.enabled = input.logs.enabled;
+      }
+      if (input.logs.level !== undefined) {
+        disk.mqtt.logs.level = MQTT_LOG_LEVELS.has(input.logs.level)
+          ? input.logs.level
+          : 'info';
+      }
+    }
+    if (input.latencyAlert) {
+      const la = input.latencyAlert;
+      if (la.enabled !== undefined) disk.latency_alert.enabled = la.enabled;
+      if (la.thresholdMs !== undefined) {
+        disk.latency_alert.threshold_ms = la.thresholdMs;
+      }
+      if (la.cooldownSeconds !== undefined) {
+        disk.latency_alert.cooldown_seconds = la.cooldownSeconds;
+      }
+      if (la.intervalSeconds !== undefined) {
+        disk.latency_alert.interval_seconds = la.intervalSeconds;
+      }
+    }
+
+    // Persist the block (no secrets), then the password (async store + legacy
+    // sync writer, mirroring setS3), then drop the live client.
+    this.writeDiskConfig(name, disk);
+    if (input.password) {
+      this.writeSecret(disk.mqtt.password_env, input.password);
+      await this.secrets.set(disk.mqtt.password_env, input.password);
+    }
+    this.secrets.invalidate();
+    this.disconnectMqtt(name);
+    return this.maskedMqtt(disk);
+  }
+
+  /** MQTT config with the password masked (never returned in clear). */
+  async getMqtt(name: string): Promise<MaskedMqtt> {
+    if (!(await this.get(name))) {
+      throw new NotFoundException(`app "${name}" not found`);
+    }
+    return this.maskedMqtt(this.readDiskConfig(name));
+  }
+
+  private maskedMqtt(disk: DiskConfig): MaskedMqtt {
+    const resolved = this.resolveMqtt(disk);
+    return {
+      enabled: resolved.enabled,
+      url: resolved.url,
+      username: resolved.username,
+      topicPrefix: resolved.topicPrefix,
+      qos: resolved.qos,
+      tls: resolved.tls,
+      events: resolved.events,
+      logs: resolved.logs,
+      passwordEnv: disk.mqtt.password_env,
+      password: this.mask(resolved.password),
+      hasPassword: !!resolved.password,
+      configured: resolved.enabled && !!resolved.url,
+      latencyAlert: AppsService.resolveLatencyAlert(disk.latency_alert),
+    };
+  }
+
+  /**
+   * Best-effort: drop the app's live MQTT client (config changed / app gone)
+   * via the global MQTT_SERVICE. Resolved lazily through ModuleRef — same
+   * no-cycle pattern as the samples hand-off.
+   */
+  private disconnectMqtt(name: string): void {
+    try {
+      const mqtt = this.moduleRef.get<MqttServiceContract>(MQTT_SERVICE, {
+        strict: false,
+      });
+      void mqtt?.disconnectApp(name).catch(() => undefined);
+    } catch {
+      /* mqtt module absent (tests) — nothing to drop */
+    }
+  }
+
   /**
    * Validate a raw YAML config (wave-4 §1): must parse and carry the minimal
    * shape. Returns soft warnings for missing-but-tolerated blocks. Throws
@@ -963,6 +1165,12 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     if (s3.key !== undefined || s3.secret !== undefined) {
       warnings.push(
         's3.key/s3.secret in the yaml are ignored; use PUT /apps/:app/s3 to set credentials',
+      );
+    }
+    const mqtt = (obj.mqtt as Record<string, unknown>) || {};
+    if (mqtt.password !== undefined) {
+      warnings.push(
+        'mqtt.password in the yaml is ignored; use PUT /apps/:app/mqtt to set the broker password',
       );
     }
     if (obj.room_prefix === undefined) {
@@ -1075,6 +1283,23 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         vod_renditions: [],
       },
       callbacks: { url: '', secret: '' },
+      mqtt: {
+        enabled: false,
+        url: '',
+        username: '',
+        password_env: `APP_${envSlug}_MQTT_PASSWORD`,
+        topic_prefix: `streamhub/${name}`,
+        qos: 0,
+        tls: false,
+        events: ['all'],
+        logs: { enabled: false, level: 'info' },
+      },
+      latency_alert: {
+        enabled: false,
+        threshold_ms: 1000,
+        cooldown_seconds: 60,
+        interval_seconds: 10,
+      },
       features: {
         rtmp_password: false,
         viewer_counter: true,
@@ -1138,6 +1363,16 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
             enabled: (over.rtmp?.transcode ?? base.rtmp.transcode) === true,
           },
       callbacks: { ...base.callbacks, ...(over.callbacks ?? {}) },
+      mqtt: {
+        ...base.mqtt,
+        ...(over.mqtt ?? {}),
+        events:
+          Array.isArray(over.mqtt?.events) && over.mqtt!.events.length
+            ? over.mqtt!.events
+            : base.mqtt.events,
+        logs: { ...base.mqtt.logs, ...(over.mqtt?.logs ?? {}) },
+      },
+      latency_alert: { ...base.latency_alert, ...(over.latency_alert ?? {}) },
       features: { ...base.features, ...(over.features ?? {}) },
     };
   }
@@ -1231,6 +1466,39 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         disk.callbacks.secret = patch.callbacks.secret;
       }
     }
+    if (patch.mqtt) {
+      const m = patch.mqtt;
+      if (m.enabled !== undefined) disk.mqtt.enabled = m.enabled;
+      if (m.url !== undefined) disk.mqtt.url = m.url.trim();
+      if (m.username !== undefined) disk.mqtt.username = m.username;
+      if (m.topicPrefix !== undefined) {
+        disk.mqtt.topic_prefix = m.topicPrefix.trim();
+      }
+      if (m.qos !== undefined) disk.mqtt.qos = m.qos;
+      if (m.tls !== undefined) disk.mqtt.tls = m.tls;
+      if (Array.isArray(m.events)) disk.mqtt.events = m.events;
+      if (m.logs) {
+        if (m.logs.enabled !== undefined) {
+          disk.mqtt.logs.enabled = m.logs.enabled;
+        }
+        if (m.logs.level !== undefined) disk.mqtt.logs.level = m.logs.level;
+      }
+      // Secret → out of the yaml, into data/secrets.json (empty keeps stored).
+      if (m.password) this.writeSecret(disk.mqtt.password_env, m.password);
+    }
+    if (patch.latencyAlert) {
+      const la = patch.latencyAlert;
+      if (la.enabled !== undefined) disk.latency_alert.enabled = la.enabled;
+      if (la.thresholdMs !== undefined) {
+        disk.latency_alert.threshold_ms = la.thresholdMs;
+      }
+      if (la.cooldownSeconds !== undefined) {
+        disk.latency_alert.cooldown_seconds = la.cooldownSeconds;
+      }
+      if (la.intervalSeconds !== undefined) {
+        disk.latency_alert.interval_seconds = la.intervalSeconds;
+      }
+    }
     if (patch.features) {
       const f = patch.features;
       if (f.rtmpPassword !== undefined) disk.features.rtmp_password = f.rtmpPassword;
@@ -1288,6 +1556,8 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       rtmp: { enabled: disk.rtmp.enabled, transcode: disk.rtmp.transcode },
       transcoding: this.resolveTranscoding(disk),
       callbacks: { url: disk.callbacks.url, secret: disk.callbacks.secret },
+      mqtt: this.resolveMqtt(disk),
+      latencyAlert: AppsService.resolveLatencyAlert(disk.latency_alert),
       features: {
         rtmpPassword: !!disk.features.rtmp_password,
         viewerCounter: !!disk.features.viewer_counter,
@@ -1359,6 +1629,50 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       encoding,
       vodAdaptive: !!t.vod_adaptive,
       vodRenditions,
+    };
+  }
+
+  /**
+   * Resolve + sanitize the on-disk `mqtt:` block: password dereferenced from
+   * the secret store (env wins), qos clamped to 0|1|2, events defaulting to
+   * ['all'], log level falling back to 'info'.
+   */
+  private resolveMqtt(disk: DiskConfig): MqttConfig {
+    const m = disk.mqtt;
+    const qos: MqttQos = m.qos === 1 || m.qos === 2 ? m.qos : 0;
+    const events =
+      Array.isArray(m.events) && m.events.length
+        ? m.events.map((e) => String(e).trim()).filter(Boolean)
+        : ['all'];
+    const level = MQTT_LOG_LEVELS.has(String(m.logs?.level))
+      ? (m.logs.level as LogLevel)
+      : 'info';
+    return {
+      enabled: !!m.enabled,
+      url: (m.url || '').trim(),
+      username: m.username || '',
+      password: this.resolveSecret(m.password_env),
+      topicPrefix: (m.topic_prefix || '').trim() || `streamhub/${disk.name}`,
+      qos,
+      tls: !!m.tls,
+      events: events.length ? events : ['all'],
+      logs: { enabled: !!m.logs?.enabled, level },
+    };
+  }
+
+  /** Resolve + sanitize the on-disk `latency_alert:` block (defaults applied). */
+  private static resolveLatencyAlert(
+    disk: DiskConfig['latency_alert'],
+  ): LatencyAlertConfig {
+    const num = (v: unknown, fallback: number, min: number): number => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= min ? n : fallback;
+    };
+    return {
+      enabled: !!disk?.enabled,
+      thresholdMs: num(disk?.threshold_ms, 1000, 1),
+      cooldownSeconds: num(disk?.cooldown_seconds, 60, 0),
+      intervalSeconds: num(disk?.interval_seconds, 10, 2),
     };
   }
 

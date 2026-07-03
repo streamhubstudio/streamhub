@@ -62,6 +62,11 @@ const EVENT_GROUPS: { groupKey: string; events: string }[] = [
     events:
       'stream_started, stream_ended, recording_started, recording_part_ready, recording_ready, recording_failed, snapshot_taken, vod_ready, chat_message, reaction',
   },
+  {
+    groupKey: 'pluginsAlerts',
+    events:
+      'plugin_worker_started, plugin_worker_stopped, plugin_worker_error, stream.latency_high, stream.latency_recovered',
+  },
 ]
 
 // --- unified save status -----------------------------------------------------
@@ -100,7 +105,7 @@ function SaveStatus({
 
 // --- section anchors ---------------------------------------------------------
 
-const SECTIONS = ['callbacks', 's3', 'features', 'qc'] as const
+const SECTIONS = ['callbacks', 'mqtt', 's3', 'features', 'qc'] as const
 
 function SectionNav() {
   const { t } = useTranslation('integracionesTab')
@@ -250,6 +255,258 @@ function CallbacksCard({ app }: { app: string }) {
             onClick={() => save.mutate()}
           >
             {save.isPending ? t('callbacks.saving') : t('callbacks.save')}
+          </Button>
+          <SaveStatus state={save.isError ? 'error' : state} />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// --- MQTT --------------------------------------------------------------------
+
+const MQTT_LOG_LEVELS = ['trace', 'debug', 'info', 'warn', 'error', 'fatal']
+
+function MqttCard({ app }: { app: string }) {
+  const { t } = useTranslation(['integracionesTab', 'common'])
+  const qc = useQueryClient()
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['app-mqtt', app],
+    queryFn: ({ signal }) => api.apps.getMqtt(app, signal),
+  })
+
+  const [enabled, setEnabled] = useState(false)
+  const [url, setUrl] = useState('')
+  const [username, setUsername] = useState('')
+  // Secret: never prefilled. Sent only when the user types a new value.
+  const [password, setPassword] = useState('')
+  const [topicPrefix, setTopicPrefix] = useState('')
+  const [qos, setQos] = useState('0')
+  const [tls, setTls] = useState(false)
+  const [events, setEvents] = useState('all')
+  const [logsEnabled, setLogsEnabled] = useState(false)
+  const [logsLevel, setLogsLevel] = useState('info')
+  const [laEnabled, setLaEnabled] = useState(false)
+  const [laThreshold, setLaThreshold] = useState('1000')
+  const [laCooldown, setLaCooldown] = useState('60')
+
+  useEffect(() => {
+    if (!data) return
+    setEnabled(Boolean(data.enabled))
+    setUrl(data.url ?? '')
+    setUsername(data.username ?? '')
+    setPassword('')
+    setTopicPrefix(data.topicPrefix ?? '')
+    setQos(String(data.qos ?? 0))
+    setTls(Boolean(data.tls))
+    setEvents((data.events ?? ['all']).join(', '))
+    setLogsEnabled(Boolean(data.logs?.enabled))
+    setLogsLevel(data.logs?.level ?? 'info')
+    setLaEnabled(Boolean(data.latencyAlert?.enabled))
+    setLaThreshold(String(data.latencyAlert?.thresholdMs ?? 1000))
+    setLaCooldown(String(data.latencyAlert?.cooldownSeconds ?? 60))
+  }, [data])
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.apps.putMqtt(app, {
+        enabled,
+        url: url.trim(),
+        username: username.trim(),
+        topicPrefix: topicPrefix.trim(),
+        qos: Number(qos) || 0,
+        tls,
+        events: events
+          .split(',')
+          .map((e) => e.trim())
+          .filter(Boolean),
+        logs: { enabled: logsEnabled, level: logsLevel },
+        latencyAlert: {
+          enabled: laEnabled,
+          thresholdMs: Math.max(1, Number(laThreshold) || 1000),
+          cooldownSeconds: Math.max(0, Number(laCooldown) || 0),
+        },
+        // Omit an empty password so the server keeps the stored one.
+        ...(password.trim() ? { password: password.trim() } : {}),
+      }),
+    onSuccess: () => {
+      setPassword('')
+      qc.invalidateQueries({ queryKey: ['app-mqtt', app] })
+    },
+  })
+
+  if (isLoading) return <Loading label={t('mqtt.loading')} />
+  if (isError)
+    return <ErrorBanner message={errMessage(error, t('mqtt.loadError'))} />
+
+  const dirty =
+    enabled !== Boolean(data?.enabled) ||
+    url !== (data?.url ?? '') ||
+    username !== (data?.username ?? '') ||
+    topicPrefix !== (data?.topicPrefix ?? '') ||
+    qos !== String(data?.qos ?? 0) ||
+    tls !== Boolean(data?.tls) ||
+    events !== (data?.events ?? ['all']).join(', ') ||
+    logsEnabled !== Boolean(data?.logs?.enabled) ||
+    logsLevel !== (data?.logs?.level ?? 'info') ||
+    laEnabled !== Boolean(data?.latencyAlert?.enabled) ||
+    laThreshold !== String(data?.latencyAlert?.thresholdMs ?? 1000) ||
+    laCooldown !== String(data?.latencyAlert?.cooldownSeconds ?? 60) ||
+    password.trim() !== ''
+  const state: SaveState = save.isPending
+    ? 'saving'
+    : dirty
+      ? 'dirty'
+      : save.isSuccess
+        ? 'saved'
+        : 'idle'
+
+  return (
+    <Card>
+      <SectionTitle title={t('mqtt.title')} subtitle={t('mqtt.subtitle')} />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3">
+          <div>
+            <div className="text-sm text-slate-100">{t('mqtt.enabledLabel')}</div>
+            <div className="mt-0.5 text-[11px] text-slate-500">
+              {t('mqtt.enabledHint')}
+            </div>
+          </div>
+          <Toggle checked={enabled} onChange={setEnabled} />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('mqtt.urlLabel')} hint={t('mqtt.urlHint')}>
+            <TextInput
+              value={url}
+              placeholder="mqtts://broker.example.com:8883"
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </Field>
+          <Field label={t('mqtt.prefixLabel')} hint={t('mqtt.prefixHint')}>
+            <TextInput
+              value={topicPrefix}
+              placeholder={`streamhub/${app}`}
+              onChange={(e) => setTopicPrefix(e.target.value)}
+            />
+          </Field>
+          <Field label={t('mqtt.usernameLabel')}>
+            <TextInput
+              value={username}
+              placeholder="user"
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </Field>
+          <Field
+            label={t('mqtt.passwordLabel')}
+            hint={data?.hasPassword ? t('mqtt.storedHint') : undefined}
+          >
+            <TextInput
+              type="password"
+              autoComplete="off"
+              value={password}
+              placeholder={data?.password || '••••••••'}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+          <Field label={t('mqtt.qosLabel')} hint={t('mqtt.qosHint')}>
+            <Select value={qos} onChange={(e) => setQos(e.target.value)}>
+              <option value="0">0 — at most once</option>
+              <option value="1">1 — at least once</option>
+              <option value="2">2 — exactly once</option>
+            </Select>
+          </Field>
+          <Field label={t('mqtt.eventsLabel')} hint={t('mqtt.eventsHint')}>
+            <TextInput
+              value={events}
+              placeholder="all"
+              onChange={(e) => setEvents(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3">
+          <div>
+            <div className="text-sm text-slate-100">{t('mqtt.tlsLabel')}</div>
+            <div className="mt-0.5 text-[11px] text-slate-500">
+              {t('mqtt.tlsHint')}
+            </div>
+          </div>
+          <Toggle checked={tls} onChange={setTls} />
+        </div>
+
+        {/* Log forwarding */}
+        <div className="rounded-lg border border-navy-600 bg-navy-700/40 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm text-slate-100">{t('mqtt.logsLabel')}</div>
+              <div className="mt-0.5 text-[11px] text-slate-500">
+                {t('mqtt.logsHint')}
+              </div>
+            </div>
+            <Toggle checked={logsEnabled} onChange={setLogsEnabled} />
+          </div>
+          {logsEnabled && (
+            <div className="mt-3 max-w-48">
+              <Field label={t('mqtt.logsLevelLabel')}>
+                <Select
+                  value={logsLevel}
+                  onChange={(e) => setLogsLevel(e.target.value)}
+                >
+                  {MQTT_LOG_LEVELS.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          )}
+        </div>
+
+        {/* Latency alert */}
+        <div className="rounded-lg border border-navy-600 bg-navy-700/40 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm text-slate-100">
+                {t('mqtt.latencyLabel')}
+              </div>
+              <div className="mt-0.5 text-[11px] text-slate-500">
+                {t('mqtt.latencyHint')}
+              </div>
+            </div>
+            <Toggle checked={laEnabled} onChange={setLaEnabled} />
+          </div>
+          {laEnabled && (
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <Field label={t('mqtt.latencyThresholdLabel')}>
+                <TextInput
+                  type="number"
+                  value={laThreshold}
+                  onChange={(e) => setLaThreshold(e.target.value)}
+                />
+              </Field>
+              <Field label={t('mqtt.latencyCooldownLabel')}>
+                <TextInput
+                  type="number"
+                  value={laCooldown}
+                  onChange={(e) => setLaCooldown(e.target.value)}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+
+        {save.isError && (
+          <ErrorBanner message={errMessage(save.error, t('mqtt.saveError'))} />
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="accent"
+            disabled={save.isPending || !dirty}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? t('mqtt.saving') : t('mqtt.save')}
           </Button>
           <SaveStatus state={save.isError ? 'error' : state} />
         </div>
@@ -633,6 +890,9 @@ export function IntegracionesTab({ app }: { app: string }) {
       <SectionNav />
       <Section id="callbacks">
         <CallbacksCard app={app} />
+      </Section>
+      <Section id="mqtt">
+        <MqttCard app={app} />
       </Section>
       <Section id="s3">
         <S3Card app={app} />

@@ -24,6 +24,11 @@ import {
 import { TenancyService } from '../tenancy/tenancy.service';
 import { hashPassword, verifyPassword } from './password.util';
 import { TotpService } from './totp.service';
+import {
+  SessionContext,
+  SessionService,
+  setRequestSessionId,
+} from './session.service';
 
 export interface LoginResult {
   /** Signed HS256 JWT (sub=user, ~12h expiry). */
@@ -115,7 +120,28 @@ export class AuthService implements AuthValidatorContract {
     private readonly config: ConfigService,
     private readonly tenancy: TenancyService,
     private readonly totp: TotpService,
+    private readonly sessions: SessionService,
   ) {}
+
+  /**
+   * Mint a session row (active-sessions) and return a JWT carrying its id as
+   * `sid`. Every human sign-in path (signup / password login / magic-link)
+   * routes through here so the token is revocable from "Mi cuenta".
+   */
+  private issueSessionToken(
+    userId: string,
+    email: string | null,
+    secret: string,
+    session?: SessionContext,
+  ): string {
+    const sid = this.sessions.create({
+      userId,
+      email,
+      ip: session?.ip ?? null,
+      userAgent: session?.userAgent ?? null,
+    });
+    return signJwt({ sub: userId, sid }, secret, AuthService.JWT_TTL_SECONDS);
+  }
 
   // ---------------------------------------------------------------------------
   // Built-in auth (POST /auth/signup, POST /auth/login)
@@ -143,7 +169,10 @@ export class AuthService implements AuthValidatorContract {
    * PENDING user may "sign up" (that completes their invite by attaching a
    * password); a brand-new email is refused with 403.
    */
-  async signup(input: SignupInput): Promise<LoginResult> {
+  async signup(
+    input: SignupInput,
+    session?: SessionContext,
+  ): Promise<LoginResult> {
     const secret = this.requireSecret();
     const email = input.email.trim().toLowerCase();
     const password = input.password;
@@ -191,7 +220,7 @@ export class AuthService implements AuthValidatorContract {
       this.tenancy.addMembership(userId, tenantId, 'owner');
     }
 
-    return { token: signJwt({ sub: userId }, secret, AuthService.JWT_TTL_SECONDS) };
+    return { token: this.issueSessionToken(userId, email, secret, session) };
   }
 
   /**
@@ -208,7 +237,12 @@ export class AuthService implements AuthValidatorContract {
    * (401 `totp_required` / `totp_invalid` otherwise). The break-glass path is
    * deliberately exempt — ADMIN_USER/ADMIN_PASS can never be locked out.
    */
-  async login(user: string, pass: string, code?: string): Promise<LoginResult> {
+  async login(
+    user: string,
+    pass: string,
+    code?: string,
+    session?: SessionContext,
+  ): Promise<LoginResult> {
     const secret = this.requireSecret();
     const adminUser = this.config.adminUser;
     const adminPass = this.config.adminPass;
@@ -219,10 +253,11 @@ export class AuthService implements AuthValidatorContract {
       const passOk = this.safeEqual(pass, adminPass);
       if (userOk && passOk) {
         return {
-          token: signJwt(
-            { sub: TenancyService.ADMIN_USER_ID },
+          token: this.issueSessionToken(
+            TenancyService.ADMIN_USER_ID,
+            adminUser,
             secret,
-            AuthService.JWT_TTL_SECONDS,
+            session,
           ),
         };
       }
@@ -240,7 +275,7 @@ export class AuthService implements AuthValidatorContract {
       // Second factor AFTER the password checks out (never leaks which failed).
       this.totp.assertLoginCode(row.id, code);
       return {
-        token: signJwt({ sub: row.id }, secret, AuthService.JWT_TTL_SECONDS),
+        token: this.issueSessionToken(row.id, row.email, secret, session),
       };
     }
 
@@ -436,7 +471,7 @@ export class AuthService implements AuthValidatorContract {
    */
   private async validateJwt(req: Request, token: string): Promise<AuthContext> {
     const secret = this.requireSecret();
-    let payload: { sub?: string };
+    let payload: { sub?: string; sid?: string };
     try {
       payload = verifyJwt(token, secret);
     } catch {
@@ -444,6 +479,19 @@ export class AuthService implements AuthValidatorContract {
     }
     const sub = typeof payload.sub === 'string' ? payload.sub : '';
     if (!sub) throw new UnauthorizedException('Invalid or expired token');
+
+    // Active-sessions: tokens minted after this feature carry a `sid`. Reject
+    // one whose session was revoked (or no longer exists) so "sign out this
+    // device" takes effect everywhere. Legacy tokens without a `sid` are still
+    // accepted (grace) so shipping this never mass-logs-out live sessions.
+    const sid = typeof payload.sid === 'string' ? payload.sid : null;
+    if (sid) {
+      if (!this.sessions.isActive(sid)) {
+        throw new UnauthorizedException('Session revoked or expired');
+      }
+      setRequestSessionId(req, sid);
+      this.sessions.touch(sid);
+    }
 
     const user = this.tenancy.getUser(sub);
 

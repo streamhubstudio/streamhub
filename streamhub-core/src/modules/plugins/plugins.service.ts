@@ -11,6 +11,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   APPS_SERVICE,
@@ -34,6 +35,10 @@ import {
   PluginUiSlot,
 } from './plugin.contract';
 import { PluginRegistryService } from './plugin-registry.service';
+import {
+  LiveDataView,
+  PluginLiveDataService,
+} from './plugin-livedata.service';
 import {
   PluginWorkerManager,
   WorkerLogLine,
@@ -88,6 +93,9 @@ export class PluginsService {
     private readonly workers: PluginWorkerManager,
     @Inject(APPS_SERVICE) private readonly apps: AppsServiceContract,
     @Inject(LOGS_SERVICE) private readonly logs: LogsServiceContract,
+    // Defaulted so existing manual constructions (unit specs) keep compiling;
+    // under Nest DI the module-registered singleton is injected.
+    private readonly livedata: PluginLiveDataService = new PluginLiveDataService(),
   ) {}
 
   /** Resolve the app or 404. Returns the record (with id). */
@@ -263,11 +271,12 @@ export class PluginsService {
     return this.get(app, id);
   }
 
-  /** Uninstall: stop any worker, drop the row. Idempotent. */
+  /** Uninstall: stop any worker, drop the row + live data. Idempotent. */
   async remove(app: string, id: string): Promise<void> {
     const appRec = await this.requireApp(app);
     this.requireMeta(id);
     this.workers.stop(app, id);
+    this.livedata.clear(app, id);
     this.repo.remove(app, id);
     this.logs.write(
       'info',
@@ -334,6 +343,73 @@ export class PluginsService {
       throw new BadRequestException(`plugin '${id}' has no worker`);
     }
     return this.workers.status(app, id);
+  }
+
+  /**
+   * LIVE-DATA INGEST (worker → core). Accepts one JSON payload from the
+   * plugin's RUNNING worker and stores it as the latest live data for
+   * (app, plugin, room). AuthN: the `token` must equal the per-start ingest
+   * token the worker-hook injected into the worker env (STREAMHUB_INGEST_TOKEN)
+   * — so only the process the core itself spawned can push, and a stopped
+   * worker's token is dead immediately.
+   */
+  async ingestLive(
+    app: string,
+    id: string,
+    token: string | undefined,
+    payload: Record<string, unknown>,
+  ): Promise<{ ok: true }> {
+    await this.requireApp(app);
+    const meta = this.requireMeta(id);
+    if (!meta.needsWorker) {
+      throw new BadRequestException(
+        `plugin '${id}' has no worker — live ingest is worker-only`,
+      );
+    }
+    const expected = this.workers.ingestToken(app, id);
+    if (!expected || !token || token !== expected) {
+      throw new UnauthorizedException('invalid or missing ingest token');
+    }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new BadRequestException('live payload must be a JSON object');
+    }
+    const room = typeof payload.room === 'string' ? payload.room.trim() : '';
+    if (!room) {
+      throw new BadRequestException("live payload must carry a 'room'");
+    }
+    if (!this.livedata.push(app, id, room, payload)) {
+      throw new BadRequestException('live payload too large');
+    }
+    return { ok: true };
+  }
+
+  /**
+   * LIVE-DATA READ (player → core, PUBLIC). Latest worker payload for an
+   * ENABLED player-overlay plugin. Serves the anonymous /play and /embed
+   * players (same trust level as GET /plugins/public), so it is gated hard:
+   * only installed + enabled `player-overlay` plugins ever answer — everything
+   * else 404s. Freshness (`ts`/`ageMs`) lets the overlay drop stale boxes.
+   */
+  async liveOverlayData(
+    app: string,
+    id: string,
+    room: string,
+  ): Promise<LiveDataView | { ts: null; ageMs: null; payload: null }> {
+    await this.requireApp(app);
+    const meta = this.requireMeta(id);
+    const row = this.repo.get(app, id);
+    if (meta.ui !== 'player-overlay' || !row || !row.enabled) {
+      throw new NotFoundException(
+        `plugin '${id}' has no public live data for app '${app}'`,
+      );
+    }
+    return (
+      this.livedata.latest(app, id, room.trim()) ?? {
+        ts: null,
+        ageMs: null,
+        payload: null,
+      }
+    );
   }
 
   /** Per-plugin logs: worker ring buffer + persisted rows. */

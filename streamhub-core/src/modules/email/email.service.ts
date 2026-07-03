@@ -93,37 +93,6 @@ export class EmailService {
   }
 
   /**
-   * Send the password-reset email. Plain-text + HTML body with a short validity
-   * notice (30-min single-use link). Never throws — returns a {@link SendResult}.
-   */
-  async sendPasswordReset(email: string, url: string): Promise<SendResult> {
-    const subject = 'Reset your StreamHub password';
-    const text =
-      `Reset your StreamHub password\n\n` +
-      `We received a request to reset your password. Click the link below to ` +
-      `choose a new one. It works once and expires in 30 minutes:\n\n` +
-      `${url}\n\n` +
-      `If you did not request this, you can safely ignore this email — your ` +
-      `password will not change.`;
-    const html =
-      `<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto">` +
-      `<h2 style="margin:0 0 16px">Reset your StreamHub password</h2>` +
-      `<p style="color:#334155;line-height:1.5">We received a request to reset ` +
-      `your password. Click the button below to choose a new one. ` +
-      `This link works once and expires in 30 minutes.</p>` +
-      `<p style="margin:24px 0"><a href="${this.escapeHtml(url)}" ` +
-      `style="background:#4f46e5;color:#fff;padding:12px 20px;border-radius:8px;` +
-      `text-decoration:none;display:inline-block">Reset password</a></p>` +
-      `<p style="color:#64748b;font-size:13px;line-height:1.5">Or paste this URL into your browser:<br>` +
-      `<a href="${this.escapeHtml(url)}">${this.escapeHtml(url)}</a></p>` +
-      `<p style="color:#94a3b8;font-size:12px;margin-top:24px">` +
-      `If you did not request this, you can safely ignore this email — your ` +
-      `password will not change.</p></div>`;
-
-    return this.send({ to: email, subject, text, html });
-  }
-
-  /**
    * Send a team-invitation email carrying a sign-in (magic) link. Never throws
    * — returns a {@link SendResult}.
    */

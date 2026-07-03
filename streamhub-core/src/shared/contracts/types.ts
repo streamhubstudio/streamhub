@@ -111,6 +111,60 @@ export interface AppFeatures {
   wsIngest?: WsIngestFeatures;
 }
 
+/** MQTT publish QoS level (per-app `mqtt.qos`). */
+export type MqttQos = 0 | 1 | 2;
+
+/** Per-app MQTT log forwarding (`mqtt.logs` block). */
+export interface MqttLogsConfig {
+  /** Forward the app's log stream to `<topicPrefix>/log/<level>`. */
+  enabled: boolean;
+  /** Minimum level forwarded (trace < debug < info < warn < error < fatal). */
+  level: LogLevel;
+}
+
+/**
+ * Resolved per-app MQTT event publishing config (config.yaml `mqtt:` block).
+ * `password` is already resolved from the secret store (the yaml only carries
+ * a `password_env` ref, mirroring the S3 credential pattern) — NEVER return it
+ * raw over the API (mask like S3 creds).
+ */
+export interface MqttConfig {
+  /** Master switch. Default false. */
+  enabled: boolean;
+  /** Broker URL, e.g. mqtt://host:1883 or mqtts://host:8883. Empty = off. */
+  url: string;
+  /** Optional broker username. */
+  username: string;
+  /** Resolved broker password (from env / data/secrets.json). */
+  password: string;
+  /** Topic root; defaults to `streamhub/<app>`. */
+  topicPrefix: string;
+  /** Publish QoS (0 default). */
+  qos: MqttQos;
+  /** Force TLS (mqtt:// is upgraded to mqtts://). */
+  tls: boolean;
+  /** Event filter: ['all'] (default) or an explicit list of event names. */
+  events: string[];
+  /** App-log forwarding. */
+  logs: MqttLogsConfig;
+}
+
+/**
+ * Per-app stream latency/health alerting (config.yaml `latency_alert:` block).
+ * On breach the core emits `stream.latency_high` (and later
+ * `stream.latency_recovered`) through BOTH the callbacks pipeline and MQTT.
+ */
+export interface LatencyAlertConfig {
+  /** Master switch. Default false. */
+  enabled: boolean;
+  /** Breach threshold for the sampled per-room probe RTT, in ms. */
+  thresholdMs: number;
+  /** Minimum seconds between successive `stream.latency_high` alerts per room. */
+  cooldownSeconds: number;
+  /** Sampling interval per app, in seconds (default 10). */
+  intervalSeconds: number;
+}
+
 /**
  * Full parsed representation of an app's config.yaml (see SPEC §7).
  * Note: s3 here carries the resolved credentials (S3Config), not the raw
@@ -170,6 +224,17 @@ export interface AppConfig {
     url: string;
     secret: string;
   };
+  /**
+   * Per-app MQTT event publishing. Optional in the type for back-compat with
+   * older fixtures; AppsService always resolves it (defaults applied,
+   * `enabled: false` when the block is missing on disk).
+   */
+  mqtt?: MqttConfig;
+  /**
+   * Per-app stream latency alerting. Optional for back-compat; AppsService
+   * always resolves it (defaults applied, disabled when missing on disk).
+   */
+  latencyAlert?: LatencyAlertConfig;
   /** Wave-2 feature flags (SPEC §16). Always resolved (defaults applied). */
   features: AppFeatures;
 }
@@ -284,4 +349,14 @@ export type CallbackEvent =
   // SPEC §16: client-side chat/reactions relayed via data channels; the core
   // fires these outbound callbacks when a data message is sent server-side.
   | 'chat_message'
-  | 'reaction';
+  | 'reaction'
+  // Plugin worker lifecycle (plugins framework worker-hook): fired when a
+  // per-app plugin worker process starts, stops (clean) or errors/crashes.
+  | 'plugin_worker_started'
+  | 'plugin_worker_stopped'
+  | 'plugin_worker_error'
+  // Stream health alerts (mqtt module latency monitor): the per-room probe RTT
+  // crossed `latency_alert.threshold_ms` (high) / dropped back under it
+  // (recovered). Dotted names are intentional (alert family).
+  | 'stream.latency_high'
+  | 'stream.latency_recovered';

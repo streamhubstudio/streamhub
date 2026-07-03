@@ -16,6 +16,7 @@ import type {
   CallbacksServiceContract,
   LiveKitServiceContract,
   LogsServiceContract,
+  MqttServiceContract,
   RecordingServiceContract,
   S3ServiceContract,
   SamplesServiceContract,
@@ -155,6 +156,17 @@ export function mockSamplesService(
     write: jest.fn(async () => undefined),
   };
   return apply(base, overrides) as Mocked<SamplesServiceContract>;
+}
+
+export function mockMqttService(
+  overrides?: Partial<MqttServiceContract>,
+): Mocked<MqttServiceContract> {
+  const base: MqttServiceContract = {
+    publishEvent: jest.fn(async () => undefined),
+    publishLog: jest.fn(async () => undefined),
+    disconnectApp: jest.fn(async () => undefined),
+  };
+  return apply(base, overrides) as Mocked<MqttServiceContract>;
 }
 
 export function mockRecordingService(

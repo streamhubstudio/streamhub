@@ -1,7 +1,7 @@
 # StreamHub YOLO worker runtime deps.
 #
-# ultralytics pulls torch + torchvision (large). On a CPU-only host, install
-# the CPU wheels of torch first to avoid CUDA downloads:
+# ultralytics pulls torch + torchvision (large). On a CPU-only host (e.g.
+# your-server) install the CPU wheels of torch first to avoid CUDA downloads:
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 #   pip install -r requirements.txt
 #

@@ -2,9 +2,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import * as os from 'os';
 
 import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
@@ -16,6 +18,27 @@ export const MAX_STATS_BYTES = 4096;
 
 /** A node is considered stale once its last heartbeat is older than this. */
 export const NODE_STALE_AFTER_SECONDS = 90;
+
+/**
+ * Statuses an operator pins via `PATCH /cluster/nodes/:id`. A node's own
+ * heartbeat may clear staleness (refresh `last_seen_at`) but must NEVER promote
+ * one of these back to `active` — the operator's drain/disable decision stands
+ * until the operator lifts it. `active`/`down`/`unknown` are non-operator states
+ * a heartbeat is free to promote to `active`.
+ */
+export const OPERATOR_PINNED_STATUSES = ['draining', 'disabled'] as const;
+
+/** Stable id + name of the origin's own self-registered `nodes` row. */
+export const ORIGIN_NODE_ID = 'origin';
+
+/**
+ * SQL `CASE` shared by heartbeat + origin self-register: promote the row to
+ * `active` UNLESS it is operator-pinned (draining/disabled), in which case the
+ * existing status is kept verbatim.
+ */
+const STATUS_KEEP_OPERATOR = `CASE WHEN status IN (${OPERATOR_PINNED_STATUSES.map(
+  (s) => `'${s}'`,
+).join(', ')}) THEN status ELSE 'active' END`;
 
 /**
  * One row of the global `nodes` registry (no secrets). `stats` is the parsed
@@ -96,19 +119,37 @@ export interface ClusterInfo {
  *
  * Owns the global `nodes` table: a joining node upserts BY NAME (keeping its id
  * so a re-run of the installer is idempotent) and gets back the bootstrap
- * config it needs to attach to the LiveKit control plane. Heartbeats keep the
- * node marked `active` and carry an optional free-form `stats` blob. The
- * manager surface lists nodes (with parsed stats + a derived `stale` flag),
- * exposes cluster info (join command) and lets an operator patch/remove a node.
+ * config it needs to attach to the LiveKit control plane. Heartbeats refresh
+ * `last_seen_at`/`stats` and promote the node to `active` — but NEVER override an
+ * operator's drain/disable (see {@link OPERATOR_PINNED_STATUSES}). On boot, when
+ * clustering is enabled, the origin self-registers so the master appears in its
+ * own registry alongside the edges. The manager surface lists nodes (with parsed
+ * stats + a derived `stale` flag), exposes cluster info (join command) and lets
+ * an operator patch/remove a node.
  */
 @Injectable()
-export class ClusterService {
+export class ClusterService implements OnModuleInit {
   private readonly logger = new Logger(ClusterService.name);
 
   constructor(
     private readonly db: DbService,
     private readonly config: ConfigService,
   ) {}
+
+  /**
+   * On boot, ensure the origin appears in its OWN registry (fix: the master
+   * never self-registered, so it went `stale` in its own /cluster/nodes list).
+   * No-op unless clustering is enabled. Never crash boot on a registry hiccup.
+   */
+  onModuleInit(): void {
+    try {
+      this.registerSelf();
+    } catch (err) {
+      this.logger.error(
+        `origin self-register failed (continuing): ${(err as Error).message}`,
+      );
+    }
+  }
 
   /**
    * Register (or refresh) a node BY NAME. Existing → update url/region/status/
@@ -165,9 +206,12 @@ export class ClusterService {
   }
 
   /**
-   * Mark a node alive and refresh `last_seen_at`. When `stats` is supplied it is
-   * persisted verbatim (last-write-wins) after a ~4KB size guard; omitted stats
-   * leave the previous blob untouched. Unknown node → 404.
+   * Refresh a node's liveness: bump `last_seen_at` and (when `stats` is supplied,
+   * after a ~4KB guard) the `stats_json` blob; omitted stats leave the previous
+   * blob untouched. Status is promoted to `active` UNLESS the operator has pinned
+   * the node to draining/disabled — a heartbeat clears staleness but never
+   * reverts an operator decision (see {@link OPERATOR_PINNED_STATUSES}). Unknown
+   * node → 404.
    */
   heartbeat(nodeId: string, stats?: Record<string, unknown>): void {
     const db = this.db.global();
@@ -183,7 +227,8 @@ export class ClusterService {
       res = db
         .prepare(
           `UPDATE nodes
-             SET status = 'active', last_seen_at = datetime('now'), stats_json = ?
+             SET status = ${STATUS_KEEP_OPERATOR},
+                 last_seen_at = datetime('now'), stats_json = ?
            WHERE id = ?`,
         )
         .run(json, nodeId);
@@ -191,7 +236,7 @@ export class ClusterService {
       res = db
         .prepare(
           `UPDATE nodes
-             SET status = 'active', last_seen_at = datetime('now')
+             SET status = ${STATUS_KEEP_OPERATOR}, last_seen_at = datetime('now')
            WHERE id = ?`,
         )
         .run(nodeId);
@@ -296,6 +341,60 @@ export class ClusterService {
   // ---------------------------------------------------------------------------
   // internals
   // ---------------------------------------------------------------------------
+
+  /**
+   * Ensure the origin has a stable self-row in the registry (id/name `origin`).
+   * No-op when clustering is disabled. First boot inserts it `active`; later
+   * boots refresh url/stats/last_seen and re-promote to `active` only when not
+   * operator-pinned (mirrors heartbeat), never clobbering an operator-set
+   * name/region. The fixed id keeps the row stable across restarts.
+   */
+  private registerSelf(): void {
+    if (!this.config.clusterToken) return;
+    const db = this.db.global();
+    const url = this.masterUrl() || null;
+    const stats = JSON.stringify(this.selfStats());
+
+    const existing = db
+      .prepare('SELECT id FROM nodes WHERE id = ?')
+      .get(ORIGIN_NODE_ID) as { id: string } | undefined;
+
+    if (existing) {
+      db.prepare(
+        `UPDATE nodes
+           SET url = ?, status = ${STATUS_KEEP_OPERATOR},
+               last_seen_at = datetime('now'), stats_json = ?
+         WHERE id = ?`,
+      ).run(url, stats, ORIGIN_NODE_ID);
+    } else {
+      db.prepare(
+        `INSERT INTO nodes (id, name, url, region, status, last_seen_at, stats_json)
+         VALUES (?, 'origin', ?, 'origin', 'active', datetime('now'), ?)`,
+      ).run(ORIGIN_NODE_ID, url, stats);
+    }
+    this.logger.log(
+      `cluster self-register: origin node present in registry (${existing ? 'refresh' : 'new'})`,
+    );
+  }
+
+  /** This node's own resource stats for the registry (cpu/mem/cores). */
+  private selfStats(): Record<string, unknown> {
+    const cores = os.cpus().length;
+    const load1 = os.loadavg()[0];
+    const memTotal = os.totalmem();
+    const memFree = os.freemem();
+    return {
+      role: 'origin',
+      cores,
+      loadavg1: Number(load1.toFixed(2)),
+      // Load normalized by core count → comparable to an edge's reported cpu.
+      cpu: cores > 0 ? Number((load1 / cores).toFixed(3)) : 0,
+      memTotal,
+      memFree,
+      memUsedRatio:
+        memTotal > 0 ? Number(((memTotal - memFree) / memTotal).toFixed(3)) : 0,
+    };
+  }
 
   /** Master API base for the join command (STREAMHUB_PUBLIC_URL, sane fallbacks). */
   private masterUrl(): string {

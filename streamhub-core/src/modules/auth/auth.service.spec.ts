@@ -22,6 +22,7 @@ import { getAuthCtx, PLATFORM_TENANT_ID } from '../../shared/auth-context';
 import { ConfigService } from '../../shared/config/config.service';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { AuthService } from './auth.service';
+import { SessionService } from './session.service';
 import { TotpService } from './totp.service';
 
 const SECRET = 'test-jwt-secret-do-not-use-in-prod';
@@ -49,7 +50,16 @@ function makeAuth(overrides: Record<string, string> = {}): Harness {
   const tenancy = ctx.newService(TenancyService, ctx.db, ctx.config);
   tenancy.onModuleInit();
   const totp = ctx.newService(TotpService, ctx.config, tenancy);
-  const auth = ctx.newService(AuthService, ctx.db, ctx.config, tenancy, totp);
+  const sessions = ctx.newService(SessionService, ctx.db);
+  sessions.onModuleInit();
+  const auth = ctx.newService(
+    AuthService,
+    ctx.db,
+    ctx.config,
+    tenancy,
+    totp,
+    sessions,
+  );
   return { ctx, tenancy, auth, totp };
 }
 

@@ -1,6 +1,6 @@
 {
   "advanced": {
-    "summary": "Advanced — source of truth (config.yaml)",
+    "summary": "Advanced",
     "hint": "Raw YAML editor and backups. The controls above are shortcuts that write into it."
   },
   "presets": {

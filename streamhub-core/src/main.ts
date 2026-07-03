@@ -94,18 +94,22 @@ function mountHlsStatic(
  * in the MIDDLE before serving from `<DATA_DIR>/apps`. Terminal: a missing file
  * returns 404 instead of falling through to the SPA.
  *
- * SECURITY (Fold-4): editing a sample = arbitrary JS, and the panel is served
- * from the SAME origin (its admin JWT lives in this origin's localStorage). To
- * stop a malicious/edited sample from reading the panel's credentials we serve
- * every sample DOCUMENT under a CSP `sandbox` WITHOUT `allow-same-origin`:
- * the browser loads it into a UNIQUE OPAQUE ORIGIN, so its `localStorage` /
- * cookies are partitioned away from the real streamhub origin — `localStorage`
- * reads simply can't see the panel's token. `allow-scripts` is granted so the
- * player/SDK still runs; forms/popups are allowed for convenience.
+ * SECURITY: these are OUR generated templates (SamplesService renders them from
+ * the in-repo `sample-templates.ts`), NOT arbitrary user uploads — so the threat
+ * model is "keep the sample sandboxed" rather than "defend against hostile HTML".
+ * We serve every sample DOCUMENT under a CSP `sandbox` so it stays fenced off, but
+ * WITH `allow-same-origin` (integration fix): a publish-capable sample needs a
+ * real origin to (a) do a same-origin `fetch()` for its public play/listen token
+ * (no CORS layer exists for the API) and (b) call `getUserMedia()` — both are
+ * HARD-DENIED under an opaque origin, which killed every publish sample (incl. the
+ * conference). `allow-scripts` keeps the player/SDK running; `allow-forms`/`popups`
+ * /`modals` are for convenience. `frame-ancestors *` keeps embeds working.
  *
- * Consequence (documented for sample authors): samples therefore CANNOT rely on
- * any panel/admin credential. They MUST authenticate with a PUBLIC listen/embed
- * token (minted per room, passed via the page/query), never the admin token.
+ * Consequence (documented for sample authors): samples still authenticate with a
+ * PUBLIC listen/embed token (minted per room, passed via the page/query) or an
+ * ephemeral token — never a panel/admin credential. With `allow-same-origin` a
+ * sample technically shares this origin, so an operator editing a sample must
+ * treat that edit as trusted same-origin code (as they would any in-repo asset).
  *
  * The sandbox CSP is applied to HTML only; static assets (.js/.m3u8/.ts/...)
  * keep open CORS + CORP so cross-site embeds/CDNs can fetch them.
@@ -124,11 +128,12 @@ function mountSamplesStatic(
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Referrer-Policy', 'no-referrer');
       if (filePath.endsWith('.html') || filePath.endsWith('.htm')) {
-        // Opaque-origin sandbox: isolates the sample from the panel origin so
-        // it can't read the admin token. NO `allow-same-origin` on purpose.
+        // Sandboxed but same-origin: `allow-same-origin` lets our generated
+        // samples fetch their public play/listen token (same-origin, no CORS)
+        // and call getUserMedia() — both are hard-denied under an opaque origin.
         res.setHeader(
           'Content-Security-Policy',
-          "sandbox allow-scripts allow-forms allow-popups allow-modals; frame-ancestors *",
+          "sandbox allow-scripts allow-same-origin allow-forms allow-popups allow-modals; frame-ancestors *",
         );
         // Cacheless HTML so a re-edited sample is picked up immediately.
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

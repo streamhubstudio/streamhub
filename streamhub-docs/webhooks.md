@@ -233,11 +233,53 @@ Fired when an animated reaction is observed on the `reaction` topic. Enabled via
 }
 ```
 
+#### `plugin_worker_started` / `plugin_worker_stopped` / `plugin_worker_error`
+
+Fired by the plugins-framework worker hook when a per-app plugin worker process
+starts, exits cleanly (or is stopped) or errors/crashes.
+
+```json
+{
+  "id": "…", "event": "plugin_worker_error", "app": "live",
+  "timestamp": "2026-07-03T12:04:00.000Z",
+  "data": { "plugin": "yolo", "exitCode": 1, "signal": null }
+}
+```
+
+`data` carries `plugin` plus `pid` (started), `exitCode`+`signal` (stopped/crash)
+or `error` (spawn/process error).
+
+#### `stream.latency_high` / `stream.latency_recovered`
+
+Fired by the per-app latency monitor (`latency_alert:` config block) when a live
+room's sampled probe RTT crosses / recovers from the configured threshold. See
+[features/mqtt.md](features/mqtt.md#high-latency-alert) for the metric.
+
+```json
+{
+  "id": "…", "event": "stream.latency_high", "app": "live",
+  "timestamp": "2026-07-03T12:05:00.000Z",
+  "data": {
+    "room": "live-demo",
+    "rttMs": 2380,
+    "thresholdMs": 1000,
+    "metric": "livekit_room_probe_rtt_ms",
+    "participants": 12,
+    "publishers": 1
+  }
+}
+```
+
 > Implementation note: the canonical, code-backed outbound events today are
 > `stream_started`, `stream_ended`, `vod_ready` and `recording_failed` (shared signing/
 > envelope/retry path). `chat_message` and `reaction` are the SPEC §16 contract emitted
 > when the chat/reaction data-channel features are enabled; they use the **same envelope,
 > headers and HMAC signature** described above.
+
+> **MQTT mirror**: every outbound event on this page is ALSO published to the app's
+> MQTT broker when the per-app `mqtt:` block is enabled — same taxonomy and `data`
+> payload, envelope `{event, app, timestamp, data}`, topics
+> `<topic_prefix>/<category>/<event>`. See [features/mqtt.md](features/mqtt.md).
 
 ### Receiver example
 

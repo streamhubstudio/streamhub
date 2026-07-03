@@ -2,6 +2,8 @@
 # prior builds, secrets, or data into the image.
 **/node_modules
 **/dist
+**/__pycache__
+**/.pytest_cache
 **/.env
 **/.env.local
 .git

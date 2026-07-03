@@ -21,6 +21,7 @@ import { AuthContext } from '../../shared/auth-context';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { EmailService, type SendResult } from '../email/email.service';
 import { MagicLinkService } from './magic-link.service';
+import { SessionService } from './session.service';
 import { TenantInvitesController } from './tenant-invites.controller';
 import { TotpService } from './totp.service';
 
@@ -54,6 +55,8 @@ function makeInvites(overrides: Record<string, string> = {}): Harness {
     .mockResolvedValue({ ok: true, messageId: '<id>' });
   const email = { sendInvite } as unknown as EmailService;
 
+  const sessions = ctx.newService(SessionService, ctx.db);
+  sessions.onModuleInit();
   const magic = ctx.newService(
     MagicLinkService,
     ctx.db,
@@ -61,6 +64,7 @@ function makeInvites(overrides: Record<string, string> = {}): Harness {
     tenancy,
     email,
     totp,
+    sessions,
   );
   magic.onModuleInit();
 

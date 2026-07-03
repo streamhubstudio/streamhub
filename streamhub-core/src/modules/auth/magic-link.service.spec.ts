@@ -19,6 +19,7 @@ import { verifyJwt } from '../../shared/auth';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { EmailService, type SendResult } from '../email/email.service';
 import { MagicLinkService } from './magic-link.service';
+import { SessionService } from './session.service';
 import { TotpService } from './totp.service';
 
 const SECRET = 'test-jwt-secret-do-not-use-in-prod';
@@ -53,6 +54,8 @@ function makeMagic(overrides: Record<string, string> = {}): Harness {
     .mockResolvedValue({ ok: true, messageId: '<id>' });
   const email = { sendMagicLink } as unknown as EmailService;
 
+  const sessions = ctx.newService(SessionService, ctx.db);
+  sessions.onModuleInit();
   const magic = ctx.newService(
     MagicLinkService,
     ctx.db,
@@ -60,6 +63,7 @@ function makeMagic(overrides: Record<string, string> = {}): Harness {
     tenancy,
     email,
     totp,
+    sessions,
   );
   magic.onModuleInit();
 

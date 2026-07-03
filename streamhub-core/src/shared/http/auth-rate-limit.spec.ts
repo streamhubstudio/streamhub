@@ -41,13 +41,11 @@ describe('shared/http/auth-rate-limit (M6)', () => {
     }
   });
 
-  it('limits ONLY the documented sensitive auth paths (login/magic-link/reset)', () => {
+  it('limits ONLY the documented sensitive auth paths (login/magic-link)', () => {
     expect([...AUTH_RATE_LIMIT_PATHS]).toEqual([
       '/api/v1/auth/login',
       '/api/v1/auth/magic-link',
       '/api/v1/auth/magic/verify',
-      '/api/v1/auth/reset-request',
-      '/api/v1/auth/reset',
     ]);
     // never the whole API surface
     expect(AUTH_RATE_LIMIT_PATHS).not.toContain('/api/v1');

@@ -43,7 +43,7 @@
       "title": "Contraseña",
       "subtitle": "Cambiá tu contraseña. Vas a necesitar la actual.",
       "noPassword": "Esta cuenta ingresa con magic links y todavía no tiene una contraseña conocida.",
-      "setViaReset": "Establecé una contraseña con el flujo de reset por email →",
+      "noPasswordHint": "Ingresás con magic links — no hace falta contraseña.",
       "currentLabel": "Contraseña actual",
       "newLabel": "Nueva contraseña",
       "confirmLabel": "Confirmar nueva contraseña",
@@ -75,6 +75,25 @@
       "disabling": "Desactivando…",
       "errorCode": "Código inválido. Revisá tu app autenticadora e intentá de nuevo."
     }
+  },
+  "sessions": {
+    "title": "Sesiones activas",
+    "subtitle": "Dispositivos y navegadores con sesión iniciada en tu cuenta. Cerrá cualquiera que no reconozcas.",
+    "loading": "Cargando sesiones…",
+    "loadError": "No se pudieron cargar tus sesiones.",
+    "empty": "No hay sesiones activas.",
+    "signedIn": "Inicio de sesión",
+    "thisDevice": "Este dispositivo",
+    "unknownIp": "IP desconocida",
+    "signOut": "Cerrar sesión",
+    "signOutOthers": "Cerrar las demás sesiones",
+    "cancel": "Cancelar",
+    "confirmOneTitle": "¿Cerrar esta sesión?",
+    "confirmOneBody": "Esta sesión se cerrará de inmediato.",
+    "confirmCurrentBody": "Esta es tu sesión actual — cerrarla te desconectará de este dispositivo.",
+    "confirmOthersTitle": "¿Cerrar las demás sesiones?",
+    "confirmOthersBody": "Se cerrarán todas las otras sesiones. Este dispositivo seguirá conectado.",
+    "revokeError": "No se pudo cerrar la sesión. Intentá de nuevo."
   },
   "overview": {
     "tenantTitle": "Tenant actual",

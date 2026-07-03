@@ -1,15 +1,14 @@
 /**
  * Security ("Mi cuenta" → Seguridad):
  *  - password change (POST /account/password — requires the current password;
- *    magic-link-born accounts without a known password are pointed at the
- *    emailed reset flow instead),
+ *    magic-link-born accounts have no known password and just sign in with a
+ *    magic link, so that block is replaced by a short note),
  *  - 2FA (TOTP): enrol via POST /account/2fa/setup (QR data URI rendered
  *    server-side + manual secret) → confirm a live code (enable) — or disable
  *    with a live code when already active. The break-glass admin password is
  *    env-managed, so that block is hidden for the admin account.
  */
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api, type TwoFaSetup } from '@/api'
@@ -211,12 +210,9 @@ export function SecurityCard() {
               )}
             </>
           ) : (
-            <Link
-              to="/auth/reset"
-              className="text-sm text-primary-500 transition hover:text-primary-600"
-            >
-              {t('security.password.setViaReset')}
-            </Link>
+            <p className="text-sm text-fg-muted">
+              {t('security.password.noPasswordHint')}
+            </p>
           )}
         </Card>
       )}

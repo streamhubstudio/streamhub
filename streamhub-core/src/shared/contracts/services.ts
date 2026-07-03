@@ -357,6 +357,44 @@ export interface CallbacksServiceContract {
 }
 
 /**
+ * Per-app MQTT event publishing (mqtt module). Fan-out sink fed by the
+ * callbacks dispatcher (every callback event) and the logs service (app log
+ * lines). Every method is best-effort and MUST never throw — MQTT trouble can
+ * never break the emitting flow.
+ */
+export interface MqttServiceContract {
+  /**
+   * Publish one event to the app's broker as
+   * `<topicPrefix>/<category>/<event>` with envelope
+   * `{ event, app, timestamp, data }`. No-op when the app's `mqtt.enabled` is
+   * false, the URL is empty, or the event is filtered out by `mqtt.events`.
+   */
+  publishEvent(
+    appName: string,
+    event: CallbackEvent,
+    payload: Record<string, unknown>,
+  ): Promise<void>;
+  /**
+   * Forward one app log line to `<topicPrefix>/log/<level>`. No-op unless the
+   * app's `mqtt.logs.enabled` is true and `level` is at or above
+   * `mqtt.logs.level`. Lines emitted by the mqtt module itself are skipped
+   * (loop guard).
+   */
+  publishLog(
+    appName: string,
+    level: LogLevel,
+    source: string,
+    message: string,
+    meta?: Record<string, unknown>,
+  ): Promise<void>;
+  /**
+   * Close + drop the app's MQTT client (config change / app delete). The next
+   * publish reconnects lazily with fresh config.
+   */
+  disconnectApp(appName: string): Promise<void>;
+}
+
+/**
  * Restream (multi-destination RTMP forwarding — AntMedia "endpoints").
  * Cross-module surface is intentionally minimal: the livekit webhook sink
  * advances per-destination state on egress_* events (started/updated/ended)

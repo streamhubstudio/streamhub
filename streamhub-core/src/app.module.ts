@@ -20,6 +20,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LiveKitModule } from './modules/livekit/livekit.module';
 import { LogsModule } from './modules/logs/logs.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
+import { MqttModule } from './modules/mqtt/mqtt.module';
 import { PluginsModule } from './modules/plugins/plugins.module';
 import { RecordingModule } from './modules/recording/recording.module';
 import { RestreamModule } from './modules/restream/restream.module';
@@ -86,6 +87,9 @@ import { WsIngestModule } from './modules/ws-ingest/ws-ingest.module';
     TenancyModule,
     LogsModule,
     CallbacksModule,
+    // Per-app MQTT event publishing + latency monitor (global; feeds the
+    // callbacks dispatcher tap and the logs forwarder).
+    MqttModule,
     // Observability (Prometheus): global MetricsService + /metrics + HTTP
     // interceptor. Imported early so its interceptor wraps every route.
     MetricsModule,

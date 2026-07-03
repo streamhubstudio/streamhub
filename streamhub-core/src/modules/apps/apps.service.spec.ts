@@ -603,6 +603,29 @@ describe('AppsService', () => {
       expect(disk.s3.region).toBe('eu-west-1');
     });
 
+    it('provider "aws" without explicit endpoint clears the scaffold Wasabi endpoint', async () => {
+      // The scaffold defaults s3.endpoint to Wasabi's URL; switching the
+      // provider to aws must not silently keep it (uploads would target
+      // Wasabi with AWS creds). Empty endpoint = AWS SDK regional default.
+      const before = yaml.load(readRaw('live')) as {
+        s3: Record<string, unknown>;
+      };
+      expect(before.s3.endpoint).toContain('wasabisys.com');
+      await apps.setS3('live', { provider: 'aws', bucket: 'aws-bucket' });
+      const disk = yaml.load(readRaw('live')) as { s3: Record<string, unknown> };
+      expect(disk.s3.provider).toBe('aws');
+      expect(disk.s3.endpoint).toBe('');
+      // An explicit endpoint still wins (custom/compatible providers).
+      await apps.setS3('live', {
+        provider: 'aws',
+        endpoint: 'https://minio.internal:9000',
+      });
+      const disk2 = yaml.load(readRaw('live')) as {
+        s3: Record<string, unknown>;
+      };
+      expect(disk2.s3.endpoint).toBe('https://minio.internal:9000');
+    });
+
     it('INVARIANT: credentials are masked in the response and NEVER written to the yaml', async () => {
       const m = await apps.setS3('live', {
         key: 'AKIAEXAMPLEKEY',

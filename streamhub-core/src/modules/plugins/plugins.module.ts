@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppsModule } from '../apps/apps.module';
 import { AppPluginsRepository } from './app-plugins.repository';
+import { PluginLiveDataService } from './plugin-livedata.service';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginWorkerManager } from './plugin-worker.manager';
 import { PluginsController } from './plugins.controller';
@@ -24,6 +25,7 @@ export const PLUGINS_SERVICE = Symbol('PLUGINS_SERVICE');
     PluginRegistryService,
     AppPluginsRepository,
     PluginWorkerManager,
+    PluginLiveDataService,
     PluginsService,
     { provide: PLUGINS_SERVICE, useExisting: PluginsService },
   ],

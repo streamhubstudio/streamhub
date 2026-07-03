@@ -4,10 +4,10 @@ import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
  * Fase-0 M6 — brute-force rate limiting for the SENSITIVE auth endpoints only.
  *
  * We deliberately DO NOT throttle the whole API (that would break the dashboard's
- * background polling). Only the credential-guessing surfaces are limited: login,
- * magic-link request/verify and password reset request/confirm. Paths are the
- * full request paths (the API global prefix `/api/v1` is part of the URL that
- * `app.use(path, ...)` matches in main.ts).
+ * background polling). Only the credential-guessing surfaces are limited: login
+ * and magic-link request/verify. Paths are the full request paths (the API
+ * global prefix `/api/v1` is part of the URL that `app.use(path, ...)` matches
+ * in main.ts).
  *
  * Limits (per client IP, per window) — override via env, documented in ENV.md:
  *   - AUTH_RATE_LIMIT_MAX        (default 10)
@@ -21,8 +21,6 @@ export const AUTH_RATE_LIMIT_PATHS = [
   '/api/v1/auth/login',
   '/api/v1/auth/magic-link',
   '/api/v1/auth/magic/verify',
-  '/api/v1/auth/reset-request',
-  '/api/v1/auth/reset',
 ] as const;
 
 export interface AuthRateLimitOptions {

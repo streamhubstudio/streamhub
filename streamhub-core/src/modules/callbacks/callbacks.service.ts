@@ -9,6 +9,8 @@ import {
   CallbacksServiceContract,
   LOGS_SERVICE,
   LogsServiceContract,
+  MQTT_SERVICE,
+  MqttServiceContract,
 } from '../../shared/contracts';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -50,6 +52,9 @@ export class CallbacksService implements CallbacksServiceContract {
     @Inject(APPS_SERVICE) private readonly apps: AppsServiceContract,
     @Inject(LOGS_SERVICE) private readonly logs: LogsServiceContract,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional()
+    @Inject(MQTT_SERVICE)
+    private readonly mqtt?: MqttServiceContract,
   ) {}
 
   async dispatch(
@@ -57,6 +62,14 @@ export class CallbacksService implements CallbacksServiceContract {
     event: CallbackEvent,
     payload: Record<string, unknown>,
   ): Promise<void> {
+    // MQTT fan-out tap (per-app MQTT publishing). dispatch() is the single
+    // funnel every outbound event flows through, so tapping here mirrors the
+    // WHOLE taxonomy to MQTT without duplicated emit sites. Independent of the
+    // webhook URL (an app may use MQTT only), fire-and-forget, never throws.
+    if (this.mqtt) {
+      void this.mqtt.publishEvent(appName, event, payload).catch(() => undefined);
+    }
+
     let config: AppConfig;
     try {
       config = await this.apps.getConfig(appName);

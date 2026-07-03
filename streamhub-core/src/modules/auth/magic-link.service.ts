@@ -13,6 +13,7 @@ import { TenancyService } from '../tenancy/tenancy.service';
 import { EmailService } from '../email/email.service';
 import { hashRandomPassword } from './password.util';
 import { TotpService } from './totp.service';
+import { SessionContext, SessionService } from './session.service';
 
 /** Outcome of requestMagicLink — always generic to the caller (no enumeration). */
 export interface MagicRequestResult {
@@ -95,6 +96,7 @@ export class MagicLinkService implements OnModuleInit {
     private readonly tenancy: TenancyService,
     private readonly email: EmailService,
     private readonly totp: TotpService,
+    private readonly sessions: SessionService,
   ) {}
 
   /**
@@ -274,7 +276,11 @@ export class MagicLinkService implements OnModuleInit {
    * missing/wrong code (401 `totp_required` / `totp_invalid`) does NOT burn the
    * single-use link — the SPA re-submits the same token with the code.
    */
-  async verify(rawToken: string, code?: string): Promise<MagicVerifyResult> {
+  async verify(
+    rawToken: string,
+    code?: string,
+    session?: SessionContext,
+  ): Promise<MagicVerifyResult> {
     const secret = this.requireSecret();
     const token = (rawToken || '').trim();
     if (!token) throw new UnauthorizedException('Invalid or expired link');
@@ -312,7 +318,19 @@ export class MagicLinkService implements OnModuleInit {
     }
 
     const userId = this.resolveOrCreateUser(row.email);
-    return { token: signJwt({ sub: userId }, secret, MagicLinkService.JWT_TTL_SECONDS) };
+    const sid = this.sessions.create({
+      userId,
+      email: row.email,
+      ip: session?.ip ?? null,
+      userAgent: session?.userAgent ?? null,
+    });
+    return {
+      token: signJwt(
+        { sub: userId, sid },
+        secret,
+        MagicLinkService.JWT_TTL_SECONDS,
+      ),
+    };
   }
 
   // ---------------------------------------------------------------------------

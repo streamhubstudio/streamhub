@@ -15,6 +15,7 @@ import {
 import type { Request } from 'express';
 import { Public } from '../../shared/auth';
 import { MagicLinkService } from './magic-link.service';
+import { sessionContextFromRequest } from './session.service';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { MagicLinkResponseDto } from './dto/magic-response.dto';
 import { MagicVerifyDto } from './dto/magic-verify.dto';
@@ -91,8 +92,15 @@ export class MagicController {
       'JWT (~12h) — the same token password login mints.',
   })
   @ApiOkResponse({ type: LoginResponseDto })
-  async verify(@Body() dto: MagicVerifyDto): Promise<LoginResponseDto> {
-    const { token } = await this.magic.verify(dto.token, dto.code);
+  async verify(
+    @Body() dto: MagicVerifyDto,
+    @Req() req: Request,
+  ): Promise<LoginResponseDto> {
+    const { token } = await this.magic.verify(
+      dto.token,
+      dto.code,
+      sessionContextFromRequest(req),
+    );
     return { data: { token } };
   }
 

@@ -1,10 +1,10 @@
 # StreamHub — Unit & Integration Test Catalogue
 
-**429 tests, 22 suites, all green.** Run with `npm test` from `streamhub-core/`
-(jest + ts-jest, Redis/BullMQ/LiveKit/S3 mocked, no infra). This file catalogues
-every suite by module and states the invariants each one locks down.
-
-Per-suite counts are taken from the actual jest run (`jest --json`):
+**991 tests, 80 suites, all green** (jest run 2026-07-03). Run with `npm test`
+from `streamhub-core/` (jest + ts-jest, Redis/BullMQ/LiveKit/S3/MQTT mocked, no
+infra). This file catalogues the documented suites by module and states the
+invariants each one locks down — suites added by later waves may not be
+catalogued yet (the table below is the documented subset, not the full run).
 
 | # | Suite | Tests | Kind |
 |---|-------|------:|------|
@@ -30,7 +30,12 @@ Per-suite counts are taken from the actual jest run (`jest --json`):
 | 20 | `test/config-samples-apps.e2e-spec.ts` | 26 | e2e |
 | 21 | `test/smoke.e2e-spec.ts` | 2 | e2e |
 | 22 | `test/streams.e2e-spec.ts` | 8 | e2e |
-| | **Total** | **429** | |
+| 23 | `modules/mqtt/mqtt.service.spec.ts` | 18 | unit |
+| 24 | `modules/mqtt/latency-monitor.service.spec.ts` | 8 | unit |
+| 25 | `modules/callbacks/callbacks.mqtt-tap.spec.ts` | 5 | unit |
+| 26 | `modules/apps/apps.mqtt-config.spec.ts` | 8 | unit |
+| 27 | `modules/plugins/plugin-worker.events.spec.ts` | 7 | unit |
+| | **Total (catalogued)** | **475** | |
 
 Grouped by concern below.
 
@@ -396,7 +401,7 @@ revert, `/reload`), masked `/s3` (incl. the `confirmPublic` gate), and samples
 
 ---
 
-## Callbacks / Webhooks (16 + 20)
+## Callbacks / Webhooks / MQTT (16 + 5 + 18 + 8 + 8 + 7 + 20)
 
 ### `callbacks.service.spec.ts` — 16
 The signed outbound webhook dispatcher:
@@ -413,6 +418,62 @@ The signed outbound webhook dispatcher:
   non-retryable 4xx (400); retries a 500 up to `MAX_ATTEMPTS` then gives up
   (**never throws**); retries a 429; retries on a thrown network error and never
   rejects.
+
+### `callbacks.mqtt-tap.spec.ts` — 5
+The MQTT fan-out tap inside the callbacks funnel:
+- every dispatched event is mirrored to `MQTT_SERVICE.publishEvent` with the
+  same app/event/payload while the webhook POST still fires;
+- MQTT fan-out happens **even without a webhook URL** and when the callbacks
+  config load fails (the sink does its own gating);
+- an exploding MQTT sink never breaks webhook delivery; the sink is optional
+  (bare construction still works).
+
+### `mqtt.service.spec.ts` — 18 (modules/mqtt)
+The per-app MQTT client manager + publisher, with the `MQTT_CLIENT_FACTORY`
+seam faked (**nothing can open a socket**):
+- publishes the exact `{event, app, timestamp, data}` envelope (no extra keys)
+  to `<prefix>/<category>/<event>`; category routing for vod/plugin/alert/
+  interaction/connection; qos honoured; credentials passed to the factory;
+  empty prefix falls back to `streamhub/<app>`.
+- **disabled / empty URL / app gone → no client is ever created**; turning
+  mqtt off drops the live client.
+- `events` list filters publishes; `['all']` passes everything.
+- config fingerprint change (url/tls/creds) → old client cleanly ended, new
+  one built; `disconnectApp` ends the client and the next publish reconnects.
+- reconnect backoff: `reconnectPeriod` doubles per close, capped at 30 s,
+  reset on connect; broker errors logged once per disconnected episode.
+- log forwarding: gated on `logs.enabled` + minimum level; **source `mqtt` is
+  skipped (loop guard)**.
+- never throws: factory explosion and publish explosion are both swallowed.
+
+### `latency-monitor.service.spec.ts` — 8 (modules/mqtt)
+The stream latency monitor with a fake probe:
+- breach → exactly ONE `stream.latency_high` through the callbacks funnel with
+  `{room, rttMs, thresholdMs, metric, participants, publishers}`; latched while
+  high (no duplicates); recovery → `stream.latency_recovered`;
+- a re-breach inside `cooldownSeconds` is suppressed, fires again after;
+- disabled config → the probe is never called; per-app `intervalSeconds`
+  pacing; failed probes change no state; **never throws** on probe/config
+  failures.
+
+### `apps.mqtt-config.spec.ts` — 8 (modules/apps)
+The `mqtt:`/`latency_alert:` config machinery (real temp DB + SecretsStore):
+- defaults resolve safe (disabled, `streamhub/<app>` prefix, events `['all']`,
+  latency alert off with 1000/60/10);
+- **the broker password never lands in config.yaml** — only the
+  `password_env` ref; the value goes to `data/secrets.json` via `setMqtt` and
+  via `updateConfig(mqtt.password)`;
+- masked on read (`getMqtt`), resolved for internal consumers (`getConfig`);
+  omitting `password` keeps the stored one; junk sanitized (qos→0,
+  empty events→`all`, bad level→`info`); raw editor warns on an inline
+  `mqtt.password`; 404 on unknown apps.
+
+### `plugin-worker.events.spec.ts` — 7 (modules/plugins)
+Worker lifecycle → callbacks funnel (fake child, no real process):
+- `plugin_worker_started` on start (with pid); `plugin_worker_stopped` on
+  clean exit AND on manual stop (single emit site — the exit handler);
+- `plugin_worker_error` on crash exit, on child 'error' (deduped when both
+  fire) and on spawn failure; the callbacks dependency is optional.
 
 ### `webhooks.controller.spec.ts` — 20
 The LiveKit webhook ingest → stream tracking + callback fan-out:
@@ -550,7 +611,7 @@ missing/mismatched credential, 200 with the correct `Bearer` header or `?token=`
 ### `shared/http/auth-rate-limit.spec.ts` (new) — M6 brute-force limiting
 N attempts on `/auth/login` → `429` (`error.code:'rate_limited'`); a normal
 route is never limited; the limiter is scoped to exactly the documented
-sensitive paths (login/magic-link/magic-verify/reset-request/reset).
+sensitive paths (login/magic-link/magic-verify).
 
 ### `shared/auth/auth.guard.spec.ts` (new) — M6 fail-closed
 No validator bound: **allow** in dev/test (skeleton boots), **401** in production
@@ -603,6 +664,17 @@ consume nor trip it (nor the window limits). Invite links verify exactly like
 login links. Magic verify with 2FA enabled demands the code BEFORE burning the
 one-time token (missing → `totp_required`, wrong → `totp_invalid`, the SAME
 link then succeeds with a valid code).
+
+### `modules/auth/session.service.spec.ts` (new) — active sessions
+Every human sign-in mints a `sessions` row whose id rides in the JWT as `sid`:
+password login / signup / magic all create one (ip + user-agent captured).
+`listForUser` surfaces ip + created date and flags the CURRENT session. The auth
+validator ACCEPTS a live session then REJECTS the SAME token once its session is
+revoked; a JWT whose `sid` never existed is rejected, but a legacy token with no
+`sid` is still accepted (grace, never mass-logout). A user can NEVER revoke
+another user's session (own-only predicate); `revokeOthers` closes every session
+but the current one. Password recovery (`reset.service`/`reset.e2e`) was removed
+— magic-link is the only account-recovery path.
 
 ### `streamhub-web/src/lib/authFlows.spec.ts` (new, node:test)
 Pure SPA helpers: `isTotpRequired`/`isTotpInvalid` only match a 401 with the
@@ -673,6 +745,52 @@ key/url, non-rtmp scheme, key smuggling via slashes/spaces) and
 Mirror of the preset logic driving the AddTarget form: destination URL preview
 per platform, custom URL passthrough/key join, and pre-submit validation
 (i18n error keys).
+
+---
+
+## Deface face-obfuscation + plugin live-data channel (feat/deface)
+
+### `modules/plugins/plugin-livedata.spec.ts` (new) — 11
+The worker→core→player live-data channel (`POST/GET /apps/:app/plugins/:id/live`).
+
+Invariants:
+- **Latest-only store** per (app, plugin, room) with `ts`/`ageMs` freshness;
+  payloads over 64 KB rejected; key space capped with oldest-first eviction;
+  `clear()` scoped to one plugin.
+- **Ingest auth**: the worker-hook mints a fresh token per worker START and
+  injects `STREAMHUB_INGEST_URL`/`_TOKEN` into the spawned env; pushes without
+  the CURRENT running worker's token → 401; a stopped worker's token is dead.
+- **Payload contract**: must be a JSON object carrying a non-empty `room`;
+  no-worker plugins can never ingest.
+- **Public read gating**: only installed + ENABLED `player-overlay` plugins
+  answer (404 otherwise); no data yet → `{ts:null,...}` not a 404; uninstall
+  clears the feed.
+
+### `src/plugins/deface/plugin.meta.spec.ts` (new) — 7
+The deface manifest + pure `worker.spawn(ctx)`: id/category/ui contract, all
+11 deface CLI options present **with defaults** (install-valid with no config),
+select/number bounds mirror the deface CLI, config → `DEFACE_*` env mapping,
+cuda toggle → execution provider, `DEFACE_WORKER_DIR`/`PLUGIN_PYTHON`
+operator overrides, discovery by the real registry.
+
+### `deface-worker/` (pytest) — 37, no onnxruntime/opencv needed
+Pure logic of the Python worker: env parsing + clamping (`DEFACE_*`,
+callback fallback to `STREAMHUB_INGEST_URL`), stream-source resolution,
+mask-scale box math (deface `scale_bb` semantics), normalization + degenerate
+drop, IoU/greedy-NMS, the CenterFace heatmap decode (stride-4 exp/offset math,
+thresh, clamping), atomic model download/caching, callback payload builder +
+poster (ingest-token header, error swallowing), FPS throttle, and the
+detect→POST loop — **empty frames are posted too** (they clear overlay masks).
+
+### streamhub-web (node:test) — `src/plugins/deface/overlay.util.spec.ts` (new) — 20
+Pure overlay logic: settings resolution (defaults mirror the backend schema,
+clamping, garbage-safe), live-payload parsing (clamped to the unit square,
+malformed faces dropped), **mask-scale applied exactly once** (pre-expanded
+payloads pass through; external payloads expand client-side), poll/staleness
+policy bounds, face TRACKS (identity kept across moves, unmatched tracks HELD
+before dropping — over-mask rather than flicker), frame-rate-independent
+exponential smoothing incl. exact settling, letterbox (`object-fit: contain`)
+geometry, mosaic grid / blur radius / mask shape helpers.
 
 ---
 

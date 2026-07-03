@@ -42,8 +42,15 @@ export const SAMPLE_FILES: SampleTemplateName[] = [
   'conference.html',
 ];
 
+// livekit-client is PINNED to 2.15.7 — validated end-to-end (publish + subscribe +
+// data) against livekit-server 1.8.4 on node01. Do NOT float this URL: an unpinned
+// jsdelivr path resolves to whatever is latest (2.20+ today), which CANNOT PUBLISH
+// against server 1.8.4 (track publication never resolves; negotiation times out).
+// server 1.8.4 <-> client 2.15.7 are a validated pair — upgrade BOTH in lockstep
+// (roadmap note). The pin is enforced by the invariant in
+// samples.new-templates.spec.ts.
 const LIVEKIT_CDN =
-  'https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js';
+  'https://cdn.jsdelivr.net/npm/livekit-client@2.15.7/dist/livekit-client.umd.min.js';
 const VIDEOJS_CSS = 'https://vjs.zencdn.net/8.10.0/video-js.css';
 const VIDEOJS_JS = 'https://vjs.zencdn.net/8.10.0/video.min.js';
 const VIDEOJS_HLS =
@@ -612,90 +619,414 @@ document.getElementById('toggle').onclick = () => { playing ? stop() : tune(); }
 </script>
 </body></html>`,
 
-  // Conference (N-to-N) — a simple meeting room: publish cam/mic, subscribe to
-  // everyone, tile grid, mute/cam/screen-share/leave. Joins with an ephemeral
-  // token (#token=…) or mints one (dev / operator link with ?apitoken=…).
-  'conference.html': `${head('StreamHub · Conferencia · {{APP}}')}
-<header><b>StreamHub</b> · Conferencia (N-a-N) · app <b>{{APP}}</b> <span id="count" class="muted"></span></header>
+  // Conference (Google Meet-style, N-to-N) — a full meeting surface:
+  //   • pre-join screen: display-name input, live camera/mic preview with device
+  //     pickers and pre-mute toggles; room from the URL (?room=) with a default.
+  //   • in-call: responsive speaker-view grid (active speaker highlighted),
+  //     name labels + mic-muted indicators, screen share (the shared screen
+  //     becomes the big presentation tile).
+  //   • StreamHub-styled control bar (mic / camera / screen / participant count
+  //     / chat / leave) with `m` + `v` keyboard shortcuts.
+  //   • chat side panel over the LiveKit data channel (name · time · text),
+  //     enter-to-send, unread badge when closed — no persistence.
+  // Joins with the app token flow like the other samples: an ephemeral token
+  // (link #token=…&ws=…&room=…) or a minted one (operator/dev link ?apitoken=…).
+  // Reconnect and participant join/leave are handled live.
+  'conference.html': `${head('StreamHub · Conference · {{APP}}')}
 <style>
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.tile{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
+:root{--cyan:#22d3ee;--blue:#2d6cff;--panel:#0e1530;--panel2:#121a33;--edge:#1f2b4d;--edge2:#25325a}
+html,body{height:100%}
+body{overflow:hidden}
+.app{position:fixed;inset:0;display:flex;flex-direction:column}
+.app video{max-height:none}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel2);border-bottom:1px solid var(--edge);flex:0 0 auto}
+.topbar .brand{font-weight:800;color:var(--cyan);letter-spacing:.3px}
+.topbar .room{opacity:.72;font-size:13px}
+.pill{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 11px;border-radius:999px;background:#0e1530;border:1px solid var(--edge2)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:#12b886}
+.pill .dot.warn{background:#e8a33d}.pill .dot.bad{background:#c0263a}
+/* pre-join */
+.prejoin{flex:1;display:flex;align-items:center;justify-content:center;gap:30px;padding:24px;flex-wrap:wrap;overflow:auto}
+.pv{position:relative;width:min(560px,92vw);aspect-ratio:16/9;background:#000;border-radius:16px;overflow:hidden;border:1px solid var(--edge2)}
+.pv video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.pv .novid{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#7f8db3;font-size:14px;background:#0c1226}
+.pv.camoff .novid{display:flex}.pv.camoff video{visibility:hidden}
+.pv .mini{position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:14px}
+.rnd{width:48px;height:48px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border:1px solid var(--edge2);color:#fff;cursor:pointer;padding:0}
+.rnd:hover{background:rgba(0,0,0,.75)}
+.rnd.off{background:#c0263a;border-color:#c0263a}
+.rnd svg{width:22px;height:22px}
+.pjcard{width:min(360px,92vw)}
+.pjcard h1{font-size:23px;margin:0 0 4px}
+.pjcard .sub{margin:0 0 14px;opacity:.7;font-size:13px}
+.pjcard label{display:block;font-size:12px;opacity:.75;margin:12px 0 4px}
+.pjcard input,.pjcard select{width:100%;box-sizing:border-box}
+.join{width:100%;margin-top:22px;background:var(--blue);padding:13px;font-size:15px}
+/* call */
+.call{flex:1;display:flex;min-height:0}
+.stagewrap{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;gap:10px}
+.present{flex:1;display:none;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--edge);position:relative}
+.present video{width:100%;height:100%;object-fit:contain;background:#000}
+.present .plabel{position:absolute;top:10px;left:12px;background:rgba(0,0,0,.6);padding:3px 10px;border-radius:8px;font-size:12px}
+.tiles{flex:1;display:grid;gap:10px;min-height:0;align-content:center;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.stagewrap.presenting .present{display:block}
+.stagewrap.presenting .tiles{flex:0 0 auto;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:190px;overflow-x:auto;align-content:start}
+.tile{position:relative;background:#0c1226;border-radius:14px;overflow:hidden;aspect-ratio:16/9;border:2px solid transparent;min-width:0}
 .tile video{width:100%;height:100%;object-fit:cover;background:#000}
-.tile .lbl{position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,.55);padding:1px 8px;border-radius:6px;font-size:12px}
-.ctrl{display:flex;gap:10px;justify-content:center;margin:12px 0;flex-wrap:wrap}
-.setup{background:#0e1530;border-radius:10px;padding:16px;max-width:520px;margin:0 auto}
-.setup input{width:100%;margin:6px 0}
+.tile.self video{transform:scaleX(-1)}
+.tile.speaking{border-color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.35)}
+.tile .avatar{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#141d3a}
+.tile.camoff .avatar{display:flex}.tile.camoff video{visibility:hidden}
+.tile .avatar span{width:66px;height:66px;border-radius:50%;background:#2a3a66;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}
+.tile .lbl{position:absolute;bottom:8px;left:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.62);padding:3px 9px;border-radius:9px;font-size:12px;max-width:82%}
+.tile .lbl .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .lbl .mic{width:14px;height:14px;color:#ff6b6b;flex:0 0 auto;display:none}
+.tile.muted .lbl .mic{display:inline-block}
+/* chat */
+.chat{width:322px;max-width:88vw;background:var(--panel);border-left:1px solid var(--edge);display:flex;flex-direction:column;min-height:0}
+.chat.hidden{display:none}
+.chat h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--edge);font-size:14px;display:flex;align-items:center;justify-content:space-between}
+.chat h3 button{background:none;border:0;color:#8ea2cc;font-size:20px;cursor:pointer;padding:0;line-height:1}
+.msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:11px}
+.msgs .empty{opacity:.5;font-size:13px;text-align:center;margin-top:24px}
+.cmsg .meta{font-size:11px;opacity:.65;margin-bottom:1px}.cmsg .meta b{color:var(--cyan)}
+.cmsg .txt{font-size:13px;word-break:break-word;line-height:1.45}
+.compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--edge)}
+.compose input{flex:1}
+/* control bar */
+.bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;background:var(--panel2);border-top:1px solid var(--edge);flex:0 0 auto;flex-wrap:wrap}
+.cbtn{position:relative;width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.06);border:1px solid var(--edge2);color:#e6ecff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .15s,box-shadow .15s}
+.cbtn:hover{background:rgba(255,255,255,.13)}
+.cbtn.active{background:var(--cyan);border-color:var(--cyan);color:#04222a}
+.cbtn.off{background:#c0263a;border-color:#c0263a;color:#fff}
+.cbtn.leave{background:#c0263a;border-color:#c0263a;color:#fff;width:64px}
+.cbtn svg{width:23px;height:23px}
+.cbtn .badge{position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--cyan);color:#04222a;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}
+.cbtn .badge.show{display:flex}
+.people{display:inline-flex;align-items:center;gap:7px;height:52px;padding:0 15px;border-radius:15px;background:rgba(255,255,255,.06);border:1px solid var(--edge2);font-size:14px;font-weight:600}
+.people svg{width:20px;height:20px;opacity:.85}
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:rgba(0,0,0,.82);border:1px solid var(--edge2);padding:8px 15px;border-radius:11px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+@media(max-width:640px){.chat{position:absolute;inset:0;width:100%;max-width:100%;z-index:10}.cbtn,.people{width:46px;height:46px}.cbtn.leave{width:58px}.people{padding:0 12px}}
 </style>
-<main>
-  <div id="setup" class="setup">
-    <p><b>Sala de conferencia N-a-N.</b> Cada participante entra con su identidad. Con un token efímero (link <code>#token=…</code>) o, en dev, minteo directo.</p>
-    <label class="muted">tu nombre</label><input id="fName" placeholder="Ana" />
-    <label class="muted">room</label><input id="fRoom" value="{{ROOM}}" />
-    <label class="muted">token efímero (opcional)</label><input id="fToken" placeholder="eyJ… (si no, se mintéa)" />
-    <button id="join">Entrar a la sala</button>
+<div class="app">
+  <div class="topbar">
+    <span class="brand">StreamHub</span>
+    <span class="room">Conference · <b id="roomName">{{ROOM}}</b></span>
+    <span class="pill"><span id="netdot" class="dot"></span><span id="netlbl">ready</span></span>
   </div>
-  <div id="stage" style="display:none">
-    <div class="tiles" id="tiles"></div>
-    <div class="ctrl">
-      <button id="mic" class="alt">Silenciar</button>
-      <button id="cam" class="alt">Cámara</button>
-      <button id="screen" class="alt">Compartir pantalla</button>
-      <button id="leave" style="background:#c0263a">Salir</button>
+
+  <!-- PRE-JOIN -->
+  <div id="prejoin" class="prejoin">
+    <div id="pv" class="pv">
+      <video id="preview" autoplay muted playsinline></video>
+      <div class="novid">Camera off</div>
+      <div class="mini">
+        <button id="pjMic" class="rnd" title="Microphone (toggle)"></button>
+        <button id="pjCam" class="rnd" title="Camera (toggle)"></button>
+      </div>
+    </div>
+    <div class="pjcard">
+      <h1>Ready to join?</h1>
+      <p class="sub">Check your camera and mic, then hop in.</p>
+      <label for="fName">Your name</label>
+      <input id="fName" placeholder="e.g. Alex" maxlength="40" />
+      <label for="fRoom">Room</label>
+      <input id="fRoom" value="{{ROOM}}" />
+      <label for="camSelect">Camera</label>
+      <select id="camSelect"></select>
+      <label for="micSelect">Microphone</label>
+      <select id="micSelect"></select>
+      <button id="join" class="join">Join now</button>
     </div>
   </div>
-  <div class="log" id="log">idle</div>
-</main>
+
+  <!-- IN-CALL -->
+  <div id="call" class="call" style="display:none">
+    <div class="stagewrap" id="stagewrap">
+      <div class="present" id="present">
+        <video id="presentVideo" autoplay playsinline></video>
+        <div class="plabel" id="presentLabel"></div>
+      </div>
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <aside id="chat" class="chat hidden">
+      <h3>Chat <button id="chatClose" title="Close">&times;</button></h3>
+      <div class="msgs" id="msgs"><div class="empty">No messages yet.</div></div>
+      <div class="compose">
+        <input id="chatInput" placeholder="Send a message…" maxlength="500" />
+        <button id="chatSend">Send</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- CONTROL BAR -->
+  <div id="bar" class="bar" style="display:none">
+    <button id="mic" class="cbtn" title="Mic (m)"></button>
+    <button id="cam" class="cbtn" title="Camera (v)"></button>
+    <button id="screen" class="cbtn" title="Share screen"></button>
+    <span class="people" title="Participants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM23 20v-2a4 4 0 0 0-3-3.87M16 4.13a4 4 0 0 1 0 7.75"/></svg><span id="count">1</span></span>
+    <button id="chatToggle" class="cbtn" title="Chat"><span class="badge" id="chatBadge">0</span></button>
+    <button id="leave" class="cbtn leave" title="Leave"></button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
 <script src="${LIVEKIT_CDN}"></script>
 <script>
 ${bootstrap()}
-const log = logTo('log');
-const tiles = document.getElementById('tiles');
-let room = null, micOn = true, camOn = true, sharing = false;
-const tileById = {};
-function tileFor(id, label){
-  if (tileById[id]) return tileById[id];
-  const t = document.createElement('div'); t.className='tile';
-  const v = document.createElement('video'); v.autoplay=true; v.playsInline=true;
-  const l = document.createElement('div'); l.className='lbl'; l.textContent = label || id;
-  t.appendChild(v); t.appendChild(l); tiles.appendChild(t);
-  tileById[id] = { t: t, v: v, l: l }; return tileById[id];
-}
-function removeTile(id){ const x = tileById[id]; if(x){ x.t.remove(); delete tileById[id]; } refreshCount(); }
-function refreshCount(){ document.getElementById('count').textContent = Object.keys(tileById).length + ' en sala'; }
-async function join(creds, name){
-  await loadScript(ADAPTOR_URL);
-  document.getElementById('setup').style.display='none';
-  document.getElementById('stage').style.display='block';
-  try {
-    room = new LivekitClient.Room({ adaptiveStream:true, dynacast:true });
-    room.on(LivekitClient.RoomEvent.TrackSubscribed, (t, pub, participant)=>{ const c = tileFor(participant.identity, participant.name || participant.identity); if(t.kind==='video') t.attach(c.v); else { const a=t.attach(); a.autoplay=true; document.body.appendChild(a);} refreshCount(); });
-    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, (p)=> removeTile(p.identity));
-    await room.connect(creds.wsUrl, creds.token);
-    await room.localParticipant.enableCameraAndMicrophone();
-    const me = tileFor(room.localParticipant.identity, (name||'Yo') + ' (vos)');
-    me.v.muted = true;
-    const pub = room.localParticipant.getTrackPublication(LivekitClient.Track.Source.Camera);
-    if (pub && pub.track) pub.track.attach(me.v);
-    refreshCount(); log('en la sala' + (creds.room ? ' — ' + creds.room : ''));
-  } catch (e) { log('error: ' + (e && e.message ? e.message : e)); }
-}
-document.getElementById('join').onclick = async () => {
-  const name = document.getElementById('fName').value.trim() || rid('user-');
-  const roomName = nsRoom(document.getElementById('fRoom').value.trim());
-  const pasted = document.getElementById('fToken').value.trim();
-  try {
-    const eph = ephemeral();
-    let creds;
-    if (pasted) creds = { token: pasted, wsUrl: WS_URL, room: roomName };
-    else if (eph && eph.token) creds = eph;
-    else creds = await getToken({ room: roomName, identity: name, canPublish:true, canSubscribe:true });
-    join(creds, name);
-  } catch (e) { log('error: ' + (e && e.message ? e.message : e) + ' — pegá un token efímero o abrí con #token=…'); }
+// ---- inline SVG icon set (stroke = currentColor) -------------------------
+var SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">';
+var IC = {
+  mic: SVG+'<path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>',
+  micOff: SVG+'<path d="M9 9v3a3 3 0 0 0 5 2.1M15 10.5V6a3 3 0 0 0-5.9-.7"/><path d="M19 11a7 7 0 0 1-6.5 6.98M8 5.5A6.9 6.9 0 0 0 5 11M12 18v3M3 3l18 18"/></svg>',
+  cam: SVG+'<path d="M16 8.5 21 6v12l-5-2.5V8.5zM3 7h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/></svg>',
+  camOff: SVG+'<path d="M16 8.5 21 6v12l-3.2-1.6M10 7h4a1 1 0 0 1 1 1v3M15 14v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1M3 3l18 18"/></svg>',
+  screen: SVG+'<path d="M3 5h18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 20h8M12 16v4"/></svg>',
+  chat: SVG+'<path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-5.7A8.4 8.4 0 1 1 21 11.5z"/></svg>',
+  leave: SVG+'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'
 };
-document.getElementById('mic').onclick = async () => { micOn=!micOn; await room.localParticipant.setMicrophoneEnabled(micOn); document.getElementById('mic').textContent = micOn ? 'Silenciar' : 'Activar'; };
-document.getElementById('cam').onclick = async () => { camOn=!camOn; await room.localParticipant.setCameraEnabled(camOn); const me=tileById[room.localParticipant.identity]; if(camOn && me){ const pub=room.localParticipant.getTrackPublication(LivekitClient.Track.Source.Camera); if(pub&&pub.track) pub.track.attach(me.v);} };
-document.getElementById('screen').onclick = async () => { const next=!sharing; try{ await room.localParticipant.setScreenShareEnabled(next); sharing=next; document.getElementById('screen').textContent = sharing ? 'Detener pantalla' : 'Compartir pantalla'; }catch(e){ log('screen share cancelado'); } };
-document.getElementById('leave').onclick = async () => { try{ if(room) await room.disconnect(); }catch(e){} for(const k in tileById) removeTile(k); document.getElementById('stage').style.display='none'; document.getElementById('setup').style.display='block'; log('saliste de la sala'); };
+function setChatIcon(){ var tog=document.getElementById('chatToggle'); var b=document.getElementById('chatBadge'); tog.innerHTML=IC.chat; tog.appendChild(b); }
+var toastEl=document.getElementById('toast'), toastTimer=null;
+function toast(m){ toastEl.textContent=String(m); toastEl.classList.add('show'); if(toastTimer)clearTimeout(toastTimer); toastTimer=setTimeout(function(){toastEl.classList.remove('show');},2600); }
+function net(state,label){ var d=document.getElementById('netdot'); d.className='dot'+(state==='warn'?' warn':state==='bad'?' bad':''); document.getElementById('netlbl').textContent=label; }
+
+// ------------------------------------------------------------------ pre-join
+var LK = window.LivekitClient;
+var previewStream=null, startMic=true, startCam=true;
+var initialRoom = qp('room') || nsRoom('');
+document.getElementById('fRoom').value = initialRoom;
+document.getElementById('roomName').textContent = initialRoom;
+document.getElementById('fName').value = qp('name') || qp('identity') || '';
+
+function paintPjToggles(){
+  var m=document.getElementById('pjMic'), c=document.getElementById('pjCam');
+  m.innerHTML=startMic?IC.mic:IC.micOff; m.className='rnd'+(startMic?'':' off');
+  c.innerHTML=startCam?IC.cam:IC.camOff; c.className='rnd'+(startCam?'':' off');
+  document.getElementById('pv').className='pv'+(startCam?'':' camoff');
+}
+function fillSelect(id,list,fallback){
+  var sel=document.getElementById(id); var cur=sel.value; sel.innerHTML='';
+  list.forEach(function(d,i){ var o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||(fallback+' '+(i+1)); sel.appendChild(o); });
+  if(cur) sel.value=cur;
+}
+async function listDevices(){
+  try{
+    var devs = await navigator.mediaDevices.enumerateDevices();
+    fillSelect('camSelect',devs.filter(function(d){return d.kind==='videoinput';}),'Camera');
+    fillSelect('micSelect',devs.filter(function(d){return d.kind==='audioinput';}),'Microphone');
+  }catch(e){}
+}
+async function startPreview(){
+  try{ if(previewStream) previewStream.getTracks().forEach(function(t){t.stop();}); }catch(e){}
+  var camId=document.getElementById('camSelect').value;
+  var micId=document.getElementById('micSelect').value;
+  try{
+    previewStream = await navigator.mediaDevices.getUserMedia({
+      video: startCam ? (camId?{deviceId:{exact:camId}}:true) : false,
+      audio: micId?{deviceId:{exact:micId}}:true
+    });
+    document.getElementById('preview').srcObject = startCam ? previewStream : null;
+    await listDevices();
+    net('warn','ready');
+  }catch(e){ document.getElementById('pv').classList.add('camoff'); net('warn','no camera/mic permission'); }
+}
+document.getElementById('pjMic').onclick=function(){ startMic=!startMic; paintPjToggles(); };
+document.getElementById('pjCam').onclick=async function(){ startCam=!startCam; paintPjToggles(); await startPreview(); };
+document.getElementById('camSelect').onchange=startPreview;
+document.getElementById('micSelect').onchange=startPreview;
+paintPjToggles();
+startPreview();
+
+// ------------------------------------------------------------------ in-call
+var room=null, micOn=true, camOn=true, sharing=false, leaving=false, chatOpen=false, unread=0;
+var tileById={}, activeId=null, presentOwner=null;
+var enc=new TextEncoder(), dec=new TextDecoder();
+var tiles=document.getElementById('tiles');
+
+function initials(name){ return (name||'?').trim().slice(0,2).toUpperCase(); }
+function tileFor(id,label){
+  if(tileById[id]) return tileById[id];
+  var t=document.createElement('div'); t.className='tile';
+  var v=document.createElement('video'); v.autoplay=true; v.playsInline=true;
+  var av=document.createElement('div'); av.className='avatar'; var sp=document.createElement('span'); sp.textContent=initials(label); av.appendChild(sp);
+  var l=document.createElement('div'); l.className='lbl';
+  var mic=document.createElementNS('http://www.w3.org/2000/svg','svg'); mic.setAttribute('class','mic'); mic.setAttribute('viewBox','0 0 24 24'); mic.setAttribute('fill','none'); mic.setAttribute('stroke','currentColor'); mic.setAttribute('stroke-width','2'); mic.innerHTML='<path d="M9 9v3a3 3 0 0 0 5 2.1M15 10.5V6a3 3 0 0 0-5.9-.7M19 11a7 7 0 0 1-13 3M12 18v3M3 3l18 18"/>';
+  var nm=document.createElement('span'); nm.className='nm'; nm.textContent=label||id;
+  l.appendChild(mic); l.appendChild(nm);
+  t.appendChild(v); t.appendChild(av); t.appendChild(l); tiles.appendChild(t);
+  tileById[id]={t:t,v:v,l:nm}; return tileById[id];
+}
+function removeTile(id){ var x=tileById[id]; if(x){ x.t.remove(); delete tileById[id]; } refreshCount(); }
+function setCamOff(id,off){ var x=tileById[id]; if(x) x.t.classList.toggle('camoff',off); }
+function setMutedUi(id,muted){ var x=tileById[id]; if(x) x.t.classList.toggle('muted',muted); }
+function refreshCount(){ var n=room? room.remoteParticipants.size+1 : Object.keys(tileById).length; document.getElementById('count').textContent=n; }
+function setActive(id){ if(activeId&&tileById[activeId]) tileById[activeId].t.classList.remove('speaking'); activeId=id; if(id&&tileById[id]) tileById[id].t.classList.add('speaking'); }
+
+function showPresent(track,label){
+  document.getElementById('stagewrap').classList.add('presenting');
+  track.attach(document.getElementById('presentVideo'));
+  document.getElementById('presentLabel').textContent=(label||'')+' · presenting';
+}
+function clearPresent(){ document.getElementById('stagewrap').classList.remove('presenting'); presentOwner=null; try{document.getElementById('presentVideo').srcObject=null;}catch(e){} }
+function isScreen(pub,track){
+  var S = (LK.Track&&LK.Track.Source)?LK.Track.Source.ScreenShare:'screen_share';
+  if(pub&&pub.source) return pub.source===S;
+  if(track&&track.source) return track.source===S;
+  return false;
+}
+function attachLocalCam(me){
+  var pub=room.localParticipant.getTrackPublication(LK.Track.Source.Camera);
+  if(pub&&pub.track){ pub.track.attach(me.v); setCamOff(room.localParticipant.identity,false); }
+}
+function hydrate(){
+  room.remoteParticipants.forEach(function(p){
+    var c=tileFor(p.identity, p.name||p.identity);
+    p.trackPublications.forEach(function(pub){
+      var track=pub.track; if(!track) return;
+      if(track.kind==='video'){ if(isScreen(pub,track)){ presentOwner=p.identity; showPresent(track,p.name||p.identity); } else track.attach(c.v); }
+      else { var a=track.attach(); a.autoplay=true; document.body.appendChild(a); }
+    });
+    var mp=p.getTrackPublication(LK.Track.Source.Microphone); if(mp&&mp.isMuted) setMutedUi(p.identity,true);
+  });
+}
+function wire(room){
+  room.on(LK.RoomEvent.TrackSubscribed,function(track,pub,participant){
+    if(track.kind==='video'){
+      if(isScreen(pub,track)){ presentOwner=participant.identity; showPresent(track, participant.name||participant.identity); }
+      else { var c=tileFor(participant.identity, participant.name||participant.identity); track.attach(c.v); setCamOff(participant.identity,false); }
+    } else { var a=track.attach(); a.autoplay=true; document.body.appendChild(a); }
+    refreshCount();
+  });
+  room.on(LK.RoomEvent.TrackUnsubscribed,function(track,pub,participant){
+    if(isScreen(pub,track)&&presentOwner===participant.identity) clearPresent();
+    else if(track.kind==='video') setCamOff(participant.identity,true);
+    try{ track.detach().forEach(function(el){el.remove();}); }catch(e){}
+  });
+  room.on(LK.RoomEvent.LocalTrackPublished,function(pub){ if(isScreen(pub,pub.track)){ presentOwner=room.localParticipant.identity; showPresent(pub.track,'You'); } });
+  room.on(LK.RoomEvent.LocalTrackUnpublished,function(pub){ if(isScreen(pub,pub.track)&&presentOwner===room.localParticipant.identity) clearPresent(); });
+  room.on(LK.RoomEvent.TrackMuted,function(pub,participant){ if(pub.kind==='audio') setMutedUi(participant.identity,true); if(pub.source===LK.Track.Source.Camera) setCamOff(participant.identity,true); });
+  room.on(LK.RoomEvent.TrackUnmuted,function(pub,participant){ if(pub.kind==='audio') setMutedUi(participant.identity,false); if(pub.source===LK.Track.Source.Camera) setCamOff(participant.identity,false); });
+  room.on(LK.RoomEvent.ParticipantConnected,function(p){ tileFor(p.identity,p.name||p.identity); refreshCount(); toast((p.name||p.identity)+' joined'); });
+  room.on(LK.RoomEvent.ParticipantDisconnected,function(p){ if(presentOwner===p.identity) clearPresent(); removeTile(p.identity); toast((p.name||p.identity)+' left'); });
+  room.on(LK.RoomEvent.ActiveSpeakersChanged,function(speakers){ if(speakers&&speakers.length) setActive(speakers[0].identity); });
+  room.on(LK.RoomEvent.DataReceived,onData);
+  room.on(LK.RoomEvent.Reconnecting,function(){ net('warn','reconnecting…'); toast('Reconnecting…'); });
+  room.on(LK.RoomEvent.Reconnected,function(){ net('ok','connected'); toast('Reconnected'); });
+  room.on(LK.RoomEvent.Disconnected,function(){ if(!leaving){ net('bad','disconnected'); toast('Disconnected'); backToPrejoin(); } });
+}
+
+async function join(creds,name){
+  await loadScript(ADAPTOR_URL); // best-effort AntMedia-style adaptor, else livekit-client
+  LK = window.LivekitClient;
+  try{ if(previewStream) previewStream.getTracks().forEach(function(t){t.stop();}); }catch(e){}
+  document.getElementById('prejoin').style.display='none';
+  document.getElementById('call').style.display='flex';
+  document.getElementById('bar').style.display='flex';
+  paintBar();
+  try{
+    var camId=document.getElementById('camSelect').value;
+    var micId=document.getElementById('micSelect').value;
+    room = new LK.Room({
+      adaptiveStream:true, dynacast:true,
+      videoCaptureDefaults: camId?{deviceId:camId}:undefined,
+      audioCaptureDefaults: micId?{deviceId:micId}:undefined
+    });
+    wire(room);
+    net('warn','connecting…');
+    await room.connect(creds.wsUrl, creds.token);
+    net('ok','connected');
+    var me=tileFor(room.localParticipant.identity, (name||'You')+' (you)');
+    me.t.classList.add('self'); me.v.muted=true;
+    await room.localParticipant.enableCameraAndMicrophone();
+    if(!startMic){ await room.localParticipant.setMicrophoneEnabled(false); }
+    if(!startCam){ await room.localParticipant.setCameraEnabled(false); }
+    micOn=startMic; camOn=startCam; paintBar();
+    attachLocalCam(me); setCamOff(room.localParticipant.identity,!camOn); setMutedUi(room.localParticipant.identity,!micOn);
+    hydrate(); refreshCount(); toast('Joined '+(creds.room||initialRoom));
+  }catch(e){ toast('error: '+(e&&e.message?e.message:e)); net('bad','error'); }
+}
+
+// ---- control bar ----
+function paintBar(){
+  var mb=document.getElementById('mic'); mb.innerHTML=micOn?IC.mic:IC.micOff; mb.className='cbtn'+(micOn?'':' off');
+  var cb=document.getElementById('cam'); cb.innerHTML=camOn?IC.cam:IC.camOff; cb.className='cbtn'+(camOn?'':' off');
+  var sb=document.getElementById('screen'); sb.innerHTML=IC.screen; sb.className='cbtn'+(sharing?' active':'');
+  setChatIcon();
+  document.getElementById('leave').innerHTML=IC.leave;
+}
+async function toggleMic(){ if(!room)return; micOn=!micOn; await room.localParticipant.setMicrophoneEnabled(micOn); setMutedUi(room.localParticipant.identity,!micOn); paintBar(); }
+async function toggleCam(){ if(!room)return; camOn=!camOn; await room.localParticipant.setCameraEnabled(camOn); if(camOn){ var me=tileById[room.localParticipant.identity]; if(me) attachLocalCam(me);} setCamOff(room.localParticipant.identity,!camOn); paintBar(); }
+async function toggleScreen(){ if(!room)return; var next=!sharing; try{ await room.localParticipant.setScreenShareEnabled(next); sharing=next; paintBar(); }catch(e){ toast('screen share cancelled'); } }
+document.getElementById('mic').onclick=toggleMic;
+document.getElementById('cam').onclick=toggleCam;
+document.getElementById('screen').onclick=toggleScreen;
+document.getElementById('leave').onclick=function(){ leaving=true; try{ if(room) room.disconnect(); }catch(e){} backToPrejoin(); };
+function backToPrejoin(){
+  for(var k in tileById) removeTile(k); tileById={}; activeId=null; clearPresent();
+  room=null; sharing=false;
+  document.getElementById('call').style.display='none';
+  document.getElementById('bar').style.display='none';
+  document.getElementById('prejoin').style.display='flex';
+  net('warn','ready'); leaving=false; startPreview();
+}
+
+// ---- chat (LiveKit data channel; name · time · text, no persistence) ----
+var msgsEl=document.getElementById('msgs');
+function ts(){ try{ return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function addMsg(from,text,time,mine){
+  var e=msgsEl.querySelector('.empty'); if(e) e.remove();
+  var d=document.createElement('div'); d.className='cmsg';
+  var m=document.createElement('div'); m.className='meta'; var b=document.createElement('b'); b.textContent=(mine?'You':(from||'Guest')); m.appendChild(b); m.appendChild(document.createTextNode(' · '+(time||ts())));
+  var tx=document.createElement('div'); tx.className='txt'; tx.textContent=text;
+  d.appendChild(m); d.appendChild(tx); msgsEl.appendChild(d); msgsEl.scrollTop=msgsEl.scrollHeight;
+  if(!mine && !chatOpen){ unread++; var badge=document.getElementById('chatBadge'); badge.textContent=unread>9?'9+':String(unread); badge.classList.add('show'); }
+}
+function onData(payload,participant){
+  var txt=''; try{ txt=dec.decode(payload); }catch(e){}
+  var obj=null; try{ obj=JSON.parse(txt); }catch(e){}
+  if(obj&&obj.topic==='chat') addMsg(obj.from||(participant&&participant.identity),obj.message,obj.time,false);
+}
+function sendChat(){
+  var inp=document.getElementById('chatInput'); var v=inp.value.trim(); if(!v||!room) return;
+  var payload={topic:'chat', from:(room.localParticipant.name||room.localParticipant.identity), message:v, time:ts()};
+  addMsg(payload.from,v,payload.time,true);
+  try{ room.localParticipant.publishData(enc.encode(JSON.stringify(payload)),{reliable:true,topic:'chat'}); }catch(e){ toast('could not send'); }
+  inp.value='';
+}
+function toggleChat(open){
+  chatOpen = (open===undefined)? !chatOpen : open;
+  document.getElementById('chat').classList.toggle('hidden',!chatOpen);
+  document.getElementById('chatToggle').classList.toggle('active',chatOpen);
+  if(chatOpen){ unread=0; document.getElementById('chatBadge').classList.remove('show'); document.getElementById('chatInput').focus(); }
+}
+document.getElementById('chatToggle').onclick=function(){ toggleChat(); };
+document.getElementById('chatClose').onclick=function(){ toggleChat(false); };
+document.getElementById('chatSend').onclick=sendChat;
+document.getElementById('chatInput').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendChat(); } });
+
+// ---- keyboard shortcuts: m = mic, v = camera ----
+window.addEventListener('keydown',function(e){
+  var tag=(e.target&&e.target.tagName)||''; if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;
+  if(!room) return;
+  if(e.key==='m'||e.key==='M'){ e.preventDefault(); toggleMic(); }
+  else if(e.key==='v'||e.key==='V'){ e.preventDefault(); toggleCam(); }
+});
+
+// ---- join ----
+document.getElementById('join').onclick=async function(){
+  var display=document.getElementById('fName').value.trim()||'Guest';
+  var roomName=nsRoom(document.getElementById('fRoom').value.trim());
+  initialRoom=roomName; document.getElementById('roomName').textContent=roomName;
+  try{
+    var eph=ephemeral();
+    var creds;
+    if(eph&&eph.token) creds={token:eph.token, wsUrl:eph.wsUrl, room:eph.room||roomName};
+    else creds=await getToken({ room:roomName, identity:display+'-'+Math.random().toString(36).slice(2,6), name:display, canPublish:true, canSubscribe:true });
+    if(!creds.room) creds.room=roomName;
+    join(creds,display);
+  }catch(e){ toast('error: '+(e&&e.message?e.message:e)+' — open the link with #token=… or pass ?apitoken=…'); }
+};
 </script>
 </body></html>`,
 };

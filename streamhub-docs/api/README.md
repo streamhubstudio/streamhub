@@ -25,8 +25,6 @@ Complete list of `streamhub-core` HTTP endpoints.
 | POST | `/auth/login` | public | auth (2FA: send `code` when enabled) |
 | POST | `/auth/magic-link` | public | auth (429 + `retryAfterSeconds` under the 60s resend cooldown) |
 | POST | `/auth/magic/verify` | public | auth (2FA: send `code` when enabled) |
-| POST | `/auth/reset-request` | public | auth |
-| POST | `/auth/reset` | public | auth |
 | GET | `/auth/me` | Bearer | auth |
 | GET | `/account` | Bearer (human JWT) | auth — my profile + tenant |
 | PATCH | `/account` | Bearer (human JWT) | auth — update name/email |
@@ -34,6 +32,9 @@ Complete list of `streamhub-core` HTTP endpoints.
 | POST | `/account/2fa/setup` | Bearer (human JWT) | auth — start TOTP enrolment |
 | POST | `/account/2fa/enable` | Bearer (human JWT) | auth — activate 2FA |
 | POST | `/account/2fa/disable` | Bearer (human JWT) | auth — disable 2FA |
+| GET | `/auth/sessions` | Bearer (human JWT) | auth — my active sessions (ip, dates, `current`) |
+| DELETE | `/auth/sessions/{id}` | Bearer (human JWT) | auth — revoke one session (current = sign out) |
+| DELETE | `/auth/sessions` | Bearer (human JWT) | auth — revoke every OTHER session |
 | GET | `/teams/mine` | usage:read | auth |
 | POST | `/teams/mine/members` | tenant:write (owner) | auth |
 | GET | `/tenant/invites` | owner/superadmin | auth — pending invitations |
@@ -84,6 +85,13 @@ Complete list of `streamhub-core` HTTP endpoints.
 |--------|------|-----------|---------|
 | GET | `/apps/{app}/s3` | s3:read | [vod](../features/vod.md) |
 | PUT | `/apps/{app}/s3` | s3:write | vod (public_url gated by confirmPublic) |
+
+## App MQTT
+
+| Method | Path | Permission | Feature |
+|--------|------|-----------|---------|
+| GET | `/apps/{app}/mqtt` | config:read | [mqtt](../features/mqtt.md) (password masked) |
+| PUT | `/apps/{app}/mqtt` | config:write | mqtt (password → secrets.json; omit to keep) |
 
 ## Tokens (LiveKit join) & radio
 

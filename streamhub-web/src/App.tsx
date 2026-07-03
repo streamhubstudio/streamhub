@@ -9,7 +9,6 @@ import { AppLayout } from '@/layout/AppLayout'
 import Login from '@/pages/Login'
 import Signup from '@/pages/Signup'
 import AuthMagic from '@/pages/AuthMagic'
-import AuthReset from '@/pages/AuthReset'
 import Account from '@/pages/Account'
 import Dashboard from '@/pages/Dashboard'
 import Apps from '@/pages/Apps'
@@ -38,10 +37,6 @@ export default function App() {
       {/* PUBLIC magic-link verification. Reads ?token= from the emailed link,
           exchanges it for a session JWT, then redirects to the dashboard. */}
       <Route path="/auth/magic" element={<AuthMagic />} />
-
-      {/* PUBLIC password reset. No ?token= → asks for an email and sends a
-          reset link; with ?token= (from the emailed link) → new-password form. */}
-      <Route path="/auth/reset" element={<AuthReset />} />
 
       {/* PUBLIC player surfaces (no auth guard). They fetch the public
           play-token (GET /apps/:app/play-token/:room) and connect to LiveKit

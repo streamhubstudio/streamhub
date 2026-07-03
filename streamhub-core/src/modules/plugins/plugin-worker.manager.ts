@@ -14,10 +14,18 @@ import {
   Injectable,
   Logger,
   OnModuleDestroy,
+  Optional,
 } from '@nestjs/common';
 import { ChildProcess, spawn } from 'child_process';
+import { randomUUID } from 'crypto';
 import { ConfigService } from '../../shared/config/config.service';
-import { LOGS_SERVICE, LogsServiceContract } from '../../shared/contracts';
+import {
+  CALLBACKS_SERVICE,
+  CallbackEvent,
+  CallbacksServiceContract,
+  LOGS_SERVICE,
+  LogsServiceContract,
+} from '../../shared/contracts';
 import { PluginMeta, PluginWorkerContext } from './plugin.contract';
 
 export type WorkerStatus = 'running' | 'stopped' | 'crashed' | 'starting';
@@ -44,6 +52,10 @@ interface WorkerEntry {
   state: WorkerState;
   child?: ChildProcess;
   logs: WorkerLogLine[];
+  /** A plugin_worker_error was already emitted for this run (dupe guard). */
+  errorNotified?: boolean;
+  /** Random per-start secret a worker echoes to POST :id/live (ingest auth). */
+  ingestToken?: string;
 }
 
 const MAX_LOG_LINES = 500;
@@ -56,7 +68,28 @@ export class PluginWorkerManager implements OnModuleDestroy {
   constructor(
     private readonly config: ConfigService,
     @Inject(LOGS_SERVICE) private readonly logsSvc: LogsServiceContract,
+    @Optional()
+    @Inject(CALLBACKS_SERVICE)
+    private readonly callbacks?: CallbacksServiceContract,
   ) {}
+
+  /**
+   * Emit a plugin worker lifecycle event (plugin_worker_started/_stopped/
+   * _error) through the callbacks funnel → app webhook + MQTT tap.
+   * Fire-and-forget; a dispatch failure never affects the worker lifecycle.
+   */
+  private notify(
+    app: string,
+    event: CallbackEvent,
+    payload: Record<string, unknown>,
+  ): void {
+    if (!this.callbacks) return;
+    try {
+      void this.callbacks.dispatch(app, event, payload).catch(() => undefined);
+    } catch {
+      /* never break the worker lifecycle */
+    }
+  }
 
   onModuleDestroy(): void {
     for (const entry of this.workers.values()) {
@@ -87,6 +120,16 @@ export class PluginWorkerManager implements OnModuleDestroy {
     const entry = this.workers.get(this.key(app, pluginId));
     if (!entry) return [];
     return entry.logs.slice(-Math.max(1, limit));
+  }
+
+  /**
+   * The live-data ingest token for a RUNNING worker (undefined when stopped —
+   * a dead worker must not be able to keep pushing). The service layer compares
+   * this against the `x-plugin-ingest-token` header of POST :id/live.
+   */
+  ingestToken(app: string, pluginId: string): string | undefined {
+    if (!this.isRunning(app, pluginId)) return undefined;
+    return this.workers.get(this.key(app, pluginId))?.ingestToken;
   }
 
   /**
@@ -126,12 +169,29 @@ export class PluginWorkerManager implements OnModuleDestroy {
       status: 'starting',
       startedAt: new Date().toISOString(),
     };
+    entry.errorNotified = false;
+    // Fresh ingest token per start — the live-data channel (POST :id/live)
+    // only accepts pushes carrying the CURRENT running worker's token.
+    entry.ingestToken = randomUUID();
     this.workers.set(key, entry);
+
+    // Framework-provided env every worker gets (before spec.env so a plugin
+    // can still override deliberately): who it is + where/how to push live
+    // overlay data back into the core. The core binds localhost, and workers
+    // are spawned on the same host, so 127.0.0.1 is always reachable.
+    const frameworkEnv: Record<string, string> = {
+      STREAMHUB_APP: app,
+      STREAMHUB_PLUGIN_ID: meta.id,
+      STREAMHUB_INGEST_URL: `http://127.0.0.1:${this.config.port}/api/v1/apps/${encodeURIComponent(
+        app,
+      )}/plugins/${encodeURIComponent(meta.id)}/live`,
+      STREAMHUB_INGEST_TOKEN: entry.ingestToken,
+    };
 
     try {
       const child = spawn(spec.command, spec.args ?? [], {
         cwd: spec.cwd ?? appDir,
-        env: { ...process.env, ...(spec.env ?? {}) },
+        env: { ...process.env, ...frameworkEnv, ...(spec.env ?? {}) },
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       entry.child = child;
@@ -149,14 +209,21 @@ export class PluginWorkerManager implements OnModuleDestroy {
         entry.state.error = err.message;
         entry.state.stoppedAt = new Date().toISOString();
         this.system(entry, meta.id, app, appId, `worker error: ${err.message}`);
+        if (!entry.errorNotified) {
+          entry.errorNotified = true;
+          this.notify(app, 'plugin_worker_error', {
+            plugin: meta.id,
+            error: err.message,
+          });
+        }
       });
       child.on('exit', (code, signal) => {
         entry.child = undefined;
         entry.state.exitCode = code;
         entry.state.stoppedAt = new Date().toISOString();
         // A non-zero, non-signalled exit that we did not request = crash.
-        entry.state.status =
-          code && code !== 0 && !signal ? 'crashed' : 'stopped';
+        const crashed = !!code && code !== 0 && !signal;
+        entry.state.status = crashed ? 'crashed' : 'stopped';
         this.system(
           entry,
           meta.id,
@@ -164,6 +231,20 @@ export class PluginWorkerManager implements OnModuleDestroy {
           appId,
           `worker exited (code=${code ?? 'null'}, signal=${signal ?? 'none'})`,
         );
+        if (crashed && !entry.errorNotified) {
+          entry.errorNotified = true;
+          this.notify(app, 'plugin_worker_error', {
+            plugin: meta.id,
+            exitCode: code,
+            signal: signal ?? null,
+          });
+        } else if (!crashed) {
+          this.notify(app, 'plugin_worker_stopped', {
+            plugin: meta.id,
+            exitCode: code ?? null,
+            signal: signal ?? null,
+          });
+        }
       });
 
       this.system(
@@ -173,6 +254,10 @@ export class PluginWorkerManager implements OnModuleDestroy {
         appId,
         `worker started: ${spec.command} ${(spec.args ?? []).join(' ')} (pid ${child.pid})`,
       );
+      this.notify(app, 'plugin_worker_started', {
+        plugin: meta.id,
+        pid: child.pid ?? null,
+      });
     } catch (err) {
       entry.state.status = 'crashed';
       entry.state.error = (err as Error).message;
@@ -184,6 +269,13 @@ export class PluginWorkerManager implements OnModuleDestroy {
         appId,
         `spawn failed: ${(err as Error).message}`,
       );
+      if (!entry.errorNotified) {
+        entry.errorNotified = true;
+        this.notify(app, 'plugin_worker_error', {
+          plugin: meta.id,
+          error: (err as Error).message,
+        });
+      }
     }
     return entry.state;
   }

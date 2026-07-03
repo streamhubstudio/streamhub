@@ -28,13 +28,15 @@
   "eventGroups": {
     "roomParticipants": "Sala / participantes",
     "ingressEgress": "Ingress / Egress",
-    "streamhub": "StreamHub (negocio)"
+    "streamhub": "StreamHub (negocio)",
+    "pluginsAlerts": "Plugins / alertas"
   },
   "nav": {
     "callbacks": "Callbacks",
     "s3": "Almacenamiento S3",
     "features": "Funciones",
-    "qc": "Token QC"
+    "qc": "Token QC",
+    "mqtt": "MQTT"
   },
   "saveStatus": {
     "saving": "Guardando…",
@@ -60,6 +62,37 @@
     "saveError": "No se pudo guardar.",
     "saving": "Guardando…",
     "save": "Guardar callbacks"
+  },
+  "mqtt": {
+    "loading": "Cargando configuración MQTT…",
+    "loadError": "No se pudo cargar la configuración MQTT.",
+    "title": "MQTT (publicación de eventos)",
+    "subtitle": "Publica cada evento de esta app (conexiones, VOD/grabación, plugins, alertas y opcionalmente logs) como JSON en tu broker MQTT, además de los webhooks.",
+    "enabledLabel": "Publicar eventos por MQTT",
+    "enabledHint": "Llave maestra. Apagada, no se publica nada ni se mantiene conexión.",
+    "urlLabel": "URL del broker",
+    "urlHint": "mqtt:// , mqtts:// , ws:// o wss:// (admite path, ej. wss://mqtt.ejemplo.com/mqtt).",
+    "usernameLabel": "Usuario",
+    "passwordLabel": "Contraseña",
+    "storedHint": "Hay una contraseña guardada. Dejá vacío para conservarla.",
+    "prefixLabel": "Prefijo de topics",
+    "prefixHint": "Los topics quedan <prefijo>/<categoría>/<evento>. Vacío = streamhub/<app>.",
+    "qosLabel": "QoS",
+    "qosHint": "Calidad de servicio de publicación para cada mensaje.",
+    "eventsLabel": "Eventos",
+    "eventsHint": "Nombres de eventos separados por coma, o \"all\" (default) para toda la taxonomía.",
+    "tlsLabel": "Forzar TLS",
+    "tlsHint": "Convierte mqtt:// en mqtts:// (y ws:// en wss://) antes de conectar.",
+    "logsLabel": "Reenviar logs de la app",
+    "logsHint": "Publica las líneas de log de esta app en <prefijo>/log/<nivel>.",
+    "logsLevelLabel": "Nivel mínimo",
+    "latencyLabel": "Alerta de latencia alta",
+    "latencyHint": "Muestrea la salud de cada sala en vivo; al superar el umbral emite stream.latency_high a webhooks Y MQTT (stream.latency_recovered al recuperarse).",
+    "latencyThresholdLabel": "Umbral (ms)",
+    "latencyCooldownLabel": "Cooldown (segundos)",
+    "saveError": "No se pudo guardar.",
+    "saving": "Guardando…",
+    "save": "Guardar MQTT"
   },
   "featuresCard": {
     "loading": "Cargando features…",

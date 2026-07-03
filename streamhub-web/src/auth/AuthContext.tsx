@@ -58,10 +58,6 @@ export interface AuthContextValue {
   requestMagicLink: (email: string) => Promise<void>
   /** Passwordless: exchange a magic-link token (+ TOTP code when 2FA is on) for a session. */
   verifyMagic: (token: string, code?: string) => Promise<void>
-  /** Ask the backend to email a password-reset link. */
-  requestPasswordReset: (email: string) => Promise<void>
-  /** Set a new password using the token from the emailed reset link. */
-  resetPassword: (token: string, password: string) => Promise<void>
   logout: () => void
 }
 
@@ -152,16 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   )
 
-  const requestPasswordReset = useCallback(async (email: string) => {
-    await api.auth.resetRequest({ email })
-  }, [])
-
-  const resetPassword = useCallback(async (token: string, password: string) => {
-    // Deliberately does NOT adopt a session — the user re-authenticates with
-    // their new password on the login screen afterwards.
-    await api.auth.reset({ token, password })
-  }, [])
-
   // Wire 401 -> logout for the whole app.
   useEffect(() => {
     setUnauthorizedHandler(() => logout())
@@ -184,8 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       requestMagicLink,
       verifyMagic,
-      requestPasswordReset,
-      resetPassword,
       logout,
     }
   }, [
@@ -197,8 +181,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signup,
     requestMagicLink,
     verifyMagic,
-    requestPasswordReset,
-    resetPassword,
     logout,
   ])
 

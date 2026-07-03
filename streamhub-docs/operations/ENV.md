@@ -40,13 +40,13 @@ committed. Anything ending in `_SECRET`/`_PASS`/`_TOKEN` must be long and random
 | `ADMIN_PASS` | change-me | Break-glass admin password. |
 | `STREAMHUB_API_TOKEN` | `sk_change_me` | Global API bearer token (`Authorization: Bearer sk_…`). Stored here only so re-running the installer stays idempotent; the DB keeps a hash. Seeded via `deploy/seed-token.js`. |
 | `STREAMHUB_AUTHZ_ENFORCE` | `on` | RBAC + quota + per-app-token isolation mode: `off` \| `log` \| `on`. **Default is now `on`** (secure-by-default, Fase-0). `log` runs the same checks but only **logs** what they would block (use it to migrate a deployment that ran unenforced). In every mode GLOBAL `sk_` tokens and the break-glass admin bypass RBAC; only **app-scoped** `sk_` tokens are confined to their own app. |
-| `AUTH_RATE_LIMIT_MAX` | `10` | Max attempts per client IP per window on the SENSITIVE auth routes only (login, magic-link, magic/verify, reset-request, reset). The rest of the API (incl. dashboard polling) is not limited. Exceeding it → `429`. |
+| `AUTH_RATE_LIMIT_MAX` | `10` | Max attempts per client IP per window on the SENSITIVE auth routes only (login, magic-link, magic/verify). The rest of the API (incl. dashboard polling) is not limited. Exceeding it → `429`. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | `900000` | Rate-limit window in ms (default 15 min) for the auth routes above. |
 | `STREAMHUB_ALLOW_SIGNUP` | (unset → off) | Enables PUBLIC self-signup (`POST /auth/signup` + the "Create account" flow in the dashboard). `1`/`true`/`on`/`yes` → anyone can create an account + their own free-plan tenant. Unset/anything else → **invite-only**: a brand-new email gets `403 signup_disabled`; an invited *pending* user can still complete signup. Surfaced to the SPA via `GET /auth/config`. |
 | `STREAMHUB_SUPERADMIN_EMAIL` | `info@streamhub.studio` | Email that becomes the superadmin principal when it signs in via magic-link. |
-| `STREAMHUB_APP_URL` | `https://app.streamhub.studio` | Public base URL of the dashboard used to build magic-link / invite / reset URLs in emails. |
+| `STREAMHUB_APP_URL` | `https://app.streamhub.studio` | Public base URL of the dashboard used to build magic-link / invite URLs in emails. |
 
-## Email (SMTP — magic links, invites, password resets)
+## Email (SMTP — magic links, invites)
 
 | Var | Default | Meaning |
 |---|---|---|

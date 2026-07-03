@@ -84,7 +84,7 @@ export default definePlugin({
       type: 'boolean',
       label: 'Use CUDA (GPU)',
       default: false,
-      help: 'On uses the GPU; off runs on CPU. Leave it off on CPU-only hosts.',
+      help: 'On uses the GPU; off runs on CPU. your-server has no GPU — leave off there.',
     },
     {
       key: 'callbackUrl',

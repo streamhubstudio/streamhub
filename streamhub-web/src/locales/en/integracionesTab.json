@@ -28,13 +28,15 @@
   "eventGroups": {
     "roomParticipants": "Room / participants",
     "ingressEgress": "Ingress / Egress",
-    "streamhub": "StreamHub (business)"
+    "streamhub": "StreamHub (business)",
+    "pluginsAlerts": "Plugins / alerts"
   },
   "nav": {
     "callbacks": "Callbacks",
     "s3": "S3 storage",
     "features": "Features",
-    "qc": "QC token"
+    "qc": "QC token",
+    "mqtt": "MQTT"
   },
   "saveStatus": {
     "saving": "Saving…",
@@ -60,6 +62,37 @@
     "saveError": "Could not save.",
     "saving": "Saving…",
     "save": "Save callbacks"
+  },
+  "mqtt": {
+    "loading": "Loading MQTT config…",
+    "loadError": "Could not load the MQTT configuration.",
+    "title": "MQTT (event publishing)",
+    "subtitle": "Publishes every event of this app (connections, VOD/recording, plugins, alerts and optionally logs) as JSON to your MQTT broker, in addition to webhooks.",
+    "enabledLabel": "Publish events over MQTT",
+    "enabledHint": "Master switch. When off, nothing is published and no connection is kept.",
+    "urlLabel": "Broker URL",
+    "urlHint": "mqtt:// , mqtts:// , ws:// or wss:// (path allowed, e.g. wss://mqtt.example.com/mqtt).",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "storedHint": "A password is stored. Leave empty to keep it.",
+    "prefixLabel": "Topic prefix",
+    "prefixHint": "Topics become <prefix>/<category>/<event>. Empty = streamhub/<app>.",
+    "qosLabel": "QoS",
+    "qosHint": "Publish quality of service for every message.",
+    "eventsLabel": "Events",
+    "eventsHint": "Comma-separated event names, or \"all\" (default) for the whole taxonomy.",
+    "tlsLabel": "Force TLS",
+    "tlsHint": "Upgrades mqtt:// to mqtts:// (and ws:// to wss://) before connecting.",
+    "logsLabel": "Forward app logs",
+    "logsHint": "Publishes this app's log lines to <prefix>/log/<level>.",
+    "logsLevelLabel": "Minimum level",
+    "latencyLabel": "High-latency alert",
+    "latencyHint": "Samples each live room's health; on breach emits stream.latency_high to webhooks AND MQTT (stream.latency_recovered on recovery).",
+    "latencyThresholdLabel": "Threshold (ms)",
+    "latencyCooldownLabel": "Cooldown (seconds)",
+    "saveError": "Could not save.",
+    "saving": "Saving…",
+    "save": "Save MQTT"
   },
   "featuresCard": {
     "loading": "Loading features…",

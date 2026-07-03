@@ -65,6 +65,18 @@ destination — see [restream.md](restream.md); payload URLs are always masked).
 **Chat / reactions** (fired when a data message is sent server-side):
 `chat_message`, `reaction`.
 
+**Plugin workers** (fired by the plugins-framework worker hook):
+`plugin_worker_started`, `plugin_worker_stopped`, `plugin_worker_error`
+(payload: `plugin`, plus `pid` / `exitCode`+`signal` / `error`).
+
+**Stream health alerts** (fired by the latency monitor — see
+[mqtt.md](mqtt.md#high-latency-alert)): `stream.latency_high`,
+`stream.latency_recovered` (payload: `room`, `rttMs`, `thresholdMs`, `metric`).
+
+> Every event above is ALSO published to the app's MQTT broker when the
+> per-app `mqtt:` block is enabled — same taxonomy, same `data` payload,
+> envelope `{event, app, timestamp, data}`. See [mqtt.md](mqtt.md).
+
 ## Delivery semantics
 
 - Timeout 10s per attempt, up to **3 attempts**, exponential backoff (500ms base).
