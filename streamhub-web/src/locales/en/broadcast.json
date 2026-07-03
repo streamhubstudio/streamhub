@@ -1,0 +1,61 @@
+{
+  "header": {
+    "title": "Broadcast",
+    "subtitle": "Studio · app · {{app}}",
+    "exit": "Exit"
+  },
+  "preview": {
+    "audioOnly": "Audio-only mode",
+    "audioOnlyHint": "No video. Only the microphone is streamed to the RTMP destination.",
+    "permissionDenied": "Camera permission denied.",
+    "permissionHint": "Enable the camera and microphone in your browser to preview and broadcast.",
+    "retryPermission": "Retry permission",
+    "initializing": "Initializing camera…",
+    "note": "The browser publishes your camera and microphone over <strong>WebRTC</strong> to a LiveKit room; the <strong>server</strong> composes that room and forwards it to the <strong>RTMP</strong> destination. It's not a direct RTMP push from the browser."
+  },
+  "form": {
+    "title": "Destination and devices",
+    "audioOnly": "Audio only",
+    "audioOnlyHint": "Streams only the microphone (no camera).",
+    "rtmpLabel": "Destination RTMP URL",
+    "rtmpHint": "Full URL <em>with the stream key</em> (e.g. <code>{{url}}</code>).",
+    "rtmpInvalid": "Invalid format. It must start with rtmp:// or rtmps:// and include host and stream key.",
+    "roomLabel": "Room (LiveKit)",
+    "roomHint": "Optional. Default: studio.",
+    "cameraLabel": "Camera",
+    "cameraEmpty": "No cameras detected",
+    "micLabel": "Microphone",
+    "micEmpty": "No microphones detected"
+  },
+  "egress": {
+    "label": "Egress"
+  },
+  "actions": {
+    "connecting": "Connecting…",
+    "start": "Start broadcast",
+    "stopping": "Stopping…",
+    "stop": "Stop broadcast",
+    "needValidUrl": "Enter a valid RTMP URL to enable broadcasting."
+  },
+  "phase": {
+    "live": "Live",
+    "connecting": "Connecting",
+    "stopping": "Stopping",
+    "idle": "Standby"
+  },
+  "device": "Device {{n}}",
+  "errors": {
+    "noCamera": "No connected camera found.",
+    "cameraAccess": "Could not access the camera.",
+    "rtmpInvalid": "Invalid RTMP URL. It must be rtmp://host/app/streamKey (full URL including the stream key).",
+    "noToken": "The server did not return a valid publish token.",
+    "connLost": "Connection to the room was lost.",
+    "startFailed": "Could not start the broadcast.",
+    "egressEnded": "The broadcast ended on the server ({{status}}).",
+    "audioAccess": "could not access audio",
+    "micRequired": "No microphone: {{detail}}. It is required in audio-only mode.",
+    "micFallbackVideo": "No microphone: {{detail}}. Broadcasting video only.",
+    "unknown": "unknown error",
+    "stopUnconfirmed": "Could not confirm the egress stop: {{detail}}."
+  }
+}

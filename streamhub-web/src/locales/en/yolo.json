@@ -1,0 +1,48 @@
+{
+  "fields": {
+    "room": {
+      "label": "Room / stream",
+      "help": "HLS room to analyze — /hls/<app>/<room>/index.m3u8.",
+      "placeholder": "live"
+    },
+    "callbackUrl": {
+      "label": "Callback URL",
+      "help": "Detections are POSTed here per frame: { app, room, ts, detections }.",
+      "placeholder": "https://example.com/hooks/yolo"
+    },
+    "model": {
+      "label": "Model size",
+      "help": "Bigger = more accurate but slower. Nano/Small suit CPU hosts."
+    },
+    "cuda": {
+      "label": "Use CUDA (GPU)",
+      "help": "On uses the GPU; off runs on CPU. Leave it off on CPU-only hosts."
+    },
+    "confidence": {
+      "label": "Confidence threshold",
+      "help": "Minimum detection confidence (0–1)."
+    },
+    "fps": {
+      "label": "Sample FPS",
+      "help": "Frames per second to sample (lower = less CPU)."
+    },
+    "classes": {
+      "label": "Classes filter",
+      "help": "Pick the COCO classes to detect. None selected = all 80.",
+      "all": "All classes",
+      "count": "{{count}} selected"
+    }
+  },
+  "models": {
+    "nano": "Nano (fastest, CPU-friendly)",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "xlarge": "XLarge (most accurate, GPU)"
+  },
+  "overlay": {
+    "badge": "YOLO · {{device}}",
+    "allClasses": "all classes",
+    "classes": "{{count}} classes"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "title": "Live streams",
+  "loading": "Loading streams…",
+  "empty": "No active streams yet. Start publishing from your camera or an RTMP/WHIP ingress.",
+  "emptyCta": {
+    "broadcast": "Broadcast",
+    "createIngress": "Create ingress"
+  },
+  "error": {
+    "stopStream": "Could not stop the stream.",
+    "recordStart": "Could not start the recording.",
+    "recordStop": "Could not stop the recording.",
+    "hlsStart": "Could not start HLS.",
+    "hlsStop": "Could not stop HLS.",
+    "load": "Could not load the streams."
+  },
+  "table": {
+    "stream": "Stream",
+    "room": "Room",
+    "type": "Type",
+    "status": "Status",
+    "startedAt": "Started",
+    "actions": "Actions"
+  },
+  "status": {
+    "finished": "finished",
+    "recording": "recording"
+  },
+  "viewers": "{{count}} viewers",
+  "actions": {
+    "watch": "Watch",
+    "restream": "Restream",
+    "startingHls": "Starting HLS…",
+    "watchHls": "Watch (HLS)",
+    "stopping": "Stopping…",
+    "stopHls": "Stop HLS",
+    "stopRecording": "Stop recording",
+    "starting": "Starting…",
+    "record": "Record",
+    "stopStream": "Stop stream"
+  },
+  "confirmStopStream": "Stop stream {{id}}?",
+  "modal": {
+    "room": "Room"
+  },
+  "hls": {
+    "liveTitle": "Live HLS",
+    "latency": "~6-15s latency",
+    "playlistUrl": "Playlist URL (.m3u8)",
+    "embed": "Embed (HTML)",
+    "embedHelp": "Paste it into any website (video.js via CDN). On Safari/iOS the `.m3u8` also plays natively."
+  }
+}

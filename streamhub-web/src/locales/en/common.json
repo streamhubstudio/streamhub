@@ -1,0 +1,34 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "create": "Create",
+    "back": "Back",
+    "search": "Search"
+  },
+  "state": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "empty": "Nothing to show",
+    "live": "LIVE"
+  },
+  "answer": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "error": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Connection error. Check your network.",
+    "unauthorized": "You don't have permission to do this.",
+    "notFound": "We couldn't find what you were looking for.",
+    "server": "Server error. Please try again later."
+  }
+}

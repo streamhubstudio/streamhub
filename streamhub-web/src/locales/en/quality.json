@@ -1,0 +1,43 @@
+{
+  "title": "Stream Health",
+  "subtitle": "Test your connection to the server and grade it as a traffic light.",
+  "empty": "Run a test to measure your connection quality.",
+  "actions": {
+    "run": "Run test",
+    "running": "Testing…"
+  },
+  "verdict": {
+    "idle": "Not tested",
+    "green": "Optimal",
+    "yellow": "Fair",
+    "red": "Poor"
+  },
+  "phase": {
+    "idle": "Idle",
+    "latency": "Measuring latency…",
+    "download": "Measuring download…",
+    "upload": "Measuring upload…",
+    "done": "Done",
+    "downloaded": "{{mb}} MB downloaded"
+  },
+  "metric": {
+    "download": "Download",
+    "upload": "Upload",
+    "uploadSkipped": "Not measured",
+    "bitrate": "Reception bitrate",
+    "latency": "Latency (RTT)",
+    "jitter": "Jitter"
+  },
+  "unit": {
+    "mbps": "Mbps",
+    "kbps": "kbps",
+    "ms": "ms"
+  },
+  "note": {
+    "measured": "Download/upload measured over HTTP; latency from health pings.",
+    "uploadOptional": "Upload skipped — set an Upload test URL in the settings to measure it."
+  },
+  "error": {
+    "generic": "The quality test could not complete."
+  }
+}

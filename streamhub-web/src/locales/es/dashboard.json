@@ -1,0 +1,54 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "subtitle": "Estado y métricas en vivo de streamhub-core."
+  },
+  "appsTable": {
+    "title": "Apps",
+    "subtitle": "Tenants registrados en streamhub-core.",
+    "viewAll": "Ver todas",
+    "loadError": "No se pudieron cargar las apps.",
+    "loading": "Cargando apps…",
+    "emptyBefore": "No hay apps todavía.",
+    "emptyLink": "Crear la primera",
+    "colName": "Nombre",
+    "colId": "Identificador",
+    "colRoomPrefix": "Room prefix",
+    "colCreated": "Creada",
+    "open": "Abrir"
+  },
+  "health": {
+    "checking": "Comprobando estado del servidor…",
+    "unreachableError": "No se pudo contactar al servidor.",
+    "up": "Operativo",
+    "down": "Inalcanzable",
+    "status": "Estado",
+    "version": "Versión",
+    "uptime": "Uptime"
+  },
+  "stats": {
+    "loadError": "No se pudieron cargar las métricas.",
+    "cpu": "CPU",
+    "memory": "Memoria",
+    "disk": "Disco",
+    "diskNA": "N/D",
+    "cores_one": "{{count}} núcleo",
+    "cores_other": "{{count}} núcleos",
+    "activeStreams": "Streams activos",
+    "apps": "Apps",
+    "rooms": "Rooms",
+    "ingress": "Ingress",
+    "egress": "Egress",
+    "connected": "conectado",
+    "disconnected": "sin conexión",
+    "livekitReachable": "accesible",
+    "livekitUnreachable": "inalcanzable",
+    "updating": "actualizando…",
+    "database": "Base de datos",
+    "databaseHint": "BD de apps + global",
+    "vodStorage": "Almacenamiento VOD",
+    "vods_one": "{{count}} grabación",
+    "vods_other": "{{count}} grabaciones"
+  },
+  "updating": "Actualizando…"
+}

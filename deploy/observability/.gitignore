@@ -1,0 +1,4 @@
+# El .gitignore raíz ya ignora **/.env; acá sólo lo específico de este stack:
+# el METRICS_TOKEN real (nunca commitear) y el textfile collector runtime.
+secrets/metrics_token
+textfile/*.prom

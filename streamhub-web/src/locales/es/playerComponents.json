@@ -1,0 +1,70 @@
+{
+  "audio": {
+    "defaultLabel": "Audio en vivo",
+    "onAir": "En vivo",
+    "connecting": "Conectando",
+    "offline": "Sin emisión",
+    "speakers": "Al aire: {{speakers}}",
+    "activeAudio": "Transmisión de audio activa",
+    "connectingRoom": "Conectando a la sala…",
+    "waiting": "Esperando a que el máster salga al aire."
+  },
+  "chat": {
+    "title": "Chat",
+    "close": "Cerrar chat",
+    "empty": "Todavía no hay mensajes.",
+    "placeholder": "Escribí un mensaje…",
+    "send": "Enviar",
+    "emojis": "Emojis",
+    "toggle": "Mostrar chat"
+  },
+  "connection": {
+    "connecting": "Conectando",
+    "reconnecting": "Reconectando",
+    "disconnected": "Desconectado"
+  },
+  "hls": {
+    "loadError": "No se pudo cargar la transmisión HLS.",
+    "loadErrorHint": "El playlist no respondió. Verificá que el HLS egress siga activo.",
+    "waitingSignal": "Esperando la señal en vivo…",
+    "loading": "Cargando reproductor HLS…"
+  },
+  "live": {
+    "generatingAccess": "Generando acceso a la sala…",
+    "invalidToken": "El servidor no devolvió un token de acceso válido.",
+    "accessError": "No se pudo generar el acceso a la sala.",
+    "openError": "No se pudo abrir el player",
+    "retrying": "Reintentando…",
+    "connectionProblem": "Problema de conexión: {{error}}"
+  },
+  "mjpeg": {
+    "live": "EN VIVO",
+    "connecting": "Conectando con la cámara…",
+    "offline": "Cámara sin señal",
+    "offlineHint": "El stream MJPEG se cortó. Reintentando automáticamente…"
+  },
+  "controls": {
+    "unmute": "Activar sonido",
+    "mute": "Silenciar",
+    "enterFullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "sendReaction": "Enviar reacción",
+    "reaction": "Reacción"
+  },
+  "video": {
+    "participant": "Participante",
+    "screen": "pantalla",
+    "connectingRoom": "Conectando a la sala…",
+    "emptyTitle": "Sala vacía",
+    "emptyBody": "Nadie está transmitiendo todavía. El video aparecerá automáticamente cuando comience la emisión."
+  },
+  "viewers": {
+    "count_one": "{{count}} viewer",
+    "count_other": "{{count}} viewers"
+  },
+  "identity": {
+    "you": "Yo",
+    "anonymous": "Anónimo",
+    "someone": "Alguien"
+  }
+}

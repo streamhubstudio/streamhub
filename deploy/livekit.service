@@ -1,0 +1,15 @@
+[Unit]
+Description=LiveKit Server
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/livekit-server --config /etc/livekit/livekit.yaml
+Restart=on-failure
+RestartSec=2
+User=root
+LimitNOFILE=500000
+
+[Install]
+WantedBy=multi-user.target

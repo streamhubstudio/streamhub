@@ -1,0 +1,18 @@
+# Datasource provisionado automáticamente al boot de Grafana.
+# uid fijo "prometheus" para que los dashboards JSON en ../../dashboards/*.json
+# puedan referenciarlo sin variables de import (${DS_PROMETHEUS}).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # network_mode: host en ambos servicios (ver docker-compose.observability.yml)
+    # -> Grafana y Prometheus comparten la red del host, se hablan por localhost.
+    url: http://127.0.0.1:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST

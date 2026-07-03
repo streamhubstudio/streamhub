@@ -1,0 +1,171 @@
+# =============================================================================
+# StreamHub — one-command self-hosted LiveKit media server.
+# -----------------------------------------------------------------------------
+#   ./install.sh          # generates .env with random secrets, then `up -d`
+#   docker compose up -d  # if you already have a filled-in .env
+#
+# WHY host networking: LiveKit (SFU), Ingress (RTMP/WHIP) and Egress (recording)
+# push real-time media over UDP/RTMP and rely on STUN external-IP detection.
+# Running them on the host network is the reliable, LiveKit-recommended setup and
+# mirrors the bare-metal deployment. Every service talks to the others over
+# 127.0.0.1, and Caddy (also host-net) terminates TLS on :80/:443.
+#
+# NOTE: `network_mode: host` is Linux-only. This is meant for a Linux VM/server
+# with a public IP (the normal target for a media server).
+#
+# Ports used on the host:
+#   80, 443   Caddy (dashboard + API + LiveKit signaling `/rtc`, all TLS)
+#   7880      LiveKit signaling/API (ws)          7881  LiveKit TCP fallback
+#   7882/udp  LiveKit media (single mux port)     1935  Ingress RTMP
+#   8080      Ingress WHIP        3020  core (local)   6379  redis (local)
+# =============================================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: streamhub-redis
+    network_mode: host
+    # REDIS_BIND may hold several IPs ("127.0.0.1 10.0.0.1") — redis joins CLI
+    # args into one config line. REDIS_PASSWORD empty = auth disabled.
+    command: ["redis-server", "--bind", "${REDIS_BIND:-127.0.0.1}", "--requirepass", "${REDIS_PASSWORD:-}", "--appendonly", "yes"]
+    volumes:
+      - ${STREAMHUB_HOST_DATA_DIR:-./data}/redis:/data
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    container_name: streamhub-livekit
+    network_mode: host
+    restart: unless-stopped
+    depends_on: [redis]
+    # LiveKit reads its whole config from the LIVEKIT_CONFIG env var (this is the
+    # env binding of livekit-server's --config-body flag; NOTE it is LIVEKIT_CONFIG,
+    # not *_CONFIG_BODY like ingress/egress). Compose substitutes ${LIVEKIT_*} from
+    # .env. Single UDP mux port (7882) keeps the firewall simple; use_external_ip
+    # autodetects the public IP; the webhook feeds StreamHub core.
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses: [""]
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: true
+        # Edge nodes joining a cluster point this at the ORIGIN's redis and
+        # core (install.sh --join sets LIVEKIT_REDIS_ADDRESS / _PASSWORD /
+        # LIVEKIT_WEBHOOK_URL in .env).
+        redis:
+          address: ${LIVEKIT_REDIS_ADDRESS:-127.0.0.1:6379}
+          password: ${LIVEKIT_REDIS_PASSWORD:-}
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        webhook:
+          api_key: ${LIVEKIT_API_KEY}
+          urls:
+            - ${LIVEKIT_WEBHOOK_URL:-http://127.0.0.1:3020/api/v1/webhooks/livekit}
+        turn:
+          enabled: false
+        logging:
+          level: info
+        # Native Prometheus metrics on the HOST (network_mode: host). Scrape
+        # 127.0.0.1:6789 locally — do NOT open 6789 on the firewall. Each LiveKit
+        # service needs its own port since they share the host network.
+        prometheus_port: 6789
+
+  ingress:
+    image: livekit/ingress:latest
+    container_name: streamhub-ingress
+    network_mode: host
+    restart: unless-stopped
+    # Resource caps (compose v2 non-swarm keys). Ingress transcodes RTMP/WHIP;
+    # bound it so a runaway session can't starve the box. Tune via .env.
+    mem_limit: ${INGRESS_MEM_LIMIT:-1g}
+    cpus: ${INGRESS_CPUS:-1.5}
+    depends_on: [redis, livekit]
+    environment:
+      INGRESS_CONFIG_BODY: |
+        redis:
+          address: ${LIVEKIT_REDIS_ADDRESS:-127.0.0.1:6379}
+          password: ${LIVEKIT_REDIS_PASSWORD:-}
+        ws_url: ws://127.0.0.1:7880
+        api_key: ${LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET}
+        rtmp_port: 1935
+        whip_port: 8080
+        http_relay_port: 9090
+        logging:
+          level: info
+        # Prometheus metrics on the host — separate port from livekit-server.
+        prometheus_port: 6790
+
+  egress:
+    image: livekit/egress:latest
+    container_name: streamhub-egress
+    network_mode: host
+    restart: unless-stopped
+    # Egress runs a headless Chrome to composite rooms; it needs shared memory
+    # and the SYS_ADMIN cap for the sandbox.
+    shm_size: "1gb"
+    cap_add: [SYS_ADMIN]
+    # Resource caps (compose v2 non-swarm keys). The headless Chrome egress uses
+    # to composite a room can balloon RAM/CPU under multi-track/high-res rooms,
+    # so we hard-cap it — the single biggest OOM risk on a small host. Defaults
+    # target an 8GB/8c box; raise EGRESS_MEM_LIMIT/EGRESS_CPUS for heavier rooms.
+    mem_limit: ${EGRESS_MEM_LIMIT:-2g}
+    cpus: ${EGRESS_CPUS:-2}
+    depends_on: [redis, livekit]
+    environment:
+      EGRESS_CONFIG_BODY: |
+        redis:
+          address: ${LIVEKIT_REDIS_ADDRESS:-127.0.0.1:6379}
+          password: ${LIVEKIT_REDIS_PASSWORD:-}
+        ws_url: ws://127.0.0.1:7880
+        api_key: ${LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET}
+        insecure: false
+        log_level: info
+        # Prometheus metrics on the host — separate port from livekit/ingress.
+        prometheus_port: 6791
+    # CRITICAL: egress must see the data dir at the SAME path the core hands it,
+    # so the MP4 it writes lands exactly where core looks to upload it to S3.
+    volumes:
+      - ${STREAMHUB_HOST_DATA_DIR:-./data}:${DATA_DIR:-/data}
+
+  core:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: streamhub-core:local
+    container_name: streamhub-core
+    network_mode: host
+    restart: unless-stopped
+    depends_on: [redis, livekit]
+    env_file: .env
+    volumes:
+      - ${STREAMHUB_HOST_DATA_DIR:-./data}:${DATA_DIR:-/data}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:'+(process.env.PORT||3020)+'/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: streamhub-caddy
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      core:
+        condition: service_healthy
+    environment:
+      STREAMHUB_DOMAIN: ${STREAMHUB_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

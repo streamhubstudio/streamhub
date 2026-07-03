@@ -1,0 +1,45 @@
+# dependencias
+node_modules/
+
+# secretos / config local
+.env
+.env.local
+*.local
+**/.env
+
+# media / grabaciones (si se escriben localmente)
+recordings/
+*.mp4
+*.ogg
+*.mp3
+
+# logs / runtime
+*.log
+npm-debug.log*
+.DS_Store
+pids/
+*.pid
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# builds
+streamhub-core/dist/
+streamhub-web/dist/
+streamhub-adaptor/dist/
+streamhub-core/web/
+
+# datos runtime del core (DB global + per-app apps/<app>/)
+streamhub-core/data/
+streamhub-core/apps/
+streamhub-core/logs/
+streamhub-core/coverage/
+
+# workspace de agentes (worktrees temporales de Claude Code)
+.claude/worktrees/
+
+# accesos/secretos locales — NO commitear
+Access.md
+deploy-streamhub.sh

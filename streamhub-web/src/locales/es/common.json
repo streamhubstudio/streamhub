@@ -1,0 +1,34 @@
+{
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Borrar",
+    "close": "Cerrar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "refresh": "Refrescar",
+    "retry": "Reintentar",
+    "confirm": "Confirmar",
+    "edit": "Editar",
+    "create": "Crear",
+    "back": "Volver",
+    "search": "Buscar"
+  },
+  "state": {
+    "loading": "Cargando...",
+    "saving": "Guardando...",
+    "empty": "No hay nada para mostrar",
+    "live": "EN VIVO"
+  },
+  "answer": {
+    "yes": "Sí",
+    "no": "No"
+  },
+  "error": {
+    "generic": "Algo salió mal. Intentá de nuevo.",
+    "network": "Error de conexión. Verificá tu red.",
+    "unauthorized": "No tenés permiso para hacer esto.",
+    "notFound": "No se encontró lo que buscabas.",
+    "server": "Error del servidor. Probá más tarde."
+  }
+}

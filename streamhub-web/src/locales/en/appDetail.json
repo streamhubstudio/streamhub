@@ -1,0 +1,67 @@
+{
+  "header": {
+    "backToApps": "← Apps",
+    "prefix": "prefix:",
+    "radio": "Radio",
+    "broadcastCamera": "Broadcast camera",
+    "loadError": "Could not load the app."
+  },
+  "sizes": {
+    "db": "DB",
+    "dbTitle": "Size of this app's database (app.db)",
+    "vods": "VODs",
+    "vodsTitle": "Total size of this app's recordings"
+  },
+  "loadingApp": "Loading app…",
+  "state": {
+    "updating": "Updating…",
+    "loadingDefault": "Loading…",
+    "emptyDefault": "No data."
+  },
+  "tabs": {
+    "overview": {
+      "label": "Dashboard",
+      "hint": "Live viewers, streams, recordings, storage and recent events at a glance"
+    },
+    "streams": {
+      "label": "Live",
+      "hint": "Active streams · watch and record"
+    },
+    "vods": {
+      "label": "Recordings",
+      "hint": "VODs and recording settings"
+    },
+    "ingress": {
+      "label": "Publish",
+      "hint": "Go live via RTMP / WHIP / URL endpoints"
+    },
+    "tokens": {
+      "label": "Tokens",
+      "hint": "API and room tokens"
+    },
+    "samples": {
+      "label": "Samples",
+      "hint": "Integration snippets"
+    },
+    "integraciones": {
+      "label": "Integrations",
+      "hint": "Callbacks and features"
+    },
+    "plugins": {
+      "label": "Plugins",
+      "hint": "Install, configure and open this app's plugins"
+    },
+    "logs": {
+      "label": "Logs",
+      "hint": "App events"
+    },
+    "sistema": {
+      "label": "System",
+      "hint": "Database and maintenance"
+    },
+    "config": {
+      "label": "Config",
+      "hint": "Transcoding, GPU and adaptive delivery"
+    }
+  }
+}

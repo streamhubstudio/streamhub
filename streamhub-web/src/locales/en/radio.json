@@ -1,0 +1,57 @@
+{
+  "invalid": {
+    "title": "Invalid route",
+    "message": "The app or room is missing from the URL."
+  },
+  "header": {
+    "title": "Radio · {{room}}",
+    "subtitle": "app · {{app}}",
+    "exit": "Exit"
+  },
+  "master": {
+    "title": "Master (on air)",
+    "listeners_one": "{{count}} listener",
+    "listeners_other": "{{count}} listeners",
+    "micLabel": "Microphone",
+    "micEmpty": "No microphones detected",
+    "goLive": "Go on air",
+    "goingLive": "Going on air…",
+    "goOff": "Go off air",
+    "goingOff": "Leaving…",
+    "permissionDenied": "Microphone permission denied. Enable it in your browser to broadcast.",
+    "note": "The master publishes <strong>audio only</strong> over WebRTC; listeners subscribe (without publishing). It's low-latency fan-out via LiveKit, with no egress."
+  },
+  "monitor": {
+    "title": "Listener monitor",
+    "audioLabel": "Radio · {{room}}",
+    "note": "This is what your listeners hear (live audio + counter). This monitor counts as one listener while it's open."
+  },
+  "share": {
+    "title": "Share / embed",
+    "listenerLink": "Listener link",
+    "embed": "Embed iframe",
+    "note": "The embed is an <strong>audio-only</strong> player with autoplay after a gesture, a LIVE badge and a listener count. Paste it anywhere."
+  },
+  "token": {
+    "title": "Listener token",
+    "subtitle": "<strong>Subscribe-only</strong> token (audio) for your own integrations.",
+    "generate": "Generate listener token",
+    "generating": "Generating…",
+    "error": "Couldn't generate the listener token.",
+    "jwt": "Token (JWT)",
+    "wsUrl": "wsUrl"
+  },
+  "room": {
+    "title": "Room",
+    "nameLabel": "Room name",
+    "change": "Change"
+  },
+  "errors": {
+    "noRoom": "Missing room name.",
+    "micDenied": "Microphone permission denied.",
+    "micAccess": "Could not access the microphone.",
+    "noToken": "The server did not return a valid publish token.",
+    "connLost": "Connection to the room was lost.",
+    "goLiveFailed": "Could not go on air."
+  }
+}

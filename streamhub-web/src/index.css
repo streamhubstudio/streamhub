@@ -1,0 +1,227 @@
+@import 'tailwindcss';
+/* StreamHub design-system component classes (ported from Elstar). Imported
+   here (after tailwind) so its @apply rules see the theme + custom variants. */
+@import './ui/ui.css';
+
+/* Safelist the brand `primary-*` utilities. The ported components build these
+   class names at runtime (`bg-${themeColor}-${level}`), so Tailwind's static
+   scanner can't see them — enumerate them here. */
+@source inline("{,hover:,focus:,active:,focus-within:,dark:,dark:hover:,dark:active:}{bg,text,border,ring}-primary-{50,100,200,300,400,500,600,700,800,900}");
+@source inline("{,dark:,dark:hover:,dark:active:}bg-primary-{50,100,200,300,400,500,600,700,800,900}/{10,20,30,40,50}");
+
+/*
+ * StreamHub theme — Tailwind v4 CSS-first config, light + dark.
+ *
+ * Strategy (minimal churn):
+ *   1. The legacy palette (navy-* surfaces, slate-* text) is redefined as
+ *      **swapping CSS vars**, so the bulk of the UI flips theme WITHOUT touching
+ *      any component. `bg-navy-700`, `border-navy-600`, `text-slate-400`, etc.
+ *      keep working and now resolve per-theme.
+ *   2. Brand accents (sky2/blue2 = cyan->blue) stay CONSTANT in both themes.
+ *   3. New semantic tokens (bg/surface/border/fg/status) are provided for new
+ *      code. See the mapping table in the PR / handoff notes.
+ *
+ * Theme is selected by a `.dark` class on <html> (set by ThemeProvider and by
+ * the no-flash inline script in index.html). Default = light.
+ */
+
+/* Make the `dark:` variant follow the .dark class instead of prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Directional variants used by the ported Elstar components (`ltr:` / `rtl:`).
+   The app is LTR; `dir="ltr"` is set on <html>. */
+@custom-variant ltr (&:where([dir='ltr'], [dir='ltr'] *));
+@custom-variant rtl (&:where([dir='rtl'], [dir='rtl'] *));
+
+/* ------------------------------------------------------------------ *
+ * Raw values. `:root` = LIGHT, `.dark` = DARK. Only these two blocks
+ * hold hex values; everything else references them.
+ * ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  /* Surface scale (legacy "navy") — light */
+  --sh-navy: #eef2f8;
+  --sh-navy-900: #ffffff;
+  --sh-navy-800: #ffffff;
+  --sh-navy-700: #ffffff;
+  --sh-navy-600: #e2e8f0;
+
+  /* Text scale (overrides Tailwind slate) — light: darker = stronger */
+  --sh-slate-100: #0f172a;
+  --sh-slate-200: #1e293b;
+  --sh-slate-300: #334155;
+  --sh-slate-400: #64748b;
+  --sh-slate-500: #94a3b8;
+  --sh-slate-600: #cbd5e1;
+
+  /* Semantic tokens (new code) — light */
+  --sh-bg: #eef2f8;
+  --sh-surface: #ffffff;
+  --sh-surface-raised: #f8fafc;
+  --sh-sidebar: #ffffff;
+  --sh-border: #e2e8f0;
+  --sh-border-strong: #cbd5e1;
+  --sh-fg: #0f172a;
+  --sh-fg-muted: #475569;
+  --sh-fg-subtle: #94a3b8;
+  --sh-success: #059669;
+  --sh-warn: #d97706;
+  --sh-danger: #dc2626;
+  --sh-info: #2563eb;
+
+  /* Chrome bits (gradients, glass, scrollbar) — light */
+  --sh-glow-1: rgba(47, 123, 255, 0.1);
+  --sh-glow-2: rgba(34, 182, 240, 0.08);
+  --sh-glass-bg: rgba(255, 255, 255, 0.72);
+  --sh-glass-border: #e2e8f0;
+  --sh-scrollbar: #cbd5e1;
+  --sh-scrollbar-track: transparent;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --sh-navy: #0a0e27;
+  --sh-navy-900: #080b20;
+  --sh-navy-800: #0d1430;
+  --sh-navy-700: #111a3d;
+  --sh-navy-600: #1c2752;
+
+  --sh-slate-100: #f1f5f9;
+  --sh-slate-200: #e2e8f0;
+  --sh-slate-300: #cbd5e1;
+  --sh-slate-400: #94a3b8;
+  --sh-slate-500: #64748b;
+  --sh-slate-600: #475569;
+
+  --sh-bg: #0a0e27;
+  --sh-surface: #111a3d;
+  --sh-surface-raised: #1c2752;
+  --sh-sidebar: #0d1430;
+  --sh-border: #1c2752;
+  --sh-border-strong: #2b3a6b;
+  --sh-fg: #f8fafc;
+  --sh-fg-muted: #94a3b8;
+  --sh-fg-subtle: #64748b;
+  --sh-success: #34d399;
+  --sh-warn: #fbbf24;
+  --sh-danger: #f87171;
+  --sh-info: #60a5fa;
+
+  --sh-glow-1: rgba(47, 123, 255, 0.14);
+  --sh-glow-2: rgba(34, 182, 240, 0.1);
+  --sh-glass-bg: rgba(17, 26, 61, 0.55);
+  --sh-glass-border: #1c2752;
+  --sh-scrollbar: #1c2752;
+  --sh-scrollbar-track: transparent;
+}
+
+/* ------------------------------------------------------------------ *
+ * Tailwind theme. `@theme inline` makes utilities reference the raw
+ * swapping vars directly, so `.dark` overrides are picked up live.
+ * ------------------------------------------------------------------ */
+@theme inline {
+  /* Surface scale (legacy navy) — swaps */
+  --color-navy: var(--sh-navy);
+  --color-navy-900: var(--sh-navy-900);
+  --color-navy-800: var(--sh-navy-800);
+  --color-navy-700: var(--sh-navy-700);
+  --color-navy-600: var(--sh-navy-600);
+
+  /* Text scale (override slate) — swaps */
+  --color-slate-100: var(--sh-slate-100);
+  --color-slate-200: var(--sh-slate-200);
+  --color-slate-300: var(--sh-slate-300);
+  --color-slate-400: var(--sh-slate-400);
+  --color-slate-500: var(--sh-slate-500);
+  --color-slate-600: var(--sh-slate-600);
+
+  /* Brand accents — CONSTANT in both themes. Matches the logo wordmark
+     ("Hub" #22b6f0) and the marketing site: cyan #22b6f0 -> blue #2f7bff. */
+  --color-sky2: #22b6f0;
+  --color-blue2: #2f7bff;
+  --color-accent: #22b6f0;
+  --color-accent-2: #2f7bff;
+
+  /* Brand "primary" scale — the accent used by the ported Elstar design
+     system (`themeColor: 'primary'`). 500 = brand blue #2f7bff; the scale is
+     tuned so twoTone/hover/active levels (400/600) stay on-brand. Constant in
+     both themes. */
+  --color-primary: #2f7bff;
+  --color-primary-50: #eaf2ff;
+  --color-primary-100: #d6e6ff;
+  --color-primary-200: #adceff;
+  --color-primary-300: #7fb2ff;
+  --color-primary-400: #5497ff;
+  --color-primary-500: #2f7bff;
+  --color-primary-600: #1f66e6;
+  --color-primary-700: #184fb4;
+  --color-primary-800: #123c86;
+  --color-primary-900: #0d2c63;
+  --color-primary-950: #081d44;
+
+  /* Semantic surfaces / borders / text — swaps */
+  --color-bg: var(--sh-bg);
+  --color-surface: var(--sh-surface);
+  --color-surface-raised: var(--sh-surface-raised);
+  --color-sidebar: var(--sh-sidebar);
+  --color-border: var(--sh-border);
+  --color-border-strong: var(--sh-border-strong);
+  --color-fg: var(--sh-fg);
+  --color-fg-muted: var(--sh-fg-muted);
+  --color-fg-subtle: var(--sh-fg-subtle);
+
+  /* Semantic status — swaps */
+  --color-success: var(--sh-success);
+  --color-warn: var(--sh-warn);
+  --color-danger: var(--sh-danger);
+  --color-info: var(--sh-info);
+
+  --font-sans:
+    'Inter Variable', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif';
+}
+
+/* ------------------------------------------------------------------ *
+ * Base + shared component classes.
+ * ------------------------------------------------------------------ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply antialiased;
+  font-family: var(--font-sans);
+  color: var(--sh-fg);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, var(--sh-glow-1), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, var(--sh-glow-2), transparent 55%),
+    var(--sh-bg);
+}
+
+/* Frosted card used across the app. */
+.glass {
+  background: var(--sh-glass-bg);
+  border: 1px solid var(--sh-glass-border);
+  backdrop-filter: blur(6px);
+}
+
+/* Cyan -> blue gradient CTA (brand, constant in both themes). */
+.btn-accent {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-2));
+  color: #06122b;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--sh-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sh-scrollbar);
+  border-radius: 6px;
+}

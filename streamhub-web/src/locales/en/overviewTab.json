@@ -1,0 +1,45 @@
+{
+  "loading": "Loading dashboard…",
+  "loadError": "Could not load the app stats.",
+  "cards": {
+    "viewers": "Viewers now",
+    "viewersHint": "Enable the viewerCounter feature to count viewers",
+    "streams": "Active streams",
+    "vods": "Recordings",
+    "vodReady": "{{n}} ready",
+    "vodPending": "{{n}} in progress",
+    "vodFailed": "{{n}} failed",
+    "storage": "Storage",
+    "storageHint": "DB {{db}} · VODs {{vods}}",
+    "ingress": "Ingress",
+    "ingressHint": "active / total",
+    "events": "Events (24h)",
+    "eventsError": "{{n}} errors",
+    "eventsWarn": "{{n}} warnings"
+  },
+  "rooms": {
+    "title": "Live rooms",
+    "subtitle": "Rooms with an active publisher right now.",
+    "empty": "No live rooms.",
+    "room": "Room",
+    "viewers": "Viewers",
+    "publishers": "Publishers",
+    "since": "Since",
+    "actions": "Actions",
+    "watch": "Watch"
+  },
+  "events": {
+    "title": "Recent events",
+    "subtitle": "Latest events for this app.",
+    "allLevels": "All levels",
+    "range": {
+      "today": "Today",
+      "24h": "Last 24h",
+      "7d": "Last 7 days"
+    },
+    "seeAll": "See all",
+    "loading": "Loading events…",
+    "loadError": "Could not load the events.",
+    "empty": "No events in this range."
+  }
+}

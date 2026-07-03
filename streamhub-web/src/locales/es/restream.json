@@ -1,0 +1,46 @@
+{
+  "title": "Reenvío (Restream)",
+  "subtitle": "Reenviá este stream en vivo a varios destinos RTMP a la vez (YouTube, Twitch, Facebook o un servidor propio). Cada destino corre en su propio egress: si uno falla, los demás siguen.",
+  "form": {
+    "platform": "Plataforma",
+    "customPlatform": "Personalizado (URL RTMP)",
+    "name": "Nombre",
+    "nameHint": "Etiqueta opcional para identificar el destino.",
+    "namePlaceholder": "Mi canal de YouTube",
+    "key": "Stream key del destino",
+    "keyHint": "Pegá la clave de transmisión que te da la plataforma. Se guarda en el servidor y nunca se vuelve a mostrar completa.",
+    "keyPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+    "url": "URL RTMP de destino",
+    "urlHint": "URL completa rtmp:// o rtmps:// (incluida la stream key si corresponde)."
+  },
+  "formError": {
+    "keyRequired": "Ingresá la stream key del destino.",
+    "keyInvalid": "La stream key no puede contener espacios ni barras.",
+    "urlRequired": "Ingresá la URL RTMP de destino.",
+    "urlInvalid": "La URL debe empezar con rtmp:// o rtmps://."
+  },
+  "actions": {
+    "add": "Agregar destino",
+    "adding": "Agregando…",
+    "stop": "Detener",
+    "stopping": "Deteniendo…"
+  },
+  "list": {
+    "title": "Destinos",
+    "loading": "Cargando destinos…",
+    "empty": "Sin destinos todavía. Agregá el primero arriba.",
+    "retries_one": "{{count}} reintento",
+    "retries_other": "{{count}} reintentos"
+  },
+  "status": {
+    "starting": "iniciando",
+    "active": "activo",
+    "failed": "falló",
+    "stopped": "detenido"
+  },
+  "error": {
+    "add": "No se pudo agregar el destino.",
+    "stop": "No se pudo detener el destino.",
+    "load": "No se pudieron cargar los destinos."
+  }
+}

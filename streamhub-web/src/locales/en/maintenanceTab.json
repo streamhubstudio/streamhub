@@ -1,0 +1,48 @@
+{
+  "confirmPhrase": "PURGE",
+  "scope": {
+    "vods": {
+      "label": "VODs",
+      "desc": "Deletes the recording records from the database. Does not touch the app config."
+    },
+    "logs": {
+      "label": "Logs",
+      "desc": "Deletes the app's stored events/logs."
+    },
+    "all": {
+      "label": "Everything (VODs + logs)",
+      "desc": "Deletes VODs and logs. The most destructive option."
+    }
+  },
+  "health": {
+    "title": "Database (app.db)",
+    "dbSize": "app.db size",
+    "wal": "WAL:",
+    "path": "Path",
+    "optimizing": "Optimizing…",
+    "optimize": "Optimize (VACUUM)",
+    "purgeData": "Purge data…",
+    "optimized": "Optimized: {{before}} → {{after}}",
+    "reclaimed": " ({{size}} reclaimed)",
+    "optimizeError": "Could not optimize the database.",
+    "loading": "Loading database status…",
+    "loadError": "Could not load the database status.",
+    "empty": "No tables to show.",
+    "table": {
+      "name": "Table",
+      "rows": "Rows",
+      "size": "Size"
+    }
+  },
+  "purge": {
+    "title": "Purge database",
+    "destructive": "Destructive",
+    "warning": "This action deletes data permanently and cannot be undone.",
+    "scopeLabel": "Scope",
+    "confirmLabel": "Type \"{{phrase}}\" to confirm",
+    "confirmHint": "Confirmation is required before deleting.",
+    "error": "Could not purge the database.",
+    "purging": "Purging…",
+    "purgeScope": "Purge {{scope}}"
+  }
+}

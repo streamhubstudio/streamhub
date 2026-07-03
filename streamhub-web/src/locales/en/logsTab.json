@@ -1,0 +1,10 @@
+{
+  "title": "Logs",
+  "subtitle": "Events for app {{app}}.",
+  "allLevels": "All levels",
+  "filterSource": "Filter by source…",
+  "filterSearch": "Search message…",
+  "loading": "Loading logs…",
+  "loadError": "Could not load the logs.",
+  "empty": "No logs."
+}

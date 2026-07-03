@@ -1,0 +1,6 @@
+{
+  "overlay": {
+    "camera": "Camera",
+    "ariaLabel": "{{name}} — live timestamp {{time}}"
+  }
+}

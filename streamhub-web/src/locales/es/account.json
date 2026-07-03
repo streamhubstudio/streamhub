@@ -1,0 +1,145 @@
+{
+  "title": "Mi cuenta",
+  "sessionActive": "Sesión activa",
+  "tabs": {
+    "profile": "Perfil",
+    "security": "Seguridad",
+    "team": "Equipo",
+    "platform": "Plataforma"
+  },
+  "roles": {
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "superadmin": "Superadmin"
+  },
+  "noTenant": {
+    "superadmin": "Elegí un tenant en la pestaña «Plataforma» para verlo acá.",
+    "member": "Tu usuario todavía no pertenece a ningún tenant."
+  },
+  "ui": {
+    "loading": "Cargando…",
+    "empty": "Sin datos."
+  },
+  "profile": {
+    "title": "Perfil",
+    "subtitle": "Tus datos personales. El email es también tu identificador de acceso.",
+    "loading": "Cargando tu cuenta…",
+    "loadError": "No se pudo cargar tu cuenta.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Tu nombre",
+    "emailLabel": "Email",
+    "emailAdminHint": "El email del admin de emergencia se gestiona vía ADMIN_USER (env).",
+    "roleLabel": "Rol",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Perfil actualizado.",
+    "saveError": "No se pudo guardar tu perfil.",
+    "tenantTitle": "Tu tenant",
+    "tenantSubtitle": "El equipo (tenant) y rol bajo el que actúa esta sesión."
+  },
+  "security": {
+    "password": {
+      "title": "Contraseña",
+      "subtitle": "Cambiá tu contraseña. Vas a necesitar la actual.",
+      "noPassword": "Esta cuenta ingresa con magic links y todavía no tiene una contraseña conocida.",
+      "setViaReset": "Establecé una contraseña con el flujo de reset por email →",
+      "currentLabel": "Contraseña actual",
+      "newLabel": "Nueva contraseña",
+      "confirmLabel": "Confirmar nueva contraseña",
+      "change": "Cambiar contraseña",
+      "changing": "Cambiando…",
+      "changed": "Contraseña cambiada.",
+      "error": "No se pudo cambiar la contraseña.",
+      "errorTooShort": "La nueva contraseña debe tener al menos {{min}} caracteres.",
+      "errorMismatch": "Las nuevas contraseñas no coinciden."
+    },
+    "twofa": {
+      "title": "Autenticación en dos pasos (2FA)",
+      "subtitleOff": "Sumá un segundo paso a tu ingreso con una app autenticadora (TOTP).",
+      "subtitleOn": "2FA activo: para ingresar se pide un código de tu app autenticadora.",
+      "on": "Activado",
+      "off": "Desactivado",
+      "start": "Configurar 2FA",
+      "starting": "Preparando…",
+      "errorStart": "No se pudo iniciar la configuración de 2FA.",
+      "qrAlt": "Código QR de enrolamiento 2FA",
+      "scanHint": "Escaneá el QR con tu app autenticadora (Google Authenticator, 1Password, Aegis…) o ingresá el secreto a mano, y confirmá con un código generado.",
+      "secretLabel": "Secreto para carga manual",
+      "confirmLabel": "Código de la app",
+      "codeLabel": "Código de la app",
+      "enable": "Activar 2FA",
+      "enabling": "Activando…",
+      "cancel": "Cancelar",
+      "disable": "Desactivar 2FA",
+      "disabling": "Desactivando…",
+      "errorCode": "Código inválido. Revisá tu app autenticadora e intentá de nuevo."
+    }
+  },
+  "overview": {
+    "tenantTitle": "Tenant actual",
+    "tenantSubtitle": "Datos y uso de cuotas del tenant (equipo) al que pertenece tu sesión.",
+    "name": "Nombre",
+    "plan": "Plan",
+    "id": "ID"
+  },
+  "metrics": {
+    "apps": "Apps",
+    "concurrentStreams": "Streams concurrentes",
+    "recordingMinutes": "Minutos de grabación (mes)",
+    "egress": "Egress (mes)",
+    "storage": "Storage"
+  },
+  "members": {
+    "title": "Usuarios / miembros",
+    "subtitleManage": "Invitá miembros por email y asignales un rol. Owner gestiona todo; editor crea/edita; viewer solo lee.",
+    "subtitleReadonly": "Miembros del tenant. Solo un owner puede invitar o revocar.",
+    "emailLabel": "Email a invitar",
+    "emailPlaceholder": "persona@empresa.com",
+    "roleLabel": "Rol",
+    "inviting": "Invitando…",
+    "invite": "Invitar",
+    "inviteError": "No se pudo invitar.",
+    "inviteSuccess": "Invitación enviada. Le llegará un email con un link para unirse al equipo.",
+    "inviteCreatedNoEmail": "Invitación creada, pero el email no se pudo enviar (SMTP no disponible). Revocá y reintentá, o compartí un link de acceso a mano.",
+    "loading": "Cargando equipo…",
+    "loadError": "No se pudo cargar el equipo.",
+    "empty": "Este tenant no tiene miembros.",
+    "invitedBadge": "invitado",
+    "you": "(vos)"
+  },
+  "invites": {
+    "title": "Invitaciones pendientes",
+    "subtitle": "Personas invitadas por email que todavía no aceptaron. Revocar invalida el link enviado.",
+    "loading": "Cargando invitaciones…",
+    "loadError": "No se pudieron cargar las invitaciones.",
+    "empty": "No hay invitaciones pendientes.",
+    "sentAt": "Invitado el {{date}}",
+    "revoke": "Revocar",
+    "revokeConfirm": "¿Revocar la invitación de {{email}}?",
+    "revokeError": "No se pudo revocar la invitación."
+  },
+  "platform": {
+    "quotaFields": {
+      "apps": "Apps",
+      "concurrentStreams": "Streams concurrentes",
+      "recordingMinutes": "Min. grabación/mes",
+      "egress": "Egress/mes",
+      "storage": "Storage"
+    },
+    "plan": "Plan",
+    "saveError": "No se pudieron guardar las cuotas.",
+    "saving": "Guardando…",
+    "saveQuotas": "Guardar cuotas",
+    "saved": "Cuotas actualizadas.",
+    "title": "Todos los tenants",
+    "subtitle": "Vista de plataforma. Seleccioná un tenant para verlo en las otras pestañas o ajustá sus cuotas.",
+    "loading": "Cargando tenants…",
+    "loadError": "No se pudieron cargar los tenants.",
+    "empty": "No hay tenants.",
+    "appCount": "{{count}} apps",
+    "selected": "Seleccionado",
+    "select": "Seleccionar",
+    "quotas": "Cuotas"
+  }
+}

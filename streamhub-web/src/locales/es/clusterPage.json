@@ -1,0 +1,64 @@
+{
+  "title": "Cluster",
+  "subtitle": "Nodos de StreamHub registrados en este cluster.",
+  "info": {
+    "title": "Estado del cluster",
+    "subtitle": "Token compartido y el comando que ejecutan los nodos nuevos para unirse.",
+    "enabled": "Habilitado",
+    "disabled": "Deshabilitado",
+    "loadError": "No se pudo cargar la info del cluster.",
+    "joinCommand": "Comando para unirse",
+    "token": "Token del cluster",
+    "redisUrl": "URL de Redis del cluster",
+    "reveal": "Mostrar",
+    "hide": "Ocultar"
+  },
+  "disabled": {
+    "title": "El clustering está apagado",
+    "body": "Definí un secreto compartido en cada nodo para habilitarlo:",
+    "docsLink": "Cómo agregar un nodo (INSTALL-NODE.md)"
+  },
+  "nodes": {
+    "title": "Nodos",
+    "subtitle": "Nodos registrados y su último latido.",
+    "loading": "Cargando nodos…",
+    "loadError": "No se pudieron cargar los nodos.",
+    "empty": "Todavía no hay nodos registrados.",
+    "name": "Nombre",
+    "url": "URL",
+    "region": "Región",
+    "status": "Estado",
+    "lastSeen": "Visto por última vez",
+    "stale": "obsoleto",
+    "never": "nunca",
+    "showStats": "Stats",
+    "hideStats": "Ocultar",
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "relative": {
+    "now": "recién",
+    "seconds_one": "hace {{count}}s",
+    "seconds_other": "hace {{count}}s",
+    "minutes_one": "hace {{count}} min",
+    "minutes_other": "hace {{count}} min",
+    "hours_one": "hace {{count}} h",
+    "hours_other": "hace {{count}} h",
+    "days_one": "hace {{count}} día",
+    "days_other": "hace {{count}} días"
+  },
+  "edit": {
+    "title": "Editar {{name}}",
+    "name": "Nombre",
+    "region": "Región",
+    "regionPlaceholder": "ej. us-east",
+    "error": "No se pudo guardar el nodo."
+  },
+  "delete": {
+    "title": "Eliminar {{name}}",
+    "destructive": "Destructivo",
+    "warning": "Esto da de baja al nodo del cluster. Puede volver a unirse con el token del cluster.",
+    "error": "No se pudo eliminar el nodo.",
+    "confirm": "Eliminar nodo"
+  }
+}

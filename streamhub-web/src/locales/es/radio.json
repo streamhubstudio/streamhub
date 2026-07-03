@@ -1,0 +1,57 @@
+{
+  "invalid": {
+    "title": "Ruta inválida",
+    "message": "Falta la app o la sala en la URL."
+  },
+  "header": {
+    "title": "Radio · {{room}}",
+    "subtitle": "app · {{app}}",
+    "exit": "Salir"
+  },
+  "master": {
+    "title": "Máster (al aire)",
+    "listeners_one": "{{count}} oyente",
+    "listeners_other": "{{count}} oyentes",
+    "micLabel": "Micrófono",
+    "micEmpty": "Sin micrófonos detectados",
+    "goLive": "Salir al aire",
+    "goingLive": "Saliendo al aire…",
+    "goOff": "Salir del aire",
+    "goingOff": "Saliendo…",
+    "permissionDenied": "Permiso de micrófono denegado. Habilitalo en el navegador para transmitir.",
+    "note": "El máster publica <strong>solo audio</strong> por WebRTC; los oyentes se suscriben (sin publicar). Es fan-out de baja latencia vía LiveKit, sin egress."
+  },
+  "monitor": {
+    "title": "Monitor del oyente",
+    "audioLabel": "Radio · {{room}}",
+    "note": "Así lo escuchan tus oyentes (audio en vivo + contador). Este monitor cuenta como un oyente mientras esté abierto."
+  },
+  "share": {
+    "title": "Compartir / embeber",
+    "listenerLink": "Link de oyente",
+    "embed": "Embed iframe",
+    "note": "El embed es un reproductor <strong>solo audio</strong> con autoplay tras un gesto, badge EN VIVO y nº de oyentes. Pegalo en cualquier sitio."
+  },
+  "token": {
+    "title": "Token de oyente",
+    "subtitle": "Token <strong>subscribe-only</strong> (audio) para integraciones propias.",
+    "generate": "Generar token de oyente",
+    "generating": "Generando…",
+    "error": "No se pudo generar el token de oyente.",
+    "jwt": "Token (JWT)",
+    "wsUrl": "wsUrl"
+  },
+  "room": {
+    "title": "Sala",
+    "nameLabel": "Nombre de la sala",
+    "change": "Cambiar"
+  },
+  "errors": {
+    "noRoom": "Falta el nombre de la sala.",
+    "micDenied": "Permiso de micrófono denegado.",
+    "micAccess": "No se pudo acceder al micrófono.",
+    "noToken": "El servidor no devolvió un token de publicación válido.",
+    "connLost": "Se perdió la conexión con la sala.",
+    "goLiveFailed": "No se pudo salir al aire."
+  }
+}

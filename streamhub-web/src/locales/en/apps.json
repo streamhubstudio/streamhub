@@ -1,0 +1,47 @@
+{
+  "page": {
+    "title": "Apps",
+    "subtitle": "Your tenant's apps on LiveKit.",
+    "new": "New app",
+    "updating": "Updating…",
+    "loadError": "Couldn't load the apps.",
+    "loading": "Loading apps…",
+    "emptyNoData": "No data.",
+    "empty": "No apps yet.",
+    "createFirst": "Create the first app",
+    "onboardTitle": "Welcome to StreamHub 👋",
+    "onboardBody": "Create your first app to start streaming. An app is an isolated space with its own streams, recordings, ingest keys and plugins.",
+    "onboardStep1": "Create an app",
+    "onboardStep2": "Publish via WebRTC, RTMP, WHIP or a WS camera",
+    "onboardStep3": "Play it back, record it and add plugins"
+  },
+  "card": {
+    "deleteAria": "Delete {{name}}",
+    "deleteTitle": "Delete app",
+    "roomPrefix": "Room prefix",
+    "created": "Created",
+    "detail": "View details"
+  },
+  "create": {
+    "title": "New app",
+    "submit": "Create app",
+    "submitting": "Creating…",
+    "nameLabel": "Name (slug)",
+    "nameHint": "Unique identifier. Lowercase, numbers and hyphens.",
+    "displayNameLabel": "Display name",
+    "roomPrefixLabel": "Room prefix",
+    "roomPrefixPlaceholder": "Optional — derived from the name if omitted",
+    "errorNameRequired": "Name is required.",
+    "errorNameSlug": "The name must be a slug: lowercase, numbers and hyphens (no spaces).",
+    "errorCreate": "Couldn't create the app."
+  },
+  "delete": {
+    "title": "Delete app",
+    "submit": "Delete permanently",
+    "submitting": "Deleting…",
+    "warning": "This action removes the app <strong>{{name}}</strong> and its configuration. It can't be undone.",
+    "confirmLabel": "Type <code>{{name}}</code> to confirm",
+    "deleteVods": "Also delete VODs and local files",
+    "error": "Couldn't delete the app."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "title": "Streams en vivo",
+  "loading": "Cargando streams…",
+  "empty": "Todavía no hay streams activos. Empezá a publicar desde tu cámara o un Ingress RTMP/WHIP.",
+  "emptyCta": {
+    "broadcast": "Transmitir",
+    "createIngress": "Crear Ingress"
+  },
+  "error": {
+    "stopStream": "No se pudo detener el stream.",
+    "recordStart": "No se pudo iniciar la grabación.",
+    "recordStop": "No se pudo detener la grabación.",
+    "hlsStart": "No se pudo iniciar el HLS.",
+    "hlsStop": "No se pudo detener el HLS.",
+    "load": "No se pudieron cargar los streams."
+  },
+  "table": {
+    "stream": "Stream",
+    "room": "Sala",
+    "type": "Tipo",
+    "status": "Estado",
+    "startedAt": "Inicio",
+    "actions": "Acciones"
+  },
+  "status": {
+    "finished": "finalizado",
+    "recording": "grabando"
+  },
+  "viewers": "{{count}} viewers",
+  "actions": {
+    "watch": "Ver",
+    "restream": "Reenviar",
+    "startingHls": "Iniciando HLS…",
+    "watchHls": "Ver (HLS)",
+    "stopping": "Deteniendo…",
+    "stopHls": "Detener HLS",
+    "stopRecording": "Detener grabación",
+    "starting": "Iniciando…",
+    "record": "Grabar",
+    "stopStream": "Detener stream"
+  },
+  "confirmStopStream": "¿Detener el stream {{id}}?",
+  "modal": {
+    "room": "Sala"
+  },
+  "hls": {
+    "liveTitle": "HLS en vivo",
+    "latency": "~6-15s de latencia",
+    "playlistUrl": "URL del playlist (.m3u8)",
+    "embed": "Embed (HTML)",
+    "embedHelp": "Pegalo en cualquier web (video.js por CDN). En Safari/iOS el `.m3u8` también reproduce de forma nativa."
+  }
+}

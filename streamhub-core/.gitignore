@@ -1,0 +1,13 @@
+/node_modules
+/dist
+/coverage
+.jest-cache
+*.log
+.env
+data/
+# runtime per-app data dir at the package root ONLY (a bare `apps/` also
+# swallowed new files under src/modules/apps/)
+/apps/
+/logs/
+.DS_Store
+openapi.json

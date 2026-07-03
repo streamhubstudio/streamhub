@@ -1,0 +1,35 @@
+{
+  "invalid": {
+    "title": "Ruta inválida",
+    "desc": "Falta la app o la sala en la URL."
+  },
+  "header": {
+    "appLabel": "app · {{app}}",
+    "audioOnly": "Solo audio",
+    "audioOnlyTitle": "Reproducir solo el audio de la sala",
+    "exit": "Salir"
+  },
+  "share": {
+    "title": "Compartir",
+    "subtitle": "URL pública del reproductor y snippet para incrustar.",
+    "publicUrl": "URL pública",
+    "embed": "Embed (iframe)",
+    "openNewTab": "Abrir en una pestaña nueva"
+  },
+  "connection": {
+    "live": "En vivo",
+    "connecting": "Conectando",
+    "reconnecting": "Reconectando",
+    "disconnected": "Desconectado"
+  },
+  "stage": {
+    "connecting": "Conectando a la sala…",
+    "emptyTitle": "Sala vacía",
+    "emptyDesc": "Nadie está transmitiendo todavía. El video aparecerá automáticamente cuando comience la emisión.",
+    "startAudio": "Activar sonido",
+    "screen": "pantalla",
+    "participant": "Participante"
+  },
+  "viewers_one": "{{count}} en sala",
+  "viewers_other": "{{count}} en sala"
+}

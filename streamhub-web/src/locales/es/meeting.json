@@ -1,0 +1,49 @@
+{
+  "invalid": {
+    "title": "Sala inválida",
+    "desc": "Faltan los parámetros app/room en la URL."
+  },
+  "token": {
+    "minting": "Generando token de acceso…",
+    "error": "No se pudo generar el token de la sala.",
+    "joinFailed": "No se pudo unir",
+    "connectError": "Error de conexión con la sala."
+  },
+  "prejoin": {
+    "subtitle": "Configurá tu entrada a la reunión.",
+    "nameLabel": "Nombre para mostrar",
+    "namePlaceholder": "Tu nombre",
+    "withMic": "Entrar con micrófono",
+    "withCam": "Entrar con cámara",
+    "connecting": "Conectando…",
+    "join": "Unirse a la reunión"
+  },
+  "controls": {
+    "micOn": "Micrófono",
+    "micOff": "Silenciado",
+    "camOn": "Cámara",
+    "camOff": "Sin cámara",
+    "screen": "Pantalla",
+    "reaction": "Reacción",
+    "chat": "Chat",
+    "leave": "Salir"
+  },
+  "stage": {
+    "waiting": "Esperando participantes…",
+    "inRoom_one": "{{count}} en sala",
+    "inRoom_other": "{{count}} en sala"
+  },
+  "chat": {
+    "title": "Chat",
+    "close": "Cerrar chat",
+    "empty": "Todavía no hay mensajes.",
+    "emojis": "Emojis",
+    "placeholder": "Escribí un mensaje…",
+    "send": "Enviar"
+  },
+  "participant": {
+    "self": "Yo",
+    "anonymous": "Anónimo",
+    "someone": "Alguien"
+  }
+}

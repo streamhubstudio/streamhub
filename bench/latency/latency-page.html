@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!--
+  G1 latency harness — glass-to-glass WebRTC latency vía "reloj quemado" en píxeles.
+
+  Un solo page = publisher + subscriber en la MISMA máquina (mismo reloj, sin sync).
+  El publisher dibuja Date.now() codificado en 32 bloques binarios (28 bits de ms
+  + 4 de checksum XOR) en un canvas 640x360 @30fps y lo publica por WebRTC.
+  El subscriber (segunda Room) decodifica los bloques de cada frame recibido
+  (requestVideoFrameCallback) y computa latency = Date.now() - ts decodificado.
+
+  Query params:
+    ws=wss://...        pubtoken=...   subtoken=...
+    secs=30             segundos de muestreo (tras el primer decode válido)
+    simulcast=1|0       codec=vp8|h264|vp9|av1 (publishDefaults)
+    fps=30              res=640x360
+-->
+<html><head><meta charset="utf-8"><title>g1-latency</title></head>
+<body style="background:#111;color:#eee;font:12px monospace">
+<div id="st">boot</div>
+<canvas id="pub" width="640" height="360" style="width:320px;border:1px solid #444"></canvas>
+<video id="sub" autoplay playsinline muted style="width:320px;border:1px solid #444"></video>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.15.7/dist/livekit-client.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+const WS = Q.get('ws'), PUBTOKEN = Q.get('pubtoken'), SUBTOKEN = Q.get('subtoken');
+const MODE = Q.get('mode') || 'both';   // both | pub (publica y espera) | hls (decodifica de hlsurl)
+const HLSURL = Q.get('hlsurl') || '';
+const SECS = +(Q.get('secs') || 30);
+const SIMULCAST = Q.get('simulcast') !== '0';
+const CODEC = Q.get('codec') || undefined;
+const FPS = +(Q.get('fps') || 30);
+const st = (m) => { document.getElementById('st').textContent = m; console.log('[st]', m); };
+
+// ---- pixel clock: 32 bloques (28 bits ts + 4 checksum XOR de nibbles) ----
+const NB = 32, BW = 20, BH = 80, Y0 = 140; // bloques de 20x80 en y=140..220
+function encode(ctx, ms) {
+  const ts = ms & 0xFFFFFFF;
+  let ck = 0; for (let i = 0; i < 7; i++) ck ^= (ts >>> (i * 4)) & 0xF;
+  const word = (ts * 16 + ck) >>> 0; // 32 bits: ts28 << 4 | ck4  (MSB first)
+  ctx.fillStyle = '#808080'; ctx.fillRect(0, Y0 - 20, 640, BH + 40); // marco gris
+  for (let i = 0; i < NB; i++) {
+    const bit = (word >>> (31 - i)) & 1;
+    ctx.fillStyle = bit ? '#fff' : '#000';
+    ctx.fillRect(i * BW, Y0, BW, BH);
+  }
+}
+function decode(ctx) {
+  const img = ctx.getImageData(0, Y0 + BH / 2 - 3, 640, 6).data; // franja central
+  let word = 0;
+  for (let i = 0; i < NB; i++) {
+    let sum = 0, n = 0;
+    for (let dx = 6; dx < BW - 6; dx++) for (let dy = 0; dy < 6; dy++) {
+      const o = (dy * 640 + i * BW + dx) * 4; sum += img[o]; n++;
+    }
+    word = (word * 2 + (sum / n > 128 ? 1 : 0)) >>> 0;
+  }
+  const ts = Math.floor(word / 16), ck = word & 0xF;
+  let x = 0; for (let i = 0; i < 7; i++) x ^= (ts >>> (i * 4)) & 0xF;
+  return x === ck ? ts : null;
+}
+function tsToLatency(ts28) {
+  const now = Date.now();
+  let cand = (Math.floor(now / 0x10000000) * 0x10000000) + ts28;
+  if (cand > now + 1000) cand -= 0x10000000; // wrap
+  return now - cand;
+}
+
+// ---- main ----
+(async () => {
+  try {
+    const LK = window.LivekitClient;
+    const lat = [];
+    let firstDecodeAt = 0, frames = 0, badDecodes = 0;
+    const vEl = document.getElementById('sub');
+    const dcv = document.createElement('canvas'); dcv.width = 640; dcv.height = 360;
+    const dcx = dcv.getContext('2d', { willReadFrequently: true });
+    function pct(a, p) { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; }
+    function finish(extra) {
+      const r = lat.length ? {
+        samples: lat.length, frames, badDecodes,
+        mean: +(lat.reduce((a, b) => a + b, 0) / lat.length).toFixed(1),
+        p50: pct(lat, 0.5), p90: pct(lat, 0.9), p95: pct(lat, 0.95),
+        min: Math.min(...lat), max: Math.max(...lat),
+        mode: MODE, simulcast: SIMULCAST, codec: CODEC || 'default', fps: FPS, secs: SECS, ...extra,
+      } : { error: 'no valid samples', frames, badDecodes, mode: MODE };
+      window.__RESULT = r;
+      document.title = 'DONE';
+      st('DONE ' + JSON.stringify(r));
+    }
+    function startSampling(maxLatMs) {
+      const onFrame = () => {
+        frames++;
+        try {
+          dcx.drawImage(vEl, 0, 0, 640, 360);
+          const ts = decode(dcx);
+          if (ts !== null) {
+            const l = tsToLatency(ts);
+            if (l >= 0 && l < maxLatMs) {
+              if (!firstDecodeAt) firstDecodeAt = Date.now();
+              if (firstDecodeAt && Date.now() - firstDecodeAt > 2000) lat.push(l); // warmup 2s
+            } else badDecodes++;
+          } else badDecodes++;
+        } catch (e) { badDecodes++; }
+        if (!firstDecodeAt || Date.now() - firstDecodeAt < (SECS + 2) * 1000) {
+          vEl.requestVideoFrameCallback(onFrame);
+        } else finish();
+      };
+      vEl.requestVideoFrameCallback(onFrame);
+    }
+
+    // ---- publisher (modes both|pub): canvas clock -> WebRTC ----
+    if (MODE !== 'hls') {
+      const cv = document.getElementById('pub'), cx = cv.getContext('2d', { willReadFrequently: true });
+      (function draw() {
+        cx.fillStyle = '#123'; cx.fillRect(0, 0, 640, 360);
+        const now = Date.now();
+        encode(cx, now);
+        cx.fillStyle = '#fff'; cx.font = '28px monospace';
+        cx.fillText(new Date(now).toISOString().slice(11, 23), 20, 60);
+        requestAnimationFrame(draw);
+      })();
+      st('connecting publisher…');
+      const pub = new LK.Room();
+      await pub.connect(WS, PUBTOKEN);
+      const vtrack = cv.captureStream(FPS).getVideoTracks()[0];
+      await pub.localParticipant.publishTrack(vtrack, {
+        simulcast: SIMULCAST, videoCodec: CODEC,
+        name: 'clock', source: LK.Track.Source.Camera,
+      });
+      st('publisher up');
+      if (MODE === 'pub') {
+        // publica durante SECS y termina (otro proceso mide HLS/WebRTC aparte)
+        setTimeout(() => { window.__RESULT = { published: true, secs: SECS }; document.title = 'DONE'; }, SECS * 1000);
+        return;
+      }
+    }
+
+    // ---- subscriber ----
+    if (MODE === 'hls') {
+      st('hls: loading ' + HLSURL);
+      const Hls = window.Hls;
+      if (Hls && Hls.isSupported()) {
+        const h = new Hls({ lowLatencyMode: true, liveSyncDuration: 3, maxBufferLength: 10 });
+        h.loadSource(HLSURL); h.attachMedia(vEl);
+        h.on(Hls.Events.MANIFEST_PARSED, () => { vEl.play(); st('hls playing; sampling…'); startSampling(120000); });
+        h.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) { window.__RESULT = { error: 'hls: ' + d.type + '/' + d.details }; document.title = 'DONE'; } });
+      } else {
+        vEl.src = HLSURL; vEl.play(); startSampling(120000);
+      }
+    } else {
+      st('connecting subscriber…');
+      const sub = new LK.Room({ adaptiveStream: false });
+      sub.on(LK.RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind !== 'video') return;
+        track.attach(vEl);
+        st('subscribed; sampling…');
+        startSampling(30000);
+      });
+      await sub.connect(WS, SUBTOKEN);
+    }
+    setTimeout(() => { if (!window.__RESULT) { window.__RESULT = { error: 'timeout', frames, badDecodes, mode: MODE }; document.title = 'DONE'; } }, (SECS + 90) * 1000);
+  } catch (e) {
+    window.__RESULT = { error: String(e && e.message || e) };
+    document.title = 'DONE';
+    st('ERROR ' + e);
+  }
+})();
+</script></body></html>
