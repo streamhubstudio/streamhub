@@ -1,0 +1,66 @@
+# Prometheus scrape config for the StreamHub media stack.
+# See deploy/OBSERVABILITY.md for the full setup (Prometheus + Grafana).
+#
+# Copy next to a docker-compose / systemd Prometheus and adjust the targets
+# (host:port) + the streamhub token to match your deployment.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: streamhub
+
+scrape_configs:
+  # --------------------------------------------------------------------------
+  # 1) streamhub-core application metrics (this repo).
+  #    Endpoint: GET /metrics (root path, NOT under the /api/v1 prefix).
+  #    If STREAMHUB METRICS_TOKEN is set, pass it as a bearer token below.
+  # --------------------------------------------------------------------------
+  - job_name: streamhub-core
+    metrics_path: /metrics
+    scheme: http
+    # Uncomment when METRICS_TOKEN is configured on streamhub-core:
+    # authorization:
+    #   type: Bearer
+    #   credentials: "REPLACE_WITH_METRICS_TOKEN"
+    static_configs:
+      - targets: ["streamhub-core:3020"]
+        labels:
+          service: streamhub-core
+    # If streamhub-core sits behind nginx/TLS at streamhub.example.com,
+    # instead use:
+    #   scheme: https
+    #   static_configs:
+    #     - targets: ["streamhub.example.com"]
+
+  # --------------------------------------------------------------------------
+  # 2) LiveKit server — NATIVE Prometheus metrics.
+  #    LiveKit exposes its own /metrics when `prometheus_port` is set in
+  #    livekit.yaml (see OBSERVABILITY.md §LiveKit). Default port used here: 6789.
+  #    Gives you room/participant/track/packet-loss/egress/ingress metrics.
+  # --------------------------------------------------------------------------
+  - job_name: livekit
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["livekit:6789"]
+        labels:
+          service: livekit
+
+  # --------------------------------------------------------------------------
+  # 3) node_exporter (OPTIONAL) — host CPU / mem / disk / network of the media
+  #    box. Run prom/node-exporter on the host (default port 9100).
+  # --------------------------------------------------------------------------
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: host
+
+  # --------------------------------------------------------------------------
+  # 4) Prometheus self-monitoring (optional but handy).
+  # --------------------------------------------------------------------------
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

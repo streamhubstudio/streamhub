@@ -1,0 +1,67 @@
+{
+  "header": {
+    "backToApps": "← Apps",
+    "prefix": "prefijo:",
+    "radio": "Radio",
+    "broadcastCamera": "Transmitir cámara",
+    "loadError": "No se pudo cargar el app."
+  },
+  "sizes": {
+    "db": "BD",
+    "dbTitle": "Tamaño de la base de datos de este app (app.db)",
+    "vods": "VODs",
+    "vodsTitle": "Tamaño total de las grabaciones de este app"
+  },
+  "loadingApp": "Cargando app…",
+  "state": {
+    "updating": "Actualizando…",
+    "loadingDefault": "Cargando…",
+    "emptyDefault": "Sin datos."
+  },
+  "tabs": {
+    "overview": {
+      "label": "Tablero",
+      "hint": "Espectadores en vivo, streams, grabaciones, almacenamiento y eventos recientes de un vistazo"
+    },
+    "streams": {
+      "label": "En vivo",
+      "hint": "Streams activos · ver y grabar"
+    },
+    "vods": {
+      "label": "Grabaciones",
+      "hint": "VODs y configuración de grabación"
+    },
+    "ingress": {
+      "label": "Transmitir",
+      "hint": "Transmití por RTMP / WHIP / URL"
+    },
+    "tokens": {
+      "label": "Tokens",
+      "hint": "Tokens de API y de sala"
+    },
+    "samples": {
+      "label": "Ejemplos",
+      "hint": "Ejemplos de código para integrar"
+    },
+    "integraciones": {
+      "label": "Integraciones",
+      "hint": "Callbacks (avisos del servidor) y funciones"
+    },
+    "plugins": {
+      "label": "Plugins",
+      "hint": "Instalá, configurá y abrí los plugins de este app"
+    },
+    "logs": {
+      "label": "Logs",
+      "hint": "Eventos del app"
+    },
+    "sistema": {
+      "label": "Sistema",
+      "hint": "Base de datos y mantenimiento"
+    },
+    "config": {
+      "label": "Configuración",
+      "hint": "Transcodificación, GPU y entrega adaptativa (calidad según la conexión)"
+    }
+  }
+}

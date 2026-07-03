@@ -1,0 +1,46 @@
+{
+  "title": "Restream",
+  "subtitle": "Forward this live stream to several RTMP destinations at once (YouTube, Twitch, Facebook or your own server). Each destination runs its own egress: if one fails, the others keep going.",
+  "form": {
+    "platform": "Platform",
+    "customPlatform": "Custom (RTMP URL)",
+    "name": "Name",
+    "nameHint": "Optional label to identify the destination.",
+    "namePlaceholder": "My YouTube channel",
+    "key": "Destination stream key",
+    "keyHint": "Paste the stream key the platform gives you. It is stored server-side and never shown in full again.",
+    "keyPlaceholder": "xxxx-xxxx-xxxx-xxxx",
+    "url": "Destination RTMP URL",
+    "urlHint": "Full rtmp:// or rtmps:// URL (including the stream key if applicable)."
+  },
+  "formError": {
+    "keyRequired": "Enter the destination stream key.",
+    "keyInvalid": "The stream key cannot contain spaces or slashes.",
+    "urlRequired": "Enter the destination RTMP URL.",
+    "urlInvalid": "The URL must start with rtmp:// or rtmps://."
+  },
+  "actions": {
+    "add": "Add destination",
+    "adding": "Adding…",
+    "stop": "Stop",
+    "stopping": "Stopping…"
+  },
+  "list": {
+    "title": "Destinations",
+    "loading": "Loading destinations…",
+    "empty": "No destinations yet. Add the first one above.",
+    "retries_one": "{{count}} retry",
+    "retries_other": "{{count}} retries"
+  },
+  "status": {
+    "starting": "starting",
+    "active": "active",
+    "failed": "failed",
+    "stopped": "stopped"
+  },
+  "error": {
+    "add": "Could not add the destination.",
+    "stop": "Could not stop the destination.",
+    "load": "Could not load the destinations."
+  }
+}

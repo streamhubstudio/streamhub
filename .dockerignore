@@ -1,0 +1,14 @@
+# Keep the build context lean and reproducible: never ship host node_modules,
+# prior builds, secrets, or data into the image.
+**/node_modules
+**/dist
+**/.env
+**/.env.local
+.git
+data/
+**/data/*.db
+**/*.log
+**/recordings/
+**/*.mp4
+streamhub-core/web/
+legacy/

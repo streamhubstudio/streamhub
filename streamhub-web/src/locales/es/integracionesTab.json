@@ -1,0 +1,109 @@
+{
+  "features": {
+    "chat": {
+      "label": "Chat",
+      "hint": "Chat por data-channel en el player y meetings."
+    },
+    "reactions": {
+      "label": "Reacciones",
+      "hint": "Reacciones animadas flotantes."
+    },
+    "viewerCounter": {
+      "label": "Contador de espectadores",
+      "hint": "Expone el conteo de suscriptores en vivo."
+    },
+    "hiddenQc": {
+      "label": "QC oculto",
+      "hint": "Permite participantes QC/grabador invisibles (no cuentan como viewers)."
+    },
+    "adaptivePlayer": {
+      "label": "Player adaptativo",
+      "hint": "Simulcast + transcode multi-capa en el player."
+    },
+    "rtmpPassword": {
+      "label": "Password RTMP",
+      "hint": "Requiere password además de la stream key para publicar por RTMP."
+    }
+  },
+  "eventGroups": {
+    "roomParticipants": "Sala / participantes",
+    "ingressEgress": "Ingress / Egress",
+    "streamhub": "StreamHub (negocio)"
+  },
+  "nav": {
+    "callbacks": "Callbacks",
+    "s3": "Almacenamiento S3",
+    "features": "Funciones",
+    "qc": "Token QC"
+  },
+  "saveStatus": {
+    "saving": "Guardando…",
+    "saved": "Guardado ✓",
+    "error": "No se pudo guardar",
+    "dirty": "Cambios sin guardar"
+  },
+  "callbacks": {
+    "loading": "Cargando integraciones…",
+    "loadError": "No se pudo cargar la configuración.",
+    "title": "Callbacks (webhooks salientes)",
+    "subtitle": "StreamHub hace un POST firmado a tu URL por CADA evento de la sala. Filtralos por el campo «event» del payload.",
+    "urlLabel": "URL de callback",
+    "urlHint": "Endpoint HTTPS que recibe los POST. Vacío = callbacks desactivados.",
+    "urlPlaceholder": "https://tu-backend.com/streamhub/webhook",
+    "secretLabel": "Secret de firma",
+    "secretHint": "Se usa para X-StreamHub-Signature: sha256=hmac(secret, body). Verificalo en tu endpoint.",
+    "secretPlaceholder": "un secreto largo y aleatorio",
+    "payloadInfo": "Se postean <0>todos</0> los eventos clasificables. El payload es <1>{{payload}}</1> y cada request trae los headers <2>X-StreamHub-Event</2> y <3>X-StreamHub-Signature</3>.",
+    "eventsSummary": "Eventos que se envían",
+    "eventsShow": "Ver",
+    "eventsHide": "Ocultar",
+    "saveError": "No se pudo guardar.",
+    "saving": "Guardando…",
+    "save": "Guardar callbacks"
+  },
+  "featuresCard": {
+    "loading": "Cargando features…",
+    "loadError": "No se pudieron cargar las features.",
+    "title": "Funciones",
+    "subtitle": "Capacidades del player y del ingreso. Cada cambio se guarda automáticamente (mirá el estado arriba a la derecha).",
+    "saveError": "No se pudo guardar la feature."
+  },
+  "qc": {
+    "title": "Token QC (oculto)",
+    "subtitle": "Participante invisible para control de calidad / grabación; no cuenta como espectador. Requiere la feature «QC oculto».",
+    "generating": "Generando…",
+    "generate": "Generar token QC",
+    "error": "No se pudo generar el token QC.",
+    "tokenJwt": "Token (JWT)"
+  },
+  "s3": {
+    "confirmPublic": "Vas a hacer PÚBLICAS las grabaciones de esta app: cualquiera con la URL (<public_url>/<objectKey>) podrá verlas y descargarlas, sin expiración. ¿Confirmás?",
+    "loading": "Cargando almacenamiento…",
+    "loadError": "No se pudo cargar la config de S3.",
+    "title": "Almacenamiento S3 (grabaciones / VODs)",
+    "subtitle": "Destino de los MP4 grabados. Las credenciales se guardan cifradas aparte; el bloque s3 va al config.yaml.",
+    "providerLabel": "Proveedor",
+    "bucketLabel": "Bucket",
+    "bucketPlaceholder": "mi-bucket",
+    "regionLabel": "Región",
+    "endpointLabel": "Endpoint",
+    "endpointHint": "Vacío en AWS. Ej Wasabi: https://s3.wasabisys.com",
+    "prefixLabel": "Prefijo",
+    "prefixHint": "Carpeta base dentro del bucket (opcional).",
+    "publicUrlLabel": "Public URL (CDN)",
+    "publicUrlHint": "Base pública para URLs determinísticas de VODs. Vacío = se usan URLs presignadas.",
+    "publicUrlPlaceholder": "https://cdn.midominio.com",
+    "publicWarnTitle": "⚠ Las grabaciones quedan PÚBLICAS",
+    "publicWarnBody": "Con <0>Public URL</0> seteada, los VODs se sirven como URLs determinísticas <1>{{objectPath}}</1> <2>sin expiración</2>: cualquiera con el link accede. Recomendado dejarlo vacío (URLs <3>presignadas</3> temporales) o usar un <4>CDN con URL firmada</4> en vez de exponer el bucket.",
+    "publicAck": "Entiendo que las grabaciones de esta app quedarán accesibles públicamente.",
+    "privateInfo": "<0>Public URL</0> vacía = entrega segura por defecto: los VODs se sirven con URLs <1>presignadas</1> temporales.",
+    "accessKeyLabel": "Access key",
+    "secretKeyLabel": "Secret key",
+    "storedHint": "Ya configurada. Dejá vacío para conservarla.",
+    "saveError": "No se pudo guardar S3.",
+    "saving": "Guardando…",
+    "save": "Guardar S3",
+    "saveBlocked": "Confirmá el aviso para habilitar acceso público.",
+    "saved": "Guardado · cliente S3 re-inicializado."
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "inputType": {
+    "rtmp": "RTMP (push)",
+    "whip": "WHIP",
+    "url": "URL (pull)",
+    "ws-mjpeg": "WebSocket (ESP32/MJPEG)"
+  },
+  "details": {
+    "rtmpUrl": "RTMP URL",
+    "streamKey": "Stream key",
+    "streamPassword": "Stream password",
+    "playerUrl": "Player URL",
+    "embedIframe": "Embed iframe"
+  },
+  "create": {
+    "title": "Crear Ingress",
+    "inputTypeLabel": "Tipo de entrada",
+    "roomLabel": "Sala (room)",
+    "roomHint": "Vacío = prefijo del app por defecto.",
+    "identityLabel": "Identidad del participante",
+    "identityHint": "Opcional.",
+    "urlLabel": "URL de origen",
+    "urlHint": "Requerido para tipo URL.",
+    "transcodeTitle": "Transcodificar (multi-capa)",
+    "transcodeHint": "Requerido para RTMP/URL; opcional para WHIP.",
+    "submitting": "Creando…",
+    "submit": "Crear Ingress",
+    "error": "No se pudo crear el Ingress."
+  },
+  "list": {
+    "title": "Ingress activos",
+    "subtitle": "Endpoints de publicación existentes. El ojo revela la URL de ingest y el stream key de cada uno.",
+    "searchPlaceholder": "Buscar por id, nombre o sala…",
+    "removeError": "No se pudo borrar el Ingress.",
+    "loading": "Cargando Ingress…",
+    "loadError": "No se pudieron cargar los Ingress.",
+    "empty": "Todavía no hay Ingress. Creá tu primer endpoint de publicación.",
+    "emptyFiltered": "Ningún Ingress coincide con esta búsqueda.",
+    "emptyCta": "Crear Ingress",
+    "idLabel": "ID",
+    "passwordBadge": "password",
+    "confirmRemove": "¿Borrar Ingress {{id}}?",
+    "revealTooltip": "Ver credenciales de ingest",
+    "table": {
+      "ingress": "Ingress",
+      "room": "Sala",
+      "status": "Estado",
+      "bitrate": "Bitrate",
+      "viewers": "Espectadores",
+      "actions": "Acciones"
+    }
+  },
+  "status": {
+    "publishing": "En vivo",
+    "buffering": "Buffering",
+    "inactive": "Inactivo",
+    "error": "Error",
+    "complete": "Finalizado"
+  },
+  "reveal": {
+    "title": "Credenciales de ingest",
+    "server": "Servidor (OBS «Server»)",
+    "rtmpUrl": "RTMP URL completa",
+    "streamKey": "Stream key — OBS «Stream Key»",
+    "show": "Mostrar stream key",
+    "hide": "Ocultar stream key",
+    "passwordRequired": "Este Ingress también requiere el stream password emitido al crearlo.",
+    "help": "Pegá el Server y el Stream Key en tu encoder (OBS, cámara, etc.). Tratá el key como un secreto."
+  },
+  "ws": {
+    "create": {
+      "roomHint": "Requerido. Una sala por cámara (ej. cam1).",
+      "infoTitle": "Ingest directo por WebSocket — sin transcodificación",
+      "infoHint": "El dispositivo manda frames JPEG por wss:// (1 mensaje binario = 1 frame). La reproducción es MJPEG sub-segundo en la misma URL de /play. Ideal para ESP32-CAM / CCTV.",
+      "error": "No se pudo crear la key de ingest WebSocket."
+    },
+    "details": {
+      "wsUrl": "URL WebSocket (el dispositivo se conecta acá)",
+      "streamKey": "Stream key (wsk_) — enviar como Authorization: Bearer",
+      "mjpegUrl": "URL MJPEG (funciona en un <img>)",
+      "help": "Flasheá el ESP32 con el firmware de ejemplo (streamhub-docs/integrations/esp32cam_ws_ingest.ino), configurá la URL WebSocket y la key, y la cámara aparece en Streams y en /play."
+    },
+    "list": {
+      "title": "Cámaras WebSocket (ESP32/MJPEG)",
+      "subtitle": "Keys de ingest directo por WS. Activa = la cámara está conectada y mandando frames ahora.",
+      "loading": "Cargando cámaras…",
+      "loadError": "No se pudieron cargar las cámaras WebSocket.",
+      "removeError": "No se pudo revocar la key.",
+      "empty": "Todavía no hay cámaras WebSocket. Creá una con el tipo de ingest «WebSocket (ESP32/MJPEG)» de arriba.",
+      "confirmRemove": "¿Revocar la key {{id}}? Una cámara activa se desconecta al instante.",
+      "revealTooltip": "Ver credenciales de conexión",
+      "openPlayer": "Abrir player público",
+      "table": {
+        "camera": "Cámara"
+      }
+    },
+    "status": {
+      "active": "En vivo",
+      "inactive": "Sin señal"
+    },
+    "reveal": {
+      "title": "Credenciales de la cámara WebSocket",
+      "streamKey": "Stream key (wsk_)",
+      "help": "El dispositivo abre la URL WebSocket y se autentica con `Authorization: Bearer <key>` (o `&key=` en la URL). Cada mensaje binario es un frame JPEG."
+    }
+  }
+}

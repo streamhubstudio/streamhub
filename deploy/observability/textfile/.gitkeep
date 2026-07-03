@@ -1,0 +1,3 @@
+Directorio del textfile collector de node_exporter (--collector.textfile.directory).
+deploy/observability/scripts/cert-expiry-textfile.sh escribe acá node_cert_not_after_seconds.prom.
+Ver README.md.

@@ -1,0 +1,19 @@
+# LiveKit server config — TEMPLATE.
+# El archivo real vive en el server en /etc/livekit/livekit.yaml (chmod 600, owner root).
+# Reemplazar <API_KEY>/<API_SECRET> por los generados con `livekit-server generate-keys`.
+port: 7880
+bind_addresses:
+  - ""
+rtc:
+  tcp_port: 7881
+  udp_port: 7882          # puerto UDP unico (mux) — abierto en firewall
+  use_external_ip: true   # autodetecta la IP publica via STUN
+redis:
+  address: localhost:6379
+keys:
+  <API_KEY>: <API_SECRET>
+turn:
+  enabled: false          # activar cuando haya dominio + cert (TURN/TLS en 5349)
+logging:
+  level: info
+  json: false

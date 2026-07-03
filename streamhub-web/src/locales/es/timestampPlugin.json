@@ -1,0 +1,6 @@
+{
+  "overlay": {
+    "camera": "Cámara",
+    "ariaLabel": "{{name}} — marca de tiempo en vivo {{time}}"
+  }
+}

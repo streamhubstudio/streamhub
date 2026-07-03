@@ -1,0 +1,47 @@
+{
+  "page": {
+    "title": "Apps",
+    "subtitle": "Apps de tu tenant sobre LiveKit.",
+    "new": "Nueva app",
+    "updating": "Actualizando…",
+    "loadError": "No se pudieron cargar las apps.",
+    "loading": "Cargando apps…",
+    "emptyNoData": "Sin datos.",
+    "empty": "Todavía no hay apps.",
+    "createFirst": "Crear la primera app",
+    "onboardTitle": "Bienvenido a StreamHub 👋",
+    "onboardBody": "Creá tu primera app para empezar a transmitir. Una app es un espacio aislado con sus propios streams, grabaciones, claves de ingesta y plugins.",
+    "onboardStep1": "Creá una app",
+    "onboardStep2": "Publicá por WebRTC, RTMP, WHIP o una cámara WS",
+    "onboardStep3": "Reproducí, grabá y sumá plugins"
+  },
+  "card": {
+    "deleteAria": "Borrar {{name}}",
+    "deleteTitle": "Borrar app",
+    "roomPrefix": "Prefijo de sala",
+    "created": "Creada",
+    "detail": "Ver detalle"
+  },
+  "create": {
+    "title": "Nueva app",
+    "submit": "Crear app",
+    "submitting": "Creando…",
+    "nameLabel": "Nombre (slug)",
+    "nameHint": "Identificador único. Minúsculas, números y guiones.",
+    "displayNameLabel": "Nombre visible",
+    "roomPrefixLabel": "Prefijo de sala (room prefix)",
+    "roomPrefixPlaceholder": "Opcional — derivado del nombre si se omite",
+    "errorNameRequired": "El nombre es obligatorio.",
+    "errorNameSlug": "El nombre debe ser un slug: minúsculas, números y guiones (sin espacios).",
+    "errorCreate": "No se pudo crear la app."
+  },
+  "delete": {
+    "title": "Borrar app",
+    "submit": "Borrar definitivamente",
+    "submitting": "Borrando…",
+    "warning": "Esta acción elimina la app <strong>{{name}}</strong> y su configuración. No se puede deshacer.",
+    "confirmLabel": "Escribí <code>{{name}}</code> para confirmar",
+    "deleteVods": "También borrar VODs y archivos locales",
+    "error": "No se pudo borrar la app."
+  }
+}

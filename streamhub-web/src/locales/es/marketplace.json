@@ -1,0 +1,76 @@
+{
+  "page": {
+    "title": "Plugins",
+    "subtitle": "Extendé StreamHub con plugins instalables.",
+    "refreshing": "Actualizando…",
+    "backendOffline": "No se pudo contactar el servicio de plugins. Se muestra el catálogo disponible; el estado de instalación puede estar desactualizado.",
+    "actionError": "No se pudo completar la acción.",
+    "allCategories": "Todos",
+    "loading": "Cargando plugins…",
+    "empty": "No hay plugins en esta categoría.",
+    "emptyHint": "Los plugins se enchufan solos — los nuevos aparecen acá al agregarlos."
+  },
+  "picker": {
+    "subtitle": "Los plugins se instalan y configuran por app. Elegí un app para gestionar sus plugins.",
+    "selectApp": "Elegí un app",
+    "loadingApps": "Cargando apps…",
+    "noApps": "Todavía no hay apps. Creá uno para instalar plugins.",
+    "manage": "Gestionar plugins"
+  },
+  "catalog": {
+    "title": "Catálogo disponible",
+    "subtitle": "Plugins incluidos en esta versión. Instalalos dentro de un app."
+  },
+  "status": {
+    "active": "Activo",
+    "installed": "Instalado",
+    "available": "Disponible"
+  },
+  "placement": {
+    "app-tab": "Pestaña de app",
+    "panel": "Panel",
+    "player-overlay": "Overlay del reproductor"
+  },
+  "card": {
+    "noDescription": "Sin descripción.",
+    "backendOnly": "Registrado en el servidor, pero su interfaz no está disponible en esta versión."
+  },
+  "actions": {
+    "install": "Instalar",
+    "uninstall": "Desinstalar",
+    "open": "Abrir",
+    "configure": "Configurar",
+    "logs": "Logs",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "working": "Procesando…",
+    "close": "Cerrar"
+  },
+  "confirm": {
+    "uninstall": "¿Desinstalar \"{{name}}\"? Se eliminará su configuración."
+  },
+  "config": {
+    "title": "Configurar {{name}}",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado",
+    "saveError": "No se pudo guardar la configuración.",
+    "noSettings": "Este plugin no tiene ajustes.",
+    "errors": {
+      "required": "Este campo es obligatorio.",
+      "nan": "Ingresá un número válido.",
+      "min": "El valor está por debajo del mínimo.",
+      "max": "El valor está por encima del máximo.",
+      "notInOptions": "Elegí una de las opciones disponibles."
+    }
+  },
+  "logs": {
+    "title": "{{name}} · logs",
+    "loading": "Cargando logs…",
+    "error": "No se pudieron cargar los logs.",
+    "empty": "Todavía no hay logs."
+  },
+  "host": {
+    "crashed": "El plugin \"{{id}}\" no se pudo renderizar."
+  }
+}

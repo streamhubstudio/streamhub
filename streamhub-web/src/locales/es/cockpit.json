@@ -1,0 +1,33 @@
+{
+  "controls": {
+    "app": "App",
+    "grid": "Grilla",
+    "autoPlay": "Reproducción automática",
+    "labels": "Etiquetas",
+    "liveCount_one": "{{count}} en vivo",
+    "liveCount_other": "{{count}} en vivo",
+    "refreshing": "Actualizando…"
+  },
+  "state": {
+    "loadingApps": "Cargando apps…",
+    "noApps": "Todavía no hay apps disponibles.",
+    "loadingStreams": "Cargando streams…",
+    "noStreams": "No hay streams en vivo por ahora.",
+    "noStreamsHint": "Las cámaras aparecen acá automáticamente en cuanto empiezan a transmitir."
+  },
+  "error": {
+    "streams": "No se pudieron cargar los streams."
+  },
+  "cell": {
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "play": "Reproducir {{name}}",
+    "clickToPlay": "Tocá para reproducir",
+    "noSignal": "Sin señal"
+  },
+  "pager": {
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "status": "Página {{page}} de {{total}}"
+  }
+}

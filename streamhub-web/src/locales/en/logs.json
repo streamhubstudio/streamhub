@@ -1,0 +1,12 @@
+{
+  "title": "Logs",
+  "subtitle": "streamhub-core server events.",
+  "allLevels": "All levels",
+  "filterApp": "Filter by app…",
+  "filterSource": "Filter by source…",
+  "filterSearch": "Search message…",
+  "updating": "Updating…",
+  "loadError": "Couldn't load the logs.",
+  "loading": "Loading logs…",
+  "empty": "No logs."
+}

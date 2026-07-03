@@ -1,0 +1,14 @@
+# StreamHub YOLO worker runtime deps.
+#
+# ultralytics pulls torch + torchvision (large). On a CPU-only host, install
+# the CPU wheels of torch first to avoid CUDA downloads:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+#
+# opencv-python-headless: HLS/RTSP frame decode via the bundled ffmpeg backend,
+# no GUI libs (works in containers). Callback POST uses the stdlib (no requests).
+ultralytics>=8.2,<9
+opencv-python-headless>=4.9
+
+# Dev/test only (pure-logic tests need no torch/opencv):
+#   pip install pytest

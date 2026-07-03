@@ -1,0 +1,134 @@
+# Reglas de alerta — Fase 1. Diseño: OBSERVABILITY-ROADMAP.md §6.
+# Umbrales pensados para un nodo de 8 GB RAM-bound (cuello de botella = RAM,
+# cada `egress` es un Chrome headless). Notificación vía Alertmanager o
+# alertas nativas de Grafana (no incluidas en Fase 1 — ver README.md).
+#
+# Convención de `severity`: `critical` = acción inmediata (servicio caído /
+# riesgo de OOM/disco lleno); `warning` = degradación o tendencia a vigilar.
+
+groups:
+  # ---------------------------------------------------------------------
+  # Salud del host (node_exporter)
+  # ---------------------------------------------------------------------
+  - name: streamhub-node
+    rules:
+      - alert: HostMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "RAM del host >85%"
+          description: "RAM usada >85% por 5m — riesgo directo para egress/Chrome (node {{ $labels.instance }})."
+
+      - alert: HostSwapInUse
+        expr: (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) > 2e9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Swap en uso (>2 GB)"
+          description: "Swap sostenido >2 GB por 10m — canario de presión de RAM antes del OOM (node {{ $labels.instance }})."
+
+      - alert: HostDiskLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Disco del host <15% libre"
+          description: "Espacio libre en / por debajo del 15% por 10m (node {{ $labels.instance }})."
+
+      - alert: HostDiskCritical
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.10
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Disco del host <10% libre"
+          description: "Espacio libre en / crítico (<10%) — riesgo de fallo de grabación/DB (node {{ $labels.instance }})."
+
+  # ---------------------------------------------------------------------
+  # Disponibilidad de servicios (streamhub-core / LiveKit / ingress / egress)
+  # ---------------------------------------------------------------------
+  - name: streamhub-service
+    rules:
+      - alert: CoreDown
+        expr: up{job="streamhub-core"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "streamhub-core no responde a /metrics"
+          description: "El target streamhub-core está down hace >2m — API y SPA probablemente caídas."
+
+      - alert: LiveKitDown
+        expr: up{job="livekit"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "LiveKit no responde a /metrics"
+          description: "El target livekit está down hace >2m — señalización/SFU probablemente caído."
+
+      - alert: EgressEndpointDown
+        expr: streamhub_media_endpoint_up{kind="egress"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "egress inalcanzable (visto desde streamhub-core)"
+          description: "streamhub-core reporta el endpoint de egress inalcanzable — las grabaciones nuevas fallarán."
+
+      - alert: LiveKitEgressDown
+        expr: up{job="livekit-egress"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "target livekit-egress caído"
+          description: "El job livekit-egress (prometheus_port 6791) no responde hace >5m — confirmar si egress está habilitado con métricas."
+
+      - alert: LiveKitIngressDown
+        expr: up{job="livekit-ingress"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "target livekit-ingress caído"
+          description: "El job livekit-ingress (prometheus_port 6790) no responde hace >5m — confirmar si ingress está habilitado con métricas."
+
+      - alert: RecordingFailures
+        expr: rate(streamhub_recording_failures_total[15m]) > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Fallos de grabación en curso"
+          description: "streamhub_recording_failures_total crece en app={{ $labels.app }} reason={{ $labels.reason }} — revisar egress/S3."
+
+      - alert: UploadBacklogStuck
+        expr: sum(streamhub_upload_queue_depth) > 5
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Backlog de subida de VOD acumulándose"
+          description: "Más de 5 VODs pendientes de subir sostenido por 30m — revisar conectividad S3 / cola de uploads."
+
+      - alert: CallbacksFailing
+        expr: sum(rate(streamhub_callbacks_total{result="failed"}[15m])) > 0.2
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Callbacks salientes fallando"
+          description: "Tasa de callbacks fallidos >0.2/s sostenida 15m — los webhooks de las apps no están recibiendo eventos."
+
+      - alert: ErrorLogSpike
+        expr: sum by (source) (rate(streamhub_log_events_total{level=~"error|fatal"}[10m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Errores en subsistema {{ $labels.source }}"
+          description: "Tasa de logs error/fatal >1/s en source={{ $labels.source }} durante 10m (puente log→métrica, §3.2 del roadmap)."
+
+      - alert: TlsCertExpiringSoon
+        # Requiere el textfile collector de node_exporter con el hook de
+        # certbot (roadmap §6 + deploy/observability/scripts/cert-expiry-textfile.sh).
+        # Sin ese hook la métrica node_cert_not_after_seconds no existe y esta
+        # regla nunca dispara (no hay falso positivo, pero tampoco cobertura).
+        expr: (node_cert_not_after_seconds - time()) < 14 * 24 * 3600
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Certificado TLS vence en <14 días"
+          description: "El certificado {{ $labels.instance }} vence en menos de 14 días — verificar renovación automática de certbot."

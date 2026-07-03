@@ -1,0 +1,94 @@
+# Scrape config del stack de observabilidad (Fase 1).
+# Diseño: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md §4.4.
+# Distinto de streamhub-core/deploy/prometheus.yml (config de referencia para
+# despliegues en red docker-compose, con targets `streamhub-core:3020` /
+# `livekit:6789`). Este archivo asume el nodo de referencia (`your-server`):
+# streamhub-core y LiveKit corren nativos (systemd) → se scrapea todo por
+# `127.0.0.1` con `network_mode: host` (ver docker-compose.observability.yml).
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: streamhub
+    node: your-server        # ajustar por nodo si esto se replica en un cluster
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # --------------------------------------------------------------------------
+  # 1) streamhub-core — métricas propias (streamhub_*) + process_*/nodejs_*.
+  #    GET /metrics en la raíz (no bajo /api/v1). Requiere METRICS_TOKEN si
+  #    está seteado en el core (ENV.md §METRICS_TOKEN).
+  #
+  #    El token NUNCA se hardcodea acá: vive en un archivo aparte montado en
+  #    el container (secrets/metrics_token, gitignoreado — ver
+  #    secrets/metrics_token.example y README.md). Si METRICS_TOKEN está
+  #    unset en streamhub-core (endpoint público), este header es inocuo:
+  #    el core lo ignora.
+  # --------------------------------------------------------------------------
+  - job_name: streamhub-core
+    metrics_path: /metrics
+    scheme: http
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics_token
+    static_configs:
+      - targets: ["127.0.0.1:3020"]
+        labels: { service: streamhub-core }
+
+  # --------------------------------------------------------------------------
+  # 2) LiveKit — métricas nativas. Requiere `prometheus_port: 6789` en
+  #    LIVEKIT_CONFIG_BODY / livekit.yaml (roadmap §4.3 — lo habilita el
+  #    despliegue del media stack, no este stack de observabilidad).
+  #    Puerto bindeado a localhost únicamente.
+  # --------------------------------------------------------------------------
+  - job_name: livekit
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["127.0.0.1:6789"]
+        labels: { service: livekit }
+
+  # --------------------------------------------------------------------------
+  # 3) LiveKit ingress — requiere `prometheus_port: 6790` en
+  #    INGRESS_CONFIG_BODY (roadmap §4.3). Si el nodo no corre ingress con
+  #    ese puerto habilitado, este job queda simplemente `down` (no rompe el
+  #    resto del scrape) — no elimines el job, es señal via alerta.
+  # --------------------------------------------------------------------------
+  - job_name: livekit-ingress
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["127.0.0.1:6790"]
+        labels: { service: ingress }
+
+  # --------------------------------------------------------------------------
+  # 4) LiveKit egress — requiere `prometheus_port: 6791` en
+  #    EGRESS_CONFIG_BODY (roadmap §4.3).
+  # --------------------------------------------------------------------------
+  - job_name: livekit-egress
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["127.0.0.1:6791"]
+        labels: { service: egress }
+
+  # --------------------------------------------------------------------------
+  # 5) node_exporter — CPU/RAM/swap/disco/red del HOST (no del proceso Node).
+  #    Corazón del tablero "server global" y de las alertas de RAM/disco/swap.
+  # --------------------------------------------------------------------------
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+        labels: { service: host }
+
+  # --------------------------------------------------------------------------
+  # 6) Prometheus self-monitoring.
+  # --------------------------------------------------------------------------
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels: { service: prometheus }

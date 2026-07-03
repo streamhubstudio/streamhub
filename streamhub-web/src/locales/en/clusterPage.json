@@ -1,0 +1,64 @@
+{
+  "title": "Cluster",
+  "subtitle": "StreamHub nodes registered in this cluster.",
+  "info": {
+    "title": "Cluster state",
+    "subtitle": "Shared token and the one-liner new nodes run to join.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loadError": "Could not load the cluster info.",
+    "joinCommand": "Join command",
+    "token": "Cluster token",
+    "redisUrl": "Cluster Redis URL",
+    "reveal": "Reveal",
+    "hide": "Hide"
+  },
+  "disabled": {
+    "title": "Clustering is off",
+    "body": "Set a shared secret on every node to enable it:",
+    "docsLink": "How to add a node (INSTALL-NODE.md)"
+  },
+  "nodes": {
+    "title": "Nodes",
+    "subtitle": "Registered nodes and their last heartbeat.",
+    "loading": "Loading nodes…",
+    "loadError": "Could not load the nodes.",
+    "empty": "No nodes registered yet.",
+    "name": "Name",
+    "url": "URL",
+    "region": "Region",
+    "status": "Status",
+    "lastSeen": "Last seen",
+    "stale": "stale",
+    "never": "never",
+    "showStats": "Stats",
+    "hideStats": "Hide",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "relative": {
+    "now": "just now",
+    "seconds_one": "{{count}}s ago",
+    "seconds_other": "{{count}}s ago",
+    "minutes_one": "{{count}} min ago",
+    "minutes_other": "{{count}} min ago",
+    "hours_one": "{{count}}h ago",
+    "hours_other": "{{count}}h ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago"
+  },
+  "edit": {
+    "title": "Edit {{name}}",
+    "name": "Name",
+    "region": "Region",
+    "regionPlaceholder": "e.g. us-east",
+    "error": "Could not save the node."
+  },
+  "delete": {
+    "title": "Remove {{name}}",
+    "destructive": "Destructive",
+    "warning": "This de-registers the node from the cluster. It can re-join with the cluster token.",
+    "error": "Could not remove the node.",
+    "confirm": "Remove node"
+  }
+}

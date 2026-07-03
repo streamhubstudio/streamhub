@@ -1,0 +1,43 @@
+{
+  "title": "Salud del stream",
+  "subtitle": "Probá tu conexión con el servidor y clasificala como un semáforo.",
+  "empty": "Ejecutá una prueba para medir la calidad de tu conexión.",
+  "actions": {
+    "run": "Ejecutar prueba",
+    "running": "Probando…"
+  },
+  "verdict": {
+    "idle": "Sin probar",
+    "green": "Óptima",
+    "yellow": "Media",
+    "red": "Mala"
+  },
+  "phase": {
+    "idle": "En reposo",
+    "latency": "Midiendo latencia…",
+    "download": "Midiendo descarga…",
+    "upload": "Midiendo subida…",
+    "done": "Listo",
+    "downloaded": "{{mb}} MB descargados"
+  },
+  "metric": {
+    "download": "Descarga",
+    "upload": "Subida",
+    "uploadSkipped": "Sin medir",
+    "bitrate": "Bitrate de recepción",
+    "latency": "Latencia (RTT)",
+    "jitter": "Jitter"
+  },
+  "unit": {
+    "mbps": "Mbps",
+    "kbps": "kbps",
+    "ms": "ms"
+  },
+  "note": {
+    "measured": "Descarga/subida medidas por HTTP; latencia por pings de salud.",
+    "uploadOptional": "Subida omitida: configurá una URL de prueba de subida en los ajustes para medirla."
+  },
+  "error": {
+    "generic": "La prueba de calidad no pudo completarse."
+  }
+}

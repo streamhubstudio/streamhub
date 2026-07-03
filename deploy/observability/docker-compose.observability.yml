@@ -1,0 +1,102 @@
+# Stack de observabilidad — SEPARADO del media stack (docker-compose.yml en la
+# raíz del repo). No comparte ciclo de vida ni red con `redis/livekit/ingress/
+# egress/core/caddy`: se levanta y se destruye de forma independiente.
+#
+# Diseño completo: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md (§4).
+# Fase 1 — un solo nodo (`your-server`, 8 GB RAM + 8 GB swap, compartido con el
+# media stack). Objetivo: caber en ~800 MB de RAM sin competir con el headroom
+# de los `egress` (cada uno es un Chrome headless).
+#
+# Levantar (desde la raíz del repo):
+#   docker compose -f deploy/observability/docker-compose.observability.yml \
+#     --env-file deploy/observability/.env up -d
+#
+# Requisitos antes de levantar (ver README.md):
+#   1. deploy/observability/secrets/metrics_token  (copiar desde .example y
+#      pegar el METRICS_TOKEN real — NUNCA commitear el valor real).
+#   2. deploy/observability/.env con GRAFANA_ADMIN_PASSWORD (copiar desde
+#      .env.example).
+#
+# `network_mode: host` en los tres servicios: streamhub-core y LiveKit corren
+# nativos en el host (systemd) en el nodo de referencia, así que Prometheus
+# necesita ver `127.0.0.1:3020` / `127.0.0.1:6789` directo — no hay red docker
+# que los conecte. Todo bindea explícitamente a 127.0.0.1 (nunca 0.0.0.0): el
+# acceso externo a Grafana va por túnel SSH o nginx con auth (ver README), no
+# se expone ningún puerto de este stack a Internet.
+name: streamhub-observability
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: streamhub-obs-prometheus
+    network_mode: host
+    restart: unless-stopped
+    # Presupuesto RAM del nodo (8 GB compartidos con el media stack): tope
+    # duro para que un pico de cardinalidad no le coma RAM al resto.
+    mem_limit: 512m
+    mem_reservation: 256m
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Retención Fase 1 (nodo de 8 GB): 15 días por defecto. Al mover la
+      # observabilidad a un nodo dedicado (Fase 2, §4.1 del roadmap) subir a
+      # 30d vía PROMETHEUS_RETENTION_TIME en deploy/observability/.env.
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      # Tope duro de disco (independiente del tiempo) para no arriesgar el
+      # disco del nodo: ~4 GB alcanza sobrado para el volumen de métricas
+      # actual (§4.6 del roadmap) dentro del presupuesto de 8 GB del nodo.
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-4GB}
+      - --web.listen-address=127.0.0.1:9090
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      # Token de streamhub-core para el job `streamhub-core` (bearer). Archivo
+      # aparte, gitignoreado — ver deploy/observability/secrets/metrics_token.example
+      - ./secrets/metrics_token:/etc/prometheus/secrets/metrics_token:ro
+      - prom_data:/prometheus
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: streamhub-obs-node-exporter
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    mem_limit: 64m
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=127.0.0.1:9100
+      - --collector.systemd            # estado de streamhub-core.service / livekit.service
+      - --collector.textfile.directory=/var/lib/node_exporter/textfile
+    volumes:
+      - /:/host:ro,rslave
+      # Vencimiento de certificado TLS (§6 del roadmap): certbot escribe acá
+      # `node_cert_not_after_seconds` vía deploy/observability/scripts/cert-expiry-textfile.sh
+      - ./textfile:/var/lib/node_exporter/textfile:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: streamhub-obs-grafana
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 256m
+    mem_reservation: 128m
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: "3001"       # :3000 puede estar libre, pero se separa por claridad
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://127.0.0.1:3001/}"
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      # Obligatorio: sin valor por defecto. Definir en deploy/observability/.env
+      # (ver .env.example) — evita el admin/admin de la imagen oficial.
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?Definí GRAFANA_ADMIN_PASSWORD en deploy/observability/.env (ver .env.example) antes de levantar el stack}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  prom_data:
+  grafana_data:

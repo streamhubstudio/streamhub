@@ -1,0 +1,89 @@
+{
+  "title": "Configuración del servidor",
+  "subtitle": "Configuración efectiva de este core. Solo lectura — los secretos están ocultos.",
+  "readOnlyNote": "Vista de solo lectura. Los secretos nunca se muestran — para cambiar cualquier valor editá el .env del server y reiniciá el core (mirá \"Cómo cambiar\" en cada sección).",
+  "loadError": "No se pudo cargar la configuración del servidor.",
+  "forbidden": "Necesitás una credencial superadmin (global) para ver la configuración del servidor.",
+  "authzBanner": {
+    "title": "El enforcement de permisos no está activo.",
+    "body": "STREAMHUB_AUTHZ_ENFORCE está en \"{{mode}}\": no se aplican los checks de roles/quotas. Ponelo en \"on\" en producción."
+  },
+  "authz": {
+    "on": "on — se aplica",
+    "log": "log — solo audita (no aplica)",
+    "off": "off — deshabilitado"
+  },
+  "badge": {
+    "configured": "configurado",
+    "notConfigured": "sin configurar",
+    "enabled": "activo",
+    "disabled": "inactivo"
+  },
+  "guidance": {
+    "title": "Cómo cambiar"
+  },
+  "sections": {
+    "core": "Core",
+    "auth": "Autenticación",
+    "livekit": "LiveKit",
+    "cluster": "Cluster",
+    "metrics": "Métricas",
+    "storage": "Almacenamiento",
+    "runtime": "Runtime",
+    "ports": "Puertos"
+  },
+  "core": {
+    "nodeEnv": "Entorno",
+    "host": "Host de bind",
+    "port": "Puerto",
+    "publicBaseUrl": "URL pública base",
+    "publicWsUrl": "URL pública de WebSocket",
+    "rtmpPublicHost": "Host público de RTMP",
+    "logLevel": "Nivel de log",
+    "logRetentionDays": "Retención de logs (días)",
+    "authzEnforce": "Enforcement de permisos",
+    "redisUrl": "Redis (host:port)",
+    "dataDir": "Directorio de datos"
+  },
+  "auth": {
+    "adminUser": "Usuario admin",
+    "jwtSecret": "Secreto JWT",
+    "adminPass": "Contraseña admin",
+    "smtp": "SMTP (email)",
+    "superadminEmail": "Email de superadmin"
+  },
+  "livekit": {
+    "url": "URL de LiveKit",
+    "apiKey": "API key"
+  },
+  "cluster": {
+    "enabled": "Clustering",
+    "redis": "Redis del cluster",
+    "nodesCount": "Nodos registrados"
+  },
+  "metrics": {
+    "token": "Token de métricas"
+  },
+  "storage": {
+    "dataDir": "Directorio de datos",
+    "dbSize": "Tamaño de la DB de registro",
+    "appsCount": "Apps"
+  },
+  "runtime": {
+    "uptime": "Uptime",
+    "memoryRss": "Memoria (RSS)",
+    "pid": "PID",
+    "platform": "Plataforma",
+    "coreVersion": "Versión del core",
+    "nodeVersion": "Versión de Node"
+  },
+  "ports": {
+    "subtitle": "Puertos conocidos (según config cuando aplica, si no los valores por defecto).",
+    "core": "Core (HTTP)",
+    "livekitSignaling": "Señalización LiveKit",
+    "livekitTcp": "LiveKit TCP",
+    "livekitUdp": "LiveKit UDP",
+    "rtmp": "Ingesta RTMP",
+    "whip": "Ingesta WHIP"
+  }
+}

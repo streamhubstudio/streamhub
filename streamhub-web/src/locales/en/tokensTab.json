@@ -1,0 +1,38 @@
+{
+  "mint": {
+    "title": "Generate access token (join)",
+    "roomLabel": "Room",
+    "roomHint": "Empty = the app's default prefix.",
+    "identityLabel": "Identity",
+    "identityHint": "Optional; random if omitted.",
+    "nameLabel": "Display name",
+    "nameHint": "Optional.",
+    "canPublishLabel": "Can publish",
+    "canPublishHint": "Off = viewer only.",
+    "generating": "Generating…",
+    "generate": "Generate token",
+    "openPlayer": "Open Player ↗",
+    "openMeeting": "Open Meeting ↗",
+    "error": "Could not generate the token.",
+    "tokenJwt": "Token (JWT)"
+  },
+  "globals": {
+    "title": "Global API tokens",
+    "subtitle": "Service tokens (GET /tokens).",
+    "revokeError": "Could not revoke the token.",
+    "loading": "Loading tokens…",
+    "loadError": "Could not load the tokens.",
+    "empty": "No tokens.",
+    "table": {
+      "name": "Name",
+      "scope": "Scope",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "action": "Action"
+    },
+    "revoked": "revoked",
+    "active": "active",
+    "confirmRevoke": "Revoke token #{{id}}?",
+    "revoke": "Revoke"
+  }
+}

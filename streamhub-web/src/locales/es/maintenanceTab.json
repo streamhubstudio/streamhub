@@ -1,0 +1,48 @@
+{
+  "confirmPhrase": "PURGAR",
+  "scope": {
+    "vods": {
+      "label": "VODs",
+      "desc": "Borra los registros de grabaciones de la base. No toca la config del app."
+    },
+    "logs": {
+      "label": "Logs",
+      "desc": "Borra los eventos/logs almacenados del app."
+    },
+    "all": {
+      "label": "Todo (VODs + logs)",
+      "desc": "Borra VODs y logs. Es la opción más destructiva."
+    }
+  },
+  "health": {
+    "title": "Base de datos (app.db)",
+    "dbSize": "Tamaño de app.db",
+    "wal": "WAL:",
+    "path": "Ruta",
+    "optimizing": "Optimizando…",
+    "optimize": "Optimizar (VACUUM)",
+    "purgeData": "Purgar datos…",
+    "optimized": "Optimizado: {{before}} → {{after}}",
+    "reclaimed": " ({{size}} recuperados)",
+    "optimizeError": "No se pudo optimizar la base.",
+    "loading": "Cargando estado de la base…",
+    "loadError": "No se pudo cargar el estado de la base.",
+    "empty": "Sin tablas para mostrar.",
+    "table": {
+      "name": "Tabla",
+      "rows": "Filas",
+      "size": "Tamaño"
+    }
+  },
+  "purge": {
+    "title": "Purgar base de datos",
+    "destructive": "Destructivo",
+    "warning": "Esta acción borra datos de forma permanente y no se puede deshacer.",
+    "scopeLabel": "Alcance (scope)",
+    "confirmLabel": "Escribí \"{{phrase}}\" para confirmar",
+    "confirmHint": "La confirmación es obligatoria antes de borrar.",
+    "error": "No se pudo purgar la base.",
+    "purging": "Purgando…",
+    "purgeScope": "Purgar {{scope}}"
+  }
+}

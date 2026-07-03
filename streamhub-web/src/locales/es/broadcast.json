@@ -1,0 +1,61 @@
+{
+  "header": {
+    "title": "Transmitir",
+    "subtitle": "Studio · app · {{app}}",
+    "exit": "Salir"
+  },
+  "preview": {
+    "audioOnly": "Modo solo audio",
+    "audioOnlyHint": "Sin video. Se transmite únicamente el micrófono al destino RTMP.",
+    "permissionDenied": "Permiso de cámara denegado.",
+    "permissionHint": "Habilitá la cámara y el micrófono en el navegador para previsualizar y transmitir.",
+    "retryPermission": "Reintentar permiso",
+    "initializing": "Inicializando cámara…",
+    "note": "El navegador publica tu cámara y micrófono por <strong>WebRTC</strong> a una sala de LiveKit; el <strong>servidor</strong> compone esa sala y la reenvía al destino <strong>RTMP</strong>. No es un push RTMP directo desde el navegador."
+  },
+  "form": {
+    "title": "Destino y dispositivos",
+    "audioOnly": "Solo audio",
+    "audioOnlyHint": "Transmite únicamente el micrófono (sin cámara).",
+    "rtmpLabel": "URL RTMP de destino",
+    "rtmpHint": "URL completa <em>con la stream key</em> (ej. <code>{{url}}</code>).",
+    "rtmpInvalid": "Formato inválido. Debe empezar con rtmp:// o rtmps:// e incluir host y stream key.",
+    "roomLabel": "Sala (LiveKit)",
+    "roomHint": "Opcional. Por defecto: studio.",
+    "cameraLabel": "Cámara",
+    "cameraEmpty": "Sin cámaras detectadas",
+    "micLabel": "Micrófono",
+    "micEmpty": "Sin micrófonos detectados"
+  },
+  "egress": {
+    "label": "Egress"
+  },
+  "actions": {
+    "connecting": "Conectando…",
+    "start": "Iniciar transmisión",
+    "stopping": "Deteniendo…",
+    "stop": "Detener transmisión",
+    "needValidUrl": "Ingresá una URL RTMP válida para habilitar la transmisión."
+  },
+  "phase": {
+    "live": "En vivo",
+    "connecting": "Conectando",
+    "stopping": "Deteniendo",
+    "idle": "En espera"
+  },
+  "device": "Dispositivo {{n}}",
+  "errors": {
+    "noCamera": "No se encontró ninguna cámara conectada.",
+    "cameraAccess": "No se pudo acceder a la cámara.",
+    "rtmpInvalid": "URL RTMP inválida. Debe ser rtmp://host/app/streamKey (URL completa con la stream key).",
+    "noToken": "El servidor no devolvió un token de publicación válido.",
+    "connLost": "Se perdió la conexión con la sala.",
+    "startFailed": "No se pudo iniciar la transmisión.",
+    "egressEnded": "La transmisión finalizó en el servidor ({{status}}).",
+    "audioAccess": "no se pudo acceder al audio",
+    "micRequired": "Sin micrófono: {{detail}}. En modo solo audio es obligatorio.",
+    "micFallbackVideo": "Sin micrófono: {{detail}}. Se transmite solo video.",
+    "unknown": "error desconocido",
+    "stopUnconfirmed": "No se pudo confirmar la detención del egress: {{detail}}."
+  }
+}

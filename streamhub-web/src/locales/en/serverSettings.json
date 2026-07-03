@@ -1,0 +1,89 @@
+{
+  "title": "Server settings",
+  "subtitle": "Effective configuration of this core. Read-only — secrets are redacted.",
+  "readOnlyNote": "Read-only view. Secrets are never shown — change any setting by editing the server's .env and restarting the core (see \"How to change\" in each section).",
+  "loadError": "Couldn't load the server settings.",
+  "forbidden": "You need a superadmin (global-scope) credential to view the server settings.",
+  "authzBanner": {
+    "title": "Permission enforcement is not active.",
+    "body": "STREAMHUB_AUTHZ_ENFORCE is \"{{mode}}\": role/quota checks are not being enforced. Set it to \"on\" in production."
+  },
+  "authz": {
+    "on": "on — enforced",
+    "log": "log — audit only (not applied)",
+    "off": "off — disabled"
+  },
+  "badge": {
+    "configured": "configured",
+    "notConfigured": "not configured",
+    "enabled": "enabled",
+    "disabled": "disabled"
+  },
+  "guidance": {
+    "title": "How to change"
+  },
+  "sections": {
+    "core": "Core",
+    "auth": "Auth",
+    "livekit": "LiveKit",
+    "cluster": "Cluster",
+    "metrics": "Metrics",
+    "storage": "Storage",
+    "runtime": "Runtime",
+    "ports": "Ports"
+  },
+  "core": {
+    "nodeEnv": "Environment",
+    "host": "Bind host",
+    "port": "Port",
+    "publicBaseUrl": "Public base URL",
+    "publicWsUrl": "Public WebSocket URL",
+    "rtmpPublicHost": "RTMP public host",
+    "logLevel": "Log level",
+    "logRetentionDays": "Log retention (days)",
+    "authzEnforce": "Permission enforcement",
+    "redisUrl": "Redis (host:port)",
+    "dataDir": "Data directory"
+  },
+  "auth": {
+    "adminUser": "Admin user",
+    "jwtSecret": "JWT secret",
+    "adminPass": "Admin password",
+    "smtp": "SMTP (email)",
+    "superadminEmail": "Superadmin email"
+  },
+  "livekit": {
+    "url": "LiveKit URL",
+    "apiKey": "API key"
+  },
+  "cluster": {
+    "enabled": "Clustering",
+    "redis": "Cluster Redis",
+    "nodesCount": "Registered nodes"
+  },
+  "metrics": {
+    "token": "Metrics token"
+  },
+  "storage": {
+    "dataDir": "Data directory",
+    "dbSize": "Registry DB size",
+    "appsCount": "Apps"
+  },
+  "runtime": {
+    "uptime": "Uptime",
+    "memoryRss": "Memory (RSS)",
+    "pid": "PID",
+    "platform": "Platform",
+    "coreVersion": "Core version",
+    "nodeVersion": "Node version"
+  },
+  "ports": {
+    "subtitle": "Well-known ports (config-derived where possible, else the defaults).",
+    "core": "Core (HTTP)",
+    "livekitSignaling": "LiveKit signaling",
+    "livekitTcp": "LiveKit TCP",
+    "livekitUdp": "LiveKit UDP",
+    "rtmp": "RTMP ingest",
+    "whip": "WHIP ingest"
+  }
+}

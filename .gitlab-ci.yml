@@ -1,0 +1,127 @@
+# =============================================================================
+# StreamHub (vision-media-server) — GitLab CI
+# -----------------------------------------------------------------------------
+# Runs on merge requests and on the default branch (main). Each component is a
+# self-contained job that installs, builds and tests in one container:
+#
+#   * GitLab jobs are isolated containers, so a separate "install" stage would
+#     have to hand node_modules to later stages as artifacts — an anti-pattern
+#     (huge, brittle). Instead each job runs `npm ci` / `pip install` itself and
+#     leans on a per-directory cache to keep that fast. Conceptually every job
+#     still does install -> build -> test; the stages below just order the
+#     heavier app builds (build) ahead of the auxiliary checks (test).
+#
+# Deploy is intentionally NOT wired here (see the commented placeholder at the
+# bottom) — deploys go through deploy/deploy-core.sh on the host, gated by ops.
+# =============================================================================
+
+stages:
+  - build   # compile the TS/React apps and run their unit tests + coverage
+  - test    # auxiliary language / script checks (python worker, shellcheck)
+
+# Only build on merge requests, the default branch (main), and tags — not on
+# every random branch push (avoids double pipelines on MR source branches).
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+# -----------------------------------------------------------------------------
+# core — NestJS API + SPA host. Build, unit + e2e (jest, ~682 specs), coverage.
+# -----------------------------------------------------------------------------
+core:
+  stage: build
+  image: node:20
+  # npm ci wipes node_modules, so the real speedup comes from the npm download
+  # cache; we key it (and node_modules) per component on the lockfile.
+  variables:
+    npm_config_cache: "$CI_PROJECT_DIR/.npm-cache/core"
+  cache:
+    key:
+      files:
+        - streamhub-core/package-lock.json
+    paths:
+      - streamhub-core/node_modules/
+      - .npm-cache/core/
+  script:
+    - cd streamhub-core
+    - npm ci
+    - npm run build
+    - npm test
+    - npm run test:cov -- --coverageReporters=text --coverageReporters=cobertura
+  # GitLab parses this from the jest "All files ... % " summary row.
+  coverage: '/All files[^|]*\|[^|]*\s+([\d.]+)/'
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - streamhub-core/coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: streamhub-core/coverage/cobertura-coverage.xml
+
+# -----------------------------------------------------------------------------
+# web — React SPA. Lint (oxlint), unit (node --test), production build.
+# -----------------------------------------------------------------------------
+web:
+  stage: build
+  image: node:20
+  variables:
+    npm_config_cache: "$CI_PROJECT_DIR/.npm-cache/web"
+  cache:
+    key:
+      files:
+        - streamhub-web/package-lock.json
+    paths:
+      - streamhub-web/node_modules/
+      - .npm-cache/web/
+  script:
+    - cd streamhub-web
+    - npm ci
+    - npm test
+    - npm run lint
+    - npm run build
+
+# -----------------------------------------------------------------------------
+# yolo — Python worker. Pure-logic tests, no torch/opencv needed.
+# -----------------------------------------------------------------------------
+yolo:
+  stage: test
+  image: python:3.12
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+  cache:
+    key: yolo-pip
+    paths:
+      - .pip-cache/
+  script:
+    - cd yolo-worker
+    - pip install pytest
+    - python -m pytest
+
+# -----------------------------------------------------------------------------
+# shellcheck — lint every shipped shell script (installer + deploy/*.sh).
+# -----------------------------------------------------------------------------
+shellcheck:
+  stage: test
+  image: koalaman/shellcheck-alpine:stable
+  script:
+    - shellcheck -S info install.sh deploy/*.sh
+
+# -----------------------------------------------------------------------------
+# deploy (placeholder) — NOT enabled. Deploys run on the host via
+# deploy/deploy-core.sh (backup -> extract tarball -> npm ci && build ->
+# systemctl restart), which reads secrets from the host .env, never from CI.
+# Uncomment + wire a runner/SSH target when a CD flow is agreed.
+# -----------------------------------------------------------------------------
+# deploy:core:
+#   stage: test
+#   image: alpine:3
+#   needs: ["core"]
+#   rules:
+#     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+#       when: manual
+#   script:
+#     - echo "ssh deploy@your-server 'cd /opt/streamhub-core && bash deploy/deploy-core.sh'"

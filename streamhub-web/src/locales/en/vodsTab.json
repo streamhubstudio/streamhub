@@ -1,0 +1,84 @@
+{
+  "config": {
+    "loading": "Loading recording settings…",
+    "loadError": "Could not load the recording settings.",
+    "title": "Recording settings",
+    "subtitle": "Applies to recordings you start under Live. Every change is saved automatically.",
+    "saved": "Saved",
+    "saveError": "Could not save the settings.",
+    "splitLabel": "Split recording",
+    "splitHint": "Splits the MP4 every N minutes; each part becomes a separate VOD. No split = a single continuous file.",
+    "snapshotLabel": "Snapshots",
+    "snapshotHint": "Saves an image of the room every N seconds to S3 (streamhub/<app>/snapshots/). Off = no snapshots."
+  },
+  "split": {
+    "none": "No split",
+    "minutes": "{{n}} min"
+  },
+  "snapshot": {
+    "off": "Off",
+    "every": "Every {{n}} s"
+  },
+  "title": "Recordings (VODs)",
+  "subtitle": "Every recording and every split part lands here. Play it back, view metadata or delete it.",
+  "playError": "Could not fetch the VOD.",
+  "loading": "Loading VODs…",
+  "loadError": "Could not load the VODs.",
+  "empty": "No recordings yet. Start a recording from Live.",
+  "emptyFiltered": "No recordings match these filters.",
+  "emptyCta": {
+    "goLive": "Go to Live"
+  },
+  "filters": {
+    "room": "Filter by room…",
+    "allStatuses": "All statuses",
+    "order": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "largest": "Largest first",
+      "smallest": "Smallest first"
+    }
+  },
+  "table": {
+    "room": "Room",
+    "status": "Status",
+    "duration": "Duration",
+    "size": "Size",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "actions": {
+    "opening": "Opening…",
+    "play": "Play",
+    "download": "Download",
+    "downloading": "Preparing…"
+  },
+  "download": {
+    "errorTitle": "Download failed",
+    "error": "Could not prepare the download. The VOD may not be ready yet."
+  },
+  "probe": {
+    "tooltip": "Detect duration (ffprobe)",
+    "errorTitle": "Probe failed",
+    "error": "Could not analyze the recording.",
+    "noneTitle": "Nothing detected",
+    "none": "ffprobe could not read the recording's metadata."
+  },
+  "player": {
+    "title": "VOD #{{id}}"
+  },
+  "meta": {
+    "room": "Room",
+    "duration": "Duration",
+    "size": "Size",
+    "created": "Created"
+  },
+  "delete": {
+    "title": "Delete VOD #{{id}}",
+    "destructive": "Destructive",
+    "warning": "This removes the recording from the database, the S3 bucket and the local file. It cannot be undone.",
+    "error": "Could not delete the VOD.",
+    "deleting": "Deleting…",
+    "confirm": "Delete permanently"
+  }
+}

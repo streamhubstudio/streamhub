@@ -1,0 +1,51 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "apps": "Apps",
+    "plugins": "Plugins",
+    "cluster": "Cluster",
+    "logs": "Logs",
+    "serverSettings": "Configuración",
+    "account": "Mi cuenta"
+  },
+  "layout": {
+    "session": "Sesión",
+    "readOnly": "Solo lectura",
+    "logout": "Salir",
+    "menu": "Menú",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "collapse": "Colapsar menú",
+    "expand": "Expandir menú",
+    "account": "Mi cuenta",
+    "footer": "StreamHub UI · capa de gestión sobre LiveKit"
+  },
+  "role": {
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "superadmin": "Superadmin"
+  },
+  "login": {
+    "titleLogin": "Ingresar",
+    "titleSignup": "Crear cuenta",
+    "subtitleLogin": "Accedé al panel de StreamHub.",
+    "subtitleSignup": "Creá tu cuenta y tu equipo en StreamHub.",
+    "identifierLoginLabel": "Email o usuario",
+    "identifierSignupLabel": "Email",
+    "emailPlaceholder": "vos@empresa.com",
+    "teamNameLabel": "Nombre del equipo (opcional)",
+    "teamNamePlaceholder": "Mi empresa",
+    "passwordLabel": "Contraseña",
+    "submitVerifying": "Verificando…",
+    "submitCreating": "Creando…",
+    "dividerNoAccount": "¿No tenés cuenta?",
+    "dividerHasAccount": "¿Ya tenés cuenta?",
+    "switchToSignup": "Crear una cuenta",
+    "switchToLogin": "Volver a ingresar",
+    "errorInvalidCredentials": "Email o contraseña inválidos.",
+    "errorAccountExists": "Ya existe una cuenta con ese email.",
+    "errorLoginFailed": "No se pudo iniciar sesión.",
+    "errorSignupFailed": "No se pudo crear la cuenta."
+  }
+}

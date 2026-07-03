@@ -1,0 +1,45 @@
+{
+  "loading": "Cargando tablero…",
+  "loadError": "No se pudieron cargar las estadísticas del app.",
+  "cards": {
+    "viewers": "Espectadores ahora",
+    "viewersHint": "Activá la función viewerCounter para contar espectadores",
+    "streams": "Streams activos",
+    "vods": "Grabaciones",
+    "vodReady": "{{n}} listas",
+    "vodPending": "{{n}} en curso",
+    "vodFailed": "{{n}} fallidas",
+    "storage": "Almacenamiento",
+    "storageHint": "BD {{db}} · VODs {{vods}}",
+    "ingress": "Ingress",
+    "ingressHint": "activos / total",
+    "events": "Eventos (24h)",
+    "eventsError": "{{n}} errores",
+    "eventsWarn": "{{n}} advertencias"
+  },
+  "rooms": {
+    "title": "Salas en vivo",
+    "subtitle": "Salas con un emisor activo en este momento.",
+    "empty": "No hay salas en vivo.",
+    "room": "Sala",
+    "viewers": "Espectadores",
+    "publishers": "Emisores",
+    "since": "Desde",
+    "actions": "Acciones",
+    "watch": "Ver"
+  },
+  "events": {
+    "title": "Eventos recientes",
+    "subtitle": "Últimos eventos de este app.",
+    "allLevels": "Todos los niveles",
+    "range": {
+      "today": "Hoy",
+      "24h": "Últimas 24h",
+      "7d": "Últimos 7 días"
+    },
+    "seeAll": "Ver todos",
+    "loading": "Cargando eventos…",
+    "loadError": "No se pudieron cargar los eventos.",
+    "empty": "Sin eventos en este rango."
+  }
+}

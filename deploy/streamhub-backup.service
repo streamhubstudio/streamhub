@@ -1,0 +1,17 @@
+[Unit]
+Description=StreamHub backup (SQLite DBs + secrets.json -> tar.gz -> S3)
+Documentation=file:///opt/streamhub/streamhub-docs/operations/BACKUPS.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# All config is env. Put BACKUP_DATA_DIR / BACKUP_S3_* etc. in this file
+# (0600, root-owned). The leading "-" makes it optional if you set env inline.
+EnvironmentFile=-/etc/streamhub/backup.env
+# Adjust the path if the repo lives elsewhere (e.g. /opt/streamhub-core).
+ExecStart=/opt/streamhub/deploy/backup.sh
+# Be gentle: backups run alongside a live media server.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

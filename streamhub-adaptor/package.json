@@ -1,0 +1,44 @@
+{
+  "name": "@streamhub/adaptor",
+  "version": "0.1.0",
+  "description": "Drop-in replacement for AntMedia @antmedia/webrtc_adaptor WebRTCAdaptor, backed by livekit-client and the StreamHub media server.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "browser": "./dist/streamhub-adaptor.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "antmedia",
+    "webrtc_adaptor",
+    "livekit",
+    "webrtc",
+    "streamhub",
+    "adaptor",
+    "drop-in"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "livekit-client": "^2.0.0"
+  },
+  "devDependencies": {
+    "livekit-client": "^2.20.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

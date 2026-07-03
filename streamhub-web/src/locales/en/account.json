@@ -1,0 +1,145 @@
+{
+  "title": "My account",
+  "sessionActive": "Active session",
+  "tabs": {
+    "profile": "Profile",
+    "security": "Security",
+    "team": "Team",
+    "platform": "Platform"
+  },
+  "roles": {
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "superadmin": "Superadmin"
+  },
+  "noTenant": {
+    "superadmin": "Pick a tenant on the \"Platform\" tab to view it here.",
+    "member": "Your user doesn't belong to any tenant yet."
+  },
+  "ui": {
+    "loading": "Loading…",
+    "empty": "No data."
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your personal data. The email is also your sign-in identifier.",
+    "loading": "Loading your account…",
+    "loadError": "Couldn't load your account.",
+    "nameLabel": "Display name",
+    "namePlaceholder": "Your name",
+    "emailLabel": "Email",
+    "emailAdminHint": "The break-glass admin email is managed via ADMIN_USER (env).",
+    "roleLabel": "Role",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Profile updated.",
+    "saveError": "Couldn't save your profile.",
+    "tenantTitle": "Your tenant",
+    "tenantSubtitle": "The team (tenant) and role this session acts under."
+  },
+  "security": {
+    "password": {
+      "title": "Password",
+      "subtitle": "Change your password. You'll need the current one.",
+      "noPassword": "This account signs in with magic links and has no known password yet.",
+      "setViaReset": "Set a password via the email reset flow →",
+      "currentLabel": "Current password",
+      "newLabel": "New password",
+      "confirmLabel": "Confirm new password",
+      "change": "Change password",
+      "changing": "Changing…",
+      "changed": "Password changed.",
+      "error": "Couldn't change the password.",
+      "errorTooShort": "The new password must be at least {{min}} characters.",
+      "errorMismatch": "The new passwords don't match."
+    },
+    "twofa": {
+      "title": "Two-factor authentication (2FA)",
+      "subtitleOff": "Add a second step to your sign-in with an authenticator app (TOTP).",
+      "subtitleOn": "2FA is active: signing in requires a code from your authenticator app.",
+      "on": "Enabled",
+      "off": "Disabled",
+      "start": "Set up 2FA",
+      "starting": "Preparing…",
+      "errorStart": "Couldn't start the 2FA setup.",
+      "qrAlt": "2FA enrolment QR code",
+      "scanHint": "Scan the QR with your authenticator app (Google Authenticator, 1Password, Aegis…) or enter the secret manually, then confirm with a generated code.",
+      "secretLabel": "Manual entry secret",
+      "confirmLabel": "Code from the app",
+      "codeLabel": "Code from the app",
+      "enable": "Activate 2FA",
+      "enabling": "Activating…",
+      "cancel": "Cancel",
+      "disable": "Disable 2FA",
+      "disabling": "Disabling…",
+      "errorCode": "Invalid code. Check your authenticator app and try again."
+    }
+  },
+  "overview": {
+    "tenantTitle": "Current tenant",
+    "tenantSubtitle": "Details and quota usage of the tenant (team) your session belongs to.",
+    "name": "Name",
+    "plan": "Plan",
+    "id": "ID"
+  },
+  "metrics": {
+    "apps": "Apps",
+    "concurrentStreams": "Concurrent streams",
+    "recordingMinutes": "Recording minutes (month)",
+    "egress": "Egress (month)",
+    "storage": "Storage"
+  },
+  "members": {
+    "title": "Users / members",
+    "subtitleManage": "Invite members by email and assign them a role. Owner manages everything; editor creates/edits; viewer only reads.",
+    "subtitleReadonly": "Tenant members. Only an owner can invite or revoke.",
+    "emailLabel": "Email to invite",
+    "emailPlaceholder": "person@company.com",
+    "roleLabel": "Role",
+    "inviting": "Inviting…",
+    "invite": "Invite",
+    "inviteError": "Couldn't send the invite.",
+    "inviteSuccess": "Invite sent. They'll get an email with a link to join the team.",
+    "inviteCreatedNoEmail": "Invite created, but the email couldn't be sent (SMTP unavailable). Revoke and retry, or share a login link manually.",
+    "loading": "Loading team…",
+    "loadError": "Couldn't load the team.",
+    "empty": "This tenant has no members.",
+    "invitedBadge": "invited",
+    "you": "(you)"
+  },
+  "invites": {
+    "title": "Pending invitations",
+    "subtitle": "People invited by email who haven't accepted yet. Revoking invalidates the emailed link.",
+    "loading": "Loading invitations…",
+    "loadError": "Couldn't load the invitations.",
+    "empty": "No pending invitations.",
+    "sentAt": "Invited on {{date}}",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the invitation for {{email}}?",
+    "revokeError": "Couldn't revoke the invitation."
+  },
+  "platform": {
+    "quotaFields": {
+      "apps": "Apps",
+      "concurrentStreams": "Concurrent streams",
+      "recordingMinutes": "Rec. minutes/month",
+      "egress": "Egress/month",
+      "storage": "Storage"
+    },
+    "plan": "Plan",
+    "saveError": "Couldn't save the quotas.",
+    "saving": "Saving…",
+    "saveQuotas": "Save quotas",
+    "saved": "Quotas updated.",
+    "title": "All tenants",
+    "subtitle": "Platform view. Pick a tenant to view it in the other tabs or adjust its quotas.",
+    "loading": "Loading tenants…",
+    "loadError": "Couldn't load the tenants.",
+    "empty": "No tenants.",
+    "appCount": "{{count}} apps",
+    "selected": "Selected",
+    "select": "Select",
+    "quotas": "Quotas"
+  }
+}

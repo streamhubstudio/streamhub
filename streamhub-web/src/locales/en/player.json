@@ -1,0 +1,35 @@
+{
+  "invalid": {
+    "title": "Invalid route",
+    "desc": "The app or room is missing from the URL."
+  },
+  "header": {
+    "appLabel": "app · {{app}}",
+    "audioOnly": "Audio only",
+    "audioOnlyTitle": "Play only the room's audio",
+    "exit": "Leave"
+  },
+  "share": {
+    "title": "Share",
+    "subtitle": "Public player URL and snippet to embed.",
+    "publicUrl": "Public URL",
+    "embed": "Embed (iframe)",
+    "openNewTab": "Open in a new tab"
+  },
+  "connection": {
+    "live": "Live",
+    "connecting": "Connecting",
+    "reconnecting": "Reconnecting",
+    "disconnected": "Disconnected"
+  },
+  "stage": {
+    "connecting": "Connecting to the room…",
+    "emptyTitle": "Empty room",
+    "emptyDesc": "Nobody is broadcasting yet. Video will appear automatically when the broadcast starts.",
+    "startAudio": "Enable sound",
+    "screen": "screen",
+    "participant": "Participant"
+  },
+  "viewers_one": "{{count}} in room",
+  "viewers_other": "{{count}} in room"
+}

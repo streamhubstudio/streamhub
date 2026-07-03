@@ -1,0 +1,54 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "subtitle": "Live status and metrics for streamhub-core."
+  },
+  "appsTable": {
+    "title": "Apps",
+    "subtitle": "Tenants registered in streamhub-core.",
+    "viewAll": "View all",
+    "loadError": "Couldn't load the apps.",
+    "loading": "Loading apps…",
+    "emptyBefore": "No apps yet.",
+    "emptyLink": "Create the first one",
+    "colName": "Name",
+    "colId": "Identifier",
+    "colRoomPrefix": "Room prefix",
+    "colCreated": "Created",
+    "open": "Open"
+  },
+  "health": {
+    "checking": "Checking server status…",
+    "unreachableError": "Couldn't reach the server.",
+    "up": "Operational",
+    "down": "Unreachable",
+    "status": "Status",
+    "version": "Version",
+    "uptime": "Uptime"
+  },
+  "stats": {
+    "loadError": "Couldn't load the metrics.",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "disk": "Disk",
+    "diskNA": "N/A",
+    "cores_one": "{{count}} core",
+    "cores_other": "{{count}} cores",
+    "activeStreams": "Active streams",
+    "apps": "Apps",
+    "rooms": "Rooms",
+    "ingress": "Ingress",
+    "egress": "Egress",
+    "connected": "connected",
+    "disconnected": "offline",
+    "livekitReachable": "reachable",
+    "livekitUnreachable": "unreachable",
+    "updating": "updating…",
+    "database": "Database",
+    "databaseHint": "app + global DBs",
+    "vodStorage": "VOD storage",
+    "vods_one": "{{count}} recording",
+    "vods_other": "{{count}} recordings"
+  },
+  "updating": "Updating…"
+}

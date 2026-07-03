@@ -1,0 +1,109 @@
+{
+  "features": {
+    "chat": {
+      "label": "Chat",
+      "hint": "Data-channel chat in the player and meetings."
+    },
+    "reactions": {
+      "label": "Reactions",
+      "hint": "Floating animated reactions."
+    },
+    "viewerCounter": {
+      "label": "Viewer counter",
+      "hint": "Exposes the live subscriber count."
+    },
+    "hiddenQc": {
+      "label": "Hidden QC",
+      "hint": "Allows invisible QC/recorder participants (they don't count as viewers)."
+    },
+    "adaptivePlayer": {
+      "label": "Adaptive player",
+      "hint": "Simulcast + multi-layer transcode in the player."
+    },
+    "rtmpPassword": {
+      "label": "RTMP password",
+      "hint": "Requires a password in addition to the stream key to publish over RTMP."
+    }
+  },
+  "eventGroups": {
+    "roomParticipants": "Room / participants",
+    "ingressEgress": "Ingress / Egress",
+    "streamhub": "StreamHub (business)"
+  },
+  "nav": {
+    "callbacks": "Callbacks",
+    "s3": "S3 storage",
+    "features": "Features",
+    "qc": "QC token"
+  },
+  "saveStatus": {
+    "saving": "Saving…",
+    "saved": "Saved ✓",
+    "error": "Could not save",
+    "dirty": "Unsaved changes"
+  },
+  "callbacks": {
+    "loading": "Loading integrations…",
+    "loadError": "Could not load the configuration.",
+    "title": "Callbacks (outbound webhooks)",
+    "subtitle": "StreamHub sends a signed POST to your URL for EVERY room event. Filter them by the payload's \"event\" field.",
+    "urlLabel": "Callback URL",
+    "urlHint": "HTTPS endpoint that receives the POSTs. Empty = callbacks disabled.",
+    "urlPlaceholder": "https://your-backend.com/streamhub/webhook",
+    "secretLabel": "Signing secret",
+    "secretHint": "Used for X-StreamHub-Signature: sha256=hmac(secret, body). Verify it on your endpoint.",
+    "secretPlaceholder": "a long random secret",
+    "payloadInfo": "<0>All</0> classifiable events are posted. The payload is <1>{{payload}}</1> and each request carries the headers <2>X-StreamHub-Event</2> and <3>X-StreamHub-Signature</3>.",
+    "eventsSummary": "Events that get posted",
+    "eventsShow": "Show",
+    "eventsHide": "Hide",
+    "saveError": "Could not save.",
+    "saving": "Saving…",
+    "save": "Save callbacks"
+  },
+  "featuresCard": {
+    "loading": "Loading features…",
+    "loadError": "Could not load the features.",
+    "title": "Features",
+    "subtitle": "Player and ingress capabilities. Every change is saved automatically (see the status in the top-right).",
+    "saveError": "Could not save the feature."
+  },
+  "qc": {
+    "title": "QC token (hidden)",
+    "subtitle": "Invisible participant for quality control / recording; does not count as a viewer. Requires the \"Hidden QC\" feature.",
+    "generating": "Generating…",
+    "generate": "Generate QC token",
+    "error": "Could not generate the QC token.",
+    "tokenJwt": "Token (JWT)"
+  },
+  "s3": {
+    "confirmPublic": "You are about to make this app's recordings PUBLIC: anyone with the URL (<public_url>/<objectKey>) will be able to view and download them, with no expiration. Confirm?",
+    "loading": "Loading storage…",
+    "loadError": "Could not load the S3 configuration.",
+    "title": "S3 storage (recordings / VODs)",
+    "subtitle": "Destination for the recorded MP4s. Credentials are stored encrypted separately; the s3 block goes into config.yaml.",
+    "providerLabel": "Provider",
+    "bucketLabel": "Bucket",
+    "bucketPlaceholder": "my-bucket",
+    "regionLabel": "Region",
+    "endpointLabel": "Endpoint",
+    "endpointHint": "Empty on AWS. E.g. Wasabi: https://s3.wasabisys.com",
+    "prefixLabel": "Prefix",
+    "prefixHint": "Base folder inside the bucket (optional).",
+    "publicUrlLabel": "Public URL (CDN)",
+    "publicUrlHint": "Public base for deterministic VOD URLs. Empty = presigned URLs are used.",
+    "publicUrlPlaceholder": "https://cdn.mydomain.com",
+    "publicWarnTitle": "⚠ Recordings become PUBLIC",
+    "publicWarnBody": "With <0>Public URL</0> set, VODs are served as deterministic URLs <1>{{objectPath}}</1> <2>with no expiration</2>: anyone with the link can access them. Recommended to leave it empty (temporary <3>presigned</3> URLs) or use a <4>CDN with a signed URL</4> instead of exposing the bucket.",
+    "publicAck": "I understand that this app's recordings will be publicly accessible.",
+    "privateInfo": "Empty <0>Public URL</0> = secure delivery by default: VODs are served with temporary <1>presigned</1> URLs.",
+    "accessKeyLabel": "Access key",
+    "secretKeyLabel": "Secret key",
+    "storedHint": "Already configured. Leave empty to keep it.",
+    "saveError": "Could not save S3.",
+    "saving": "Saving…",
+    "save": "Save S3",
+    "saveBlocked": "Confirm the warning to enable public access.",
+    "saved": "Saved · S3 client re-initialized."
+  }
+}

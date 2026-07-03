@@ -1,0 +1,45 @@
+{
+  "manager": {
+    "title": "HTML samples (per app)",
+    "subtitle": "Self-contained pages wired to THIS app (WebRTC publish/play, HLS, radio). Editing one does NOT affect the other apps.",
+    "regenerateTooltip": "Regenerate all of this app's samples from the templates",
+    "regenerating": "Regenerating…",
+    "regenerate": "Regenerate",
+    "regenerateError": "Could not regenerate the samples.",
+    "regenerateSuccess": "Samples regenerated from the templates.",
+    "loading": "Loading samples…",
+    "loadError": "Could not load the samples.",
+    "empty": "This app has no samples. Use \"Regenerate\" to create them."
+  },
+  "editor": {
+    "loadingFile": "Loading {{file}}…",
+    "loadFileError": "Could not load {{file}}.",
+    "hidePreview": "Hide preview",
+    "preview": "Preview",
+    "open": "Open ↗",
+    "saveError": "Could not save the sample.",
+    "unsavedChanges": "Unsaved changes.",
+    "savedThisApp": "Saved (this app only).",
+    "publicUrl": "Public URL",
+    "embedIframe": "Embed iframe",
+    "previewLabel": "Preview",
+    "previewHelp": "Isolated preview (iframe <0>sandbox</0> without <1>allow-same-origin</1>): the sample cannot access the panel session. It loads the <2>saved</2> version, not unsaved changes."
+  },
+  "embed": {
+    "title": "Embed & link",
+    "subtitle": "Generates an embeddable preview and direct links to the WebRTC surfaces.",
+    "roomLabel": "Room",
+    "roomHint": "Empty = the app's default prefix.",
+    "generating": "Generating…",
+    "generate": "Generate embed / preview",
+    "openPlayer": "Open Player ↗",
+    "openMeeting": "Open Meeting ↗",
+    "openRadio": "Open Radio ↗",
+    "error": "Could not generate the preview.",
+    "snippetsTitle": "Snippets",
+    "embedIframe": "Embed iframe",
+    "playerUrl": "Player URL",
+    "noEmbeddable": "The token did not return embeddable URLs for this app.",
+    "livePreviewTitle": "Live preview"
+  }
+}

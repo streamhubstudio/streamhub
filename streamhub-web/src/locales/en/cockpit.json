@@ -1,0 +1,33 @@
+{
+  "controls": {
+    "app": "App",
+    "grid": "Grid",
+    "autoPlay": "Auto-play",
+    "labels": "Labels",
+    "liveCount_one": "{{count}} live",
+    "liveCount_other": "{{count}} live",
+    "refreshing": "Refreshing…"
+  },
+  "state": {
+    "loadingApps": "Loading apps…",
+    "noApps": "No apps available yet.",
+    "loadingStreams": "Loading streams…",
+    "noStreams": "No live streams right now.",
+    "noStreamsHint": "Cameras appear here automatically as soon as they start publishing."
+  },
+  "error": {
+    "streams": "Couldn't load the streams."
+  },
+  "cell": {
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "play": "Play {{name}}",
+    "clickToPlay": "Click to play",
+    "noSignal": "No signal"
+  },
+  "pager": {
+    "prev": "Previous",
+    "next": "Next",
+    "status": "Page {{page}} of {{total}}"
+  }
+}

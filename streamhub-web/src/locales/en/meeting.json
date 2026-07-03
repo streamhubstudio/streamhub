@@ -1,0 +1,49 @@
+{
+  "invalid": {
+    "title": "Invalid room",
+    "desc": "The app/room parameters are missing from the URL."
+  },
+  "token": {
+    "minting": "Generating access token…",
+    "error": "The room token could not be generated.",
+    "joinFailed": "Couldn't join",
+    "connectError": "Connection error with the room."
+  },
+  "prejoin": {
+    "subtitle": "Set up how you'll join the meeting.",
+    "nameLabel": "Display name",
+    "namePlaceholder": "Your name",
+    "withMic": "Join with microphone",
+    "withCam": "Join with camera",
+    "connecting": "Connecting…",
+    "join": "Join meeting"
+  },
+  "controls": {
+    "micOn": "Microphone",
+    "micOff": "Muted",
+    "camOn": "Camera",
+    "camOff": "No camera",
+    "screen": "Screen",
+    "reaction": "Reaction",
+    "chat": "Chat",
+    "leave": "Leave"
+  },
+  "stage": {
+    "waiting": "Waiting for participants…",
+    "inRoom_one": "{{count}} in room",
+    "inRoom_other": "{{count}} in room"
+  },
+  "chat": {
+    "title": "Chat",
+    "close": "Close chat",
+    "empty": "No messages yet.",
+    "emojis": "Emojis",
+    "placeholder": "Type a message…",
+    "send": "Send"
+  },
+  "participant": {
+    "self": "Me",
+    "anonymous": "Anonymous",
+    "someone": "Someone"
+  }
+}

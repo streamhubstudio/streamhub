@@ -1,0 +1,76 @@
+{
+  "page": {
+    "title": "Plugins",
+    "subtitle": "Extend StreamHub with installable plugins.",
+    "refreshing": "Refreshing…",
+    "backendOffline": "Couldn't reach the plugins service. Showing the available catalog; install state may be out of date.",
+    "actionError": "The action couldn't be completed.",
+    "allCategories": "All",
+    "loading": "Loading plugins…",
+    "empty": "No plugins in this category.",
+    "emptyHint": "Plugins drop in automatically — new ones appear here once added."
+  },
+  "picker": {
+    "subtitle": "Plugins are installed and configured per app. Pick an app to manage its plugins.",
+    "selectApp": "Pick an app",
+    "loadingApps": "Loading apps…",
+    "noApps": "No apps yet. Create one to install plugins.",
+    "manage": "Manage plugins"
+  },
+  "catalog": {
+    "title": "Available catalog",
+    "subtitle": "Plugins bundled in this build. Install them inside an app."
+  },
+  "status": {
+    "active": "Active",
+    "installed": "Installed",
+    "available": "Available"
+  },
+  "placement": {
+    "app-tab": "App tab",
+    "panel": "Panel",
+    "player-overlay": "Player overlay"
+  },
+  "card": {
+    "noDescription": "No description provided.",
+    "backendOnly": "Registered on the server but its UI isn't available in this build."
+  },
+  "actions": {
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "open": "Open",
+    "configure": "Configure",
+    "logs": "Logs",
+    "active": "Active",
+    "inactive": "Inactive",
+    "working": "Working…",
+    "close": "Close"
+  },
+  "confirm": {
+    "uninstall": "Uninstall \"{{name}}\"? Its configuration will be removed."
+  },
+  "config": {
+    "title": "Configure {{name}}",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Couldn't save the configuration.",
+    "noSettings": "This plugin has no settings.",
+    "errors": {
+      "required": "This field is required.",
+      "nan": "Enter a valid number.",
+      "min": "The value is below the minimum.",
+      "max": "The value is above the maximum.",
+      "notInOptions": "Choose one of the available options."
+    }
+  },
+  "logs": {
+    "title": "{{name}} · logs",
+    "loading": "Loading logs…",
+    "error": "Couldn't load the logs.",
+    "empty": "No logs yet."
+  },
+  "host": {
+    "crashed": "The \"{{id}}\" plugin failed to render."
+  }
+}

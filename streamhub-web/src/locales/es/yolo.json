@@ -1,0 +1,48 @@
+{
+  "fields": {
+    "room": {
+      "label": "Sala / stream",
+      "help": "Sala HLS a analizar — /hls/<app>/<sala>/index.m3u8.",
+      "placeholder": "live"
+    },
+    "callbackUrl": {
+      "label": "URL de callback",
+      "help": "Las detecciones se envían acá por POST en cada frame: { app, room, ts, detections }.",
+      "placeholder": "https://example.com/hooks/yolo"
+    },
+    "model": {
+      "label": "Tamaño del modelo",
+      "help": "Más grande = más preciso pero más lento. Nano/Small van bien en CPU."
+    },
+    "cuda": {
+      "label": "Usar CUDA (GPU)",
+      "help": "Activado usa la GPU; desactivado corre en CPU. Dejalo apagado en hosts sin GPU."
+    },
+    "confidence": {
+      "label": "Umbral de confianza",
+      "help": "Confianza mínima de detección (0–1)."
+    },
+    "fps": {
+      "label": "FPS de muestreo",
+      "help": "Cuadros por segundo a muestrear (menos = menos CPU)."
+    },
+    "classes": {
+      "label": "Filtro de clases",
+      "help": "Elegí las clases COCO a detectar. Ninguna seleccionada = las 80.",
+      "all": "Todas las clases",
+      "count": "{{count}} seleccionadas"
+    }
+  },
+  "models": {
+    "nano": "Nano (más rápido, ideal CPU)",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large",
+    "xlarge": "XLarge (más preciso, GPU)"
+  },
+  "overlay": {
+    "badge": "YOLO · {{device}}",
+    "allClasses": "todas las clases",
+    "classes": "{{count}} clases"
+  }
+}

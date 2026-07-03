@@ -1,0 +1,70 @@
+{
+  "audio": {
+    "defaultLabel": "Live audio",
+    "onAir": "Live",
+    "connecting": "Connecting",
+    "offline": "Off air",
+    "speakers": "On air: {{speakers}}",
+    "activeAudio": "Audio stream active",
+    "connectingRoom": "Connecting to the room…",
+    "waiting": "Waiting for the host to go on air."
+  },
+  "chat": {
+    "title": "Chat",
+    "close": "Close chat",
+    "empty": "No messages yet.",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "emojis": "Emojis",
+    "toggle": "Show chat"
+  },
+  "connection": {
+    "connecting": "Connecting",
+    "reconnecting": "Reconnecting",
+    "disconnected": "Disconnected"
+  },
+  "hls": {
+    "loadError": "Couldn't load the HLS stream.",
+    "loadErrorHint": "The playlist didn't respond. Check that the HLS egress is still active.",
+    "waitingSignal": "Waiting for the live signal…",
+    "loading": "Loading HLS player…"
+  },
+  "live": {
+    "generatingAccess": "Generating room access…",
+    "invalidToken": "The server didn't return a valid access token.",
+    "accessError": "Couldn't generate room access.",
+    "openError": "Couldn't open the player",
+    "retrying": "Retrying…",
+    "connectionProblem": "Connection problem: {{error}}"
+  },
+  "mjpeg": {
+    "live": "LIVE",
+    "connecting": "Connecting to the camera…",
+    "offline": "Camera offline",
+    "offlineHint": "The MJPEG stream dropped. Retrying automatically…"
+  },
+  "controls": {
+    "unmute": "Unmute",
+    "mute": "Mute",
+    "enterFullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "sendReaction": "Send reaction",
+    "reaction": "Reaction"
+  },
+  "video": {
+    "participant": "Participant",
+    "screen": "screen",
+    "connectingRoom": "Connecting to the room…",
+    "emptyTitle": "Empty room",
+    "emptyBody": "No one is broadcasting yet. The video will appear automatically when the broadcast starts."
+  },
+  "viewers": {
+    "count_one": "{{count}} viewer",
+    "count_other": "{{count}} viewers"
+  },
+  "identity": {
+    "you": "Me",
+    "anonymous": "Anonymous",
+    "someone": "Someone"
+  }
+}

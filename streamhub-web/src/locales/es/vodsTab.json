@@ -1,0 +1,84 @@
+{
+  "config": {
+    "loading": "Cargando configuración de grabación…",
+    "loadError": "No se pudo cargar la configuración de grabación.",
+    "title": "Configuración de grabación",
+    "subtitle": "Aplica a las grabaciones que inicies en En vivo. Cada cambio se guarda automáticamente.",
+    "saved": "Guardado",
+    "saveError": "No se pudo guardar la configuración.",
+    "splitLabel": "Cortar grabación (split)",
+    "splitHint": "Parte el MP4 cada N minutos; cada parte queda como un VOD separado. Sin cortes = un único archivo continuo.",
+    "snapshotLabel": "Snapshots (capturas)",
+    "snapshotHint": "Guarda una imagen del room cada N segundos en S3 (streamhub/<app>/snapshots/). Off = sin capturas."
+  },
+  "split": {
+    "none": "Sin cortes",
+    "minutes": "{{n}} min"
+  },
+  "snapshot": {
+    "off": "Off",
+    "every": "Cada {{n}} s"
+  },
+  "title": "Grabaciones (VODs)",
+  "subtitle": "Cada grabación y cada parte de un split queda acá. Reproducí con el player, mirá metadatos o borrá.",
+  "playError": "No se pudo obtener el VOD.",
+  "loading": "Cargando VODs…",
+  "loadError": "No se pudieron cargar los VODs.",
+  "empty": "Sin grabaciones todavía. Iniciá una grabación desde En vivo.",
+  "emptyFiltered": "Ninguna grabación coincide con estos filtros.",
+  "emptyCta": {
+    "goLive": "Ir a En vivo"
+  },
+  "filters": {
+    "room": "Filtrar por sala…",
+    "allStatuses": "Todos los estados",
+    "order": {
+      "newest": "Más recientes primero",
+      "oldest": "Más antiguas primero",
+      "largest": "Más grandes primero",
+      "smallest": "Más chicas primero"
+    }
+  },
+  "table": {
+    "room": "Sala",
+    "status": "Estado",
+    "duration": "Duración",
+    "size": "Tamaño",
+    "created": "Creado",
+    "actions": "Acciones"
+  },
+  "actions": {
+    "opening": "Abriendo…",
+    "play": "Reproducir",
+    "download": "Descargar",
+    "downloading": "Preparando…"
+  },
+  "download": {
+    "errorTitle": "Falló la descarga",
+    "error": "No se pudo preparar la descarga. Puede que el VOD todavía no esté listo."
+  },
+  "probe": {
+    "tooltip": "Detectar duración (ffprobe)",
+    "errorTitle": "Falló el análisis",
+    "error": "No se pudo analizar la grabación.",
+    "noneTitle": "Nada detectado",
+    "none": "ffprobe no pudo leer los metadatos de la grabación."
+  },
+  "player": {
+    "title": "VOD #{{id}}"
+  },
+  "meta": {
+    "room": "Sala",
+    "duration": "Duración",
+    "size": "Tamaño",
+    "created": "Creado"
+  },
+  "delete": {
+    "title": "Borrar VOD #{{id}}",
+    "destructive": "Destructivo",
+    "warning": "Esto elimina la grabación de la base de datos, del bucket S3 y del archivo local. No se puede deshacer.",
+    "error": "No se pudo borrar el VOD.",
+    "deleting": "Borrando…",
+    "confirm": "Borrar definitivamente"
+  }
+}

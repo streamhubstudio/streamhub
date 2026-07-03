@@ -1,0 +1,107 @@
+{
+  "inputType": {
+    "rtmp": "RTMP (push)",
+    "whip": "WHIP",
+    "url": "URL (pull)",
+    "ws-mjpeg": "WebSocket (ESP32/MJPEG)"
+  },
+  "details": {
+    "rtmpUrl": "RTMP URL",
+    "streamKey": "Stream key",
+    "streamPassword": "Stream password",
+    "playerUrl": "Player URL",
+    "embedIframe": "Embed iframe"
+  },
+  "create": {
+    "title": "Create ingress",
+    "inputTypeLabel": "Input type",
+    "roomLabel": "Room",
+    "roomHint": "Empty = the app's default prefix.",
+    "identityLabel": "Participant identity",
+    "identityHint": "Optional.",
+    "urlLabel": "Source URL",
+    "urlHint": "Required for URL type.",
+    "transcodeTitle": "Transcode (multi-layer)",
+    "transcodeHint": "Required for RTMP/URL; optional for WHIP.",
+    "submitting": "Creating…",
+    "submit": "Create ingress",
+    "error": "Could not create the ingress."
+  },
+  "list": {
+    "title": "Active ingresses",
+    "subtitle": "Existing publishing endpoints. The eye reveals each one's ingest URL and stream key.",
+    "searchPlaceholder": "Search by id, name or room…",
+    "removeError": "Could not delete the ingress.",
+    "loading": "Loading ingresses…",
+    "loadError": "Could not load the ingresses.",
+    "empty": "No ingresses yet. Create your first publishing endpoint.",
+    "emptyFiltered": "No ingresses match this search.",
+    "emptyCta": "Create ingress",
+    "idLabel": "ID",
+    "passwordBadge": "password",
+    "confirmRemove": "Delete ingress {{id}}?",
+    "revealTooltip": "View ingest credentials",
+    "table": {
+      "ingress": "Ingress",
+      "room": "Room",
+      "status": "Status",
+      "bitrate": "Bitrate",
+      "viewers": "Viewers",
+      "actions": "Actions"
+    }
+  },
+  "status": {
+    "publishing": "Live",
+    "buffering": "Buffering",
+    "inactive": "Inactive",
+    "error": "Error",
+    "complete": "Finished"
+  },
+  "reveal": {
+    "title": "Ingest credentials",
+    "server": "Server (OBS \"Server\")",
+    "rtmpUrl": "Full RTMP URL",
+    "streamKey": "Stream key — OBS \"Stream Key\"",
+    "show": "Show stream key",
+    "hide": "Hide stream key",
+    "passwordRequired": "This ingress also requires the stream password issued when it was created.",
+    "help": "Paste the Server and Stream Key into your encoder (OBS, camera, etc.). Treat the key as a secret."
+  },
+  "ws": {
+    "create": {
+      "roomHint": "Required. One room per camera (e.g. cam1).",
+      "infoTitle": "Direct WebSocket ingest — no transcoding",
+      "infoHint": "The device sends JPEG frames over wss:// (1 binary message = 1 frame). Playback is sub-second MJPEG on the same /play URL. Ideal for ESP32-CAM / CCTV.",
+      "error": "Could not create the WebSocket ingest key."
+    },
+    "details": {
+      "wsUrl": "WebSocket URL (device connects here)",
+      "streamKey": "Stream key (wsk_) — send as Authorization: Bearer",
+      "mjpegUrl": "MJPEG URL (works in an <img>)",
+      "help": "Flash the ESP32 with the example firmware (streamhub-docs/integrations/esp32cam_ws_ingest.ino), set the WebSocket URL and the key, and the camera shows up in Streams and on /play."
+    },
+    "list": {
+      "title": "WebSocket cameras (ESP32/MJPEG)",
+      "subtitle": "Keys for direct WS ingest. Active = the camera is connected and sending frames right now.",
+      "loading": "Loading cameras…",
+      "loadError": "Could not load the WebSocket cameras.",
+      "removeError": "Could not revoke the key.",
+      "empty": "No WebSocket cameras yet. Create one with the \"WebSocket (ESP32/MJPEG)\" ingest type above.",
+      "confirmRemove": "Revoke key {{id}}? An active camera will be disconnected immediately.",
+      "revealTooltip": "View connection credentials",
+      "openPlayer": "Open public player",
+      "table": {
+        "camera": "Camera"
+      }
+    },
+    "status": {
+      "active": "Live",
+      "inactive": "Offline"
+    },
+    "reveal": {
+      "title": "WebSocket camera credentials",
+      "streamKey": "Stream key (wsk_)",
+      "help": "The device opens the WebSocket URL and authenticates with `Authorization: Bearer <key>` (or `&key=` in the URL). Each binary message is one JPEG frame."
+    }
+  }
+}
