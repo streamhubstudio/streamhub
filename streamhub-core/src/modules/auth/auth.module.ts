@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AUTH_VALIDATOR, StreamHubAuthGuard } from '../../shared/auth';
 import { EmailModule } from '../email/email.module';
+import { SecurityModule } from '../security/security.module';
 import { AccountController } from './account.controller';
 import { AuthController } from './auth.controller';
 import { LoginController } from './login.controller';
@@ -35,7 +36,9 @@ import { TotpService } from './totp.service';
  * (global) owns the users/teams/memberships tables this module reads and writes.
  */
 @Module({
-  imports: [EmailModule],
+  // SecurityModule provides IpReputationService: login/magic/token failures
+  // are reported (fire-and-forget) to the in-app auto-ban.
+  imports: [EmailModule, SecurityModule],
   controllers: [
     AuthController,
     LoginController,

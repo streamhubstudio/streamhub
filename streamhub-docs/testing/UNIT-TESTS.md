@@ -1,6 +1,6 @@
 # StreamHub — Unit & Integration Test Catalogue
 
-**991 tests, 80 suites, all green** (jest run 2026-07-03). Run with `npm test`
+**1091 tests, 87 suites, all green** (jest run 2026-07-03). Run with `npm test`
 from `streamhub-core/` (jest + ts-jest, Redis/BullMQ/LiveKit/S3/MQTT mocked, no
 infra). This file catalogues the documented suites by module and states the
 invariants each one locks down — suites added by later waves may not be
@@ -791,6 +791,59 @@ policy bounds, face TRACKS (identity kept across moves, unmatched tracks HELD
 before dropping — over-mask rather than flicker), frame-rate-independent
 exponential smoothing incl. exact settling, letterbox (`object-fit: contain`)
 geometry, mosaic grid / blur radius / mask shape helpers.
+
+---
+
+## Network security — IP access control + auto-ban (79 tests, 6 suites)
+
+Feature doc: [network-security](../features/network-security.md). All under
+`src/modules/security/`.
+
+### `ip-cidr.util.spec.ts` — 17
+Pure v4/v6 parsing (`::` compression, IPv4-mapped folding, zone stripping),
+CIDR boundary matches (/0, /24, /32, /64, /128; family never cross-matches),
+the private/loopback ranges behind the lock-out guarantee, and the
+XFF-first client-IP resolution.
+
+### `ip-rules.service.spec.ts` — 14
+`ip_rules` bootstrap is idempotent; add() normalises bare IPs to /32 // /128,
+rejects invalid CIDR + duplicates (400); **explicit allow WINS over block**
+regardless of insertion order; mutations reload the compiled cache
+immediately; rules survive a restart; remove() 404s unknown ids.
+
+### `ip-reputation.service.spec.ts` — 13
+Threshold (N offenses in window → ban, N−1 → not), sliding-window expiry, ban
+TTL expiry, **escalation doubles the TTL per repeat ban**, recording is
+idempotent while banned (no TTL extension), **never bans loopback/private/
+allowlisted** (offenses still visible), active bans survive a restart
+(`ip_bans`), unban = clean slate (resets escalation), recordOffense never
+throws on garbage and is a no-op with `STREAMHUB_AUTOBAN_ENABLED` off.
+
+### `security.middleware.spec.ts` — 16
+Dormant pass-through with everything off; loopback/private pass in EVERY mode
+even with `0.0.0.0/0` + `::/0` blocked (liveness); enforce: blocklisted → 403,
+banned → 429 — both with generic bodies that **never leak which rule/ban
+matched**; log mode annotates (`req.ipAccess`) but never rejects; allowlist-only
+default-deny; explicit allow beats block AND an active ban; opt-in 404-storm
+recording.
+
+### `security.controller.spec.ts` — 8
+Every `/security/*` endpoint rejects app-scoped principals (403, same
+requireGlobal gate as /cluster); superadmin/global-token/dev-path pass; status
+reflects config + live counts; rule create→list→delete and ban→unban
+round-trips; 400/404 error surfaces.
+
+### `offense-wiring.spec.ts` — 11
+The REAL failure sites report the right offense kind and only on failure:
+`AuthService.login` → `login_failed`, `AuthService.validate` →
+`invalid_token` (missing bearer is NOT an offense; valid tokens record
+nothing), `MagicLinkService.verify` → `magic_verify_failed` (first use legit,
+replay records), and the shared auth rate limiter's 429 handler reports
+through the pluggable hook — a throwing reporter never breaks the 429.
+
+### streamhub-web (node:test) — `src/lib/cidr.spec.ts` — 5
+The rule-form validator mirrors the backend parser's accept/reject surface
+(v4/v6, bare IPs, prefix bounds inclusive 0..32/0..128, malformed rejects).
 
 ---
 

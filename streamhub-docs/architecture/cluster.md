@@ -105,3 +105,42 @@ Each node exposes streamhub-core `/metrics` and LiveKit's native Prometheus metr
 central Prometheus scrapes all nodes, Grafana aggregates. Cluster-relevant signals: per-node
 CPU/bandwidth, egress queue depth, relay track counts, S3 upload failures, per-tenant usage
 vs quota. See [`../operations/OBSERVABILITY.md`](../operations/OBSERVABILITY.md).
+
+## Node liveness: heartbeat + self-registration
+
+Since installer v2.1.0 the join flow is no longer the node's only "pulse":
+
+- **Heartbeat systemd timer** — `install.sh` provisions
+  `/usr/local/bin/streamhub-heartbeat.sh` (POSTs `{nodeId, stats}` to
+  `POST /cluster/heartbeat` with `X-Cluster-Token`) plus a
+  `streamhub-heartbeat.service`/`.timer` pair (`OnBootSec=30`,
+  `OnUnitActiveSec=60` — every 60s), enabled on **both** the origin and every
+  joined edge. Previously an edge only "pinged" once, at join time, and went
+  `stale=true` after 90s with nothing re-arming it (worked around manually in
+  early cluster tests with a cron entry — the installer now ships the timer,
+  so that workaround is obsolete).
+- **Origin self-registration** — `ClusterService` upserts a fixed `id:'origin'`
+  row into the `nodes` registry on boot (and keeps it fresh via the same
+  heartbeat path), so the origin now shows up in `GET /cluster/nodes` next to
+  its edges instead of only edges being visible.
+- **Operator status is preserved across heartbeats** — a node an operator sets
+  to `draining`/`disabled` via `PATCH /cluster/nodes/:id` used to flip back to
+  `active` on its very next heartbeat write (the heartbeat handler
+  unconditionally reset `status`). Both the heartbeat write and self-registration
+  now special-case `draining`/`disabled` and leave them alone.
+
+## Known limitations (real, observed in cluster testing)
+
+- **`draining` is registry-only.** `PATCH /cluster/nodes/:id {status:'draining'}`
+  updates the StreamHub registry, but LiveKit's own room allocator is unaware
+  of it — a new room can still land on a node an operator just drained. There
+  is no router wired to that status yet (see "Making it cluster-ready" above).
+- **Cross-node egress placement can orphan a recording.** Room-composite
+  egress (recording, live HLS) is scheduled onto *whichever* node's egress
+  worker picks up the job — not necessarily the node serving the room. When
+  the claim lands on a different node than the one core queries for the local
+  file, the upload/serve step 404s or fails even though the egress itself
+  succeeded. This is a structural gap: the real fix is either shared storage
+  (NFS/S3-direct egress output) or pinning `StartEgress` to the room's own
+  node. Until then, treat recording/HLS on a multi-node cluster as
+  best-effort, not guaranteed.

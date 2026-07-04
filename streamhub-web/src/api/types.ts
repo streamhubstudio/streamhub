@@ -1357,6 +1357,57 @@ export interface SettingGuidance {
 /** Guidance keyed by group id (core/auth/livekit/cluster/metrics/storage). */
 export type SettingsGuidance = Record<string, SettingGuidance[]>
 
+// --- network security (/security/*) ------------------------------------------
+
+/** One allow/block rule (GET/POST /security/ip-rules). */
+export interface SecurityIpRule {
+  id: number
+  cidr: string
+  action: 'allow' | 'block'
+  note: string | null
+  createdAt: string
+  createdBy: string | null
+}
+
+/** An active or recently expired auto-ban (GET /security/bans). */
+export interface SecurityBan {
+  ip: string
+  reason: string
+  firstSeen: string
+  offenseCount: number
+  bannedUntil: string
+  escalationLevel: number
+  active: boolean
+}
+
+/** A recent offender inside the sliding window (GET /security/offenses). */
+export interface SecurityOffender {
+  ip: string
+  count: number
+  lastSeen: string
+  kinds: Record<string, number>
+}
+
+/** GET /security/status — mode, autoban config and live counts. */
+export interface SecurityStatus {
+  mode: 'off' | 'log' | 'enforce'
+  allowlistOnly: boolean
+  autoban: {
+    enabled: boolean
+    maxOffenses: number
+    windowS: number
+    baseTtlS: number
+    track404: boolean
+  }
+  counts: {
+    rules: number
+    allowRules: number
+    blockRules: number
+    activeBans: number
+    trackedOffenders: number
+  }
+}
+
 /** GET /system/settings — effective config with every secret redacted. */
 export interface ServerSettings {
   core: ServerSettingsCore

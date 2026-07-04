@@ -21,6 +21,9 @@ Server-wide endpoints (not scoped to a single app). All paths are under the glob
 | POST | `/account/2fa/setup` | Bearer (human JWT) | Start TOTP enrolment (secret + otpauth URI + QR data URI) |
 | POST | `/account/2fa/enable` | Bearer (human JWT) | Activate 2FA with a live code |
 | POST | `/account/2fa/disable` | Bearer (human JWT) | Disable 2FA with a live code |
+| GET | `/auth/sessions` | Bearer (human JWT) | List my live sessions (`id, ip, userAgent, createdAt, lastSeen, current`) |
+| DELETE | `/auth/sessions/{id}` | Bearer (human JWT) | Revoke one session (revoking the current one signs me out) |
+| DELETE | `/auth/sessions` | Bearer (human JWT) | Revoke every OTHER session (sign out everywhere else) |
 | GET | `/tenant/invites` | Bearer (owner) | Pending email invitations of MY tenant |
 | POST | `/tenant/invites` | Bearer (owner) | Invite by email (pending user + 72h single-use link) |
 | DELETE | `/tenant/invites/{userId}` | Bearer (owner) | Revoke a pending invitation |

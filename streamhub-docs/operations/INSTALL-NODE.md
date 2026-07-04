@@ -55,10 +55,26 @@ What it provisions, in order:
    NEVER overwritten.
 5. **Stack**: `docker compose up -d --build` — `redis livekit ingress egress core`
    (plus `caddy` only with `--proxy caddy`). Waits for `/api/v1/health`, seeds the `sk_` token.
-6. **TLS**: writes the nginx server block (`/rtc`→7880 websocket, `/`→3020) and runs
+   `EGRESS_CPUS` is auto-clamped to `min(nproc, 4)` before the stack starts (an operator's
+   explicit `.env` value is respected) — a host with fewer than 4 vCPUs used to hard-fail
+   `docker compose up` ("range of CPUs is 0.01 to N"), killing the install mid-way.
+6. **TLS / no-TLS**: writes the nginx server block (`/rtc`→7880 websocket, `/`→3020) and runs
    `certbot --nginx --redirect` (skipped for `localhost` installs, `--no-tls`, or when the
-   cert already exists; renewals via `certbot.timer`).
-7. Prints a **summary**: dashboard URL + credentials, `sk_` token, RTMP/WHIP/HLS endpoints,
+   cert already exists; renewals via `certbot.timer`). `--no-tls` (or `STREAMHUB_NO_TLS=1`,
+   or auto-detected when `--domain`/`STREAMHUB_DOMAIN` is a bare IP literal) is a **real**
+   no-TLS mode: public URLs switch to `http://`/`ws://`, Caddy serves plain HTTP with no
+   ACME attempt (`STREAMHUB_SITE_ADDRESS`), and nginx writes an IP-friendly catch-all
+   (`server_name _; listen 80 default_server;`) instead of a name-based vhost — no
+   half-configured TLS state on an IP-only box.
+7. **Heartbeat agent**: installs `/usr/local/bin/streamhub-heartbeat.sh` +
+   a `streamhub-heartbeat.service`/`.timer` pair (`systemctl enable --now
+   streamhub-heartbeat.timer`, runs every 60s) that POSTs `{nodeId, stats}` to
+   `POST /cluster/heartbeat`. Installed for **both** the origin and joined edges, so a node
+   no longer needs a manual cron workaround to avoid going `stale=true` 90s after its last
+   ping — see [`../architecture/cluster.md`](../architecture/cluster.md#node-liveness-heartbeat--self-registration).
+   The origin also self-registers into its own `nodes` registry on boot, so it shows up
+   in `GET /cluster/nodes` alongside its edges.
+8. Prints a **summary**: dashboard URL + credentials, `sk_` token, RTMP/WHIP/HLS endpoints,
    and the **cluster token + ready-made join one-liner** for edges.
 
 Before pointing real traffic: DNS `A` record → the server's public IP (DNS-only, no CDN
@@ -125,3 +141,13 @@ docker compose logs -f core        # logs
 docker compose down                # stop
 curl -fsSL https://www.streamhub.studio/install.sh | sudo bash   # re-run = update + restart
 ```
+
+**Refresh semantics on re-run (tarball installs):** the tarball fallback path
+(see [Hosting the installer](#hosting-the-installer)) now
+mirrors the fresh tree onto `/opt/streamhub` with **delete** semantics —
+`rsync -a --delete` (falling back to a `find`-based mirror if `rsync` isn't
+available, auto-installed when possible) — so files removed upstream since
+your last install are actually removed locally too, instead of accumulating
+forever. `.env`/`.env.local`/`*.local`/`data/`/`.git/` are always excluded from
+the mirror, so secrets and app data are never touched. A git-checkout install
+still just does `git pull --ff-only` (git already tracks deletions).

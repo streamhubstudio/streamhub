@@ -47,12 +47,16 @@ latency_alert:
   enabled: false
   threshold_ms: 1000
   cooldown_seconds: 60
-  interval_seconds: 10
+  interval_seconds: 10        # min 2
 ```
 
 API: `GET /apps/{app}/mqtt` (password **masked**, like the S3 credentials) and
 `PUT /apps/{app}/mqtt` (partial update; omit `password` to keep the stored
 one). The dashboard exposes the same fields in **App → Integraciones → MQTT**.
+The read response also carries `configured` (a broker `url` is set) and
+`hasPassword` (a password is currently stored) alongside the masked
+`password`/`passwordEnv`, so a client can render connection state without
+ever seeing the secret.
 
 > **Security** — the broker password NEVER lands in `config.yaml`: the yaml only
 > carries the `password_env` reference and the value is persisted to
@@ -122,13 +126,17 @@ are excluded (loop guard). Plugin worker stdout/stderr is included (source
 ## High-latency alert
 
 Config: `latency_alert: { enabled, threshold_ms, cooldown_seconds,
-interval_seconds }`. When enabled, the monitor samples every **active room** of
-the app each `interval_seconds` and applies a latched threshold per room:
+interval_seconds }` (`interval_seconds` has a floor of **2s**, enforced both by
+the API and the monitor). When enabled, the monitor samples every **active
+room** of the app each `interval_seconds` and applies a latched threshold per
+room:
 
 - sample above `threshold_ms` → emit **`stream.latency_high`** (once — latched
   while it stays high) with payload
   `{ room, rttMs, thresholdMs, metric, participants, publishers }`;
-- sample back at/below the threshold → emit **`stream.latency_recovered`**;
+- sample back at/below the threshold → emit **`stream.latency_recovered`**
+  with payload `{ room, rttMs, thresholdMs, metric }` (no `participants`/
+  `publishers` — those are only attached to the `_high` alert);
 - a re-breach within `cooldown_seconds` of the previous alert is suppressed.
 
 Both events go through the callbacks dispatcher, i.e. they reach the app's

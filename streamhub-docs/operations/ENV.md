@@ -46,6 +46,21 @@ committed. Anything ending in `_SECRET`/`_PASS`/`_TOKEN` must be long and random
 | `STREAMHUB_SUPERADMIN_EMAIL` | `info@streamhub.studio` | Email that becomes the superadmin principal when it signs in via magic-link. |
 | `STREAMHUB_APP_URL` | `https://app.streamhub.studio` | Public base URL of the dashboard used to build magic-link / invite URLs in emails. |
 
+## Network security (in-app IP access control + auto-ban)
+
+Full feature doc: [network-security](../features/network-security.md). Loopback + RFC1918/private
+IPs are ALWAYS permitted and NEVER banned (lock-out guarantee), in every mode.
+
+| Var | Default | Meaning |
+|---|---|---|
+| `STREAMHUB_IP_ACCESS_MODE` | `off` | Global IP allow/blocklist mode: `off` \| `log` (record + annotate would-blocks, never reject) \| `enforce` (blocklisted / non-allowlisted → `403`). Rules are managed at runtime via `/api/v1/security/ip-rules` (dashboard → Settings → Network security). |
+| `STREAMHUB_IP_ALLOWLIST_ONLY` | `false` | Strict allowlist: in `enforce` mode, PUBLIC IPs without an explicit `allow` rule are rejected. Loopback/private always pass. |
+| `STREAMHUB_AUTOBAN_ENABLED` | `false` | In-app fail2ban master switch: records offenses (failed login, failed magic verify, invalid `sk_`/JWT, auth 429s) per client IP and auto-bans repeat offenders with `429`. |
+| `STREAMHUB_AUTOBAN_MAX_OFFENSES` | `10` | Offenses within the window that trigger a ban. |
+| `STREAMHUB_AUTOBAN_WINDOW_S` | `300` | Sliding offense window (seconds). |
+| `STREAMHUB_AUTOBAN_BASE_TTL_S` | `900` | First-ban duration (seconds). Doubles per repeat ban (escalation), capped at 7 days. Active bans persist across restarts (`ip_bans`). |
+| `STREAMHUB_AUTOBAN_404_ENABLED` | `false` | Also count 404 responses (from public IPs) as offenses — catches path scanners; leave off if anything legitimate probes unknown URLs. |
+
 ## Email (SMTP — magic links, invites)
 
 | Var | Default | Meaning |
@@ -90,8 +105,14 @@ Used by the one-liner installer when a box joins an existing control plane
 
 | Var | Default | Meaning |
 |---|---|---|
-| `TRANSCODING_HWACCEL` | auto | Hardware-accel preference for transcoding (see `deploy/GPU.md`). |
+| `TRANSCODING_HWACCEL` | auto | Hardware-accel preference for transcoding (LiveKit egress/ingress NVENC/VAAPI — see [`streamhub-core/deploy/GPU.md`](../../streamhub-core/deploy/GPU.md)). |
 | `GPU_DISABLE` | (unset) | Force CPU-only; skips GPU detection. |
+
+The core image ships **ffmpeg** out of the box (needed for snapshots, the
+`h264+vp8` recording alternate and adaptive VOD post-transcode — see
+[features/transcoding-gpu.md](../features/transcoding-gpu.md)); passing
+`gpus: all` to the **core** service in `docker-compose.yml` (commented out by
+default, opt-in) additionally lets that bundled ffmpeg use NVENC.
 
 ## Logging
 

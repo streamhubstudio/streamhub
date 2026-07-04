@@ -26,6 +26,7 @@ import { RecordingModule } from './modules/recording/recording.module';
 import { RestreamModule } from './modules/restream/restream.module';
 import { S3Module } from './modules/s3/s3.module';
 import { SamplesModule } from './modules/samples/samples.module';
+import { SecurityModule } from './modules/security/security.module';
 import { StreamsModule } from './modules/streams/streams.module';
 import { SystemModule } from './modules/system/system.module';
 import { TranscodingModule } from './modules/transcoding/transcoding.module';
@@ -95,6 +96,10 @@ import { WsIngestModule } from './modules/ws-ingest/ws-ingest.module';
     MetricsModule,
 
     // feature modules
+    // Network security (IP allow/blocklist + auto-ban). Its middleware runs
+    // ahead of every guard/handler; imported before AuthModule so offense
+    // recording is available to the auth failure sites.
+    SecurityModule,
     AuthModule,
     // authz + quotas run as a second global guard layer after AuthModule's auth
     // guard populates req.authCtx (wave-5). Phased: log-only until enforce=on.

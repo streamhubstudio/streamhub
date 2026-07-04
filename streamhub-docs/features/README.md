@@ -37,6 +37,7 @@ one `vods.db`/`app.db` per app) and media in S3 per app.
 | [db-maintenance.md](db-maintenance.md) | Per-app SQLite health / optimize / purge |
 | [config-editor.md](config-editor.md) | Raw YAML editor, backups, dry-run, revert, reload, restart |
 | [presets.md](presets.md) | Config presets: low-latency / high-quality-recording / mass-audience-HLS (deep-merge + hot-reload) |
+| [plugins.md](plugins.md) | Plugin framework (auto-discovery, workers, live-data channel) + the 8 built-in plugins (cockpit, quality, radio, streaming, timestamp, watermark, yolo, deface) |
 | [samples.md](samples.md) | Per-app sample pages (publish/play/HLS/radio) + G4 turnkey verticals (CCTV/live-shopping/1:1/radio/conference) |
 | [radio-audio.md](radio-audio.md) | Audio-only rooms + radio master/listener + listen-token |
 | [adaptor-sdk.md](adaptor-sdk.md) | `@streamhub/adaptor` drop-in AntMedia SDK |

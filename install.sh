@@ -434,7 +434,10 @@ if [ "$MODE" = "origin" ]; then
   env_set ADMIN_PASS              "$ADMIN_PASS"
   env_put STREAMHUB_API_TOKEN     "sk_$(rand 43)"
   env_put METRICS_TOKEN           "mtk_$(rand 28)"
-  env_put STREAMHUB_AUTHZ_ENFORCE "log"
+  # "on" from the start — the tenancy guard's own code default is "on"; a
+  # fresh install must not silently ship in log-only (audit found an
+  # app-scoped token could read/write another tenant's app under "log").
+  env_put STREAMHUB_AUTHZ_ENFORCE "on"
   env_set STREAMHUB_PUBLIC_URL    "$PUBLIC_URL"
   env_set STREAMHUB_APP_URL       "$PUBLIC_URL"
   # Caddy site address: unset → the compose default is the bare domain (auto-TLS,

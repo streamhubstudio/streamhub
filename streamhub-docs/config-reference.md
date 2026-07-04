@@ -153,6 +153,14 @@ Resolved into `S3Config`. Multi-provider via `@aws-sdk/client-s3`.
 > via the API; core persists them outside the versionable YAML. They are never returned
 > by `GET /apps/{app}/config`.
 
+> **Switching `provider`**: `PUT /apps/{app}/s3` clears `endpoint` to `""` (the
+> AWS SDK's regional default) whenever you set `provider: "aws"` **without**
+> also passing an explicit `endpoint` in the same request. This matters because
+> a scaffolded app defaults to the Wasabi `endpoint` — without the auto-clear,
+> flipping `provider` to `aws` alone would silently keep uploading to Wasabi
+> with AWS credentials. Passing an explicit `endpoint` always wins, regardless
+> of `provider`.
+
 ## `webrtc`
 
 The adaptive/transcoding ladder. Editable via `GET/PATCH /apps/{app}/config` and read by
