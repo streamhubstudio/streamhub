@@ -84,7 +84,7 @@ Complete list of `streamhub-core` HTTP endpoints.
 | Method | Path | Permission | Feature |
 |--------|------|-----------|---------|
 | GET | `/apps/{app}/s3` | s3:read | [vod](../features/vod.md) |
-| PUT | `/apps/{app}/s3` | s3:write | vod (public_url gated by confirmPublic) |
+| PUT | `/apps/{app}/s3` | s3:write | vod (public_url gated by confirmPublic; setting `provider:"aws"` without an explicit `endpoint` auto-clears a stale scaffold endpoint — see [config-reference.md](../config-reference.md#s3)) |
 
 ## App MQTT
 
@@ -92,6 +92,23 @@ Complete list of `streamhub-core` HTTP endpoints.
 |--------|------|-----------|---------|
 | GET | `/apps/{app}/mqtt` | config:read | [mqtt](../features/mqtt.md) (password masked) |
 | PUT | `/apps/{app}/mqtt` | config:write | mqtt (password → secrets.json; omit to keep) |
+
+## Plugins
+
+| Method | Path | Permission | Feature |
+|--------|------|-----------|---------|
+| GET | `/apps/{app}/plugins` | plugin:read | [plugins](../features/plugins.md) — marketplace: every built-in plugin + this app's install/config state |
+| GET | `/apps/{app}/plugins/{id}` | plugin:read | plugins — one marketplace entry |
+| POST | `/apps/{app}/plugins/{id}/install` | plugin:write | plugins — install into the app (idempotent) |
+| PATCH | `/apps/{app}/plugins/{id}` | plugin:write | plugins — enable/disable and/or reconfigure (`config` validated against schema) |
+| DELETE | `/apps/{app}/plugins/{id}` | plugin:write | plugins — uninstall (stops its worker, clears live-data feeds) |
+| GET | `/apps/{app}/plugins/{id}/logs` | plugin:read | plugins — per-plugin logs |
+| POST | `/apps/{app}/plugins/{id}/worker/start` | plugin:write | plugins — start worker (`needsWorker` plugins) |
+| POST | `/apps/{app}/plugins/{id}/worker/stop` | plugin:write | plugins — stop worker |
+| GET | `/apps/{app}/plugins/{id}/worker/status` | plugin:read | plugins — worker state |
+| POST | `/apps/{app}/plugins/{id}/live` | `X-Plugin-Ingest-Token` (not Bearer) | plugins — worker-only live-data push |
+| GET | `/apps/{app}/plugins/{id}/live?room` | public | plugins — latest live-data payload for an enabled `player-overlay` plugin |
+| GET | `/apps/{app}/plugins/public` | public | plugins — enabled `player-overlay` plugins, config sanitized, for anonymous `/play`/`/embed` |
 
 ## Tokens (LiveKit join) & radio
 
@@ -199,6 +216,18 @@ Complete list of `streamhub-core` HTTP endpoints.
 |--------|------|------|---------|
 | GET | `/system/gpu?refresh` | Bearer | [transcoding-gpu](../features/transcoding-gpu.md) |
 | POST | `/system/gpu/refresh` | Bearer | transcoding-gpu |
+
+## Network security (IP access control + auto-ban)
+
+| Method | Path | Auth | Feature |
+|--------|------|------|---------|
+| GET | `/security/status` | global-scope (superadmin) | [network-security](../features/network-security.md) — mode + counts |
+| GET | `/security/ip-rules` | global-scope (superadmin) | network-security — allow/block rules |
+| POST | `/security/ip-rules` | global-scope (superadmin) | network-security — add rule `{ cidr, action, note? }` |
+| DELETE | `/security/ip-rules/{id}` | global-scope (superadmin) | network-security — remove rule |
+| GET | `/security/bans` | global-scope (superadmin) | network-security — `{ active, recent }` auto-bans |
+| POST | `/security/bans/{ip}/unban` | global-scope (superadmin) | network-security — lift a ban |
+| GET | `/security/offenses` | global-scope (superadmin) | network-security — recent offenders |
 
 ## Admin
 

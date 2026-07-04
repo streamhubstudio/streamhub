@@ -22,7 +22,7 @@ One self-contained page per use case, wired to the app and ready to embed:
 | `live-shopping.html` | **Live-shopping 1→N** | public play-token + ephemeral | Player WebRTC de baja latencia + chat/reactions sobre el data channel de LiveKit + botón "Comprar" (demo, `?buyUrl=` para checkout real). Chat de recepción con token público; para **enviar** pasá un token efímero con `canPublishData`. |
 | `telemedicine.html` | **1:1 telemedicina/soporte** | ephemeral token | Sala privada 1:1 con **tokens efímeros**: el operador mintea un token por parte (server-side) y comparte un link `#room=…&token=…&ws=…`. Cámara PiP + remoto grande, mute/cam/colgar. |
 | `radio-player.html` | **Radio / audio** | public listen-token (no login) | Player audio-only embebible (listener) sobre el `radio/:room/listen-token`. `?station=` para el nombre de la emisora. |
-| `conference.html` | **Conferencia N-a-N** | ephemeral token / mint | Sala meeting: publica cam/mic, se suscribe a todos, grilla de tiles, mute/cam/compartir pantalla/salir. |
+| `conference.html` | **Conferencia N-a-N (estilo Meet)** | ephemeral token / mint | Sala meeting con **pre-join** (nombre + selector de cámara/mic + preview antes de entrar), grilla responsive de tiles con resalte de active-speaker, compartir pantalla (promociona a tile grande), **chat lateral por data channel** (topic `chat`, sin persistencia, badge de no-leídos) y atajos de teclado (`m`/`v` mic/cam). |
 
 **Cómo se autentican (invariante Fold-4):** las páginas se sirven en un iframe
 `sandbox` sin `allow-same-origin`, así que NUNCA pueden leer el JWT admin del
@@ -40,7 +40,10 @@ panel. Por eso:
 
 Templates use placeholders resolved at generation time: `{{APP}}`, `{{WS_URL}}`,
 `{{API_URL}}`, `{{ADAPTOR_URL}}`, `{{HLS_URL}}`, `{{ROOM}}`. Todas reusan el
-**streamhub-adaptor** (best-effort) sobre `livekit-client`.
+**streamhub-adaptor** (best-effort), y si el script del adaptor no está
+disponible caen a `livekit-client` directo desde CDN — pineado a
+**`livekit-client@2.15.7`** (par validado con el server LiveKit `v1.8.4`; ver
+[adaptor-sdk.md](adaptor-sdk.md)).
 
 ## Management endpoints (under `/apps/:app/samples`)
 

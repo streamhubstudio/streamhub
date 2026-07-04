@@ -1,4 +1,21 @@
 import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
+import type { Request } from 'express';
+
+/**
+ * Network-security hook: the security module registers a reporter here so a
+ * 429 on the sensitive auth paths counts as an offense for the in-app
+ * auto-ban (modules/security). A plain module-level slot (not DI) because the
+ * limiter is built in main.ts before the Nest container exists. Fire-and-forget:
+ * reporter errors NEVER break the 429 response.
+ */
+type RateLimitOffenseReporter = (ip: string) => void;
+let offenseReporter: RateLimitOffenseReporter | null = null;
+
+export function setRateLimitOffenseReporter(
+  fn: RateLimitOffenseReporter | null,
+): void {
+  offenseReporter = fn;
+}
 
 /**
  * Fase-0 M6 — brute-force rate limiting for the SENSITIVE auth endpoints only.
@@ -43,17 +60,29 @@ export function createAuthRateLimiter(
 ): RateLimitRequestHandler {
   const windowMs = opts.windowMs ?? envInt('AUTH_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000);
   const limit = opts.limit ?? envInt('AUTH_RATE_LIMIT_MAX', 10);
+  const message = {
+    data: null,
+    error: {
+      code: 'rate_limited',
+      message: 'Too many attempts. Please retry later.',
+    },
+  };
   return rateLimit({
     windowMs,
     limit,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    message: {
-      data: null,
-      error: {
-        code: 'rate_limited',
-        message: 'Too many attempts. Please retry later.',
-      },
+    message,
+    // Same 429 body as the default handler, plus the offense report so the
+    // security module's auto-ban sees brute-force pressure on these paths.
+    handler: (req: Request, res) => {
+      try {
+        const ip = req.ip || req.socket?.remoteAddress || '';
+        if (ip) offenseReporter?.(ip);
+      } catch {
+        /* never break the 429 path on a reporter failure */
+      }
+      res.status(429).json(message);
     },
   });
 }

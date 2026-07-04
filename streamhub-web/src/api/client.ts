@@ -84,6 +84,10 @@ import type {
   RecordStopResult,
   AddRestreamRequest,
   RestreamTarget,
+  SecurityBan,
+  SecurityIpRule,
+  SecurityOffender,
+  SecurityStatus,
   SendDataRequest,
   ServerSettings,
   SnapshotRequest,
@@ -887,6 +891,53 @@ const cluster = {
   },
 }
 
+// --- network security (/security/* — superadmin) ------------------------------
+
+const security = {
+  /** GET /security/status → mode, autoban config and live counts. */
+  status(signal?: AbortSignal): Promise<SecurityStatus> {
+    return request<SecurityStatus>('/security/status', { signal })
+  },
+  /** GET /security/ip-rules → the allow/block rule list (newest first). */
+  rules(signal?: AbortSignal): Promise<SecurityIpRule[]> {
+    return request<SecurityIpRule[]>('/security/ip-rules', { signal })
+  },
+  /** POST /security/ip-rules — add an allow/block rule (CIDR or bare IP). */
+  addRule(payload: {
+    cidr: string
+    action: 'allow' | 'block'
+    note?: string
+  }): Promise<SecurityIpRule> {
+    return request<SecurityIpRule>('/security/ip-rules', {
+      method: 'POST',
+      body: payload,
+    })
+  },
+  /** DELETE /security/ip-rules/:id — remove a rule. */
+  removeRule(id: number): Promise<{ id: number; deleted: true }> {
+    return request<{ id: number; deleted: true }>(`/security/ip-rules/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  /** GET /security/bans → { active, recent } auto-bans. */
+  bans(signal?: AbortSignal): Promise<{ active: SecurityBan[]; recent: SecurityBan[] }> {
+    return request<{ active: SecurityBan[]; recent: SecurityBan[] }>('/security/bans', {
+      signal,
+    })
+  },
+  /** POST /security/bans/:ip/unban — lift a ban (clean slate). */
+  unban(ip: string): Promise<{ ip: string; unbanned: true }> {
+    return request<{ ip: string; unbanned: true }>(
+      `/security/bans/${encodeURIComponent(ip)}/unban`,
+      { method: 'POST' },
+    )
+  },
+  /** GET /security/offenses → recent offenders (window counts). */
+  offenses(signal?: AbortSignal): Promise<SecurityOffender[]> {
+    return request<SecurityOffender[]>('/security/offenses', { signal })
+  },
+}
+
 // --- account / identity (Wave 5 + cuenta y auth) -----------------------------
 
 const account = {
@@ -1071,6 +1122,7 @@ export const api = {
   tokens,
   logs,
   cluster,
+  security,
 }
 
 export type StreamHubApi = typeof api

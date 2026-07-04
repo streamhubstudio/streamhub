@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
@@ -22,6 +23,7 @@ import {
   setAuthCtx,
 } from '../../shared/auth-context';
 import { TenancyService } from '../tenancy/tenancy.service';
+import { IpReputationService } from '../security/ip-reputation.service';
 import { hashPassword, verifyPassword } from './password.util';
 import { TotpService } from './totp.service';
 import {
@@ -121,6 +123,12 @@ export class AuthService implements AuthValidatorContract {
     private readonly tenancy: TenancyService,
     private readonly totp: TotpService,
     private readonly sessions: SessionService,
+    /**
+     * Network-security reputation sink (optional so unit harnesses that build
+     * AuthService without the security module keep working). Every call is
+     * fire-and-forget — recordOffense never throws.
+     */
+    @Optional() private readonly reputation?: IpReputationService,
   ) {}
 
   /**
@@ -273,12 +281,20 @@ export class AuthService implements AuthValidatorContract {
       verifyPassword(pass, row.password_hash)
     ) {
       // Second factor AFTER the password checks out (never leaks which failed).
-      this.totp.assertLoginCode(row.id, code);
+      try {
+        this.totp.assertLoginCode(row.id, code);
+      } catch (err) {
+        // A wrong/missing TOTP code is a failed login for the auto-ban too.
+        this.reputation?.recordOffense(session?.ip ?? null, 'login_failed');
+        throw err;
+      }
       return {
         token: this.issueSessionToken(row.id, row.email, secret, session),
       };
     }
 
+    // Network-security: count the failed credential attempt (fire-and-forget).
+    this.reputation?.recordOffense(session?.ip ?? null, 'login_failed');
     throw new UnauthorizedException('Invalid username or password');
   }
 
@@ -333,6 +349,11 @@ export class AuthService implements AuthValidatorContract {
     const hash = this.hashToken(token);
     const row = this.findActiveByHash(hash);
     if (!row) {
+      // A presented-but-unknown/revoked sk_ token is an offense (guessing).
+      this.reputation?.recordOffense(
+        this.normalizeIp(this.clientIp(req)),
+        'invalid_token',
+      );
       throw new UnauthorizedException('Invalid or revoked API token');
     }
 
@@ -475,6 +496,11 @@ export class AuthService implements AuthValidatorContract {
     try {
       payload = verifyJwt(token, secret);
     } catch {
+      // A presented-but-invalid JWT is an offense (forgery/expired replay).
+      this.reputation?.recordOffense(
+        this.normalizeIp(this.clientIp(req)),
+        'invalid_token',
+      );
       throw new UnauthorizedException('Invalid or expired token');
     }
     const sub = typeof payload.sub === 'string' ? payload.sub : '';

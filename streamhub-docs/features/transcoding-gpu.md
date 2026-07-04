@@ -102,6 +102,30 @@ curl -s -X PATCH $BASE/apps/demo/config -H "Authorization: Bearer $TOKEN" \
   metadata (`streamhub.simulcast`) and ingress transcoding is enabled.
 - The GPU/hwaccel resolution feeds the media pipeline (egress/ingress workers
   co-located with the core); metered as `streamhub_media_transcode_total{kind,accel,type}`.
-- Media pipeline deployment (GPU passthrough for the egress/ingress containers)
-  is covered by the repo's deploy docs (`deploy/DEPLOY.md`).
+- GPU passthrough for the LiveKit **egress/ingress** containers (NVENC/VAAPI
+  worker images, `nvidia-container-toolkit`, `runtime: nvidia`) is covered in
+  detail in [`streamhub-core/deploy/GPU.md`](../../streamhub-core/deploy/GPU.md).
+
+## The core image's own ffmpeg (snapshots, VOD post-transcode, NVENC)
+
+Separate from the egress/ingress hwaccel above: the **core** container itself
+bundles `ffmpeg` (Debian/apt package) so its own post-processing jobs — CCTV
+snapshots, the `encoding: h264+vp8` recording alternate, and adaptive HLS VOD
+rendition transcodes (`vod_adaptive`) — work out of the box in the Docker
+Compose shape. (Earlier builds shipped without it, which left those features
+dead-on-arrival in a fresh Docker install.)
+
+To let that bundled ffmpeg use NVENC instead of `libx264`, expose the GPU to
+the **core** service — `docker-compose.yml` has a commented, opt-in block:
+
+```yaml
+services:
+  core:
+    # gpus: all   # uncomment on a host with an NVIDIA card + nvidia-container-toolkit
+```
+
+Once enabled, `GET /system/gpu` reports the card and ffmpeg's `h264_nvenc`/
+`hevc_nvenc` encoders become available to the core's post-transcode jobs.
+Validated on an AWS `g4dn.xlarge` (NVIDIA T4): 10+ realtime 1080p→720p
+transcode sessions concurrently.
 </content>

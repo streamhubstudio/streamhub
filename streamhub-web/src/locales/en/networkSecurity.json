@@ -1,0 +1,72 @@
+{
+  "title": "Network security",
+  "subtitle": "In-app IP access control and abuse auto-ban. Complements the reverse proxy and OS firewall — it does not replace them.",
+  "disabledHint": "Both the IP access control and the auto-ban are OFF. Enable them with STREAMHUB_IP_ACCESS_MODE (log/enforce) and STREAMHUB_AUTOBAN_ENABLED=true in the server's .env, then restart the core.",
+  "envHint": "Configuration is env-driven (STREAMHUB_IP_ACCESS_MODE, STREAMHUB_IP_ALLOWLIST_ONLY, STREAMHUB_AUTOBAN_*) — see the network-security docs. Loopback and private (RFC1918) addresses are always permitted and never banned, so you cannot lock yourself out of the box.",
+  "mode": {
+    "off": "off",
+    "log": "log only",
+    "enforce": "enforced"
+  },
+  "status": {
+    "mode": "IP rules",
+    "autoban": "Auto-ban",
+    "allowlistOnly": "allowlist-only",
+    "on": "on",
+    "off": "off",
+    "counts": "{{rules}} rules · {{bans}} active bans · {{offenders}} recent offenders"
+  },
+  "rules": {
+    "title": "Allow / block rules",
+    "cidr": "CIDR",
+    "cidrPlaceholder": "203.0.113.0/24 or 2001:db8::/32",
+    "notePlaceholder": "Note (optional)",
+    "actionHeader": "Action",
+    "action": {
+      "allow": "allow",
+      "block": "block"
+    },
+    "note": "Note",
+    "created": "Created",
+    "add": "Add rule",
+    "addError": "Couldn't add the rule.",
+    "remove": "Remove",
+    "empty": "No rules yet. Add a CIDR to allow or block a range — explicit allow always wins over block."
+  },
+  "bans": {
+    "title": "Active bans",
+    "ip": "IP",
+    "reason": "Last offense",
+    "offenses": "Offenses",
+    "until": "Banned until",
+    "level": "Escalation",
+    "unban": "Unban",
+    "empty": "No IPs are currently banned."
+  },
+  "offenders": {
+    "title": "Recent offenders",
+    "ip": "IP",
+    "count": "Offenses",
+    "kinds": "Breakdown",
+    "lastSeen": "Last seen",
+    "empty": "No offenses recorded in the current window."
+  },
+  "offenseKind": {
+    "login_failed": "failed login",
+    "magic_verify_failed": "failed magic-link",
+    "invalid_token": "invalid token",
+    "rate_limited": "rate-limited",
+    "not_found": "404 storm"
+  },
+  "relative": {
+    "now": "just now",
+    "seconds_one": "{{count}}s ago",
+    "seconds_other": "{{count}}s ago",
+    "minutes_one": "{{count}} min ago",
+    "minutes_other": "{{count}} min ago",
+    "hours_one": "{{count}}h ago",
+    "hours_other": "{{count}}h ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago"
+  }
+}

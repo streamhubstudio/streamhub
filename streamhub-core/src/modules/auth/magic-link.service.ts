@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -11,6 +12,7 @@ import { ConfigService } from '../../shared/config/config.service';
 import { signJwt } from '../../shared/auth';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { EmailService } from '../email/email.service';
+import { IpReputationService } from '../security/ip-reputation.service';
 import { hashRandomPassword } from './password.util';
 import { TotpService } from './totp.service';
 import { SessionContext, SessionService } from './session.service';
@@ -97,6 +99,8 @@ export class MagicLinkService implements OnModuleInit {
     private readonly email: EmailService,
     private readonly totp: TotpService,
     private readonly sessions: SessionService,
+    /** Network-security sink (optional; recordOffense is fire-and-forget). */
+    @Optional() private readonly reputation?: IpReputationService,
   ) {}
 
   /**
@@ -283,7 +287,7 @@ export class MagicLinkService implements OnModuleInit {
   ): Promise<MagicVerifyResult> {
     const secret = this.requireSecret();
     const token = (rawToken || '').trim();
-    if (!token) throw new UnauthorizedException('Invalid or expired link');
+    if (!token) throw this.verifyFailed(session);
 
     const hash = this.hashToken(token);
     const row = this.db
@@ -292,10 +296,10 @@ export class MagicLinkService implements OnModuleInit {
       .get(hash) as MagicTokenRow | undefined;
 
     if (!row || row.used) {
-      throw new UnauthorizedException('Invalid or expired link');
+      throw this.verifyFailed(session);
     }
     if (this.isExpired(row.expires_at)) {
-      throw new UnauthorizedException('Invalid or expired link');
+      throw this.verifyFailed(session);
     }
 
     // Second factor BEFORE claiming (keeps the link reusable for the retry).
@@ -314,7 +318,7 @@ export class MagicLinkService implements OnModuleInit {
       )
       .run(row.id);
     if (claim.changes === 0) {
-      throw new UnauthorizedException('Invalid or expired link');
+      throw this.verifyFailed(session);
     }
 
     const userId = this.resolveOrCreateUser(row.email);
@@ -331,6 +335,15 @@ export class MagicLinkService implements OnModuleInit {
         MagicLinkService.JWT_TTL_SECONDS,
       ),
     };
+  }
+
+  /**
+   * Uniform verify failure: record the offense for the auto-ban (guessing
+   * one-time tokens) and return the SAME generic 401 for every branch.
+   */
+  private verifyFailed(session?: SessionContext): UnauthorizedException {
+    this.reputation?.recordOffense(session?.ip ?? null, 'magic_verify_failed');
+    return new UnauthorizedException('Invalid or expired link');
   }
 
   // ---------------------------------------------------------------------------

@@ -52,8 +52,17 @@ curl -fsSL https://www.streamhub.studio/install.sh | sudo bash
    non-interactively);
 4. generates a `.env` with strong random secrets: `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET`,
    `STREAMHUB_JWT_SECRET`, `ADMIN_PASS`, `STREAMHUB_API_TOKEN` (`sk_…`);
-5. builds + starts the stack: `docker compose up -d --build`;
-6. waits for core health, then **seeds the global API token** into the DB (`deploy/seed-token.js`).
+5. builds + starts the stack: `docker compose up -d --build` (clamping `EGRESS_CPUS` to
+   `min(nproc, 4)` first, so a host with fewer than 4 vCPUs doesn't hard-fail the compose-up);
+6. waits for core health, then **seeds the global API token** into the DB (`deploy/seed-token.js`);
+7. installs a `streamhub-heartbeat.service`/`.timer` (every 60s, `POST /cluster/heartbeat`) so the
+   node stays live in the cluster registry without a manual cron workaround — see
+   [operations/INSTALL-NODE.md](./INSTALL-NODE.md) and
+   [architecture/cluster.md](../architecture/cluster.md#node-liveness-heartbeat--self-registration).
+
+A bare IP passed as `STREAMHUB_DOMAIN` (or `--no-tls`) now drives a **real** no-TLS mode end to
+end (`http://`/`ws://` URLs, plain-HTTP Caddy/nginx, no ACME attempt) instead of only skipping
+certbot.
 
 ### A.2 Manual Compose
 

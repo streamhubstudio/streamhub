@@ -30,6 +30,11 @@ npm install @streamhub/adaptor livekit-client
 `livekit-client` is a **peer dependency** for the ESM/CJS builds (your bundler
 provides it). The browser/CDN build bundles it (see below).
 
+> **Version pin:** the browser/CDN build bundles `livekit-client@2.15.7`
+> exactly (see the `package.json` `livekit-client-pin` note), validated
+> publish+subscribe+data against **LiveKit server `v1.8.4`**. Client and
+> server are a matched pair — upgrade both together.
+
 ## How it gets a token
 
 StreamHub mints LiveKit join tokens at `POST /apps/:app/tokens` →

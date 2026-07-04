@@ -1,0 +1,72 @@
+{
+  "title": "Seguridad de red",
+  "subtitle": "Control de acceso por IP y auto-ban de abuso dentro de la app. Complementa al reverse proxy y al firewall del sistema — no los reemplaza.",
+  "disabledHint": "El control de acceso por IP y el auto-ban están APAGADOS. Activalos con STREAMHUB_IP_ACCESS_MODE (log/enforce) y STREAMHUB_AUTOBAN_ENABLED=true en el .env del servidor y reiniciá el core.",
+  "envHint": "La configuración es por variables de entorno (STREAMHUB_IP_ACCESS_MODE, STREAMHUB_IP_ALLOWLIST_ONLY, STREAMHUB_AUTOBAN_*) — ver la doc de network-security. Las direcciones loopback y privadas (RFC1918) siempre están permitidas y nunca se banean: no podés dejarte afuera del servidor.",
+  "mode": {
+    "off": "apagado",
+    "log": "solo log",
+    "enforce": "aplicado"
+  },
+  "status": {
+    "mode": "Reglas IP",
+    "autoban": "Auto-ban",
+    "allowlistOnly": "solo allowlist",
+    "on": "activo",
+    "off": "apagado",
+    "counts": "{{rules}} reglas · {{bans}} bans activos · {{offenders}} ofensores recientes"
+  },
+  "rules": {
+    "title": "Reglas allow / block",
+    "cidr": "CIDR",
+    "cidrPlaceholder": "203.0.113.0/24 o 2001:db8::/32",
+    "notePlaceholder": "Nota (opcional)",
+    "actionHeader": "Acción",
+    "action": {
+      "allow": "permitir",
+      "block": "bloquear"
+    },
+    "note": "Nota",
+    "created": "Creada",
+    "add": "Agregar regla",
+    "addError": "No se pudo agregar la regla.",
+    "remove": "Quitar",
+    "empty": "Todavía no hay reglas. Agregá un CIDR para permitir o bloquear un rango — un allow explícito siempre gana sobre un block."
+  },
+  "bans": {
+    "title": "Bans activos",
+    "ip": "IP",
+    "reason": "Última ofensa",
+    "offenses": "Ofensas",
+    "until": "Baneada hasta",
+    "level": "Escalación",
+    "unban": "Desbanear",
+    "empty": "No hay IPs baneadas en este momento."
+  },
+  "offenders": {
+    "title": "Ofensores recientes",
+    "ip": "IP",
+    "count": "Ofensas",
+    "kinds": "Detalle",
+    "lastSeen": "Última vez",
+    "empty": "Sin ofensas registradas en la ventana actual."
+  },
+  "offenseKind": {
+    "login_failed": "login fallido",
+    "magic_verify_failed": "magic-link fallido",
+    "invalid_token": "token inválido",
+    "rate_limited": "rate-limit",
+    "not_found": "tormenta de 404"
+  },
+  "relative": {
+    "now": "recién",
+    "seconds_one": "hace {{count}}s",
+    "seconds_other": "hace {{count}}s",
+    "minutes_one": "hace {{count}} min",
+    "minutes_other": "hace {{count}} min",
+    "hours_one": "hace {{count}}h",
+    "hours_other": "hace {{count}}h",
+    "days_one": "hace {{count}} día",
+    "days_other": "hace {{count}} días"
+  }
+}

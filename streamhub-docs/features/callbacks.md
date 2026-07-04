@@ -70,8 +70,9 @@ destination — see [restream.md](restream.md); payload URLs are always masked).
 (payload: `plugin`, plus `pid` / `exitCode`+`signal` / `error`).
 
 **Stream health alerts** (fired by the latency monitor — see
-[mqtt.md](mqtt.md#high-latency-alert)): `stream.latency_high`,
-`stream.latency_recovered` (payload: `room`, `rttMs`, `thresholdMs`, `metric`).
+[mqtt.md](mqtt.md#high-latency-alert)): `stream.latency_high` (payload:
+`room`, `rttMs`, `thresholdMs`, `metric`, `participants`, `publishers`),
+`stream.latency_recovered` (same payload minus `participants`/`publishers`).
 
 > Every event above is ALSO published to the app's MQTT broker when the
 > per-app `mqtt:` block is enabled — same taxonomy, same `data` payload,

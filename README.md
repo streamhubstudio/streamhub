@@ -39,6 +39,9 @@ Everything runs from one `docker compose up`.
 - **REST API** (global + per-app) with Swagger at `/api/v1/docs`, guarded by `sk_` bearer tokens.
 - **React dashboard** (Vite + Tailwind) with a break-glass admin login (JWT).
 - **RBAC + quotas** with a safe phased rollout (`off` → `log` → `on`).
+- **Network security** — in-app IP allow/blocklist (CIDR, IPv4 + IPv6) plus a fail2ban-style
+  **auto-ban** for abusive IPs (bad logins, replayed magic links, invalid tokens), managed from
+  the dashboard; loopback/private addresses can never be locked out.
 - **Plugins** (auto-discovered, no central registry to edit) — including a **face-blur (deface)**
   plugin that obfuscates faces in real time as a player overlay, plus object detection (YOLO); a
   plugin can own its own worker process, with lifecycle managed by the framework.

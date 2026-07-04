@@ -18,6 +18,7 @@ import { api, ApiRequestError, type ServerSettings, type SettingGuidance } from 
 import { Alert, Button, Card, Skeleton, Tag } from '@/ui'
 import { formatBytes } from '@/lib/bytes'
 import { authzTone, enforcementActive, setTone, formatUptime, type Tone } from '@/lib/serverSettings'
+import { NetworkSecuritySection } from '@/pages/NetworkSecurity'
 
 const POLL_MS = 60_000
 const EMPTY = '—'
@@ -300,6 +301,9 @@ function Loaded({ s }: { s: ServerSettings }) {
           <Row label={t('ports.whip')}><Mono value={s.ports.whip} /></Row>
         </Section>
       </div>
+
+      {/* Network security — in-app IP access control + auto-ban (full width). */}
+      <NetworkSecuritySection />
     </>
   )
 }

@@ -42,6 +42,12 @@ adaptor resolves credentials in order:
   (the `/sdk` static mount; `SDK_DIR` configurable, default `<DATA_DIR>/sdk`). A
   missing file simply 404s and samples fall back to livekit-client.
 
+> **Pinned version pair:** the SDK build, `streamhub-web` and every generated
+> sample are pinned to **`livekit-client@2.15.7`**, validated against the
+> **LiveKit server `v1.8.4`** image this stack ships (`docker-compose.yml`).
+> Treat client and server as a matched pair — upgrade both together, not one
+> at a time.
+
 ## Constructor options (subset)
 
 | Option | Origin | Notes |
