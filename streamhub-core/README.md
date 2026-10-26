@@ -1,7 +1,7 @@
 # streamhub-core
 
 Management layer over a self-hosted LiveKit (AntMedia-style). NestJS + TypeScript
-(strict). See `../streamhub-docs/SPEC.md` for the full spec.
+(strict). See `https://streamhub.studio/docs/SPEC` for the full spec.
 
 ## Run
 

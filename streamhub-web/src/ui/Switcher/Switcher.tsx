@@ -87,7 +87,11 @@ const Switcher = forwardRef<HTMLInputElement, SwitcherProps>((props, ref) => {
             setSwitcherChecked(nextChecked)
             onChange?.(nextChecked, e)
         } else {
-            onChange?.(switcherChecked as boolean, e)
+            // CONTROLLED: report the INTENDED new value so the parent can flip its
+            // state. (Was reporting the *current* value → a controlled toggle could
+            // never change: click ON sent `false`, so every plugin/config toggle in
+            // the dashboard was stuck off.)
+            onChange?.(nextChecked, e)
         }
     }
 

@@ -19,6 +19,8 @@ import { useTranslation } from 'react-i18next'
 import { api, ApiRequestError, type ClusterInfo, type ClusterNode } from '@/api'
 import { Alert, Button, Card, Dialog, Input, Skeleton, Table, Tag } from '@/ui'
 import { relativeTime } from '@/lib/relativeTime'
+import { DocsHint } from '@/components/DocsHint'
+import { EdgeTab } from './ClusterEdge'
 
 const { THead, TBody, Tr, Th, Td } = Table
 
@@ -212,7 +214,7 @@ function InfoBlock({
           </p>
           <p className="mt-2 text-xs">
             <a
-              href="https://github.com/streamhubstudio/streamhub/blob/main/streamhub-docs/operations/INSTALL-NODE.md"
+              href="https://streamhub.studio/docs/operations/INSTALL-NODE"
               target="_blank"
               rel="noreferrer"
               className="text-primary-500 hover:text-fg"
@@ -330,7 +332,7 @@ function DeleteNodeDialog({ node, onClose }: { node: ClusterNode; onClose: () =>
       onClose={() => !remove.isPending && onClose()}
       onRequestClose={() => !remove.isPending && onClose()}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t('delete.title', { name: node.name })}
         </h5>
@@ -483,8 +485,11 @@ function NodesTable({
 
 // --- page --------------------------------------------------------------------
 
+type ClusterTab = 'registry' | 'edge'
+
 export default function Cluster() {
   const { t } = useTranslation('clusterPage')
+  const [tab, setTab] = useState<ClusterTab>('registry')
 
   const infoQ = useQuery({
     queryKey: ['cluster-info'],
@@ -499,28 +504,57 @@ export default function Cluster() {
   })
 
   const enabled = infoQ.data?.enabled ?? false
+  const tabs: ClusterTab[] = ['registry', 'edge']
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-fg">{t('title')}</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold text-fg">
+          {t('title')} <DocsHint section="cluster" />
+        </h1>
         <p className="text-sm text-slate-400">{t('subtitle')}</p>
       </div>
 
-      <InfoBlock
-        info={infoQ.data}
-        isLoading={infoQ.isLoading}
-        isError={infoQ.isError}
-        error={infoQ.error}
-      />
+      {/* Sub-tabs: the node registry (join/edit) vs the Edge processing surface. */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700">
+        {tabs.map((tk) => (
+          <button
+            key={tk}
+            type="button"
+            data-testid={`cluster-tab-${tk}`}
+            onClick={() => setTab(tk)}
+            className={[
+              '-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition',
+              tab === tk
+                ? 'border-primary-500 text-primary-600 dark:text-primary-200'
+                : 'border-transparent text-slate-500 hover:text-primary-600 dark:hover:text-primary-100',
+            ].join(' ')}
+          >
+            {t(`tab.${tk}`)}
+          </button>
+        ))}
+      </div>
 
-      {enabled && (
-        <NodesTable
-          nodes={nodesQ.data ?? []}
-          isLoading={nodesQ.isLoading}
-          isError={nodesQ.isError}
-          error={nodesQ.error}
-        />
+      {tab === 'registry' ? (
+        <>
+          <InfoBlock
+            info={infoQ.data}
+            isLoading={infoQ.isLoading}
+            isError={infoQ.isError}
+            error={infoQ.error}
+          />
+
+          {enabled && (
+            <NodesTable
+              nodes={nodesQ.data ?? []}
+              isLoading={nodesQ.isLoading}
+              isError={nodesQ.isError}
+              error={nodesQ.error}
+            />
+          )}
+        </>
+      ) : (
+        <EdgeTab />
       )}
     </div>
   )

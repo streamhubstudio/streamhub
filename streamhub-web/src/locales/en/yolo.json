@@ -16,7 +16,7 @@
     },
     "cuda": {
       "label": "Use CUDA (GPU)",
-      "help": "On uses the GPU; off runs on CPU. your-server has no GPU — leave off there."
+      "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there."
     },
     "confidence": {
       "label": "Confidence threshold",

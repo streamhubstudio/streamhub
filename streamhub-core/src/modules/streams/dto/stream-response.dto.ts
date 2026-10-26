@@ -50,7 +50,7 @@ export class SnapshotResultDto {
   key!: string;
 
   @ApiProperty({
-    example: 'https://s3.us-east-1.wasabisys.com/ale-backup/...signed',
+    example: 'https://s3.us-east-1.wasabisys.com/my-bucket/...signed',
   })
   url!: string;
 }

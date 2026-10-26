@@ -2,11 +2,23 @@
   "nav": {
     "dashboard": "Dashboard",
     "apps": "Apps",
-    "plugins": "Plugins",
+    "plugins": "Studio",
     "cluster": "Cluster",
     "logs": "Logs",
+    "resources": "Resource history",
     "serverSettings": "Server settings",
+    "audit": "Audit log",
+    "compliance": "Security posture",
     "account": "My account"
+  },
+  "launcher": {
+    "open": "Studio launcher",
+    "title": "Open a Studio view",
+    "app": "App",
+    "loadingApps": "Loading…",
+    "noApps": "No apps yet.",
+    "noInstalled": "No Studio apps installed in this app.",
+    "openApp": "Open app"
   },
   "layout": {
     "session": "Session",
@@ -18,7 +30,10 @@
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar",
     "account": "My account",
-    "footer": "StreamHub UI · management layer over LiveKit"
+    "footer": "StreamHub UI · management layer over LiveKit",
+    "docs": "Docs",
+    "source": "Source",
+    "changelog": "View changelog"
   },
   "role": {
     "owner": "Owner",

@@ -1,0 +1,9 @@
+{
+  "aria": {
+    "paused": "El vivo está pausado",
+    "finished": "El vivo finalizó"
+  },
+  "badge": {
+    "finished": "Finalizado"
+  }
+}

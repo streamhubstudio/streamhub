@@ -1,0 +1,830 @@
+#!/usr/bin/env bash
+# =============================================================================
+# streamhub — control the whole StreamHub stack as ONE application.
+# -----------------------------------------------------------------------------
+# Installed by install.sh to /opt/streamhub/bin/streamhub with a symlink at
+# /usr/local/bin/streamhub, so the operator never runs raw `docker compose`.
+# A thin, dependency-free bash wrapper around:
+#
+#   docker compose --project-directory <dir> -f <dir>/docker-compose.yml \
+#                  --env-file <dir>/.env ...
+#
+# The SFU building blocks (redis + livekit + ingress + egress) are part of the
+# app and are managed here as one unit — never juggled by hand.
+#
+# Subcommands:
+#   start | stop | restart      bring the whole stack up / down / cycle
+#   status | ps                 running state of every service
+#   logs [service] [-f]         tail compose logs (optionally follow / to a file)
+#   version                     installed VERSION + per-service image state
+#   upgrade [--channel latest | --version X.Y.Z] [--force]
+#                               re-run the installer's idempotent upgrade path
+#   config                      show effective settings (secrets redacted)
+#   cluster <sub>               inspect/operate the cluster from the master
+#                               (status|nodes|events|restart|reboot|drain|
+#                                activate|weight — see 'streamhub cluster help')
+#   app <sub>                   plugin appstore + per-app version pins (master)
+#                               (versions|push|pull|pin|unpin|rollback|
+#                                delete-version — see 'streamhub app help')
+#   doctor                      check ports / core health / disk
+#   uninstall [--yes] [--purge] tear the node down (runs uninstall.sh)
+#
+# INSTALL_DIR is resolved from this script's own location (…/bin/streamhub);
+# override with STREAMHUB_DIR=/path streamhub ...
+# =============================================================================
+set -euo pipefail
+
+# ---- locate the install dir from our own real path (…/bin/streamhub) --------
+_self="$0"
+if command -v readlink >/dev/null 2>&1; then
+  _resolved="$(readlink -f "$_self" 2>/dev/null || true)"
+  [ -n "$_resolved" ] && _self="$_resolved"
+fi
+INSTALL_DIR="${STREAMHUB_DIR:-$(cd "$(dirname "$_self")/.." >/dev/null 2>&1 && pwd)}"
+COMPOSE_FILE="$INSTALL_DIR/docker-compose.yml"
+ENV_FILE="$INSTALL_DIR/.env"
+SELF_URL="${STREAMHUB_INSTALL_URL:-https://www.streamhub.studio/install.sh}"
+
+c_info='\033[1;36m'; c_ok='\033[1;32m'; c_warn='\033[1;33m'; c_err='\033[1;31m'; c_off='\033[0m'
+log()  { printf "${c_info}[streamhub]${c_off} %s\n" "$*"; }
+ok()   { printf "${c_ok}[streamhub]${c_off} %s\n" "$*"; }
+warn() { printf "${c_warn}[streamhub]${c_off} %s\n" "$*"; }
+die()  { printf "${c_err}[streamhub] ERROR:${c_off} %s\n" "$*" >&2; exit 1; }
+
+# ---- install profile (MODE / PROXY) written by install.sh -------------------
+# Tells us which services this node actually runs: an nginx origin must NOT
+# start the compose Caddy service; an edge runs only the media services.
+STREAMHUB_PROFILE_MODE="origin"
+STREAMHUB_PROFILE_PROXY="caddy"
+STREAMHUB_PROFILE_EGRESS="0"
+if [ -r "$INSTALL_DIR/.install-profile" ]; then
+  # shellcheck disable=SC1091
+  . "$INSTALL_DIR/.install-profile"
+fi
+MODE="$STREAMHUB_PROFILE_MODE"
+PROXY="$STREAMHUB_PROFILE_PROXY"
+EGRESS="$STREAMHUB_PROFILE_EGRESS"
+
+# Services this node manages, as a bash array. Empty-derived → all services.
+managed_services() {
+  if [ "$MODE" = "join" ]; then
+    # Egress affinity: a joined node runs egress ONLY when it opted in at install
+    # (--with-egress → STREAMHUB_PROFILE_EGRESS=1). Default keeps recordings/HLS on
+    # the origin's disk (cross-node egress artifacts break until S3 transport —
+    # see operations/INSTALL-NODE.md).
+    if [ "$EGRESS" = "1" ]; then
+      printf '%s\n' livekit ingress egress
+    else
+      printf '%s\n' livekit ingress
+    fi
+  elif [ "$PROXY" = "nginx" ]; then
+    printf '%s\n' redis livekit ingress egress core
+  fi
+  # caddy origin: nothing printed → caller manages ALL compose services
+}
+
+compose() { docker compose --project-directory "$INSTALL_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
+
+require_install() {
+  [ -f "$COMPOSE_FILE" ] || die "no StreamHub install at $INSTALL_DIR (missing docker-compose.yml). Set STREAMHUB_DIR or install first."
+  command -v docker >/dev/null 2>&1 || die "docker not found on PATH."
+}
+
+env_get() { { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- ; } || true ; }
+core_port() { local p; p="$(env_get PORT)"; printf '%s' "${p:-3020}"; }
+
+# ---- subcommands ------------------------------------------------------------
+cmd_start() {
+  require_install
+  local svcs; mapfile -t svcs < <(managed_services)
+  if [ "${#svcs[@]}" -eq 0 ]; then
+    log "starting the full stack"; compose up -d
+  elif [ "$MODE" = "join" ]; then
+    log "starting media services (${svcs[*]}) against the origin's Redis"
+    compose up -d --no-deps "${svcs[@]}"
+  else
+    log "starting the stack (${svcs[*]} — nginx fronts it)"
+    compose up -d "${svcs[@]}"
+  fi
+  ok "started."
+}
+
+cmd_stop() {
+  require_install
+  log "stopping the stack (containers stay defined; data is kept)"
+  compose stop
+  ok "stopped."
+}
+
+cmd_restart() { cmd_stop; cmd_start; }
+
+cmd_status() { require_install; compose ps; }
+cmd_ps()     { cmd_status; }
+
+cmd_logs() {
+  require_install
+  local follow=0 save=0 svc="" a
+  for a in "$@"; do
+    case "$a" in
+      -f|--follow) follow=1 ;;
+      --save)      save=1 ;;
+      -*)          die "unknown logs flag: $a" ;;
+      *)           svc="$a" ;;
+    esac
+  done
+  local args=(logs --no-color --tail=200)
+  [ "$follow" = 1 ] && args=(logs --no-color -f --tail=200)
+  [ -n "$svc" ] && args+=("$svc")
+  if [ "$save" = 1 ]; then
+    mkdir -p "$INSTALL_DIR/logs"
+    local out
+    out="$INSTALL_DIR/logs/streamhub-$(date -u +%Y%m%dT%H%M%SZ).log"
+    log "writing logs to $out"
+    compose "${args[@]}" | tee "$out"
+  else
+    compose "${args[@]}"
+  fi
+}
+
+cmd_version() {
+  local installed="unknown"
+  [ -r "$INSTALL_DIR/VERSION" ] && installed="$(head -1 "$INSTALL_DIR/VERSION" 2>/dev/null || echo unknown)"
+  ok "StreamHub $installed  (dir: $INSTALL_DIR, mode: $MODE, proxy: $PROXY)"
+  # Runtime version reported by a live core (origin only).
+  if [ "$MODE" != "join" ]; then
+    local rv
+    rv="$(curl -fsS -m5 "http://127.0.0.1:$(core_port)/api/v1/health" 2>/dev/null \
+          | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4 || true)"
+    [ -n "$rv" ] && echo "  core runtime version: $rv"
+  fi
+  if [ -f "$COMPOSE_FILE" ] && command -v docker >/dev/null 2>&1; then
+    echo "  services:"
+    compose ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}' 2>/dev/null \
+      | sed 's/^/    /' || compose ps 2>/dev/null | sed 's/^/    /' || true
+  fi
+}
+
+cmd_config() {
+  require_install
+  ok "effective settings ($ENV_FILE — secrets redacted):"
+  # Redact anything that looks like a secret; show the rest verbatim.
+  grep -vE '^\s*(#|$)' "$ENV_FILE" 2>/dev/null | while IFS= read -r line; do
+    local key="${line%%=*}"
+    case "$key" in
+      *SECRET*|*PASS*|*TOKEN*|*KEY*) printf '  %s=********\n' "$key" ;;
+      *) printf '  %s\n' "$line" ;;
+    esac
+  done
+}
+
+cmd_doctor() {
+  require_install
+  local rc=0
+  ok "StreamHub doctor — $INSTALL_DIR"
+  # docker
+  if docker info >/dev/null 2>&1; then echo "  [ok] docker daemon reachable"; else echo "  [!!] docker daemon NOT reachable"; rc=1; fi
+  # core health (origin)
+  if [ "$MODE" != "join" ]; then
+    if curl -fsS -m5 "http://127.0.0.1:$(core_port)/api/v1/health" >/dev/null 2>&1; then
+      echo "  [ok] core health OK (127.0.0.1:$(core_port))"
+    else
+      echo "  [!!] core health FAILED (127.0.0.1:$(core_port))"; rc=1
+    fi
+  fi
+  # listening ports
+  if command -v ss >/dev/null 2>&1; then
+    local p
+    for p in 7880 7882 1935 8080; do
+      if ss -Hln "( sport = :$p )" 2>/dev/null | grep -q ":$p"; then echo "  [ok] port $p listening"; else echo "  [--] port $p not listening"; fi
+    done
+  else
+    echo "  [--] ss unavailable — skipping port checks"
+  fi
+  # TURN (when enabled): the TLS relay port must listen + the cert must be readable.
+  if [ "$(env_get STREAMHUB_TURN_ENABLE)" = "true" ]; then
+    local tdom tcert
+    tdom="$(env_get STREAMHUB_TURN_DOMAIN)"
+    tcert="$(env_get STREAMHUB_TURN_CERT_DIR)"; : "${tcert:=/etc/letsencrypt}"
+    tcert="$tcert/live/$tdom/fullchain.pem"
+    if command -v ss >/dev/null 2>&1; then
+      if ss -Hln "( sport = :5349 )" 2>/dev/null | grep -q ":5349"; then echo "  [ok] TURN port 5349 listening"; else echo "  [!!] TURN enabled but port 5349 NOT listening"; rc=1; fi
+    fi
+    if [ -r "$tcert" ]; then echo "  [ok] TURN cert readable ($tcert)"; else echo "  [!!] TURN cert NOT readable ($tcert) — certbot for ${tdom:-turn.<domain>} may have failed (run as root)"; rc=1; fi
+  fi
+  # disk
+  local free
+  free="$(df -Ph "$INSTALL_DIR" 2>/dev/null | awk 'NR==2{print $4" free ("$5" used)"}')"
+  echo "  [--] disk: ${free:-unknown} on $(df -P "$INSTALL_DIR" 2>/dev/null | awk 'NR==2{print $6}')"
+  if [ "$rc" = 0 ]; then ok "doctor: all critical checks passed"; else warn "doctor: some checks FAILED (see above)"; fi
+  return "$rc"
+}
+
+cmd_upgrade() {
+  [ "$(id -u)" = "0" ] || die "upgrade must run as root:  sudo streamhub upgrade"
+  local channel="latest" version="" force="" src_env=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --channel) channel="${2:?--channel needs a value}"; shift 2 ;;
+      --version) version="${2:?--version needs a value}"; shift 2 ;;
+      --force)   force="--force-reinstall"; shift ;;
+      *)         die "unknown upgrade flag: $1" ;;
+    esac
+  done
+  if [ -n "$version" ]; then
+    # Pin the source tarball to a specific published version; the installer
+    # honors STREAMHUB_SRC_URL and stamps whatever VERSION the tarball carries.
+    local base; base="${STREAMHUB_SRC_URL:-https://www.streamhub.studio/streamhub-src.tar.gz}"
+    base="${base%/*}"
+    src_env=("STREAMHUB_SRC_URL=$base/streamhub-$version.tar.gz")
+    log "upgrading $INSTALL_DIR to pinned version $version"
+  else
+    log "upgrading $INSTALL_DIR (channel: $channel)"
+  fi
+  command -v curl >/dev/null 2>&1 || die "curl is required to fetch the installer ($SELF_URL)"
+  # Re-run the installer against THIS dir; its idempotent upgrade path takes a
+  # DB backup, rebuilds, waits for health, verifies the migration and re-stamps.
+  # shellcheck disable=SC2086
+  curl -fsSL "$SELF_URL" | env "${src_env[@]}" bash -s -- --dir "$INSTALL_DIR" --non-interactive $force
+}
+
+cmd_uninstall() {
+  [ "$(id -u)" = "0" ] || die "uninstall must run as root:  sudo streamhub uninstall"
+  local args=()
+  # Prefer the uninstaller shipped alongside the source; fall back to the URL.
+  if [ -x "$INSTALL_DIR/uninstall.sh" ]; then
+    log "running $INSTALL_DIR/uninstall.sh $*"
+    STREAMHUB_DIR="$INSTALL_DIR" bash "$INSTALL_DIR/uninstall.sh" --dir "$INSTALL_DIR" "$@"
+  else
+    command -v curl >/dev/null 2>&1 || die "no local uninstall.sh and curl unavailable"
+    local url="${STREAMHUB_UNINSTALL_URL:-https://www.streamhub.studio/uninstall.sh}"
+    log "fetching uninstaller ($url)"
+    args=(--dir "$INSTALL_DIR" "$@")
+    curl -fsSL "$url" | bash -s -- "${args[@]}"
+  fi
+}
+
+# ---- cluster admin (origin/master only) -------------------------------------
+# Thin curl wrapper over the core's global-scope REST surface, authenticated
+# with the superadmin token from .env. Edge nodes are behind NAT, so all cluster
+# admin is done from the master. No jq — JSON is parsed with python3 (as the
+# installer does). Routes: GET/PATCH /edge/nodes, POST /edge/nodes/:id/command,
+# PATCH /cluster/nodes/:id (status), GET /edge/assignments, GET /logs?source=edge.
+cluster_api_base() { printf 'http://127.0.0.1:%s/api/v1' "$(core_port)"; }
+
+cluster_token() {
+  local t; t="$(env_get STREAMHUB_API_TOKEN)"
+  [ -n "$t" ] || die "STREAMHUB_API_TOKEN not set in $ENV_FILE — the superadmin token is required for cluster admin."
+  printf '%s' "$t"
+}
+
+# cluster_api METHOD PATH [JSON_BODY] → prints the response body; dies on error.
+cluster_api() {
+  local method="$1" path="$2" body="${3:-}" tok resp code
+  tok="$(cluster_token)"
+  local args=(-sS -m 15 -o - -w '\n%{http_code}' -X "$method" -H "Authorization: Bearer $tok")
+  [ -n "$body" ] && args+=(-H 'Content-Type: application/json' -d "$body")
+  resp="$(curl "${args[@]}" "$(cluster_api_base)$path" 2>/dev/null)" \
+    || die "could not reach the core at $(cluster_api_base) — is the stack up? ('streamhub status')"
+  code="${resp##*$'\n'}"
+  body="${resp%$'\n'*}"
+  case "$code" in
+    2*) printf '%s' "$body" ;;
+    401|403) die "auth rejected ($code) — STREAMHUB_API_TOKEN must be the global superadmin token." ;;
+    404) die "not found ($code) for $path" ;;
+    *)  die "request failed ($code) for $path: $body" ;;
+  esac
+}
+
+# Resolve a node NAME or id to its id via /edge/nodes (operator-friendly).
+cluster_resolve_node() {
+  local ref="$1" id
+  [ -n "$ref" ] || die "a node name or id is required."
+  id="$(cluster_api GET /edge/nodes | python3 -c '
+import sys, json
+ref = sys.argv[1]
+for n in json.load(sys.stdin).get("data", []):
+    if n.get("id") == ref or n.get("name") == ref:
+        print(n["id"]); sys.exit(0)
+sys.exit(3)
+' "$ref")" || die "no node matching '$ref' — see 'streamhub cluster status'."
+  printf '%s' "$id"
+}
+
+cluster_status() {
+  echo "Nodes:"
+  cluster_api GET /edge/nodes | python3 -c '
+import sys, json
+data = json.load(sys.stdin).get("data", [])
+def pct(x):
+    try: return "%d%%" % round(float(x) * 100)
+    except (TypeError, ValueError): return "-"
+rows = [("NODE","TYPE","STATE","CPU","MEM","DISK","GPU","VRAMFREE","WT")]
+for n in data:
+    st = n.get("stats") or {}
+    grid = st.get("grid") or {}
+    disk = st.get("disk") or {}
+    state = "stale" if n.get("stale") else "up"
+    gpu = grid.get("gpuName") or ("yes" if grid.get("gpu") else "no")
+    vram = grid.get("vramFreeMb")
+    rows.append((
+        str(n.get("name","?")), str(n.get("type","?")), state,
+        pct(st.get("cpu")), pct(st.get("memUsedRatio")), pct(disk.get("usedRatio")),
+        str(gpu), "-" if vram is None else str(vram), str(n.get("weight","-")),
+    ))
+if len(rows) == 1:
+    print("  (no nodes registered)"); sys.exit(0)
+w = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+for r in rows:
+    print("  " + "  ".join(r[i].ljust(w[i]) for i in range(len(r))))
+'
+  echo ""
+  echo "Assignments:"
+  cluster_api GET /edge/assignments | python3 -c '
+import sys, json
+from collections import Counter
+data = json.load(sys.stdin).get("data", [])
+c = Counter(a.get("status","unknown") for a in data)
+order = ["running","offered","pending","failed","stopped","revoked"]
+keys = [k for k in order if k in c] + sorted(k for k in c if k not in order)
+if not keys:
+    print("  (no assignments)")
+else:
+    for k in keys:
+        print("  %-9s %d" % (k, c[k]))
+    print("  %-9s %d  (parked — no eligible node)" % ("PENDING", c.get("pending", 0)))
+'
+}
+
+cluster_nodes_json() {
+  cluster_api GET /edge/nodes | python3 -c 'import sys, json; print(json.dumps(json.load(sys.stdin).get("data", []), indent=2))'
+}
+
+cluster_events() {
+  local n=50
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -n) n="${2:?-n needs a value}"; shift 2 ;;
+      *)  die "unknown events flag: $1" ;;
+    esac
+  done
+  case "$n" in *[!0-9]*) die "-n must be a positive integer." ;; esac
+  cluster_api GET "/logs?source=edge&limit=$n" | python3 -c '
+import sys, json
+data = json.load(sys.stdin).get("data", [])
+if not data:
+    print("  (no edge events)")
+for e in data:
+    print("  %s  %-5s  %s" % (e.get("ts","?"), str(e.get("level","?")).upper(), e.get("message","")))
+'
+}
+
+cluster_command() {
+  local cmd="$1" ref="$2" id
+  id="$(cluster_resolve_node "$ref")"
+  log "sending '$cmd' to node '$ref' ($id)"
+  cluster_api POST "/edge/nodes/$id/command" "{\"command\":\"$cmd\"}" | python3 -c '
+import sys, json
+d = json.load(sys.stdin).get("data", {})
+out = d.get("output")
+print("  ok=%s%s" % (d.get("ok"), ("  output=%s" % out) if out else ""))
+'
+  ok "$cmd requested on '$ref'."
+}
+
+cluster_set_status() {
+  local ref="$1" status="$2" id
+  id="$(cluster_resolve_node "$ref")"
+  cluster_api PATCH "/cluster/nodes/$id" "{\"status\":\"$status\"}" >/dev/null
+  ok "node '$ref' → status '$status' (scheduler places only on 'active' nodes)."
+}
+
+cluster_weight() {
+  local ref="$1" n="$2" id
+  [ -n "$ref" ] || die "usage: streamhub cluster weight <node> <n>"
+  [ -n "$n" ] || die "usage: streamhub cluster weight <node> <n>"
+  case "$n" in *[!0-9]*) die "weight must be a non-negative integer." ;; esac
+  id="$(cluster_resolve_node "$ref")"
+  cluster_api PATCH "/edge/nodes/$id" "{\"weight\":$n}" >/dev/null
+  ok "node '$ref' → weight $n."
+}
+
+cluster_usage() {
+  cat <<'CLUSTERUSAGE'
+streamhub cluster — inspect + operate the cluster (run on the MASTER/origin)
+
+  status                 node table (type/state/cpu/mem/disk/gpu/vram/weight)
+                         + assignments by status and the pending (parked) count
+  nodes                  raw node JSON (registry rows + parsed stats)
+  events [-n N]          last N central edge events (GET /logs?source=edge)
+  restart <node>         restart the edge runtime on <node> (WS command)
+  reboot <node>          reboot the <node> host (WS command)
+  drain <node>           stop scheduling new work onto <node> (status=draining)
+  activate <node>        make <node> placeable again (status=active)
+  weight <node> <n>      set <node>'s scheduling weight (weighted policy)
+
+<node> is a registry name or id. Auth: STREAMHUB_API_TOKEN from .env.
+CLUSTERUSAGE
+}
+
+cmd_cluster() {
+  local sub="${1:-status}"; shift || true
+  case "$sub" in help|-h|--help) cluster_usage; return 0 ;; esac
+  require_install
+  [ "$MODE" = "join" ] && die "cluster admin runs on the MASTER — this is a join-mode node. Run 'streamhub cluster ...' on the origin."
+  command -v curl >/dev/null 2>&1 || die "curl is required for cluster commands."
+  command -v python3 >/dev/null 2>&1 || die "python3 is required for cluster commands (JSON parsing)."
+  case "$sub" in
+    status)   cluster_status ;;
+    nodes)    cluster_nodes_json ;;
+    events)   cluster_events "$@" ;;
+    restart)  cluster_command restart "${1:-}" ;;
+    reboot)   cluster_command reboot "${1:-}" ;;
+    drain)    cluster_set_status "${1:-}" draining ;;
+    activate) cluster_set_status "${1:-}" active ;;
+    weight)   cluster_weight "${1:-}" "${2:-}" ;;
+    *)        die "unknown cluster command: $sub (run 'streamhub cluster help')" ;;
+  esac
+}
+
+# ---- appstore admin (origin/master only) ------------------------------------
+# Thin curl wrapper over the core's appstore + per-app version REST surface,
+# authenticated with the superadmin token from .env (same token as cluster admin;
+# the appstore routes require a superadmin/global credential). Edge nodes are
+# behind NAT, so this is master-only, like cluster admin. No jq — JSON is parsed
+# with python3. Routes: GET/POST/DELETE /plugins/:id/versions[...] (appstore) +
+# GET/PUT/POST /apps/:app/plugins/:id/version[s][...] (per-app pin/rollback).
+
+# Pull a human message out of a Nest error body ({statusCode,message,error});
+# `message` may be a string or a class-validator array. Falls back to the code.
+app_api_err() {
+  local code="$1" body="$2" msg
+  msg="$(printf '%s' "$body" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(""); sys.exit(0)
+m = d.get("message")
+if m is None:
+    m = d.get("error")
+if isinstance(m, list):
+    m = "; ".join(str(x) for x in m)
+print(m or "")
+' 2>/dev/null || true)"
+  if [ -n "$msg" ]; then printf 'request failed (%s): %s' "$code" "$msg"
+  else printf 'request failed (%s)' "$code"; fi
+}
+
+# app_api METHOD PATH [JSON_BODY] → prints the 2xx body; dies with the server's
+# error message on failure. Reuses the cluster token/base helpers (same token).
+app_api() {
+  local method="$1" path="$2" body="${3:-}" tok resp code
+  tok="$(cluster_token)"
+  local args=(-sS -m 30 -o - -w '\n%{http_code}' -X "$method" -H "Authorization: Bearer $tok")
+  [ -n "$body" ] && args+=(-H 'Content-Type: application/json' -d "$body")
+  resp="$(curl "${args[@]}" "$(cluster_api_base)$path" 2>/dev/null)" \
+    || die "could not reach the core at $(cluster_api_base) — is the stack up? ('streamhub status')"
+  code="${resp##*$'\n'}"
+  body="${resp%$'\n'*}"
+  case "$code" in
+    2*) printf '%s' "$body" ;;
+    401|403) die "auth rejected ($code) — STREAMHUB_API_TOKEN must be the global superadmin token." ;;
+    *)  die "$(app_api_err "$code" "$body")" ;;
+  esac
+}
+
+# Hex SHA-256 of a file, cross-platform (Linux sha256sum / macOS shasum).
+app_sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    die "no sha256 tool available (need sha256sum or shasum) to verify the bundle."
+  fi
+}
+
+# Render an AppVersionView (pin + effective) from stdin.
+app_print_pin() {
+  python3 -c '
+import sys, json
+d = json.load(sys.stdin).get("data", {})
+print("  pin:       %s" % (d.get("active") or "(none — runs built-in/latest)"))
+print("  effective: %s" % (d.get("effective") or "-"))
+'
+}
+
+# versions <pluginId> [--app <tenant>]
+app_versions() {
+  local plugin="" app=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --app) app="${2:?--app needs a value}"; shift 2 ;;
+      -*)    die "unknown versions flag: $1" ;;
+      *)     if [ -z "$plugin" ]; then plugin="$1"; else die "unexpected argument: $1"; fi; shift ;;
+    esac
+  done
+  [ -n "$plugin" ] || die "usage: streamhub app versions <pluginId> [--app <tenant>]"
+  local path out
+  if [ -n "$app" ]; then path="/apps/$app/plugins/$plugin/versions"; else path="/plugins/$plugin/versions"; fi
+  # Capture first so a failing app_api (which die()s) aborts BEFORE python runs —
+  # piping directly would run python on empty stdin after the error.
+  out="$(app_api GET "$path")"
+  printf '%s\n' "$out" | python3 -c '
+import sys, json
+d = json.load(sys.stdin).get("data", {})
+# An app-view carries .available (the catalog) + pin/effective/history; the
+# superadmin catalog view IS the catalog itself.
+if "available" in d:
+    cat = d.get("available") or {}
+    effective = d.get("effective")
+    active = d.get("active")
+    history = d.get("history") or []
+    app = d.get("app")
+else:
+    cat, effective, active, history, app = d, None, None, None, None
+versions = cat.get("versions") or []
+def human(n):
+    try: n = float(n)
+    except (TypeError, ValueError): return "-"
+    for u in ("B","KiB","MiB","GiB"):
+        if n < 1024 or u == "GiB":
+            return ("%d %s" % (int(n), u)) if u == "B" else ("%.1f %s" % (n, u))
+        n /= 1024
+def when(v):
+    s = v.get("createdAt") or ""
+    return s[:19].replace("T", " ") if s else "-"
+rows = [("VERSION","SOURCE","SIZE","CREATED","FLAGS")]
+for v in versions:
+    f = []
+    if v.get("builtin"): f.append("builtin")
+    if v.get("latest"):  f.append("latest")
+    if effective is not None and v.get("version") == effective: f.append("ACTIVE")
+    rows.append((str(v.get("version","?")), str(v.get("source","?")),
+                 human(v.get("bundleBytes")), when(v), ",".join(f) or "-"))
+if len(rows) == 1:
+    print("  (no versions stored — the built-in materializes at first boot)")
+else:
+    w = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+    for r in rows:
+        print("  " + "  ".join(r[i].ljust(w[i]) for i in range(len(r))))
+if app is not None:
+    print("")
+    print("  app %r: pin=%s  effective=%s" % (app, active or "(none)", effective or "-"))
+    if history:
+        print("  history (newest first):")
+        for h in history[:20]:
+            at = (h.get("at") or "")[:19].replace("T", " ")
+            print("    %s  %s -> %s" % (at, h.get("from") or "builtin", h.get("to") or "builtin"))
+'
+}
+
+# push <bundle.tar.gz> --plugin <id> --version <semver> [--notes '...']
+app_push() {
+  local bundle="" plugin="" version="" notes="" have_notes=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --plugin)  plugin="${2:?--plugin needs a value}"; shift 2 ;;
+      --version) version="${2:?--version needs a value}"; shift 2 ;;
+      --notes)   notes="${2:?--notes needs a value}"; have_notes=1; shift 2 ;;
+      -*)        die "unknown push flag: $1" ;;
+      *)         if [ -z "$bundle" ]; then bundle="$1"; else die "unexpected argument: $1"; fi; shift ;;
+    esac
+  done
+  [ -n "$bundle" ]  || die "usage: streamhub app push <bundle.tar.gz> --plugin <id> --version <semver> [--notes '...']"
+  [ -n "$plugin" ]  || die "push requires --plugin <id>"
+  [ -n "$version" ] || die "push requires --version <semver>"
+  [ -f "$bundle" ]  || die "bundle not found: $bundle"
+  local tok resp code body
+  tok="$(cluster_token)"
+  local args=(-sS -m 120 -o - -w '\n%{http_code}' -X POST -H "Authorization: Bearer $tok"
+    -F "bundle=@$bundle;type=application/gzip" -F "version=$version")
+  [ "$have_notes" = 1 ] && args+=(-F "notes=$notes")
+  log "pushing $bundle → plugin '$plugin' as version $version"
+  resp="$(curl "${args[@]}" "$(cluster_api_base)/plugins/$plugin/versions" 2>/dev/null)" \
+    || die "could not reach the core at $(cluster_api_base) — is the stack up? ('streamhub status')"
+  code="${resp##*$'\n'}"
+  body="${resp%$'\n'*}"
+  case "$code" in
+    2*) : ;;
+    401|403) die "auth rejected ($code) — STREAMHUB_API_TOKEN must be the global superadmin token." ;;
+    409) die "$(app_api_err 409 "$body") — versions are immutable; bump the semver." ;;
+    *)   die "$(app_api_err "$code" "$body")" ;;
+  esac
+  printf '%s' "$body" | python3 -c '
+import sys, json
+m = json.load(sys.stdin).get("data", {})
+files = m.get("files") or {}
+print("  plugin:  %s" % m.get("pluginId","?"))
+print("  version: %s" % m.get("version","?"))
+print("  source:  %s" % m.get("source","?"))
+print("  sha256:  %s" % m.get("sha256","?"))
+print("  size:    %s bytes (%s files)" % (files.get("bytes","?"), files.get("count","?")))
+if m.get("notes"): print("  notes:   %s" % m["notes"])
+'
+  ok "pushed '$plugin' version $version."
+}
+
+# pull <pluginId> <version> [-o out.tar.gz] — download + verify x-bundle-sha256.
+app_pull() {
+  local plugin="" version="" out="" pos=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -o|--output) out="${2:?-o needs a value}"; shift 2 ;;
+      -*)          die "unknown pull flag: $1" ;;
+      *)           case "$pos" in
+                     0) plugin="$1" ;;
+                     1) version="$1" ;;
+                     *) die "unexpected argument: $1" ;;
+                   esac; pos=$((pos + 1)); shift ;;
+    esac
+  done
+  { [ -n "$plugin" ] && [ -n "$version" ]; } || die "usage: streamhub app pull <pluginId> <version> [-o out.tar.gz]"
+  [ -n "$out" ] || out="streamhub-app-$plugin-$version.tar.gz"
+  local tok hdr code sha_hdr actual
+  tok="$(cluster_token)"
+  hdr="$(mktemp)"
+  code="$(curl -sS -m 120 -D "$hdr" -o "$out" -w '%{http_code}' \
+    -H "Authorization: Bearer $tok" \
+    "$(cluster_api_base)/plugins/$plugin/versions/$version/bundle" 2>/dev/null)" \
+    || { rm -f "$hdr" "$out"; die "could not reach the core at $(cluster_api_base) — is the stack up?"; }
+  case "$code" in
+    2*) : ;;
+    401|403) rm -f "$hdr" "$out"; die "auth rejected ($code) — need the global superadmin token." ;;
+    404) rm -f "$hdr" "$out"; die "no version '$version' for plugin '$plugin' (404)." ;;
+    *)   rm -f "$hdr" "$out"; die "download failed ($code)." ;;
+  esac
+  sha_hdr="$(grep -i '^x-bundle-sha256:' "$hdr" | tail -1 | tr -d '\r' | awk '{print $2}')"
+  rm -f "$hdr"
+  [ -n "$sha_hdr" ] || { rm -f "$out"; die "server did not return x-bundle-sha256 — cannot verify integrity."; }
+  actual="$(app_sha256_file "$out")"
+  if [ "$actual" != "$sha_hdr" ]; then
+    rm -f "$out"
+    die "sha256 MISMATCH — expected $sha_hdr, got $actual. Deleted $out."
+  fi
+  ok "pulled '$plugin' $version → $out (sha256 $actual verified)."
+}
+
+# pin <pluginId> <version> --app <tenant>
+app_pin() {
+  local plugin="" version="" app="" pos=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --app) app="${2:?--app needs a value}"; shift 2 ;;
+      -*)    die "unknown pin flag: $1" ;;
+      *)     case "$pos" in
+               0) plugin="$1" ;;
+               1) version="$1" ;;
+               *) die "unexpected argument: $1" ;;
+             esac; pos=$((pos + 1)); shift ;;
+    esac
+  done
+  { [ -n "$plugin" ] && [ -n "$version" ]; } || die "usage: streamhub app pin <pluginId> <version> --app <tenant>"
+  [ -n "$app" ] || die "pin requires --app <tenant>"
+  local view
+  view="$(app_api PUT "/apps/$app/plugins/$plugin/version" "{\"version\":\"$version\"}")"
+  printf '%s\n' "$view" | app_print_pin
+  ok "app '$app': pinned '$plugin' → $version (a running worker is restarted onto it)."
+}
+
+# unpin <pluginId> --app <tenant>
+app_unpin() {
+  local plugin="" app="" pos=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --app) app="${2:?--app needs a value}"; shift 2 ;;
+      -*)    die "unknown unpin flag: $1" ;;
+      *)     case "$pos" in
+               0) plugin="$1" ;;
+               *) die "unexpected argument: $1" ;;
+             esac; pos=$((pos + 1)); shift ;;
+    esac
+  done
+  [ -n "$plugin" ] || die "usage: streamhub app unpin <pluginId> --app <tenant>"
+  [ -n "$app" ]    || die "unpin requires --app <tenant>"
+  local view
+  view="$(app_api PUT "/apps/$app/plugins/$plugin/version" '{"version":null}')"
+  printf '%s\n' "$view" | app_print_pin
+  ok "app '$app': unpinned '$plugin' → built-in/latest."
+}
+
+# rollback <pluginId> --app <tenant>
+app_rollback() {
+  local plugin="" app="" pos=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --app) app="${2:?--app needs a value}"; shift 2 ;;
+      -*)    die "unknown rollback flag: $1" ;;
+      *)     case "$pos" in
+               0) plugin="$1" ;;
+               *) die "unexpected argument: $1" ;;
+             esac; pos=$((pos + 1)); shift ;;
+    esac
+  done
+  [ -n "$plugin" ] || die "usage: streamhub app rollback <pluginId> --app <tenant>"
+  [ -n "$app" ]    || die "rollback requires --app <tenant>"
+  local view
+  view="$(app_api POST "/apps/$app/plugins/$plugin/version/rollback")"
+  printf '%s\n' "$view" | app_print_pin
+  ok "app '$app': rolled '$plugin' back to its previous version."
+}
+
+# delete-version <pluginId> <version> [--yes]
+app_delete_version() {
+  local plugin="" version="" yes=0 pos=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes|-y) yes=1; shift ;;
+      -*)       die "unknown delete-version flag: $1" ;;
+      *)        case "$pos" in
+                  0) plugin="$1" ;;
+                  1) version="$1" ;;
+                  *) die "unexpected argument: $1" ;;
+                esac; pos=$((pos + 1)); shift ;;
+    esac
+  done
+  { [ -n "$plugin" ] && [ -n "$version" ]; } || die "usage: streamhub app delete-version <pluginId> <version> [--yes]"
+  if [ "$yes" != 1 ]; then
+    printf 'Delete version %s of plugin %s? This is permanent. [y/N] ' "$version" "$plugin"
+    local reply=""; read -r reply || true
+    case "$reply" in y|Y|yes|YES) : ;; *) die "aborted." ;; esac
+  fi
+  app_api DELETE "/plugins/$plugin/versions/$version" >/dev/null
+  ok "deleted '$plugin' version $version."
+}
+
+app_usage() {
+  cat <<'APPUSAGE'
+streamhub app — plugin appstore + per-app version pins (run on the MASTER/origin)
+
+  versions <pluginId> [--app <tenant>]
+                         list stored versions (version/source/size/created/flags).
+                         With --app: also show the app's pin, effective version + history.
+  push <bundle.tar.gz> --plugin <id> --version <semver> [--notes '...']
+                         upload a NEW immutable version (multipart) + print its manifest
+                         (sha256 + size). Re-pushing a version is refused — bump the semver.
+  pull <pluginId> <version> [-o out.tar.gz]
+                         download a stored bundle and VERIFY its sha256 locally.
+  pin <pluginId> <version> --app <tenant>
+                         pin the version this app's install runs (restarts a live worker).
+  unpin <pluginId> --app <tenant>
+                         clear the pin → run the built-in/latest again.
+  rollback <pluginId> --app <tenant>
+                         repin to the version the app ran before its last change.
+  delete-version <pluginId> <version> [--yes]
+                         delete a stored version (refused if built-in or pinned by an app).
+
+Auth: STREAMHUB_API_TOKEN from .env (the global superadmin token). Master-only.
+APPUSAGE
+}
+
+cmd_app() {
+  local sub="${1:-help}"; shift || true
+  case "$sub" in help|-h|--help) app_usage; return 0 ;; esac
+  require_install
+  [ "$MODE" = "join" ] && die "appstore admin runs on the MASTER — this is a join-mode node. Run 'streamhub app ...' on the origin."
+  command -v curl >/dev/null 2>&1 || die "curl is required for app commands."
+  command -v python3 >/dev/null 2>&1 || die "python3 is required for app commands (JSON parsing)."
+  case "$sub" in
+    versions)       app_versions "$@" ;;
+    push)           app_push "$@" ;;
+    pull)           app_pull "$@" ;;
+    pin)            app_pin "$@" ;;
+    unpin)          app_unpin "$@" ;;
+    rollback)       app_rollback "$@" ;;
+    delete-version) app_delete_version "$@" ;;
+    *)              die "unknown app command: $sub (run 'streamhub app help')" ;;
+  esac
+}
+
+usage() {
+  # Print the boxed header comment verbatim (between the two ==== delimiters),
+  # stripping the leading "# " — robust to the header changing length.
+  awk '
+    /^# ={5,}/ { seen++; sub(/^# ?/, ""); print; if (seen == 2) exit; next }
+    seen == 1  { sub(/^# ?/, ""); print }
+  ' "$_self" 2>/dev/null
+}
+
+main() {
+  local sub="${1:-}"; shift || true
+  case "$sub" in
+    start)     cmd_start "$@" ;;
+    stop)      cmd_stop "$@" ;;
+    restart)   cmd_restart "$@" ;;
+    status)    cmd_status "$@" ;;
+    ps)        cmd_ps "$@" ;;
+    logs)      cmd_logs "$@" ;;
+    version|--version|-v) cmd_version "$@" ;;
+    upgrade)   cmd_upgrade "$@" ;;
+    config)    cmd_config "$@" ;;
+    cluster)   cmd_cluster "$@" ;;
+    app)       cmd_app "$@" ;;
+    doctor)    cmd_doctor "$@" ;;
+    uninstall) cmd_uninstall "$@" ;;
+    ''|help|-h|--help) usage ;;
+    *)         die "unknown command: $sub (run 'streamhub help')" ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,60 @@
+{
+  "status": {
+    "online": "En línea",
+    "offline": "Desconectado"
+  },
+  "filter": {
+    "all": "Todos ({{count}})",
+    "online": "En línea ({{count}})",
+    "offline": "Desconectados ({{count}})"
+  },
+  "metric": {
+    "cpu": "CPU",
+    "mem": "RAM",
+    "temp": "Temp",
+    "uptime": "Actividad",
+    "cameras": "Cámaras",
+    "disk": "Disco"
+  },
+  "agent": {
+    "noVersion": "desconocida",
+    "seen": "visto hace {{age}}"
+  },
+  "empty": "Aún no hay agentes. Activá el plugin fleet y apuntá tus StreamHub Agents al broker MQTT de esta app.",
+  "error": {
+    "load": "No se pudieron cargar los agentes"
+  },
+  "detail": {
+    "pick": "Seleccioná un agente para ver su historial y controles.",
+    "close": "Cerrar",
+    "control": "Control remoto",
+    "commands": "Comandos recientes",
+    "noCommands": "Todavía no se enviaron comandos."
+  },
+  "action": {
+    "ping": "Ping",
+    "restart": "Reiniciar",
+    "ota": "Actualizar (OTA)",
+    "config": "Enviar config"
+  },
+  "ota": {
+    "version": "Versión destino (ej. 1.13)",
+    "url": "URL del build",
+    "sha256": "SHA-256 (64 hex)",
+    "submit": "Enviar OTA",
+    "note": "El agente descarga el build, verifica el SHA-256, se reemplaza de forma atómica y se reinicia (rollback automático si no arranca)."
+  },
+  "config": {
+    "submit": "Enviar config"
+  },
+  "cmd": {
+    "queued": "{{command}} en cola ({{id}})",
+    "failed": "El comando falló",
+    "badJson": "La config debe ser JSON válido"
+  },
+  "cmdStatus": {
+    "pending": "pendiente",
+    "ok": "ok",
+    "error": "error"
+  }
+}

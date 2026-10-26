@@ -2,11 +2,23 @@
   "nav": {
     "dashboard": "Dashboard",
     "apps": "Apps",
-    "plugins": "Plugins",
+    "plugins": "Studio",
     "cluster": "Cluster",
     "logs": "Logs",
+    "resources": "Historial de recursos",
     "serverSettings": "Configuración",
+    "audit": "Auditoría",
+    "compliance": "Postura de seguridad",
     "account": "Mi cuenta"
+  },
+  "launcher": {
+    "open": "Lanzador de Studio",
+    "title": "Abrir una vista de Studio",
+    "app": "App",
+    "loadingApps": "Cargando…",
+    "noApps": "Todavía no hay apps.",
+    "noInstalled": "No hay apps de Studio instaladas en este app.",
+    "openApp": "Abrir app"
   },
   "layout": {
     "session": "Sesión",
@@ -18,7 +30,10 @@
     "collapse": "Colapsar menú",
     "expand": "Expandir menú",
     "account": "Mi cuenta",
-    "footer": "StreamHub UI · capa de gestión sobre LiveKit"
+    "footer": "StreamHub UI · capa de gestión sobre LiveKit",
+    "docs": "Docs",
+    "source": "Código",
+    "changelog": "Ver historial de cambios"
   },
   "role": {
     "owner": "Owner",

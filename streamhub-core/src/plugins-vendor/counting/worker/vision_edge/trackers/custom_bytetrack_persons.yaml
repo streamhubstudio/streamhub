@@ -1,0 +1,20 @@
+# ByteTrack configuration for PERSON tracking (ultralytics built-in tracker).
+#
+# PROVENANCE: ported verbatim from Vision One's production-tuned
+# custom_bytetrack_persons.yaml (streamhub-vision-one repo — "matches original
+# vision_occupancy/custom_bytetrack_persons.yaml: higher match_thresh for
+# persons, shorter track_buffer"). These values were validated against real
+# store-entrance footage; keep them in sync with the source if retuned there.
+#
+# Override with PC_TRACKER=/path/to/other.yaml (or `bytetrack.yaml` /
+# `botsort.yaml` for the ultralytics stock configs).
+
+tracker_type: bytetrack
+track_high_thresh: 0.4
+track_low_thresh: 0.1
+new_track_thresh: 0.5
+track_buffer: 90
+match_thresh: 0.7
+fuse_score: true
+min_box_area: 50
+frame_rate: 30

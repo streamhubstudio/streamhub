@@ -1,6 +1,6 @@
 [Unit]
 Description=Run the StreamHub backup daily
-Documentation=file:///opt/streamhub/streamhub-docs/operations/BACKUPS.md
+Documentation=file:///opt/streamhub/https://streamhub.studio/docs/operations/BACKUPS
 
 [Timer]
 # Daily at 03:15 UTC, +/- up to 5 min jitter. Persistent=true runs a missed

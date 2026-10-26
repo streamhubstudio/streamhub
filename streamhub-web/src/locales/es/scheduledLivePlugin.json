@@ -1,0 +1,56 @@
+{
+  "overlay": {
+    "aria": "{{headline}} — cuenta regresiva para el estreno en vivo",
+    "soon": "Muy pronto",
+    "startsAt": "Comienza {{time}}",
+    "units": {
+      "days": "días",
+      "hours": "hs",
+      "minutes": "min",
+      "seconds": "seg"
+    }
+  },
+  "config": {
+    "display": {
+      "title": "Opciones de visualización",
+      "mode": "Modo",
+      "modeCover": "Cubrir todo (ocultar el vivo hasta el inicio)",
+      "modeBadge": "Solo cartel en la esquina",
+      "accent": "Color de acento",
+      "headline": "Título principal",
+      "revealAnimation": "Animación de revelado",
+      "animFade": "Desvanecer",
+      "animZoom": "Zoom",
+      "animNone": "Ninguna",
+      "muteUntilStart": "Silenciar el vivo hasta el inicio",
+      "showViewerLocalTime": "Mostrar la hora local del espectador",
+      "autoHide": "Duración del revelado (segundos)"
+    },
+    "agenda": {
+      "title": "Agenda de estrenos",
+      "empty": "Todavía no hay estrenos programados.",
+      "loading": "Cargando…",
+      "refresh": "Actualizar",
+      "loadError": "No se pudo cargar la agenda.",
+      "saveError": "No se pudo guardar el evento.",
+      "invalidDatetime": "Elegí una fecha y hora válidas.",
+      "add": "Agregar estreno",
+      "fields": {
+        "title": "Título",
+        "datetime": "Fecha y hora de inicio",
+        "timezone": "Zona horaria",
+        "room": "Sala (opcional)",
+        "roomHint": "Vacío = todas las salas de la app",
+        "message": "Mensaje (opcional)",
+        "enabled": "Activo"
+      },
+      "row": {
+        "allRooms": "Todas las salas",
+        "delete": "Eliminar",
+        "confirmDelete": "¿Eliminar el estreno «{{title}}»?",
+        "untitled": "(sin título)"
+      },
+      "note": "Los cambios en la agenda se guardan al instante. El botón Guardar de abajo guarda las opciones de visualización."
+    }
+  }
+}

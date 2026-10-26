@@ -105,7 +105,7 @@ function SaveStatus({
 
 // --- section anchors ---------------------------------------------------------
 
-const SECTIONS = ['callbacks', 'mqtt', 's3', 'features', 'qc'] as const
+const SECTIONS = ['callbacks', 'mqtt', 'smtp', 's3', 'features', 'qc'] as const
 
 function SectionNav() {
   const { t } = useTranslation('integracionesTab')
@@ -515,6 +515,188 @@ function MqttCard({ app }: { app: string }) {
   )
 }
 
+// --- SMTP (owner item 29 — per-app SMTP override) ----------------------------
+
+function SmtpCard({ app }: { app: string }) {
+  const { t } = useTranslation(['integracionesTab', 'common'])
+  const qc = useQueryClient()
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['app-smtp', app],
+    queryFn: ({ signal }) => api.apps.getSmtp(app, signal),
+  })
+
+  const [enabled, setEnabled] = useState(false)
+  const [host, setHost] = useState('')
+  const [port, setPort] = useState('587')
+  const [user, setUser] = useState('')
+  // Secret: never prefilled. Sent only when the user types a new value.
+  const [pass, setPass] = useState('')
+  const [from, setFrom] = useState('')
+  const [testTo, setTestTo] = useState('')
+
+  useEffect(() => {
+    if (!data) return
+    setEnabled(Boolean(data.enabled))
+    setHost(data.host ?? '')
+    setPort(String(data.port ?? 587))
+    setUser(data.user ?? '')
+    setPass('')
+    setFrom(data.from ?? '')
+  }, [data])
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.apps.putSmtp(app, {
+        enabled,
+        host: host.trim(),
+        port: Number(port) || 587,
+        user: user.trim(),
+        from: from.trim(),
+        // Omit an empty password so the server keeps the stored one.
+        ...(pass.trim() ? { pass: pass.trim() } : {}),
+      }),
+    onSuccess: () => {
+      setPass('')
+      qc.invalidateQueries({ queryKey: ['app-smtp', app] })
+    },
+  })
+
+  const test = useMutation({
+    mutationFn: () => api.apps.testSmtp(app, { to: testTo.trim() }),
+  })
+
+  if (isLoading) return <Loading label={t('smtp.loading')} />
+  if (isError)
+    return <ErrorBanner message={errMessage(error, t('smtp.loadError'))} />
+
+  const dirty =
+    enabled !== Boolean(data?.enabled) ||
+    host !== (data?.host ?? '') ||
+    port !== String(data?.port ?? 587) ||
+    user !== (data?.user ?? '') ||
+    from !== (data?.from ?? '') ||
+    pass.trim() !== ''
+  const state: SaveState = save.isPending
+    ? 'saving'
+    : dirty
+      ? 'dirty'
+      : save.isSuccess
+        ? 'saved'
+        : 'idle'
+
+  return (
+    <Card>
+      <SectionTitle title={t('smtp.title')} subtitle={t('smtp.subtitle')} />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3">
+          <div>
+            <div className="text-sm text-slate-100">{t('smtp.enabledLabel')}</div>
+            <div className="mt-0.5 text-[11px] text-slate-500">
+              {t('smtp.enabledHint')}
+            </div>
+          </div>
+          <Toggle checked={enabled} onChange={setEnabled} />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('smtp.hostLabel')}>
+            <TextInput
+              value={host}
+              placeholder="smtp.example.com"
+              onChange={(e) => setHost(e.target.value)}
+            />
+          </Field>
+          <Field label={t('smtp.portLabel')} hint={t('smtp.portHint')}>
+            <TextInput
+              type="number"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+            />
+          </Field>
+          <Field label={t('smtp.userLabel')}>
+            <TextInput
+              value={user}
+              placeholder="no-reply@example.com"
+              onChange={(e) => setUser(e.target.value)}
+            />
+          </Field>
+          <Field
+            label={t('smtp.passLabel')}
+            hint={data?.hasPass ? t('smtp.storedHint') : undefined}
+          >
+            <TextInput
+              type="password"
+              autoComplete="off"
+              value={pass}
+              placeholder={data?.pass || '••••••••'}
+              onChange={(e) => setPass(e.target.value)}
+            />
+          </Field>
+          <Field label={t('smtp.fromLabel')} hint={t('smtp.fromHint')}>
+            <TextInput
+              value={from}
+              placeholder="My App <no-reply@example.com>"
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        {save.isError && (
+          <ErrorBanner message={errMessage(save.error, t('smtp.saveError'))} />
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="accent"
+            disabled={save.isPending || !dirty}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? t('smtp.saving') : t('smtp.save')}
+          </Button>
+          <SaveStatus state={save.isError ? 'error' : state} />
+        </div>
+
+        {/* Test send — probes the SAVED config (bypasses the enabled gate
+            server-side). Disabled while there are unsaved changes so it never
+            silently tests stale settings. */}
+        <div className="rounded-lg border border-navy-600 bg-navy-700/40 p-4">
+          <div className="text-sm text-slate-100">{t('smtp.testLabel')}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">
+            {dirty ? t('smtp.testDirtyHint') : t('smtp.testHint')}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="min-w-[16rem] flex-1">
+              <TextInput
+                value={testTo}
+                placeholder="ops@example.com"
+                aria-label={t('smtp.testLabel')}
+                onChange={(e) => setTestTo(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              disabled={test.isPending || !testTo.trim() || dirty}
+              onClick={() => test.mutate()}
+            >
+              {test.isPending ? t('smtp.testing') : t('smtp.testSend')}
+            </Button>
+          </div>
+          {test.isSuccess && test.data.ok && (
+            <p className="mt-2 text-xs text-success">{t('smtp.testSent')}</p>
+          )}
+          {test.isSuccess && !test.data.ok && (
+            <p className="mt-2 text-xs text-danger">
+              {test.data.skipped ? t('smtp.testNotConfigured') : t('smtp.testFailed')}
+            </p>
+          )}
+          {test.isError && (
+            <ErrorBanner message={errMessage(test.error, t('smtp.testFailed'))} />
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 // --- S3 storage --------------------------------------------------------------
 
 const PROVIDERS: { value: S3Provider; label: string }[] = [
@@ -893,6 +1075,9 @@ export function IntegracionesTab({ app }: { app: string }) {
       </Section>
       <Section id="mqtt">
         <MqttCard app={app} />
+      </Section>
+      <Section id="smtp">
+        <SmtpCard app={app} />
       </Section>
       <Section id="s3">
         <S3Card app={app} />

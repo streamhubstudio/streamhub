@@ -13,6 +13,14 @@ import {
   MqttServiceContract,
 } from '../../shared/contracts';
 import { MetricsService } from '../metrics/metrics.service';
+import {
+  assertSafeEgressUrl,
+  CALLBACK_ALLOW_HOSTS_ENV,
+  defaultHostResolver,
+  HTTP_SCHEMES,
+  parseAllowlistEnv,
+  type HostResolver,
+} from '../security/egress-url.guard';
 
 /**
  * Envelope POSTed to an app's callback URL (wave-3 §4):
@@ -46,8 +54,26 @@ const BACKOFF_BASE_MS = 500;
  * Best-effort with bounded retries; never throws (callbacks must not break the
  * caller's flow).
  */
+/** In-process listener notified for every dispatched event (trigger hook). */
+export type DispatchListener = (
+  app: string,
+  event: CallbackEvent,
+  payload: Record<string, unknown>,
+) => void;
+
 @Injectable()
 export class CallbacksService implements CallbacksServiceContract {
+  /** DNS seam for the egress SSRF guard (specs inject a fake — never dial DNS). */
+  hostResolver: HostResolver = defaultHostResolver;
+
+  /**
+   * In-process dispatch tap (StreamflowService subscribes here). dispatch() is
+   * the SINGLE funnel every domain event converges on, so one listener here sees
+   * the whole taxonomy without a second emit site. Invoked best-effort AFTER the
+   * webhook + MQTT tap, for EVERY event (even ones with no callback URL).
+   */
+  private readonly dispatchListeners = new Set<DispatchListener>();
+
   constructor(
     @Inject(APPS_SERVICE) private readonly apps: AppsServiceContract,
     @Inject(LOGS_SERVICE) private readonly logs: LogsServiceContract,
@@ -57,7 +83,45 @@ export class CallbacksService implements CallbacksServiceContract {
     private readonly mqtt?: MqttServiceContract,
   ) {}
 
+  /**
+   * Register an in-process listener invoked for every dispatched event; returns
+   * an unsubscribe fn. A listener that throws is swallowed — it can NEVER affect
+   * the media/callback plane. Powers the Streamflow trigger engine.
+   */
+  onDispatch(listener: DispatchListener): () => void {
+    this.dispatchListeners.add(listener);
+    return () => this.dispatchListeners.delete(listener);
+  }
+
+  /** Fan the event out to the in-process listeners (best-effort, never throws). */
+  private emitToListeners(
+    app: string,
+    event: CallbackEvent,
+    payload: Record<string, unknown>,
+  ): void {
+    for (const listener of this.dispatchListeners) {
+      try {
+        listener(app, event, payload);
+      } catch {
+        /* a trigger listener must never break dispatch */
+      }
+    }
+  }
+
   async dispatch(
+    appName: string,
+    event: CallbackEvent,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      await this.dispatchInner(appName, event, payload);
+    } finally {
+      // After the webhook + MQTT tap, for every event, best-effort.
+      this.emitToListeners(appName, event, payload);
+    }
+  }
+
+  private async dispatchInner(
     appName: string,
     event: CallbackEvent,
     payload: Record<string, unknown>,
@@ -89,6 +153,29 @@ export class CallbacksService implements CallbacksServiceContract {
         'debug',
         'callbacks',
         `no callback URL for app "${appName}" — skipping "${event}"`,
+      );
+      this.metrics?.callbackResult(appName, event, 'dropped');
+      return;
+    }
+
+    // Fire-time SSRF guard (P0-1): the callback URL is tenant-controlled, so a
+    // save-time check alone is not enough (config may predate the guard, DNS
+    // may have changed). Deny-private by default; the operator env allowlist
+    // (STREAMHUB_CALLBACK_ALLOW_HOSTS, default empty) exempts known-internal
+    // targets. A blocked callback is dropped — never breaks the caller's flow.
+    try {
+      await assertSafeEgressUrl(url, {
+        allowedSchemes: HTTP_SCHEMES,
+        label: 'callback URL',
+        allowlist: parseAllowlistEnv(process.env[CALLBACK_ALLOW_HOSTS_ENV]),
+        resolveHost: this.hostResolver,
+      });
+    } catch (err) {
+      this.logs.write(
+        'error',
+        'callbacks',
+        `blocked "${event}" for app "${appName}" — callback URL rejected by the egress SSRF guard`,
+        { url, error: this.errMsg(err) },
       );
       this.metrics?.callbackResult(appName, event, 'dropped');
       return;

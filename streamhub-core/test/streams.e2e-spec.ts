@@ -142,4 +142,36 @@ describe('streams controller (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('POST /apps/:app/streams/:id/snapshot', () => {
+    it('rejects an unauthenticated request with 401', async () => {
+      await ctx
+        .request()
+        .post('/api/v1/apps/live/streams/whatever/snapshot')
+        .expect(401);
+    });
+
+    it('returns 404 for an unknown stream', async () => {
+      await ctx
+        .request()
+        .post('/api/v1/apps/live/streams/nope/snapshot')
+        .set('Authorization', auth)
+        .expect(404);
+    });
+
+    it('returns 503 for a passthrough stream with no live HLS segment', async () => {
+      // Passthrough (participant='passthrough') has no LiveKit room to composite;
+      // with no on-disk HLS segment there is no source → 503 (no ffmpeg spawned).
+      const svc = ctx.app.get(
+        (await import('../src/modules/streams/streams.service')).StreamsService,
+      );
+      await svc.upsert('live', 'live-room/passthrough', 'rtmp', 'live-room', 'passthrough');
+
+      await ctx
+        .request()
+        .post('/api/v1/apps/live/streams/live-room%2Fpassthrough/snapshot')
+        .set('Authorization', auth)
+        .expect(503);
+    });
+  });
 });

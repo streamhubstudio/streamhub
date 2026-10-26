@@ -9,6 +9,9 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { ModuleRef } from '@nestjs/core';
 import { Request } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'js-yaml';
 import {
   EgressStatus,
   IngressInput,
@@ -35,6 +38,12 @@ import {
 } from '../../shared/contracts';
 import { LiveKitService } from './livekit.service';
 import { IngressAuthService } from './ingress-auth.service';
+// Net-metrics tap (Wave 1C): optional, resolved lazily so livekit never
+// hard-depends on net-metrics. Import is types + a token only — no DI cycle.
+import {
+  NET_METRICS_SERVICE,
+  NetMetricsServiceContract,
+} from '../net-metrics/net-metrics.contract';
 
 /**
  * LiveKit webhook sink (SPEC §5 livekit, §6). Public route — authenticity is
@@ -152,8 +161,13 @@ export class WebhooksController {
       case 'participant_left':
         await this.onParticipantLeft(event, app);
         break;
+      case 'room_started':
+        // Auto-record (LIVEKIT-UNUSED-FEATURES): start a recording when the
+        // app opts in via `features.auto_record` in its config.yaml.
+        await this.onRoomStarted(event, app);
+        break;
       default:
-        // room_started/room_finished/participant_joined → no business handler.
+        // room_finished/participant_joined → no business handler.
         // participant_joined intentionally does NOT create a stream: a joined
         // participant with 0 published tracks is a subscriber/viewer, not a
         // stream. It is still forwarded verbatim to the app callback below.
@@ -294,6 +308,18 @@ export class WebhooksController {
     const info = event.egressInfo;
     if (!info) return;
     const status = EgressStatus[info.status] ?? String(info.status);
+
+    // Net-metrics tap (Wave 1C): on completion, attribute the egress OUTPUT
+    // bytes (final file + HLS segment sizes) to the app's network counter.
+    if (info.status === EgressStatus.EGRESS_COMPLETE) {
+      const net = this.resolve<NetMetricsServiceContract>(NET_METRICS_SERVICE);
+      if (net && app) {
+        let bytes = 0;
+        for (const f of info.fileResults ?? []) bytes += Number(f.size ?? 0n);
+        for (const s of info.segmentResults ?? []) bytes += Number(s.size ?? 0n);
+        if (bytes > 0) net.recordBytes(app, 'out', 'livekit-egress', bytes);
+      }
+    }
 
     const recording = this.resolve<RecordingServiceContract>(RECORDING_SERVICE);
     if (!recording) {
@@ -452,6 +478,74 @@ export class WebhooksController {
       room,
       participant: p.identity,
     });
+  }
+
+  /**
+   * Auto-record on room start (LIVEKIT-UNUSED-FEATURES "auto-record on room
+   * creation"). When the app opts in via `features.auto_record: true` in its
+   * config.yaml, the room-opened webhook starts a recording for the room —
+   * this covers EVERY room-creation path (WebRTC join, RTMP/WHIP/URL ingress),
+   * unlike `CreateRoom({egress})` which only applies to API-created rooms.
+   *
+   * `RecordingService.start` still enforces `recording.enabled`, so auto-record
+   * requires BOTH flags. Strictly best-effort: any failure is logged and the
+   * webhook is always acked.
+   *
+   * NOTE: the flag is read RAW from apps/<app>/config.yaml (snake_case,
+   * default false) because AppFeatures in shared/contracts is scaffolder-owned;
+   * promoting `autoRecord` into the typed contract is the recorded follow-up.
+   */
+  private async onRoomStarted(
+    event: WebhookEvent,
+    app: string | null,
+  ): Promise<void> {
+    const roomName = event.room?.name ?? '';
+    if (!app || !roomName) return;
+    if (!this.autoRecordEnabled(app)) return;
+
+    const recording = this.resolve<RecordingServiceContract>(RECORDING_SERVICE);
+    if (!recording) {
+      this.log('warn', 'auto-record skipped: recording service unavailable', {
+        app,
+        room: roomName,
+      });
+      return;
+    }
+    try {
+      const handle = await recording.start({ appName: app, roomName });
+      this.log('info', 'auto-record started on room_started', {
+        app,
+        room: roomName,
+        vodId: handle.vodId,
+        egressId: handle.egressId,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // Typical benign case: the app has auto_record on but recording.enabled
+      // off — start() rejects and the room simply isn't recorded.
+      this.log('warn', `auto-record failed: ${message}`, {
+        app,
+        room: roomName,
+      });
+    }
+  }
+
+  /**
+   * Whether the app opted into auto-record: `features.auto_record: true` in
+   * apps/<app>/config.yaml. Raw read, default false, never throws.
+   */
+  private autoRecordEnabled(app: string): boolean {
+    try {
+      const apps = this.resolve<AppsServiceContract>(APPS_SERVICE);
+      if (!apps) return false;
+      const file = path.join(apps.appDir(app), 'config.yaml');
+      const parsed = yaml.load(fs.readFileSync(file, 'utf8')) as {
+        features?: { auto_record?: unknown };
+      } | null;
+      return parsed?.features?.auto_record === true;
+    } catch {
+      return false;
+    }
   }
 
   private async onParticipantLeft(

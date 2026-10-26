@@ -1,0 +1,61 @@
+{
+  "title": "Database backups",
+  "subtitle": "Versioned, gzip-compressed snapshots of every SQLite database — the global registry and each app's app.db. Runs daily and keeps the configured retention window.",
+  "runNow": "Back up now",
+  "runError": "The backup run failed.",
+  "runPartial": "The backup finished with errors: {{errors}}",
+  "disabledHint": "Scheduled backups are OFF (STREAMHUB_BACKUPS_ENABLED=false). You can still create manual backups with the button, but there will be no automatic daily snapshots.",
+  "envHint": "Configuration is env-driven: STREAMHUB_BACKUPS_ENABLED, STREAMHUB_BACKUP_RETENTION_DAYS, STREAMHUB_BACKUP_DIR and STREAMHUB_BACKUP_CRON — see operations/BACKUPS.md.",
+  "status": {
+    "enabled": "scheduled",
+    "disabled": "off",
+    "retention": "retention: {{days}} days",
+    "schedule": "cron"
+  },
+  "db": {
+    "global": "Global registry",
+    "app": "App “{{app}}”",
+    "orphaned": "deleted app",
+    "liveSize": "live DB: {{size}}"
+  },
+  "snapshots": {
+    "file": "Snapshot",
+    "created": "Created",
+    "age": "Age",
+    "size": "Size",
+    "preRestore": "pre-restore safety copy",
+    "empty": "No snapshots of this database yet. Use “Back up now” or wait for the daily run.",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "count_one": "{{count}} snapshot",
+    "count_other": "{{count}} snapshots"
+  },
+  "restore": {
+    "button": "Restore",
+    "title": "Restore backup",
+    "destructive": "destructive",
+    "phrase": "RESTORE",
+    "summary": "You are about to restore {{db}} from snapshot {{file}}.",
+    "warnOverwrite": "This OVERWRITES the current database: every change made after the snapshot is lost.",
+    "warnSafety": "A safety backup (.pre-restore) of the current state is auto-created first — you can roll back by restoring it.",
+    "warnIntegrity": "The snapshot is validated (gunzip + PRAGMA integrity_check) BEFORE the swap; a corrupt snapshot leaves everything untouched.",
+    "warnGlobal": "This is the GLOBAL registry: after restoring, a core restart is recommended to rebuild in-memory state (permissions, caches).",
+    "confirmLabel": "Type {{phrase}} to unlock the button",
+    "confirmButton": "Restore (overwrites the DB)",
+    "error": "Couldn't restore the snapshot.",
+    "done": "{{db}} restored successfully.",
+    "safetyCreated": "Pre-restore safety copy created: {{file}}",
+    "restartRecommended": "The global registry was restored: restart the core (docker compose restart core) so in-memory state is rebuilt."
+  },
+  "relative": {
+    "now": "just now",
+    "seconds_one": "{{count}}s ago",
+    "seconds_other": "{{count}}s ago",
+    "minutes_one": "{{count}} min ago",
+    "minutes_other": "{{count}} min ago",
+    "hours_one": "{{count}}h ago",
+    "hours_other": "{{count}}h ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago"
+  }
+}

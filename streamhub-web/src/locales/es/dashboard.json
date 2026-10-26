@@ -50,5 +50,22 @@
     "vods_one": "{{count}} grabación",
     "vods_other": "{{count}} grabaciones"
   },
+  "net": {
+    "title": "Red E/S",
+    "subtitle": "Bytes de entrada / salida por app.",
+    "appLabel": "Ámbito de app",
+    "allApps": "Todas las apps",
+    "in": "Entrada (hoy)",
+    "out": "Salida (hoy)",
+    "last24h": "Últimas 24h",
+    "ok": "Dentro del umbral",
+    "exceeded": "Umbral superado",
+    "exceededCount_one": "{{count}} app supera el umbral",
+    "exceededCount_other": "{{count}} apps superan el umbral",
+    "noThreshold": "Sin umbral",
+    "configure": "Configurar",
+    "sparkAria": "Rendimiento de red por hora, últimas 24 horas",
+    "empty": "Aún no hay apps que medir."
+  },
   "updating": "Actualizando…"
 }

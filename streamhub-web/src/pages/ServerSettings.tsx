@@ -19,6 +19,8 @@ import { Alert, Button, Card, Skeleton, Tag } from '@/ui'
 import { formatBytes } from '@/lib/bytes'
 import { authzTone, enforcementActive, setTone, formatUptime, type Tone } from '@/lib/serverSettings'
 import { NetworkSecuritySection } from '@/pages/NetworkSecurity'
+import { BackupsSection } from '@/pages/Backups'
+import { OsTuningSection } from '@/pages/OsTuning'
 
 const POLL_MS = 60_000
 const EMPTY = '—'
@@ -304,6 +306,12 @@ function Loaded({ s }: { s: ServerSettings }) {
 
       {/* Network security — in-app IP access control + auto-ban (full width). */}
       <NetworkSecuritySection />
+
+      {/* OS performance tuning — kernel/limit knobs vs recommendations (read-only). */}
+      <OsTuningSection />
+
+      {/* Backups — versioned SQLite snapshots + guarded restore (full width). */}
+      <BackupsSection />
     </>
   )
 }

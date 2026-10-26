@@ -7,20 +7,26 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiProduces,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermission } from '../authz/permission.decorator';
 import { Public } from '../../shared/auth/public.decorator';
 import { PatchPluginDto } from './dto/patch-plugin.dto';
+import { PinVersionDto } from './dto/pin-version.dto';
+import { PluginExportService } from './plugin-export.service';
 import { PluginsService } from './plugins.service';
+import { PluginVersionService } from './appstore/plugin-version.service';
 
 /** Standard StreamHub response envelope (SPEC §6). */
 interface Envelope<T> {
@@ -42,16 +48,31 @@ function ok<T>(data: T): Envelope<T> {
 @ApiParam({ name: 'app', description: 'App name (slug).', example: 'live' })
 @Controller('apps/:app/plugins')
 export class PluginsController {
-  constructor(private readonly plugins: PluginsService) {}
+  constructor(
+    private readonly plugins: PluginsService,
+    private readonly exporter: PluginExportService,
+    private readonly versionSvc: PluginVersionService,
+  ) {}
 
   @Get()
   @RequirePermission('config', 'read')
   @ApiOperation({
     summary: 'Marketplace: all built-in plugins + this app install/config state.',
+    description:
+      'Optional `?stream=`/`?room=` make the list STREAM-AWARE (used by the ' +
+      'authenticated player): a plugin the stream/room opted out of is reported ' +
+      'as `enabled:false` so overlays honor the per-stream opt-out. Without ' +
+      'either param the app-level list is returned unchanged (the marketplace).',
   })
   @ApiOkResponse({ description: 'List of plugin marketplace entries.' })
-  async list(@Param('app') app: string) {
-    return ok(await this.plugins.list(app));
+  @ApiQuery({ name: 'stream', required: false, description: 'Stream id scope.' })
+  @ApiQuery({ name: 'room', required: false, description: 'Room name scope.' })
+  async list(
+    @Param('app') app: string,
+    @Query('stream') stream?: string,
+    @Query('room') room?: string,
+  ) {
+    return ok(await this.plugins.list(app, { stream, room }));
   }
 
   // NOTE: declared BEFORE the `:id` route below so the literal `public` segment
@@ -69,8 +90,14 @@ export class PluginsController {
       'exposes app-tab/panel plugins, disabled installs or the full catalog.',
   })
   @ApiOkResponse({ description: 'Enabled player-overlay plugins (sanitized).' })
-  async publicOverlays(@Param('app') app: string) {
-    return ok(await this.plugins.publicOverlays(app));
+  @ApiQuery({ name: 'stream', required: false, description: 'Stream id scope.' })
+  @ApiQuery({ name: 'room', required: false, description: 'Room name scope.' })
+  async publicOverlays(
+    @Param('app') app: string,
+    @Query('stream') stream?: string,
+    @Query('room') room?: string,
+  ) {
+    return ok(await this.plugins.publicOverlays(app, { stream, room }));
   }
 
   @Get(':id')
@@ -79,6 +106,80 @@ export class PluginsController {
   @ApiParam({ name: 'id', description: 'Plugin id.' })
   async getOne(@Param('app') app: string, @Param('id') id: string) {
     return ok(await this.plugins.get(app, id));
+  }
+
+  @Get(':id/export')
+  // Same permission tier as config write (PATCH :id): exporting the app bundle
+  // is a sensitive, install-scoped operation.
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary: 'Export an installed Studio App as a standalone tarball.',
+    description:
+      'Bundles the app worker source + a generated Dockerfile, docker-compose, ' +
+      '.env.example (placeholders only — no real secrets/hosts) and README into ' +
+      'a gzip tarball (streamhub-app-<id>-<version>.tar.gz) that runs on your own ' +
+      'infra and talks back over REST/webhooks. 404 unknown plugin, 400 when the ' +
+      'plugin is not exportable or not installed in this app.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  @ApiProduces('application/gzip')
+  @ApiOkResponse({ description: 'The gzip tarball (attachment).' })
+  async export(
+    @Param('app') app: string,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const { filename, body } = await this.exporter.export(app, id);
+    return new StreamableFile(body, {
+      type: 'application/gzip',
+      disposition: `attachment; filename="${filename}"`,
+      length: body.length,
+    });
+  }
+
+  @Get(':id/versions')
+  @RequirePermission('config', 'read')
+  @ApiOperation({
+    summary: 'Version state for this install (active pin, catalog, history).',
+    description:
+      'Returns { active, effective, available (the appstore catalog), history }. ' +
+      '`active` is the install pin (null = built-in/latest); `effective` is the ' +
+      'version that actually runs.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  async versions(@Param('app') app: string, @Param('id') id: string) {
+    return ok(await this.versionSvc.view(app, id));
+  }
+
+  @Put(':id/version')
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary: 'Pin (or unpin) the appstore version this install runs.',
+    description:
+      'Body { version: "<semver>" | null }. null unpins (built-in/latest). The ' +
+      'version must exist in the appstore (404 otherwise). Records the change in ' +
+      'history, restarts a running worker so it takes effect, and dispatches ' +
+      'plugin.version_changed.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  async pinVersion(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Body() body: PinVersionDto,
+  ) {
+    return ok(await this.versionSvc.pin(app, id, body.version ?? null));
+  }
+
+  @Post(':id/version/rollback')
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary: 'Roll back to the version this install ran before its last change.',
+    description:
+      'Repins to the `from` of the most recent history entry (which may be ' +
+      'null = built-in/latest). 400 when there is no history to roll back to.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  async rollbackVersion(@Param('app') app: string, @Param('id') id: string) {
+    return ok(await this.versionSvc.rollback(app, id));
   }
 
   @Post(':id/install')
@@ -172,6 +273,51 @@ export class PluginsController {
     return ok(await this.plugins.ingestLive(app, id, token, body));
   }
 
+  @Post(':id/events')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Worker DOMAIN-EVENT ingest (framework channel, ingest-token auth).',
+    description:
+      'Called by the plugin WORKER process (not by clients). Same auth as ' +
+      "POST :id/live: the per-start ingest token via `x-plugin-ingest-token` " +
+      '(the worker-hook injects STREAMHUB_EVENTS_URL + STREAMHUB_INGEST_TOKEN). ' +
+      'Body: { event, room?, data? }. The event name MUST be declared in the ' +
+      "plugin manifest's `events` (spoof guard); accepted events are relayed " +
+      "through the app's SIGNED callbacks funnel (webhook + MQTT) under that " +
+      'name, with `plugin` and `room` merged into the payload.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  async ingestEvent(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Headers('x-plugin-ingest-token') token: string | undefined,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return ok(await this.plugins.ingestEvent(app, id, token, body));
+  }
+
+  @Get(':id/data')
+  @RequirePermission('config', 'read')
+  @ApiOperation({
+    summary:
+      'Latest worker live data for ANY installed plugin (authenticated).',
+    description:
+      'Dashboard counterpart of the public GET :id/live: app-tab/panel ' +
+      'plugins (whose live data must NOT be public) read their worker feed ' +
+      'here behind the Bearer guard. Returns { ts, ageMs, payload } (nulls ' +
+      'when nothing was pushed yet); 404 when the plugin is not installed.',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  @ApiQuery({ name: 'room', required: false, example: 'main' })
+  async data(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Query('room') room?: string,
+  ) {
+    return ok(await this.plugins.liveData(app, id, room ?? ''));
+  }
+
   @Get(':id/live')
   @Public()
   @ApiOperation({
@@ -192,6 +338,28 @@ export class PluginsController {
     @Query('room') room?: string,
   ) {
     return ok(await this.plugins.liveOverlayData(app, id, room ?? ''));
+  }
+
+  @Get(':id/live/state')
+  @RequirePermission('config', 'read')
+  @ApiOperation({
+    summary:
+      'Latest worker live data for the DASHBOARD (auth) — any needsWorker plugin.',
+    description:
+      'AUTHENTICATED counterpart of GET :id/live for app-tab/panel worker ' +
+      'plugins whose live feed must not be public (e.g. the perimeter armed ' +
+      'state + alert queue). Answers for any installed + enabled needsWorker ' +
+      'plugin regardless of UI slot (404 otherwise). Returns { ts, ageMs, ' +
+      'payload } (nulls when nothing was pushed yet).',
+  })
+  @ApiParam({ name: 'id', description: 'Plugin id.' })
+  @ApiQuery({ name: 'room', required: false, example: 'cam-1' })
+  async liveState(
+    @Param('app') app: string,
+    @Param('id') id: string,
+    @Query('room') room?: string,
+  ) {
+    return ok(await this.plugins.liveWorkerData(app, id, room ?? ''));
   }
 
   @Get(':id/logs')

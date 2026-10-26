@@ -10,7 +10,7 @@ datasources:
     access: proxy
     # network_mode: host en ambos servicios (ver docker-compose.observability.yml)
     # -> Grafana y Prometheus comparten la red del host, se hablan por localhost.
-    url: http://127.0.0.1:9090
+    url: http://127.0.0.1:9091
     isDefault: true
     editable: false
     jsonData:

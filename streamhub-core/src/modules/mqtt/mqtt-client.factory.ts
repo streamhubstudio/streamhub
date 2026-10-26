@@ -6,6 +6,13 @@
  * network is a bug).
  */
 
+import {
+  ALLOW_PRIVATE_MQTT_BROKER_ENV,
+  assertSafeEgressUrlSync,
+  envFlag,
+  MQTT_SCHEMES,
+} from '../security/egress-url.guard';
+
 /** DI token for the factory (bound in MqttModule; overridden in tests). */
 export const MQTT_CLIENT_FACTORY = Symbol('MQTT_CLIENT_FACTORY');
 
@@ -55,15 +62,34 @@ export function resolveBrokerUrl(url: string, tls: boolean): string {
 }
 
 /**
+ * Synchronous SSRF check on the broker URL (P0-1, defence-in-depth): scheme
+ * allowlist + private/loopback/metadata IP-LITERAL rejection. Hostnames are
+ * DNS-checked by the authoritative async guard in MqttService.mqttConfig()
+ * (this factory is sync, so it cannot resolve). Escape hatch:
+ * `STREAMHUB_ALLOW_PRIVATE_MQTT_BROKER=1` (default off) for on-prem brokers —
+ * it skips only the private-address check, never the scheme allowlist.
+ * Throws; MqttService.ensureClient catches + logs and builds no client.
+ */
+export function assertSafeBrokerUrl(url: string): void {
+  assertSafeEgressUrlSync(url, {
+    allowedSchemes: MQTT_SCHEMES,
+    label: 'MQTT broker URL',
+    allowPrivate: envFlag(process.env[ALLOW_PRIVATE_MQTT_BROKER_ENV]),
+  });
+}
+
+/**
  * Production factory: `mqtt.connect` with auto-reconnect on. Lazy-requires the
  * package so merely importing this file (e.g. from a spec) costs nothing.
  */
 export const defaultMqttClientFactory: MqttClientFactory = (opts) => {
+  const target = resolveBrokerUrl(opts.url, opts.tls);
+  assertSafeBrokerUrl(target);
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const mqtt = require('mqtt') as {
     connect: (url: string, o: object) => MqttClientLike;
   };
-  return mqtt.connect(resolveBrokerUrl(opts.url, opts.tls), {
+  return mqtt.connect(target, {
     clientId: opts.clientId,
     clean: true,
     reconnectPeriod: opts.reconnectPeriodMs,

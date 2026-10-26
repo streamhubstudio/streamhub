@@ -114,15 +114,15 @@ export class LogsService
     // ordered and avoids worker-thread transports (the framework logger handles
     // pretty-printing for HTTP logs separately).
     this.console = pino(
-      { level: 'trace', base: { service: 'streamhub-core' } },
+      { level: 'trace', base: { service: 'skyline-core' } },
       pino.destination({ fd: 1, sync: true }),
     );
 
     this.file = new RotatingFileStream({
       dir: path.join(this.config.dataDir, 'logs'),
       baseName: 'streamhub',
-      // Extra legacy base names (from a previous rename) still count for retention.
-      legacyBaseNames: [],
+      // Old rotated files from before the rename still count for retention.
+      legacyBaseNames: ['skyline'],
       maxBytes: this.int(process.env.LOG_MAX_BYTES, 10 * 1024 * 1024),
       maxFiles: this.int(process.env.LOG_MAX_FILES, 10),
       maxAgeDays: this.config.logRetentionDays,

@@ -164,8 +164,8 @@ export default function MeetingRoom({ app, room, onError }: MeetingRoomProps) {
       </header>
 
       {/* Stage + chat */}
-      <div className="flex min-h-0 flex-1">
-        <div className="relative min-w-0 flex-1 bg-gray-900/40">
+      <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+        <div className="relative min-h-0 min-w-0 flex-1 bg-gray-900/40">
           {tracks.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-gray-500">
               {t('stage.waiting')}

@@ -10,6 +10,7 @@ import {
 import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
 import { DbSizesService } from '../../shared/db/db-sizes.service';
+import { getAppVersion } from './app-version';
 
 export interface HealthStatus {
   status: 'ok';
@@ -109,7 +110,9 @@ export class HealthService {
   }
 
   private get version(): string {
-    return process.env.npm_package_version ?? '0.1.0';
+    // Real product version (repo-root VERSION file, cached at boot) — NOT the
+    // streamhub-core package.json 0.1.0. See modules/health/app-version.ts.
+    return getAppVersion();
   }
 
   health(): HealthStatus {

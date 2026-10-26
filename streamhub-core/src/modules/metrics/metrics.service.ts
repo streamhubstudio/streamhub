@@ -12,6 +12,12 @@ import {
 import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
 import { QuotasService } from '../quotas/quotas.service';
+import {
+  assignmentCounts,
+  eligibleCounts,
+  nodeMetrics,
+  type RawClusterNodeRow,
+} from './cluster-metrics';
 
 const PREFIX = 'streamhub_';
 
@@ -93,6 +99,18 @@ export class MetricsService {
   private readonly tenantQuota: Gauge<string>;
   private readonly tenantUsage: Gauge<string>;
   private readonly appsTotal: Gauge<string>;
+
+  // -- cluster / edge nodes (master-side, DB-derived — SPEC cluster) ---------
+  private readonly clusterNodeUp: Gauge<string>;
+  private readonly clusterNodeCpuRatio: Gauge<string>;
+  private readonly clusterNodeMemUsedRatio: Gauge<string>;
+  private readonly clusterNodeDiskUsedRatio: Gauge<string>;
+  private readonly clusterNodeGpu: Gauge<string>;
+  private readonly clusterNodeVramFreeMb: Gauge<string>;
+  private readonly clusterNodeWeight: Gauge<string>;
+  private readonly edgeAssignments: Gauge<string>;
+  private readonly edgePendingAssignments: Gauge<string>;
+  private readonly edgeEligibleNodes: Gauge<string>;
 
   // -- generic errors -------------------------------------------------------
   private readonly errors: Counter<string>;
@@ -220,6 +238,69 @@ export class MetricsService {
       name: `${PREFIX}apps`,
       help: 'Registered apps, by tenant.',
       labelNames: ['tenant'],
+      registers,
+    });
+
+    // Cluster/edge gauges are refreshed per scrape from `nodes` +
+    // `edge_assignments` (edge nodes are behind NAT — the master is the only
+    // place their telemetry lives, so it re-exports it here).
+    this.clusterNodeUp = new Gauge({
+      name: `${PREFIX}cluster_node_up`,
+      help: 'Whether a cluster node is up (last heartbeat within the stale window), by node and type.',
+      labelNames: ['node', 'type'],
+      registers,
+    });
+    this.clusterNodeCpuRatio = new Gauge({
+      name: `${PREFIX}cluster_node_cpu_ratio`,
+      help: 'Node CPU load ratio (load1/cores) from its last telemetry blob.',
+      labelNames: ['node'],
+      registers,
+    });
+    this.clusterNodeMemUsedRatio = new Gauge({
+      name: `${PREFIX}cluster_node_mem_used_ratio`,
+      help: 'Node used-memory ratio (0..1) from its last telemetry blob.',
+      labelNames: ['node'],
+      registers,
+    });
+    this.clusterNodeDiskUsedRatio = new Gauge({
+      name: `${PREFIX}cluster_node_disk_used_ratio`,
+      help: 'Node used-disk ratio (0..1) from its last telemetry blob.',
+      labelNames: ['node'],
+      registers,
+    });
+    this.clusterNodeGpu = new Gauge({
+      name: `${PREFIX}cluster_node_gpu`,
+      help: 'Whether the node advertises a usable GPU (1/0).',
+      labelNames: ['node'],
+      registers,
+    });
+    this.clusterNodeVramFreeMb = new Gauge({
+      name: `${PREFIX}cluster_node_vram_free_mb`,
+      help: 'Node free VRAM in MB (advertised GPU nodes only).',
+      labelNames: ['node'],
+      registers,
+    });
+    this.clusterNodeWeight = new Gauge({
+      name: `${PREFIX}cluster_node_weight`,
+      help: 'Node scheduling weight (share for the weighted policy).',
+      labelNames: ['node'],
+      registers,
+    });
+    this.edgeAssignments = new Gauge({
+      name: `${PREFIX}edge_assignments`,
+      help: 'Edge worker assignments by lifecycle status.',
+      labelNames: ['status'],
+      registers,
+    });
+    this.edgePendingAssignments = new Gauge({
+      name: `${PREFIX}edge_pending_assignments`,
+      help: 'Edge assignments parked pending (no eligible node).',
+      registers,
+    });
+    this.edgeEligibleNodes = new Gauge({
+      name: `${PREFIX}edge_eligible_nodes`,
+      help: 'Up + active placeable nodes the scheduler could take work on, split by GPU.',
+      labelNames: ['gpu'],
       registers,
     });
 
@@ -356,6 +437,7 @@ export class MetricsService {
   /** Render the exposition format, refreshing DB-derived gauges first. */
   async scrape(): Promise<string> {
     this.refreshDbGauges();
+    this.refreshClusterGauges();
     return this.registry.metrics();
   }
 
@@ -439,6 +521,78 @@ export class MetricsService {
         }
       }
     }
+  }
+
+  /**
+   * Recompute the cluster/edge gauges from the GLOBAL `nodes` + `edge_assignments`
+   * tables. Edge nodes are behind NAT (no direct scrape), so their telemetry —
+   * persisted to `nodes.stats_json` on every heartbeat — is re-exported here from
+   * the master. Fully defensive: the stats blob is operator/edge-fed, so a missing
+   * table or a garbage blob degrades to skipped series, never a failed scrape.
+   */
+  private refreshClusterGauges(): void {
+    this.clusterNodeUp.reset();
+    this.clusterNodeCpuRatio.reset();
+    this.clusterNodeMemUsedRatio.reset();
+    this.clusterNodeDiskUsedRatio.reset();
+    this.clusterNodeGpu.reset();
+    this.clusterNodeVramFreeMb.reset();
+    this.clusterNodeWeight.reset();
+    this.edgeAssignments.reset();
+    this.edgeEligibleNodes.reset();
+    // Pending is a scalar the "no capacity" alert reads — always publish a number.
+    this.edgePendingAssignments.set(0);
+
+    const now = Date.now();
+    try {
+      const rows = this.db
+        .global()
+        .prepare(
+          'SELECT name, type, weight, status, last_seen_at, stats_json FROM nodes',
+        )
+        .all() as RawClusterNodeRow[];
+      const metrics = rows.map((r) => nodeMetrics(r, now));
+      for (const m of metrics) {
+        this.clusterNodeUp.set({ node: m.node, type: m.type }, m.up);
+        this.clusterNodeGpu.set({ node: m.node }, m.gpu);
+        this.clusterNodeWeight.set({ node: m.node }, m.weight);
+        if (m.cpuRatio != null)
+          this.clusterNodeCpuRatio.set({ node: m.node }, m.cpuRatio);
+        if (m.memUsedRatio != null)
+          this.clusterNodeMemUsedRatio.set({ node: m.node }, m.memUsedRatio);
+        if (m.diskUsedRatio != null)
+          this.clusterNodeDiskUsedRatio.set({ node: m.node }, m.diskUsedRatio);
+        if (m.vramFreeMb != null)
+          this.clusterNodeVramFreeMb.set({ node: m.node }, m.vramFreeMb);
+      }
+      const eligible = eligibleCounts(metrics, this.allowCommonNodes());
+      this.edgeEligibleNodes.set({ gpu: 'true' }, eligible.gpuTrue);
+      this.edgeEligibleNodes.set({ gpu: 'false' }, eligible.gpuFalse);
+    } catch (err) {
+      this.logger.debug(`metrics: cluster node gauges failed: ${String(err)}`);
+    }
+
+    try {
+      const rows = this.db
+        .global()
+        .prepare('SELECT status FROM edge_assignments')
+        .all() as { status: string | null }[];
+      const counts = assignmentCounts(rows);
+      for (const [status, n] of Object.entries(counts.byStatus)) {
+        this.edgeAssignments.set({ status }, n);
+      }
+      this.edgePendingAssignments.set(counts.pending);
+    } catch (err) {
+      this.logger.debug(`metrics: edge assignment gauges failed: ${String(err)}`);
+    }
+  }
+
+  /** Whether `common` (full media) nodes are placeable (STREAMHUB_EDGE_ALLOW_COMMON). */
+  private allowCommonNodes(): boolean {
+    const raw = (this.config.env('STREAMHUB_EDGE_ALLOW_COMMON') ?? '')
+      .trim()
+      .toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'on' || raw === 'yes';
   }
 
   /** Read the app registry; tolerate the tenant_id column being absent. */

@@ -195,10 +195,17 @@ body {
   @apply antialiased;
   font-family: var(--font-sans);
   color: var(--sh-fg);
+  /* `body`'s background paints the whole scrollable canvas, not just its own
+     box — on a long page (Logs, Audit, Backups…) the default `repeat` tiled
+     these two finite-sized radial glows down the page every ~600/500px.
+     `no-repeat` + `fixed` renders each glow once, pinned to the viewport
+     corner it was designed for, so it never re-tiles while scrolling. */
   background:
     radial-gradient(1200px 600px at 80% -10%, var(--sh-glow-1), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, var(--sh-glow-2), transparent 55%),
     var(--sh-bg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 /* Frosted card used across the app. */

@@ -28,11 +28,13 @@ function makeAppConfig(over: {
   transcoding?: Partial<NonNullable<AppConfig['transcoding']>>;
   rtmp?: Partial<AppConfig['rtmp']>;
   webrtc?: Partial<AppConfig['webrtc']>;
+  timezone?: string;
 } = {}): AppConfig {
   return {
     name: APP,
     displayName: 'Live',
     roomPrefix: 'live',
+    timezone: over.timezone,
     recording: {
       enabled: true,
       mode: 'room-composite',
@@ -117,6 +119,23 @@ describe('TranscodingService', () => {
         hwaccel: 'auto',
       });
       expect(view.transcoding.hwaccelResolved.effective).toBe('cpu');
+      // Recording naming + retention + variables are surfaced for the config UI.
+      expect(view.recording).toMatchObject({
+        filenameTemplate: '',
+        snapshotTemplate: '',
+        retentionDays: 0,
+      });
+      expect(view.variables).toEqual({});
+      // Owner item 11: absent AppConfig.timezone → empty (server default).
+      expect(view.timezone).toBe('');
+    });
+
+    it('surfaces the app timezone when configured', async () => {
+      apps.getConfig.mockResolvedValue(
+        makeAppConfig({ timezone: 'America/Argentina/Buenos_Aires' }),
+      );
+      const view = await svc.getConfigView(APP);
+      expect(view.timezone).toBe('America/Argentina/Buenos_Aires');
     });
 
     it('surfaces an opted-in config (h264+vp8 + adaptive VOD ladder)', async () => {

@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { api, ApiRequestError, type LogEntry, type LogLevel } from '@/api'
 import { Alert, Button, Card, Input, Pagination } from '@/ui'
+import { formatDateTime } from '@/lib/datetime'
 
 const LEVELS: LogLevel[] = ['info', 'warn', 'error']
 const PAGE_SIZE = 100
@@ -173,7 +174,7 @@ export default function Logs() {
                   {/* Meta wraps inline on mobile; becomes fixed columns from md up. */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 md:contents">
                     <span className="text-slate-500 md:w-44 md:shrink-0">
-                      {field(entry, 'ts', 'time')}
+                      {formatDateTime(field(entry, 'ts', 'time'))}
                     </span>
                     <span className={`shrink-0 md:w-12 ${levelClass(lvl)}`}>
                       {lvl.toUpperCase()}

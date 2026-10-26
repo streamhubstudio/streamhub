@@ -1,0 +1,60 @@
+{
+  "status": {
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "filter": {
+    "all": "All ({{count}})",
+    "online": "Online ({{count}})",
+    "offline": "Offline ({{count}})"
+  },
+  "metric": {
+    "cpu": "CPU",
+    "mem": "RAM",
+    "temp": "Temp",
+    "uptime": "Uptime",
+    "cameras": "Cameras",
+    "disk": "Disk"
+  },
+  "agent": {
+    "noVersion": "unknown",
+    "seen": "seen {{age}} ago"
+  },
+  "empty": "No agents yet. Enable the fleet plugin and point your StreamHub Agents at this app's MQTT broker.",
+  "error": {
+    "load": "Could not load agents"
+  },
+  "detail": {
+    "pick": "Select an agent to see its history and controls.",
+    "close": "Close",
+    "control": "Remote control",
+    "commands": "Recent commands",
+    "noCommands": "No commands sent yet."
+  },
+  "action": {
+    "ping": "Ping",
+    "restart": "Restart",
+    "ota": "OTA update",
+    "config": "Push config"
+  },
+  "ota": {
+    "version": "Target version (e.g. 1.13)",
+    "url": "Build URL",
+    "sha256": "SHA-256 (64 hex)",
+    "submit": "Send OTA",
+    "note": "The agent downloads the build, verifies the SHA-256, atomically replaces itself and restarts (auto-rollback on a failed boot)."
+  },
+  "config": {
+    "submit": "Push config"
+  },
+  "cmd": {
+    "queued": "{{command}} queued ({{id}})",
+    "failed": "Command failed",
+    "badJson": "Config must be valid JSON"
+  },
+  "cmdStatus": {
+    "pending": "pending",
+    "ok": "ok",
+    "error": "error"
+  }
+}

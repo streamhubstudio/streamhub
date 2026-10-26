@@ -4,14 +4,12 @@ Runbook para levantar una instancia nueva desde cero: el **media server LiveKit*
 (SFU + Ingress RTMP/RTSP + Egress/grabación) y **StreamHub** (la capa de gestión estilo
 AntMedia: core NestJS que sirve también la SPA React), todo detrás de **un único dominio**.
 
-> Referencia: un VPS Ubuntu 24.04/26.04 con IP pública, deploy **plain-server**
-> (systemd + nginx + certbot), un único dominio (p. ej. `streamhub.example.com`).
-> Detalle de la API en `streamhub-docs/`; spec del producto en `streamhub-docs/SPEC.md`.
+> Detalle de la API en `https://streamhub.studio/docs/`; spec del producto en `https://streamhub.studio/docs/SPEC`.
 
 ## 0. Arquitectura (un dominio)
 
 ```
-                 streamhub.example.com  (nginx + TLS, 1 cert)
+                 streamhub.digitalhub.com.ar  (nginx + TLS, 1 cert)
    ┌──────────────────────────────────────────────────────────────────────┐
    │  location /rtc   → 127.0.0.1:7880   LiveKit signaling (wss, WebRTC)    │
    │  location /      → 127.0.0.1:3020   streamhub-core (NestJS): API + SPA   │
@@ -32,11 +30,11 @@ signaling (wss). Por eso con **un** registro DNS A `streamhub... → IP` alcanza
 
 ## 1. Prerrequisitos
 
-- Ubuntu 24.04/26.04, root o usuario con sudo (ej. `ubuntu`). IP pública.
+- Ubuntu 24.04/26.04 o Debian 12 (bookworm) / 13 (trixie), x86_64, root o usuario con sudo (ej. `ploi`). IP pública.
 - 1 registro DNS: `A  streamhub.<tu-dominio>  →  <IP>`  (**DNS-only**, sin proxy Cloudflare:
   el media WebRTC es UDP y no pasa por proxies HTTP).
 - Puertos a abrir en el firewall: **80, 443, 7880/tcp, 7881/tcp, 7882/udp, 1935/tcp, 3478/udp**.
-  (Con `ufw`: `ufw allow <puerto>/<proto>`.)
+  (En Ploi: network-rules con `type=tcp|udp`. Manual: `ufw allow <puerto>/<proto>`.)
 
 ## 2. LiveKit (redis + server + cli)
 
@@ -111,7 +109,7 @@ docker run -d --name egress --restart unless-stopped --network host --shm-size=1
 
 ```bash
 sudo apt-get install -y build-essential python3   # better-sqlite3 compila nativo
-# Node 20 (NodeSource) si no está:
+# Node 24 (NodeSource) si no está:
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash && sudo apt-get install -y nodejs
 
 mkdir -p /home/$USER/streamhub/{data,apps,logs}
@@ -231,8 +229,9 @@ location /    { proxy_pass http://127.0.0.1:3020; proxy_http_version 1.1;
   proxy_set_header X-Forwarded-Proto $scheme; proxy_read_timeout 86400s; }
 ```
 
-> **plain-server / SSL:** en un deploy **plain-server** la TLS la manejan **nginx + certbot**
-> propios. certbot deja su `certbot.timer` para renovar. Verificá: `systemctl list-timers | grep certbot`.
+> **plain-server / SSL:** en un Ploi **plain-server** NO hay sites/SSL gestionados por Ploi, así que
+> se usa **nginx + certbot** propios. certbot deja su `certbot.timer` para renovar (no rompe ningún
+> cron de Ploi porque no existe). Verificá: `systemctl list-timers | grep certbot`.
 >
 > Como nginx ahora sólo **proxea** a Node (no sirve archivos del `/home`), desaparece el gotcha de
 > permisos `0750`/`File not found` que aplicaba con php-fpm.
@@ -255,7 +254,7 @@ sudo systemctl restart streamhub-core
 
 > Hoy **no hay endpoint API** para setear el bloque S3/secrets de una app (se edita a mano). Es un
 > pendiente conocido (wave-3). El resto del ciclo de la app sí es por API (crear app, tokens, ingress,
-> recording, vods…); ver `streamhub-docs/api-app.md`.
+> recording, vods…); ver `https://streamhub.studio/docs/api-app`.
 
 **Flujo de grabación:** `POST /api/v1/apps/<app>/recording/start {roomName}` → egress room-composite
 → MP4 local en `apps/<app>/recordings/` → webhook `egress_ended` → sube a S3 → borra local → VOD

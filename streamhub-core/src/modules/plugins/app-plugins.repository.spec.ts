@@ -62,4 +62,43 @@ describe('AppPluginsRepository', () => {
     repo.install('live', 'watermark', {});
     expect(repo.list('other')).toEqual([]);
   });
+
+  describe('desired worker state', () => {
+    it('defaults to null (no intent recorded) on a fresh install', () => {
+      repo.install(APP, 'lpr', {});
+      expect(repo.get(APP, 'lpr')?.workerDesired).toBeNull();
+    });
+
+    it('records + reads back the desired state (round-trip on get + list)', () => {
+      repo.install(APP, 'lpr', {});
+      repo.setWorkerDesired(APP, 'lpr', 'running');
+      expect(repo.get(APP, 'lpr')?.workerDesired).toBe('running');
+      expect(repo.list(APP)[0].workerDesired).toBe('running');
+      repo.setWorkerDesired(APP, 'lpr', 'stopped');
+      expect(repo.get(APP, 'lpr')?.workerDesired).toBe('stopped');
+    });
+
+    it('setWorkerDesired on an unknown plugin is a no-op', () => {
+      expect(() => repo.setWorkerDesired(APP, 'ghost', 'running')).not.toThrow();
+      expect(repo.get(APP, 'ghost')).toBeNull();
+    });
+
+    it('adds the worker_desired column idempotently to a pre-existing app.db', () => {
+      // Simulate a legacy app.db: drop the column, then a repo read must
+      // transparently re-add it (no throw, NULL intent).
+      const db = ctx.db.appDb(APP);
+      db.exec('DROP TABLE IF EXISTS app_plugins');
+      db.exec(
+        `CREATE TABLE app_plugins (plugin_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1,
+           config_json TEXT, installed_at TEXT NOT NULL DEFAULT (datetime('now')),
+           updated_at TEXT NOT NULL DEFAULT (datetime('now')))`,
+      );
+      db.prepare("INSERT INTO app_plugins (plugin_id, enabled) VALUES ('lpr', 1)").run();
+      // Fresh repo (its ensured-cache is empty) → first access adds the column.
+      const fresh = new AppPluginsRepository(ctx.db);
+      expect(fresh.get(APP, 'lpr')?.workerDesired).toBeNull();
+      fresh.setWorkerDesired(APP, 'lpr', 'running');
+      expect(fresh.get(APP, 'lpr')?.workerDesired).toBe('running');
+    });
+  });
 });

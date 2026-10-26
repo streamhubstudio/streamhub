@@ -3,6 +3,7 @@ import {
   Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
+  Optional,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { IncomingMessage } from 'http';
@@ -10,6 +11,7 @@ import type { Server as HttpServer } from 'http';
 import type { Duplex } from 'stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 
+import { NetworkGuardService } from '../security/network-guard.service';
 import { WsIngestService, WsLikeSocket } from './ws-ingest.service';
 
 const INGEST_PATH = '/ingest/ws';
@@ -37,6 +39,7 @@ export class WsIngestGateway
   constructor(
     private readonly adapterHost: HttpAdapterHost,
     private readonly svc: WsIngestService,
+    @Optional() private readonly netGuard?: NetworkGuardService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -66,37 +69,81 @@ export class WsIngestGateway
       perMessageDeflate: false,
     });
 
-    server.on(
-      'upgrade',
-      (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-        const url = req.url ?? '';
-        const pathname = url.split('?')[0];
-        if (pathname === INGEST_PATH) {
-          this.ingestWss!.handleUpgrade(req, socket, head, (ws) => {
-            void this.svc.handleIngest(
-              ws as unknown as WsLikeSocket,
-              this.upgradeInfo(req),
-            );
-          });
-          return;
-        }
-        if (pathname === VIEWER_PATH) {
-          this.viewerWss!.handleUpgrade(req, socket, head, (ws) => {
-            void this.svc.handleViewer(
-              ws as unknown as WsLikeSocket,
-              this.upgradeInfo(req),
-            );
-          });
-          return;
-        }
-        // Not ours and nobody else handles upgrades on this server → close
-        // the socket instead of leaving it dangling.
-        socket.destroy();
-      },
-    );
+    server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+      this.routeUpgrade(req, socket, head);
+    });
     this.logger.log(
       `ws-ingest gateway listening on ${INGEST_PATH} (+ viewers on ${VIEWER_PATH})`,
     );
+  }
+
+  /**
+   * Route one HTTP `upgrade` for OUR two paths (camera ingest + viewer fan-out).
+   * Public for unit tests. Before accepting one of our upgrades it runs the
+   * network-security IP gate (Flag B — internal design notes): a banned /
+   * blocklisted peer is rejected with a bare HTTP 403 and the socket destroyed,
+   * so the auto-ban that covers the HTTP plane now also covers WS upgrades. Any
+   * other path is left to the cooperative multi-gateway reject.
+   */
+  routeUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
+    const pathname = (req.url ?? '').split('?')[0];
+    const isOurs = pathname === INGEST_PATH || pathname === VIEWER_PATH;
+
+    if (isOurs) {
+      const reason = this.netGuard?.rejectUpgradeReason(this.clientIp(req));
+      if (reason) {
+        this.rejectUpgrade(socket, reason);
+        return;
+      }
+    }
+
+    if (pathname === INGEST_PATH) {
+      this.ingestWss!.handleUpgrade(req, socket, head, (ws) => {
+        void this.svc.handleIngest(
+          ws as unknown as WsLikeSocket,
+          this.upgradeInfo(req),
+        );
+      });
+      return;
+    }
+    if (pathname === VIEWER_PATH) {
+      this.viewerWss!.handleUpgrade(req, socket, head, (ws) => {
+        void this.svc.handleViewer(
+          ws as unknown as WsLikeSocket,
+          this.upgradeInfo(req),
+        );
+      });
+      return;
+    }
+    // Not one of OUR paths. Another gateway (e.g. the edge WS control channel)
+    // hangs its own 'upgrade' listener off this same server and may still claim
+    // this socket — every listener runs for every upgrade. Defer the reject to
+    // the next tick and only destroy if nobody stamped the request as handled
+    // (cooperative multi-gateway upgrade routing).
+    setImmediate(() => {
+      const handled = (req as unknown as Record<string, boolean>)
+        .__streamhubUpgradeHandled;
+      if (!handled && !socket.destroyed) socket.destroy();
+    });
+  }
+
+  /** Reject a WS upgrade with a bare HTTP 403 and drop the socket. */
+  private rejectUpgrade(socket: Duplex, reason: string): void {
+    try {
+      socket.write(
+        'HTTP/1.1 403 Forbidden\r\n' +
+          'Connection: close\r\n' +
+          'Content-Length: 0\r\n\r\n',
+      );
+    } catch {
+      /* peer already gone */
+    }
+    try {
+      socket.destroy();
+    } catch {
+      /* already destroyed */
+    }
+    this.logger.warn(`ws upgrade rejected by network-security (${reason})`);
   }
 
   onApplicationShutdown(): void {
@@ -111,16 +158,20 @@ export class WsIngestGateway
   }
 
   private upgradeInfo(req: IncomingMessage) {
-    // Behind Caddy/nginx (trust proxy 1) the client IP rides X-Forwarded-For.
-    const fwd = req.headers['x-forwarded-for'];
-    const ip =
-      (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() ||
-      req.socket?.remoteAddress ||
-      undefined;
     return {
       url: req.url ?? '',
       authorization: req.headers.authorization,
-      ip,
+      ip: this.clientIp(req),
     };
+  }
+
+  /** Peer IP for the upgrade — X-Forwarded-For first (behind Caddy/nginx). */
+  private clientIp(req: IncomingMessage): string | undefined {
+    const fwd = req.headers['x-forwarded-for'];
+    return (
+      (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      undefined
+    );
   }
 }

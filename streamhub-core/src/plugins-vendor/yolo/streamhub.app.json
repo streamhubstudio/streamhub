@@ -1,0 +1,136 @@
+{
+  "manifestVersion": 1,
+  "id": "yolo",
+  "name": "YOLO Object Detection",
+  "description": "Runs a YOLO worker over the app's live stream, detecting COCO objects and POSTing bounding boxes to a callback URL.",
+  "category": "processor",
+  "ui": "player-overlay",
+  "version": "1.0.0",
+  "kind": "app",
+  "export": {
+    "workerDir": "yolo-worker"
+  },
+  "icon": "target",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "live",
+      "help": "HLS room name to analyze — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Model size",
+      "default": "nano",
+      "options": [
+        {
+          "value": "nano",
+          "label": "Nano (fastest, CPU-friendly)"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        },
+        {
+          "value": "xlarge",
+          "label": "XLarge (most accurate, GPU)"
+        }
+      ]
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "Callback URL",
+      "default": "",
+      "required": true,
+      "placeholder": "https://example.com/hooks/yolo",
+      "help": "POST {app, room, ts, detections:[{class,conf,bbox}]} per frame."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Confidence threshold",
+      "default": 0.35,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum detection confidence (0–1)."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 2,
+      "min": 0.1,
+      "max": 30,
+      "help": "Frames per second to sample from the stream (lower = less CPU)."
+    },
+    {
+      "key": "classes",
+      "type": "string",
+      "label": "Classes filter",
+      "default": "",
+      "placeholder": "person,car,dog (empty = all 80 COCO classes)",
+      "help": "Comma-separated COCO class names to keep; empty detects all."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m yolo_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "gpu": true,
+      "capabilities": [
+        "cuda",
+        "yolo"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "YOLO_APP": "{{app}}",
+      "YOLO_ROOM": "{{config.room}}",
+      "YOLO_MODEL": "{{ config.model | map:nano=yolov8n,small=yolov8s,medium=yolov8m,large=yolov8l,xlarge=yolov8x,*=yolov8n }}",
+      "YOLO_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "YOLO_CONFIDENCE": "{{config.confidence}}",
+      "YOLO_FPS": "{{config.fps}}",
+      "YOLO_CLASSES": "{{config.classes}}",
+      "YOLO_CALLBACK_URL": "{{config.callbackUrl}}",
+      "YOLO_HLS_DIR": "{{appDir}}/hls",
+      "YOLO_PUBLIC_BASE": "{{publicBase}}",
+      "YOLO_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true
+  }
+}

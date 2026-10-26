@@ -294,6 +294,90 @@ describe('AppsService', () => {
       // Registry row reflects the new display name.
       expect((await apps.get('upd'))?.displayName).toBe('Renamed');
     });
+
+    it('defaults recording templates + variables + retention to off on a fresh app', async () => {
+      await apps.create({ name: 'vars0' });
+      const cfg = await apps.getConfig('vars0');
+      expect(cfg.recording.filenameTemplate).toBe('');
+      expect(cfg.recording.snapshotTemplate).toBe('');
+      expect(cfg.recording.retentionDays).toBe(0);
+      expect(cfg.variables).toEqual({});
+    });
+
+    it('persists an allowed retentionDays and clamps a bad one to 0', async () => {
+      await apps.create({ name: 'ret' });
+      const ok = await apps.updateConfig('ret', {
+        recording: { retentionDays: 90 } as never,
+      });
+      expect(ok.recording.retentionDays).toBe(90);
+      // Out-of-set value → off (0).
+      const bad = await apps.updateConfig('ret', {
+        recording: { retentionDays: 45 } as never,
+      });
+      expect(bad.recording.retentionDays).toBe(0);
+    });
+
+    it('persists recording filename/snapshot templates via updateConfig', async () => {
+      await apps.create({ name: 'tpl' });
+      const cfg = await apps.updateConfig('tpl', {
+        recording: {
+          filenameTemplate: '${app}_${room}_${ts}',
+          snapshotTemplate: '${room}_snap',
+        } as never,
+      });
+      expect(cfg.recording.filenameTemplate).toBe('${app}_${room}_${ts}');
+      expect(cfg.recording.snapshotTemplate).toBe('${room}_snap');
+      // Survives a reload (persisted to disk).
+      expect((await apps.getConfig('tpl')).recording.filenameTemplate).toBe(
+        '${app}_${room}_${ts}',
+      );
+    });
+
+    it('CRUD variables via updateConfig: replace whole map, drop unusable keys', async () => {
+      await apps.create({ name: 'vars' });
+      let cfg = await apps.updateConfig('vars', {
+        variables: { site: 'HQ', channel: 'main', 'bad key!': 'x' },
+      });
+      // Unusable key (space/!) is dropped; good keys kept.
+      expect(cfg.variables).toEqual({ site: 'HQ', channel: 'main' });
+      // Whole-map REPLACE: sending a smaller map deletes the missing keys.
+      cfg = await apps.updateConfig('vars', { variables: { site: 'DC' } });
+      expect(cfg.variables).toEqual({ site: 'DC' });
+    });
+
+    describe('timezone (owner item 11)', () => {
+      it('defaults to empty (server/host local time) on a fresh app', async () => {
+        await apps.create({ name: 'tz0' });
+        const cfg = await apps.getConfig('tz0');
+        expect(cfg.timezone).toBe('');
+      });
+
+      it('persists a valid IANA timezone and survives a reload', async () => {
+        await apps.create({ name: 'tz1' });
+        const cfg = await apps.updateConfig('tz1', {
+          timezone: 'America/Argentina/Buenos_Aires',
+        });
+        expect(cfg.timezone).toBe('America/Argentina/Buenos_Aires');
+        expect((await apps.getConfig('tz1')).timezone).toBe(
+          'America/Argentina/Buenos_Aires',
+        );
+      });
+
+      it('clamps a garbage timezone to empty (fail-safe, never throws)', async () => {
+        await apps.create({ name: 'tz2' });
+        const cfg = await apps.updateConfig('tz2', {
+          timezone: 'Not/AZone' as never,
+        });
+        expect(cfg.timezone).toBe('');
+      });
+
+      it('an explicit empty string clears a previously-set timezone', async () => {
+        await apps.create({ name: 'tz3' });
+        await apps.updateConfig('tz3', { timezone: 'Europe/Madrid' });
+        const cleared = await apps.updateConfig('tz3', { timezone: '' });
+        expect(cleared.timezone).toBe('');
+      });
+    });
   });
 
   // ===========================================================================

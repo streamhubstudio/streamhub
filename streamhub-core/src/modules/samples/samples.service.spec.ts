@@ -72,7 +72,9 @@ describe('SamplesService', () => {
     it('resolves the {{APP}} / {{ROOM}} placeholders to the target app', async () => {
       await samples.generate('alpha');
       const html = onDisk('alpha', 'webrtc-publish.html');
-      expect(html).toContain("const APP = 'alpha';");
+      // Config-aware block: `CFG.app` (window.STREAMHUB_CONFIG, set by a bundle's
+      // config.js) wins; the baked literal is the fallback for the served page.
+      expect(html).toContain("const APP = CFG.app || 'alpha';");
       // No unresolved template tokens remain for known keys.
       expect(html).not.toContain('{{APP}}');
       expect(html).not.toContain('{{ROOM}}');
@@ -210,7 +212,7 @@ describe('SamplesService', () => {
       );
       const betaHtml = await samples.read('beta', 'webrtc-publish.html');
       expect(betaHtml).not.toContain('ALPHA-ONLY');
-      expect(betaHtml).toContain("const APP = 'beta';");
+      expect(betaHtml).toContain("const APP = CFG.app || 'beta';");
     });
 
     it('regenerating one app does not clobber another app\'s edits', async () => {
@@ -223,7 +225,7 @@ describe('SamplesService', () => {
       );
       // Beta was regenerated cleanly.
       expect(await samples.read('beta', 'hls-player.html')).toContain(
-        "const APP = 'beta';",
+        "const APP = CFG.app || 'beta';",
       );
     });
 
@@ -233,8 +235,8 @@ describe('SamplesService', () => {
         true,
       );
       // beta has its own independent copy (different resolved APP constant).
-      expect(onDisk('alpha', 'audio-radio.html')).toContain("const APP = 'alpha';");
-      expect(onDisk('beta', 'audio-radio.html')).toContain("const APP = 'beta';");
+      expect(onDisk('alpha', 'audio-radio.html')).toContain("const APP = CFG.app || 'alpha';");
+      expect(onDisk('beta', 'audio-radio.html')).toContain("const APP = CFG.app || 'beta';");
     });
   });
 });

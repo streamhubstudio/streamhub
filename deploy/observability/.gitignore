@@ -1,4 +1,6 @@
 # El .gitignore raíz ya ignora **/.env; acá sólo lo específico de este stack:
 # el METRICS_TOKEN real (nunca commitear) y el textfile collector runtime.
 secrets/metrics_token
+# Tokens por-nodo del modo cluster (si la flota NO comparte METRICS_TOKEN):
+secrets/metrics_token_*
 textfile/*.prom

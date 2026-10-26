@@ -12,7 +12,9 @@
     "recordStop": "No se pudo detener la grabación.",
     "hlsStart": "No se pudo iniciar el HLS.",
     "hlsStop": "No se pudo detener el HLS.",
-    "load": "No se pudieron cargar los streams."
+    "load": "No se pudieron cargar los streams.",
+    "kick": "No se pudo expulsar al publisher.",
+    "mute": "No se pudo silenciar/reactivar al publisher."
   },
   "table": {
     "stream": "Stream",
@@ -37,17 +39,72 @@
     "stopRecording": "Detener grabación",
     "starting": "Iniciando…",
     "record": "Grabar",
-    "stopStream": "Detener stream"
+    "stopStream": "Detener stream",
+    "kick": "Expulsar",
+    "mute": "Silenciar mic",
+    "unmute": "Reactivar mic",
+    "muting": "Silenciando…",
+    "kicking": "Expulsando…",
+    "plugins": "Studio",
+    "tags": "Etiquetas",
+    "more": "Más acciones"
   },
   "confirmStopStream": "¿Detener el stream {{id}}?",
+  "share": {
+    "button": "Compartir",
+    "title": "Compartir este stream",
+    "playerUrl": "URL del player",
+    "iframe": "Embed (iframe)",
+    "hlsUrl": "URL HLS (.m3u8)",
+    "videojs": "Snippet video.js",
+    "signedEmbed": "Embed firmado (temporal)",
+    "signedEmbedHelp": "Iframe con token — necesario para apps con reproducción privada.",
+    "signing": "Firmando…",
+    "signError": "Falló"
+  },
   "modal": {
     "room": "Sala"
+  },
+  "plugins": {
+    "modalTitle": "Apps de Studio del stream",
+    "title": "Apps de Studio de este stream",
+    "help": "Por defecto este stream se ve afectado por todos los apps de Studio habilitados en la app. Desactivá uno para excluir SOLO a este stream — los demás lo conservan.",
+    "affected": "Afectado",
+    "optedOut": "Excluido",
+    "empty": "No hay apps de Studio que afecten streams habilitados en esta app.",
+    "loading": "Cargando apps de Studio…",
+    "loadError": "No se pudieron cargar los apps de Studio de este stream.",
+    "saveError": "No se pudo guardar la configuración de apps de Studio.",
+    "save": "Guardar",
+    "saving": "Guardando…"
+  },
+  "tags": {
+    "modalTitle": "Etiquetas del stream",
+    "title": "Etiquetas de este stream",
+    "help": "Aplicá o quitá etiquetas de la app a este stream. Guardá para aplicar los cambios.",
+    "empty": "Esta app todavía no tiene etiquetas. Creá una abajo para aplicarla.",
+    "loading": "Cargando etiquetas…",
+    "loadError": "No se pudieron cargar las etiquetas del stream.",
+    "saveError": "No se pudieron guardar las etiquetas.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "createTitle": "Crear una etiqueta nueva",
+    "slug": "Slug",
+    "label": "Nombre",
+    "create": "Crear",
+    "creating": "Creando…",
+    "createError": "No se pudo crear la etiqueta."
   },
   "hls": {
     "liveTitle": "HLS en vivo",
     "latency": "~6-15s de latencia",
     "playlistUrl": "URL del playlist (.m3u8)",
     "embed": "Embed (HTML)",
-    "embedHelp": "Pegalo en cualquier web (video.js por CDN). En Safari/iOS el `.m3u8` también reproduce de forma nativa."
-  }
+    "embedHelp": "Pegalo en cualquier web (video.js por CDN). En Safari/iOS el `.m3u8` también reproduce de forma nativa.",
+    "embedHelpProvider": "Iframe del reproductor completo — embebe la página pública del player (usa el player activo de la app). Copialo donde quieras.",
+    "playerLabel": "Reproductor",
+    "providerPlayer": "Reproductor avanzado",
+    "builtinPlayer": "Video.js"
+  },
+  "confirmKick": "¿Expulsar al publisher {{id}} de la sala? Puede volver a entrar con un token válido."
 }

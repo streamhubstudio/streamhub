@@ -1,0 +1,82 @@
+{
+  "loading": "Loading…",
+  "enabled": "on",
+  "disabled": "off",
+  "today": "today",
+  "activeStreams": "Active streams",
+  "assignmentsLabel": "Edge assignments",
+  "status": "Status",
+  "section": {
+    "overview": "Overview",
+    "streams": "Streams",
+    "events": "Events"
+  },
+  "model": {
+    "occupancy": "Occupancy",
+    "counting": "Counting",
+    "crowd": "Crowd",
+    "demography": "Demography"
+  },
+  "noStreams": "No active streams. Start publishing to a room to configure this app on it.",
+  "configure": "Configure",
+  "smallScreenHint": "Tip: zones and lines are best drawn on a larger screen.",
+  "editSettings": "Edit settings",
+  "backToStreams": "Back to streams",
+  "actions": {
+    "edit": "Edit",
+    "done": "Done",
+    "addZone": "Add zone",
+    "addLine": "Add line",
+    "addRoi": "Add region",
+    "addPoi": "Add POI",
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "savedOk": "Saved",
+  "savedErr": "Save failed",
+  "hint": {
+    "zones": "Click on the video to add polygon points; drag a point to move it.",
+    "lines": "Drag on the video to draw the counting line; grab an endpoint to adjust. Add POIs to only count crossings inside a region.",
+    "roi": "Draw one or more POIs — clicks add polygon points; drag a point to move it. A face is tagged by the POI it falls in."
+  },
+  "zones": "Zones",
+  "lines": "Lines",
+  "pois": "POIs",
+  "noPois": "No POIs — the whole frame is used.",
+  "noShapes": "None yet — add one to start.",
+  "detect": "Detects",
+  "personas": "People",
+  "vehiculos": "Vehicles",
+  "inside": "Inside side",
+  "side": {
+    "top": "Top",
+    "bottom": "Bottom",
+    "left": "Left",
+    "right": "Right"
+  },
+  "tag": "Tag",
+  "noTag": "No tag",
+  "remove": "Remove",
+  "fps": "FPS",
+  "demography": {
+    "title": "Region & engine",
+    "engine": "Engine",
+    "engineOpt": {
+      "local": "Local (InsightFace)",
+      "openai": "OpenAI vision API",
+      "deepseek": "DeepSeek vision API"
+    },
+    "interval": "Interval (seconds)",
+    "roiSet": "Region of interest set",
+    "roiNone": "Whole frame (no region)",
+    "roiHint": "Optional — draw one or more POIs to restrict + tag reads by region (whole frame when none)."
+  },
+  "noEvents": "No events recorded yet.",
+  "col": {
+    "event": "Event",
+    "room": "Room",
+    "tag": "Tag",
+    "detail": "Detail",
+    "ts": "Time"
+  }
+}

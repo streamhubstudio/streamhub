@@ -1,0 +1,6 @@
+Input #0, mpegts, from 'seg-00007.ts':
+  Duration: 00:00:04.00, start: 1.400000, bitrate: 4610 kb/s
+  Program 1
+    Stream #0:0[0x100]: Video: h264 (High) ([27][0][0][0] / 0x001B), yuv420p(progressive), 1920x1080, 25 fps, 25 tbr, 90k tbn
+Output #0, null, to 'pipe:':
+Output file #0 does not contain any stream

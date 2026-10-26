@@ -1,0 +1,94 @@
+{
+  "manifestVersion": 1,
+  "id": "occupancy",
+  "name": "Occupancy — Zone Dwell & Sessions",
+  "description": "Tracks people in per-stream polygon zones (YOLO11 + ByteTrack) and emits dwell sessions + over-limit alerts — co-located or distributed on edge nodes.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.1",
+  "kind": "app",
+  "icon": "eye",
+  "compat": {
+    "core": ">=2.23 <3"
+  },
+  "storage": {
+    "db": "occupancy.db"
+  },
+  "export": {
+    "workerDir": "vision-edge-runtime"
+  },
+  "events": [
+    "occupancy.session_started",
+    "occupancy.session_ended",
+    "occupancy.alert"
+  ],
+  "configSchema": [
+    {
+      "key": "device",
+      "type": "select",
+      "label": "Inference device",
+      "default": "cpu",
+      "options": [
+        {
+          "value": "cpu",
+          "label": "CPU (portable)"
+        },
+        {
+          "value": "cuda",
+          "label": "CUDA GPU (recommended for multi-stream)"
+        }
+      ],
+      "help": "Where the model runs. Edge nodes advertise their own GPU capacity."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 3.5,
+      "min": 0.5,
+      "max": 30,
+      "help": "Fixed sampling cadence for the tracking pipeline."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Detection confidence",
+      "default": 0.35,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum detection confidence (0–1) applied when a zone does not override it."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m vision_edge --model occupancy",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "VISION_APP": "{{app}}",
+      "VISION_MODEL": "occupancy",
+      "VISION_MODE": "{{ originUrl | ternary:edge:worker-manager }}",
+      "VISION_DEVICE": "{{ config.device | map:cuda=cuda,*=cpu }}",
+      "VISION_FPS": "{{ config.fps ?? '3.5' }}",
+      "VISION_CONFIDENCE": "{{ config.confidence ?? '0.35' }}",
+      "VISION_MODEL_DIR": "{{dataDir}}/models/vision",
+      "VISION_ROOM": "{{config.room}}",
+      "VISION_PUBLIC_BASE": "{{ originUrl ?? publicBase }}",
+      "VISION_HLS_DIR": "{{appDir}}/hls",
+      "VISION_LIVEKIT_URL": "{{livekitUrl}}",
+      "VISION_DATA_DIR": "{{appDir}}/occupancy",
+      "VISION_CONFIG_JSON": "{{config.settings}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true
+  }
+}

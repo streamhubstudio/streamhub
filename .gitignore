@@ -31,6 +31,13 @@ streamhub-web/dist/
 streamhub-adaptor/dist/
 streamhub-core/web/
 
+# release artifacts (make-release-artifact.sh / CI release stage)
+/dist/
+
+# app composition scratch (scripts/apps-pull.mjs). The composed Studio Apps
+# under */src/plugins-vendor/ ARE committed in this public tree.
+/vendor/
+
 # datos runtime del core (DB global + per-app apps/<app>/)
 streamhub-core/data/
 streamhub-core/apps/

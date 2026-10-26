@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   OnModuleInit,
@@ -13,6 +14,7 @@ import { signJwt } from '../../shared/auth';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { EmailService } from '../email/email.service';
 import { IpReputationService } from '../security/ip-reputation.service';
+import { NodeRoleService } from '../cluster/node-role.service';
 import { hashRandomPassword } from './password.util';
 import { TotpService } from './totp.service';
 import { SessionContext, SessionService } from './session.service';
@@ -101,6 +103,11 @@ export class MagicLinkService implements OnModuleInit {
     private readonly sessions: SessionService,
     /** Network-security sink (optional; recordOffense is fire-and-forget). */
     @Optional() private readonly reputation?: IpReputationService,
+    /**
+     * Cluster role (optional). Magic-link verify mints a session JWT, so it is a
+     * mint path: refused on a cluster EDGE (login is managed at the master).
+     */
+    @Optional() private readonly nodeRole?: NodeRoleService,
   ) {}
 
   /**
@@ -207,7 +214,15 @@ export class MagicLinkService implements OnModuleInit {
       .run(hash, email, ip ?? null, createdAt, expiresAt);
 
     const url = this.buildMagicUrl(token);
-    const res = await this.email.sendMagicLink(email, url);
+    // Owner item 29: when this email already belongs to a user with their own
+    // SMTP override configured, deliver THEIR sign-in link through it — a
+    // magic-link request is "mail the user initiates" (they clicked "email me
+    // a link"). A brand-new email has no user yet, so this simply falls
+    // through to the app/global default (no app context applies to login).
+    const holder = this.tenancy.getUserByEmail(email);
+    const res = await this.email.sendMagicLink(email, url, {
+      userId: holder?.id,
+    });
     if (!res.ok) {
       return {
         dispatched: false,
@@ -472,6 +487,10 @@ export class MagicLinkService implements OnModuleInit {
   // ---------------------------------------------------------------------------
 
   private requireSecret(): string {
+    // Mint path: an edge node never mints a session (login is at the master).
+    if (this.nodeRole?.isEdge()) {
+      throw new ForbiddenException('cluster_edge_login_disabled');
+    }
     const secret = this.config.jwtSecret;
     if (!secret) {
       this.logger.warn(

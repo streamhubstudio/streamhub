@@ -4,10 +4,12 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 import { getAuthCtx, RequestWithAuthCtx } from '../../shared/auth-context';
+import { actorFromCtx, AuditService, requestIp } from '../audit/audit.service';
 import { EnforcementMode, enforcementMode } from './authz.constants';
 import { AuthzService } from './authz.service';
 import {
@@ -48,6 +50,8 @@ export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authz: AuthzService,
+    /** Audit trail (ISO 8.15) — optional so bare-ctor unit specs keep working. */
+    @Optional() private readonly audit?: AuditService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -130,6 +134,16 @@ export class PermissionGuard implements CanActivate {
     reason: string,
   ): boolean {
     const where = `${req.method} ${req.originalUrl || req.url}`;
+    // Append the denial to the security audit trail (ISO 8.15/8.16). In 'log'
+    // mode the entry still records result:'deny' with meta.enforced=false so
+    // report-only rollouts leave the same evidence an auditor expects.
+    this.audit?.record({
+      action: 'authz.deny',
+      ...actorFromCtx(ctx),
+      ip: requestIp(req),
+      result: 'deny',
+      meta: { method: req.method, path: req.originalUrl || req.url, reason, enforced: mode === 'on' },
+    });
     if (mode === 'on') {
       this.logger.warn(`DENY ${where} — ${reason} (user=${ctx.userId})`);
       throw new ForbiddenException(reason);

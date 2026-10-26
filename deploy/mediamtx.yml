@@ -1,0 +1,107 @@
+# =============================================================================
+# StreamHub — MediaMTX config: single public RTMP port (:1935) ingest front.
+# OPERATOR-FACING. Verified against bluenviron/mediamtx v1.19.2.
+# -----------------------------------------------------------------------------
+# WHAT THIS DOES
+#   MediaMTX terminates EVERY RTMP publish on the one public port :1935 and does
+#   NOT itself decide the plane — it just notifies the StreamHub core, which
+#   classifies by the stream key and does the work:
+#     - auth:      POST core /internal/mediamtx/auth   → allow/deny the publish
+#     - on ready:  POST core /internal/mediamtx/ready  → the core inspects the
+#                  path. A `ptk_` key ⇒ passthrough remux (`ffmpeg -c copy` → HLS).
+#                  Otherwise (a real `live/<key>`) ⇒ the core arms the forward to
+#                  the LiveKit ingress on :11935.
+#     - on notready: POST core /internal/mediamtx/notready → the core tears down.
+#   MediaMTX runs NO ffmpeg here (the core owns every ffmpeg). It only fronts RTMP
+#   and fires the three loopback hooks. This is why there is no per-path `live`
+#   regex — the default seeded app is literally named `live`, so a passthrough
+#   push is `live/ptk_…`; letting the CORE classify (it keys on the `ptk_` prefix)
+#   avoids a regex mis-route that Go RE2 (no negative lookahead) can't express.
+#
+# SECRET + HOST
+#   All three hooks share STREAMHUB_MEDIAMTX_HOOK_SECRET. MediaMTX does NOT expand
+#   ${VARS} inside config VALUES (only inside runOn COMMANDS, and via MTX_* env
+#   overrides), so the two transports differ:
+#     - ready/notready: `runOn*` commands — the secret rides in a header that
+#       MediaMTX expands from the environment (${STREAMHUB_MEDIAMTX_HOOK_SECRET}).
+#     - auth: `authHTTPAddress` can't carry a custom header, so the secret goes in
+#       its query string, injected via the MTX_AUTHHTTPADDRESS env OVERRIDE
+#       (compose `environment:` / systemd `mediamtx.env`). The base URL below is a
+#       valid, secret-free default so this file validates on its own.
+#   The core host is 127.0.0.1 in BOTH shapes because MediaMTX runs host-networked
+#   (like every other media service) so it reaches the loopback-bound core (:3020)
+#   and LiveKit ingress (:11935) — a bridge network could not.
+#
+# HOOK EXECUTION: MediaMTX runs runOn* WITHOUT a shell (the string is split with
+#   shell-quoting rules and exec'd directly; $VARS are expanded by MediaMTX). So
+#   each hook is a SINGLE `wget` — no pipes/&&/;. `wget` is busybox in the
+#   compose `-ffmpeg` image (alpine) and GNU wget on a bare node; both accept the
+#   flags below. NOTE the plain `bluenviron/mediamtx` image is FROM scratch (no
+#   shell/wget) and CANNOT run these hooks — use a tag that ships wget.
+# =============================================================================
+
+logLevel: info
+logDestinations: [stdout]
+
+# --- Servers -----------------------------------------------------------------
+# RTMP is the ONLY public listener. Binds every interface on :1935.
+rtmp: true
+rtmpAddress: :1935
+rtmpEncryption: "no"          # TLS RTMPS stays on the separate stunnel front
+
+# Control API — LOOPBACK ONLY (never open :9997). REQUIRED, not optional: the
+# core queries GET /v3/paths/list on boot to re-arm remuxes/forwards for streams
+# that are already publishing. Keep it enabled and bound to 127.0.0.1.
+api: true
+apiAddress: 127.0.0.1:9997
+
+# Everything else OFF: StreamHub serves HLS itself from DATA_DIR (via the core),
+# so MediaMTX's own HLS/RTSP/WebRTC/SRT muxers, metrics and debug servers are all
+# disabled to keep the surface minimal.
+metrics: false
+pprof: false
+playback: false
+# MoQ ships ENABLED by default in v1.19 (listeners on :8892 + auto-generated TLS
+# cert in cwd) — off, like every transport we don't serve from MediaMTX.
+moq: false
+rtsp: false
+hls: false
+webrtc: false
+srt: false
+
+# --- Authentication ----------------------------------------------------------
+# Delegate every publish/read decision to the core over loopback. The core keys
+# on the path (`ptk_` ⇒ passthrough, `live/<key>` ⇒ LiveKit) and validates the
+# passthrough key on publish. authMethod=http requires a non-empty http(s)
+# authHTTPAddress: the base below is secret-free (valid standalone); the
+# secret-bearing URL (`…/auth?secret=<secret>`) is injected at deploy time via
+# the MTX_AUTHHTTPADDRESS env override. api/metrics/pprof are excluded so the
+# local control API isn't gated by the external auth.
+authMethod: http
+authHTTPAddress: http://127.0.0.1:3020/api/v1/internal/mediamtx/auth
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+# --- Path defaults: ONE global pair of hooks for EVERY publish ---------------
+pathDefaults:
+  source: publisher           # streams are pushed in by an RTMP client
+
+  # Publish became ready → tell the core (which arms the remux OR the LiveKit
+  # forward, per the path). $MTX_PATH = the full publish path; the secret rides
+  # in the X-MediaMTX-Secret header (expanded from the environment).
+  runOnReady: |-
+    wget -q -O /dev/null -T 5 --header 'Content-Type: application/json' --header 'X-MediaMTX-Secret: ${STREAMHUB_MEDIAMTX_HOOK_SECRET}' --post-data '{"path":"$MTX_PATH"}' http://127.0.0.1:3020/api/v1/internal/mediamtx/ready
+  # Publish ended → tell the core to tear the flow down.
+  runOnNotReady: |-
+    wget -q -O /dev/null -T 5 --header 'Content-Type: application/json' --header 'X-MediaMTX-Secret: ${STREAMHUB_MEDIAMTX_HOOK_SECRET}' --post-data '{"path":"$MTX_PATH"}' http://127.0.0.1:3020/api/v1/internal/mediamtx/notready
+  # The hooks are one-shot POSTs — never loop-restart them.
+  runOnReadyRestart: false
+
+# --- Paths -------------------------------------------------------------------
+paths:
+  # Catch-all: every publish (`live/<key>`, `<app>/ptk_<key>`, …) uses the
+  # pathDefaults hooks above; the CORE classifies and the auth hook allows or
+  # rejects. Required — MediaMTX refuses a publish whose path matches NO entry.
+  all_others:

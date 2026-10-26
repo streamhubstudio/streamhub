@@ -25,7 +25,7 @@ import { createReadStream } from 'fs';
 import type { Response } from 'express';
 import { AppStats, AppStatsService } from './app-stats.service';
 import { RecordingService, VodDetail } from './recording.service';
-import { StartRecordingDto } from './dto/start-recording.dto';
+import { RecordStreamDto, StartRecordingDto } from './dto/start-recording.dto';
 import { ListVodsDto } from './dto/list-vods.dto';
 import {
   RecordingHandle,
@@ -76,14 +76,17 @@ export class RecordingController {
   @ApiOperation({
     summary: 'Start recording a live stream (egress over the stream room).',
     description:
-      'Resolves the stream id to its LiveKit room and starts a room-composite ' +
-      'egress (reusing the recording flow). Honors the app split/snapshot config.',
+      'Resolves the stream id to its LiveKit room and starts an egress ' +
+      '(reusing the recording flow). Honors the app split/snapshot config. ' +
+      'Optional body { recordMode: composite|track|audio, participantIdentity } ' +
+      '— track/audio record ONE publisher via TrackCompositeEgress (no Chrome).',
   })
   @ApiParam({ name: 'id', description: 'Stream id of the live stream.' })
   @ApiOkResponse({ description: 'Recording handle (vodId + egressId + status).' })
   async recordStreamStart(
     @Param('app') app: string,
     @Param('id') id: string,
+    @Body() body?: RecordStreamDto,
     @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<RecordingHandle>> {
     await this.quotas.enforceRecordingMinutes(ctx);
@@ -92,7 +95,13 @@ export class RecordingController {
     if (!stream.room) {
       throw new BadRequestException(`stream '${id}' has no room to record`);
     }
-    const handle = await this.recording.startForStream(app, id, stream.room);
+    const handle = await this.recording.startForStream(app, id, stream.room, {
+      recordMode: body?.recordMode,
+      // For track/audio, the stream row's participant identity is the natural
+      // default publisher (streams key on `${room}/${identity}`).
+      participantIdentity:
+        body?.participantIdentity || stream.participant || undefined,
+    });
     return ok(handle);
   }
 
@@ -127,6 +136,8 @@ export class RecordingController {
       appName: app,
       roomName: body.roomName,
       streamId: body.streamId,
+      recordMode: body.recordMode,
+      participantIdentity: body.participantIdentity,
     });
     return ok(handle);
   }

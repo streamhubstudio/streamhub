@@ -14,6 +14,21 @@
  * the copyable wss://…/ingest/ws URL (OBS-style Server + Key). Its cameras are
  * listed in a dedicated card with live state, frame.jpg thumbnail and a link
  * to the public /play page (which renders the MJPEG player).
+ *
+ * MPEG-TS ingest (features/mpegts-multicast.md): "MPEG-TS / UDP" is passthrough-ONLY
+ * and a PULL — the server reads a udp://@GROUP:PORT multicast/unicast source and
+ * remuxes it to HLS. Selecting it forces+locks passthrough ON, hides the backup
+ * control (no push key), and shows structured udp fields (source + SSM sources +
+ * localaddr + fifo_size). The create response carries `source_url` (not rtmp/srt).
+ *
+ * SRT ingest (features/rtmp-passthrough.md): "SRT (push)" is passthrough-ONLY —
+ * LiveKit's ingress API has no SRT input type, so selecting it forces+locks the
+ * passthrough toggle ON (the backend 400s anything else). The create response
+ * carries `srt_url` (srt://host:port?streamid=<key> — the key IS the
+ * credential, no user/password; UDP) instead of `rtmp_url`, plus
+ * `capabilities.latencyMs` (~120 ms receive-latency budget). To PULL a remote
+ * SRT source through LiveKit instead, use the "URL (pull)" kind with an
+ * srt:// url (server-version dependent).
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,8 +37,11 @@ import { HiOutlineEye, HiOutlineEyeOff, HiOutlineExternalLink, HiOutlineTrash } 
 import { api } from '@/api'
 import type { CreateIngressRequest, Ingress, IngressInputType, WsIngestKey } from '@/api'
 import { Dialog, Input, Pagination, Tooltip } from '@/ui'
+import { DocsHint } from '@/components/DocsHint'
+import { PassthroughLostWarning } from './passthrough'
 import { formatBitrate } from '@/lib/mediaFormat'
-import { maskSecret, splitIngestUrl } from '@/lib/ingest'
+import { isMpegtsIngress, isSrtIngress, maskSecret, splitIngestUrl } from '@/lib/ingest'
+import { ingressKeyPair, ingressRole } from '@/lib/ingressBackup'
 import { absoluteUrl, frameUrl, withCacheBuster, wsPublishUrl } from '@/lib/mjpeg'
 import {
   Badge,
@@ -43,11 +61,12 @@ import {
   TextInput,
   Toggle,
   errMessage,
+  isServiceUnavailable,
 } from './ui'
 
-/** Ingest kinds offered by the create form: LiveKit ingress + direct WS MJPEG. */
+/** Ingest kinds offered by the create form: LiveKit ingress + SRT/MPEG-TS + direct WS MJPEG. */
 type IngestKind = IngressInputType | 'ws-mjpeg'
-const INPUT_TYPE_VALUES: IngestKind[] = ['rtmp', 'whip', 'url', 'ws-mjpeg']
+const INPUT_TYPE_VALUES: IngestKind[] = ['rtmp', 'srt', 'mpegts', 'whip', 'url', 'ws-mjpeg']
 const PAGE_SIZE = 20
 
 /** Endpoint state → badge tone. */
@@ -69,22 +88,153 @@ function useDebounced<T>(value: T, ms = 400): T {
   return debounced
 }
 
+/** One primary/backup credential block (RTMP URL + stream key + optional password). */
+function KeyBlock({
+  tone,
+  label,
+  rtmpUrl,
+  streamKey,
+  password,
+}: {
+  tone: 'green' | 'amber'
+  label: string
+  rtmpUrl?: string
+  streamKey?: string
+  password?: string
+}) {
+  const { t } = useTranslation('ingressTab')
+  return (
+    <div className="space-y-3 rounded-md border border-navy-600 bg-navy-700/40 p-3">
+      <Badge tone={tone}>{label}</Badge>
+      {typeof rtmpUrl === 'string' && <CopyField label={t('details.rtmpUrl')} value={rtmpUrl} />}
+      {typeof streamKey === 'string' && (
+        <CopyField label={t('details.streamKey')} value={streamKey} />
+      )}
+      {typeof password === 'string' && (
+        <CopyField label={t('details.streamPassword')} value={password} />
+      )}
+    </div>
+  )
+}
+
+/** The static "what you lose" lines shown in the create form before submit. */
+function usePassthroughLostLines() {
+  const { t } = useTranslation('ingressTab')
+  return [
+    t('create.passthrough.lost.webrtc'),
+    t('create.passthrough.lost.abr'),
+    t('create.passthrough.lost.h264'),
+    t('create.passthrough.lost.recording'),
+    t('create.passthrough.lost.room'),
+    t('create.passthrough.lost.backup'),
+  ]
+}
+
+/**
+ * Credentials + playback surface returned after a passthrough (remux) create.
+ * Transport-aware: an RTMP create carries `rtmp_url`, an SRT create carries
+ * `srt_url` instead (the key rides as `?streamid=` — the key IS the credential)
+ * plus `capabilities.latencyMs` (the SRT receive-latency budget, UDP).
+ */
+function PassthroughIngressDetails({ ing }: { ing: Ingress }) {
+  const { t } = useTranslation('ingressTab')
+  const rtmp = ing.rtmp_url
+  const srt = ing.srt_url
+  const source = ing.source_url
+  const key = ing.stream_key
+  const hls = ing.hls_url
+  const isSrt = isSrtIngress(ing)
+  const isMpegts = isMpegtsIngress(ing)
+  const latencyMs = ing.capabilities?.latencyMs
+  const lost = ing.capabilities?.lost ?? []
+  // MPEG-TS PULLS, so the stream key is not a push credential — hide it.
+  const helpKey = isMpegts ? 'details.mpegtsHelp' : isSrt ? 'details.srtHelp' : 'details.passthroughHelp'
+  return (
+    <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex items-center gap-2">
+        <Badge tone="amber">{t('details.passthroughBadge')}</Badge>
+        {isSrt && <Badge tone="cyan">{t('details.srtBadge')}</Badge>}
+        {isMpegts && <Badge tone="cyan">{t('details.mpegtsBadge')}</Badge>}
+        <span className="font-mono text-xs text-slate-400">{ing.ingressId}</span>
+      </div>
+      {typeof source === 'string' && (
+        <CopyField label={t('details.sourceUrl')} value={source} />
+      )}
+      {typeof srt === 'string' && <CopyField label={t('details.srtUrl')} value={srt} />}
+      {typeof rtmp === 'string' && <CopyField label={t('details.rtmpUrl')} value={rtmp} />}
+      {!isMpegts && typeof key === 'string' && (
+        <CopyField label={t('details.streamKey')} value={key} />
+      )}
+      {typeof hls === 'string' && (
+        <CopyField label={t('details.hlsUrl')} value={hls} mono={false} />
+      )}
+      {typeof ing.player_url === 'string' && (
+        <CopyField label={t('details.playerUrl')} value={ing.player_url} mono={false} />
+      )}
+      {lost.length > 0 && (
+        <PassthroughLostWarning title={t('details.passthroughLostTitle')} items={lost} />
+      )}
+      {typeof latencyMs === 'number' && (
+        <p className="text-[11px] font-medium text-amber-600 dark:text-amber-300">
+          {t('details.srtLatency', { ms: latencyMs })}
+        </p>
+      )}
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">{t(helpKey)}</p>
+    </div>
+  )
+}
+
 /** Renders the credentials returned right after creating an ingress. */
 function IngressDetails({ ing }: { ing: Ingress }) {
   const { t } = useTranslation('ingressTab')
-  const rtmp = ing.rtmp_url ?? ing.rtmpUrl
-  const key = ing.stream_key ?? ing.streamKey
+  const pair = ingressKeyPair(ing)
+  // Legacy fallback for non-RTMP ingresses (WHIP/URL): the primary key set may
+  // be empty while LiveKit still reports a bare `url` (ingressKeyPair already
+  // folds the stream_key/rtmp_url aliases into pair.primary).
+  const bareUrl = typeof ing.url === 'string' ? ing.url : undefined
+  const primaryRtmp = pair.primary.rtmpUrl ?? bareUrl
+  const primaryKey = pair.primary.streamKey
+  const primaryPassword = ing.requires_password ? pair.primary.password : undefined
   return (
     <div className="space-y-3 rounded-lg border border-blue2/30 bg-blue2/5 p-4">
       <div className="flex items-center gap-2">
         <Badge tone="cyan">ingress</Badge>
         <span className="font-mono text-xs text-slate-400">{ing.ingressId}</span>
         {ing.adaptive && <Badge tone="green">adaptive</Badge>}
+        {pair.backup && <Badge tone="amber">{t('details.backupLabel')}</Badge>}
       </div>
-      {typeof rtmp === 'string' && <CopyField label={t('details.rtmpUrl')} value={rtmp} />}
-      {typeof key === 'string' && <CopyField label={t('details.streamKey')} value={key} />}
-      {ing.requires_password && typeof ing.stream_password === 'string' && (
-        <CopyField label={t('details.streamPassword')} value={ing.stream_password} />
+      {pair.backup ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <KeyBlock
+              tone="green"
+              label={t('details.primaryLabel')}
+              rtmpUrl={primaryRtmp}
+              streamKey={primaryKey}
+              password={primaryPassword}
+            />
+            <KeyBlock
+              tone="amber"
+              label={t('details.backupLabel')}
+              rtmpUrl={pair.backup.rtmpUrl}
+              streamKey={pair.backup.streamKey}
+              password={ing.requires_password ? pair.backup.password : undefined}
+            />
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('details.failoverHelp')}</p>
+        </>
+      ) : (
+        <>
+          {typeof primaryRtmp === 'string' && (
+            <CopyField label={t('details.rtmpUrl')} value={primaryRtmp} />
+          )}
+          {typeof primaryKey === 'string' && (
+            <CopyField label={t('details.streamKey')} value={primaryKey} />
+          )}
+          {typeof primaryPassword === 'string' && (
+            <CopyField label={t('details.streamPassword')} value={primaryPassword} />
+          )}
+        </>
       )}
       {typeof ing.player_url === 'string' && (
         <CopyField label={t('details.playerUrl')} value={ing.player_url} mono={false} />
@@ -134,6 +284,10 @@ function CredentialsDialog({ ing, onClose }: { ing: Ingress; onClose: () => void
   const rtmp = (ing.rtmp_url ?? ing.rtmpUrl) as string | undefined
   const key = (ing.stream_key ?? ing.streamKey) as string | undefined
   const parts = splitIngestUrl(rtmp ?? ing.url, key)
+  const role = ingressRole(ing)
+  // A primary row is annotated with its sibling backup key on the listing.
+  const backupKey = ing.backupStreamKey ?? ing.backup_stream_key
+  const backupRtmp = ing.backup_rtmp_url
   return (
     <Dialog
       isOpen
@@ -147,6 +301,11 @@ function CredentialsDialog({ ing, onClose }: { ing: Ingress; onClose: () => void
           <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
             {t('reveal.title')}
           </h5>
+          {role && (
+            <Badge tone={role === 'backup' ? 'amber' : 'green'}>
+              {t(`list.${role}Badge`)}
+            </Badge>
+          )}
           <span className="truncate font-mono text-xs text-slate-400">
             {ing.ingressId}
           </span>
@@ -163,8 +322,22 @@ function CredentialsDialog({ ing, onClose }: { ing: Ingress; onClose: () => void
         {typeof rtmp === 'string' && (
           <CopyField label={t('reveal.rtmpUrl')} value={rtmp} />
         )}
+        {typeof ing.srt_url === 'string' && (
+          <CopyField label={t('reveal.srtUrl')} value={ing.srt_url} />
+        )}
         {typeof key === 'string' && key && (
           <SecretField label={t('reveal.streamKey')} value={key} />
+        )}
+        {typeof backupKey === 'string' && backupKey && (
+          <>
+            {typeof backupRtmp === 'string' && (
+              <CopyField label={t('reveal.backupRtmpUrl')} value={backupRtmp} />
+            )}
+            <SecretField label={t('reveal.backupStreamKey')} value={backupKey} />
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              {t('reveal.failoverNote')}
+            </p>
+          </>
         )}
         {ing.requires_password && (
           <p className="text-[11px] font-medium text-amber-600 dark:text-amber-300">
@@ -420,7 +593,18 @@ export function IngressTab({ app }: { app: string }) {
   const [room, setRoom] = useState('')
   const [participantIdentity, setParticipantIdentity] = useState('')
   const [url, setUrl] = useState('')
+  // MPEG-TS (udp multicast/unicast) structured fields.
+  const [mpegtsSources, setMpegtsSources] = useState('')
+  const [mpegtsLocaladdr, setMpegtsLocaladdr] = useState('')
+  const [mpegtsFifoSize, setMpegtsFifoSize] = useState('')
   const [enableTranscoding, setEnableTranscoding] = useState(true)
+  // Primary + backup (failover) key — RTMP only, on by default so the operator
+  // gets a redundant key out of the box (Dacast/Vimeo-style).
+  const [withBackup, setWithBackup] = useState(true)
+  // RTMP→HLS passthrough (remux, no transcode). Mutually exclusive with
+  // transcode/backup — selecting it disables both (the backend also rejects the
+  // mix with a 400).
+  const [passthrough, setPassthrough] = useState(false)
 
   // Listing: search + page (offset paging against the backend).
   const [search, setSearch] = useState('')
@@ -450,16 +634,40 @@ export function IngressTab({ app }: { app: string }) {
   })
 
   const isWs = inputType === 'ws-mjpeg'
+  const isRtmp = inputType === 'rtmp'
+  const isSrt = inputType === 'srt'
+  const isMpegts = inputType === 'mpegts'
+  // Passthrough is an RTMP/SRT/MPEG-TS-only plane; ignore a stale toggle for
+  // other inputs. SRT and MPEG-TS FORCE it: LiveKit's ingress API has no input
+  // type for either, so they can only land on the remux plane (the backend 400s
+  // otherwise).
+  const passthroughActive = (isRtmp && passthrough) || isSrt || isMpegts
+  const lostLines = usePassthroughLostLines()
 
   const create = useMutation({
     mutationFn: () => {
       const payload: CreateIngressRequest = {
         inputType: inputType as IngressInputType,
-        enableTranscoding,
+      }
+      if (passthroughActive) {
+        // Remux plane: no transcode, no backup (both are 400s server-side).
+        payload.mode = 'passthrough'
+      } else {
+        payload.enableTranscoding = enableTranscoding
+        if (isRtmp && withBackup) payload.backup = true
       }
       if (room.trim()) payload.room = room.trim()
       if (participantIdentity.trim()) payload.participantIdentity = participantIdentity.trim()
-      if (inputType === 'url' && url.trim()) payload.url = url.trim()
+      // Both `url` (pull) and `mpegts` (udp source) ride in `url`.
+      if ((inputType === 'url' || isMpegts) && url.trim()) payload.url = url.trim()
+      if (isMpegts) {
+        // Structured udp options — only sent when provided (backend applies safe
+        // defaults incl. overrun_nonfatal on).
+        if (mpegtsSources.trim()) payload.sources = mpegtsSources.trim()
+        if (mpegtsLocaladdr.trim()) payload.localaddr = mpegtsLocaladdr.trim()
+        const fifo = Number(mpegtsFifoSize.trim())
+        if (mpegtsFifoSize.trim() && Number.isFinite(fifo)) payload.fifoSize = fifo
+      }
       return api.ingress.create(app, payload)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['app-ingress', app] }),
@@ -538,6 +746,50 @@ export function IngressTab({ app }: { app: string }) {
               />
             </Field>
           )}
+          {isMpegts && (
+            <>
+              <Field
+                label={t('create.mpegts.sourceLabel')}
+                hint={t('create.mpegts.sourceHint')}
+              >
+                <TextInput
+                  value={url}
+                  placeholder="udp://@239.1.1.1:5000"
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+              </Field>
+              <Field
+                label={t('create.mpegts.sourcesLabel')}
+                hint={t('create.mpegts.sourcesHint')}
+              >
+                <TextInput
+                  value={mpegtsSources}
+                  placeholder="10.0.0.5"
+                  onChange={(e) => setMpegtsSources(e.target.value)}
+                />
+              </Field>
+              <Field
+                label={t('create.mpegts.localaddrLabel')}
+                hint={t('create.mpegts.localaddrHint')}
+              >
+                <TextInput
+                  value={mpegtsLocaladdr}
+                  placeholder="192.168.1.10"
+                  onChange={(e) => setMpegtsLocaladdr(e.target.value)}
+                />
+              </Field>
+              <Field
+                label={t('create.mpegts.fifoLabel')}
+                hint={t('create.mpegts.fifoHint')}
+              >
+                <TextInput
+                  value={mpegtsFifoSize}
+                  placeholder="1000000"
+                  onChange={(e) => setMpegtsFifoSize(e.target.value)}
+                />
+              </Field>
+            </>
+          )}
           {isWs ? (
             <div className="rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2">
               <div className="text-sm text-slate-100">{t('ws.create.infoTitle')}</div>
@@ -546,15 +798,112 @@ export function IngressTab({ app }: { app: string }) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2">
+            <div
+              className={`flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2 ${
+                passthroughActive ? 'opacity-50' : ''
+              }`}
+            >
               <div>
                 <div className="text-sm text-slate-100">{t('create.transcodeTitle')}</div>
                 <div className="mt-0.5 text-[11px] text-slate-500">
                   {t('create.transcodeHint')}
                 </div>
               </div>
-              <Toggle checked={enableTranscoding} onChange={setEnableTranscoding} />
+              <Toggle
+                checked={passthroughActive ? false : enableTranscoding}
+                onChange={setEnableTranscoding}
+                disabled={passthroughActive}
+                ariaLabel={t('create.transcodeTitle')}
+              />
             </div>
+          )}
+          {(isRtmp || isSrt || isMpegts) && (
+            <>
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2">
+                <div>
+                  <div className="flex items-center gap-1.5 text-sm text-slate-100">
+                    {t('create.passthrough.title')}
+                    <DocsHint section="rtmpPassthrough" />
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-500">
+                    {t('create.passthrough.hint')}
+                  </div>
+                  {isSrt && (
+                    <div className="mt-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                      {t('create.passthrough.srtForced')}
+                    </div>
+                  )}
+                  {isMpegts && (
+                    <div className="mt-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                      {t('create.passthrough.mpegtsForced')}
+                    </div>
+                  )}
+                </div>
+                {/* SRT + MPEG-TS are passthrough-ONLY: the toggle locks checked+disabled. */}
+                <Toggle
+                  checked={isSrt || isMpegts || passthrough}
+                  onChange={setPassthrough}
+                  disabled={isSrt || isMpegts}
+                  ariaLabel={t('create.passthrough.title')}
+                />
+              </div>
+              {passthroughActive && (
+                <div className="sm:col-span-2">
+                  <PassthroughLostWarning
+                    title={t('create.passthrough.warningTitle')}
+                    items={lostLines}
+                  />
+                </div>
+              )}
+              {isSrt && (
+                <div
+                  role="note"
+                  className="rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2"
+                >
+                  <div className="text-sm text-slate-100">{t('create.srt.noteTitle')}</div>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-[11px] text-slate-500">
+                    <li>{t('create.srt.note.udp')}</li>
+                    <li>{t('create.srt.note.latency')}</li>
+                    <li>{t('create.srt.note.credential')}</li>
+                  </ul>
+                </div>
+              )}
+              {isMpegts && (
+                <div
+                  role="note"
+                  className="rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2"
+                >
+                  <div className="text-sm text-slate-100">{t('create.mpegts.noteTitle')}</div>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-[11px] text-slate-500">
+                    <li>{t('create.mpegts.note.pull')}</li>
+                    <li>{t('create.mpegts.note.multicast')}</li>
+                    <li>{t('create.mpegts.note.ssm')}</li>
+                  </ul>
+                </div>
+              )}
+              {/* Backup (failover) key is RTMP/SRT push-only — an MPEG-TS PULL has
+                  no push credential to fail over, so hide the whole control. */}
+              {!isMpegts && (
+                <div
+                  className={`flex items-center justify-between gap-4 rounded-lg border border-navy-600 bg-navy-700/40 px-4 py-3 sm:col-span-2 ${
+                    passthroughActive ? 'opacity-50' : ''
+                  }`}
+                >
+                  <div>
+                    <div className="text-sm text-slate-100">{t('create.backupTitle')}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500">
+                      {t('create.backupHint')}
+                    </div>
+                  </div>
+                  <Toggle
+                    checked={passthroughActive ? false : withBackup}
+                    onChange={setWithBackup}
+                    disabled={passthroughActive}
+                    ariaLabel={t('create.backupTitle')}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -564,7 +913,8 @@ export function IngressTab({ app }: { app: string }) {
             disabled={
               isWs
                 ? createWs.isPending || !room.trim()
-                : create.isPending || (inputType === 'url' && !url.trim())
+                : create.isPending ||
+                  ((inputType === 'url' || isMpegts) && !url.trim())
             }
             onClick={() => (isWs ? createWs.mutate() : create.mutate())}
           >
@@ -576,7 +926,13 @@ export function IngressTab({ app }: { app: string }) {
 
         {!isWs && create.isError && (
           <div className="mt-4">
-            <ErrorBanner message={errMessage(create.error, t('create.error'))} />
+            <ErrorBanner
+              message={
+                isServiceUnavailable(create.error)
+                  ? t('create.passthrough.disabled503')
+                  : errMessage(create.error, t('create.error'))
+              }
+            />
           </div>
         )}
         {isWs && createWs.isError && (
@@ -586,7 +942,11 @@ export function IngressTab({ app }: { app: string }) {
         )}
         {!isWs && create.data && (
           <div className="mt-4">
-            <IngressDetails ing={create.data} />
+            {create.data.mode === 'passthrough' ? (
+              <PassthroughIngressDetails ing={create.data} />
+            ) : (
+              <IngressDetails ing={create.data} />
+            )}
           </div>
         )}
         {isWs && createWs.data && (
@@ -666,6 +1026,11 @@ export function IngressTab({ app }: { app: string }) {
               const live = ing.status === 'publishing'
               const res =
                 ing.width && ing.height ? `${ing.width}×${ing.height}` : null
+              const role = ingressRole(ing)
+              // SRT push rows (id `pti_srt_…`) and MPEG-TS pull rows
+              // (id `pti_mpegts_…`) get a dedicated badge next to the passthrough one.
+              const srt = isSrtIngress(ing)
+              const mpegts = isMpegtsIngress(ing)
               return (
                 <RTr key={ing.ingressId}>
                   <RTd label={t('list.table.ingress')} className="text-slate-300">
@@ -675,7 +1040,19 @@ export function IngressTab({ app }: { app: string }) {
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-slate-500 max-md:justify-end">
                         {ing.ingressId}
-                        {ing.inputType && <Badge tone="cyan">{ing.inputType}</Badge>}
+                        {ing.inputType && !srt && !mpegts && (
+                          <Badge tone="cyan">{ing.inputType}</Badge>
+                        )}
+                        {ing.mode === 'passthrough' && (
+                          <Badge tone="amber">{t('list.passthroughBadge')}</Badge>
+                        )}
+                        {srt && <Badge tone="cyan">{t('list.srtBadge')}</Badge>}
+                        {mpegts && <Badge tone="cyan">{t('list.mpegtsBadge')}</Badge>}
+                        {role && (
+                          <Badge tone={role === 'backup' ? 'amber' : 'green'}>
+                            {t(`list.${role}Badge`)}
+                          </Badge>
+                        )}
                         {ing.requires_password && (
                           <Badge tone="amber">{t('list.passwordBadge')}</Badge>
                         )}
@@ -716,8 +1093,11 @@ export function IngressTab({ app }: { app: string }) {
                           aria-label={t('common:actions.delete')}
                           disabled={remove.isPending}
                           onClick={() => {
-                            if (confirm(t('list.confirmRemove', { id: ing.ingressId })))
-                              remove.mutate(ing.ingressId)
+                            const msg =
+                              role === 'primary'
+                                ? t('list.confirmRemovePrimary', { id: ing.ingressId })
+                                : t('list.confirmRemove', { id: ing.ingressId })
+                            if (confirm(msg)) remove.mutate(ing.ingressId)
                           }}
                         >
                           <HiOutlineTrash className="text-base" />

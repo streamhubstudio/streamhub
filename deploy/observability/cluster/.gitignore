@@ -1,0 +1,5 @@
+# Runtime / secretos del modo cluster — nunca commitear.
+# El env de nodo real (copiado de .env.node.example):
+.env.node
+# textfile collector runtime del node-agent (node_exporter):
+textfile/*.prom

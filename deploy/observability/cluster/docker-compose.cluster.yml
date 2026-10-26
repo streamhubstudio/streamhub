@@ -1,0 +1,75 @@
+# Overlay de CLUSTER para el master (stream01). Extiende — no reemplaza — el
+# stack base docker-compose.observability.yml:
+#   * cambia Prometheus a la config de cluster (prometheus.cluster.yml, 3 nodos)
+#   * agrega Loki (almacén de logs) + Promtail (agente de logs del master)
+# El stack single-node (Fase 1) sigue intacto: sólo el base levanta Prometheus+
+# Grafana+node_exporter como siempre.
+#
+# Uso (SIEMPRE con los dos -f, desde deploy/observability/):
+#   docker compose \
+#     -f docker-compose.observability.yml \
+#     -f cluster/docker-compose.cluster.yml \
+#     --env-file .env up -d
+#
+# NOTA de rutas: el "project directory" es el del PRIMER -f (deploy/observability/),
+# así que las rutas relativas de ESTE overlay se resuelven desde ahí
+# (./prometheus.cluster.yml, ./cluster/loki-config.yml, ...). Lo maneja
+# cluster/install-cluster-observability.sh.
+
+services:
+  # Prometheus: mismo servicio del base, pero apuntando a la config de cluster.
+  # `command` en un overlay REEMPLAZA al del base (por eso se repite completo);
+  # `volumes` se APENDEA (el base ya monta prometheus.yml/alerts.yml/secrets).
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.cluster.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-4GB}
+      - --web.listen-address=127.0.0.1:${PROMETHEUS_PORT:-9091}
+      - --web.enable-lifecycle
+    volumes:
+      # Rutas relativas al project dir = deploy/observability/ (dir del 1er -f).
+      - ./prometheus.cluster.yml:/etc/prometheus/prometheus.cluster.yml:ro
+      - ./alerts.cluster.yml:/etc/prometheus/alerts.cluster.yml:ro
+
+  # Loki — almacén de logs del cluster (bindea 127.0.0.1:3100).
+  loki:
+    image: grafana/loki:latest
+    container_name: streamhub-obs-loki
+    network_mode: host
+    restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 256m
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./cluster/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+
+  # Promtail del master — journald (core/livekit) + docker (ingress/egress/redis)
+  # + nginx. Empuja al Loki local.
+  promtail:
+    image: grafana/promtail:latest
+    container_name: streamhub-obs-promtail
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    mem_limit: 128m
+    command:
+      - -config.file=/etc/promtail/promtail-master.yml
+      - -config.expand-env=true
+    volumes:
+      - ./cluster/promtail-master.yml:/etc/promtail/promtail-master.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - promtail_master_positions:/promtail
+    depends_on:
+      - loki
+
+volumes:
+  loki_data:
+  promtail_master_positions:

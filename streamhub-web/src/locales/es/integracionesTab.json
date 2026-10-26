@@ -36,7 +36,8 @@
     "s3": "Almacenamiento S3",
     "features": "Funciones",
     "qc": "Token QC",
-    "mqtt": "MQTT"
+    "mqtt": "MQTT",
+    "smtp": "SMTP"
   },
   "saveStatus": {
     "saving": "Guardando…",
@@ -93,6 +94,33 @@
     "saveError": "No se pudo guardar.",
     "saving": "Guardando…",
     "save": "Guardar MQTT"
+  },
+  "smtp": {
+    "loading": "Cargando configuración SMTP…",
+    "loadError": "No se pudo cargar la configuración SMTP.",
+    "title": "SMTP (override de email)",
+    "subtitle": "Cuando está habilitado, las notificaciones de esta app (el canal de email del notificador) se envían por este servidor SMTP en vez del default global — salvo que el usuario destinatario tenga su propio SMTP configurado (Cuenta → SMTP), que tiene prioridad.",
+    "enabledLabel": "Usar el SMTP de esta app",
+    "enabledHint": "Llave maestra. Apagada = las notificaciones de esta app usan el SMTP global por defecto.",
+    "hostLabel": "Host",
+    "portLabel": "Puerto",
+    "portHint": "587 = STARTTLS; 465 = TLS implícito.",
+    "userLabel": "Usuario",
+    "passLabel": "Contraseña",
+    "storedHint": "Hay una contraseña guardada. Dejá vacío para conservarla.",
+    "fromLabel": "From",
+    "fromHint": "Header From del correo saliente, ej. \"Mi App <no-reply@ejemplo.com>\".",
+    "saveError": "No se pudo guardar.",
+    "saving": "Guardando…",
+    "save": "Guardar SMTP",
+    "testLabel": "Enviar un email de prueba",
+    "testHint": "Envía un email de prueba usando la configuración GUARDADA arriba (guardá primero si la acabás de cambiar), sin importar la llave de arriba.",
+    "testDirtyHint": "Tenés cambios sin guardar — guardá primero para que la prueba los use.",
+    "testing": "Enviando…",
+    "testSend": "Enviar prueba",
+    "testSent": "Email de prueba enviado ✓",
+    "testFailed": "No se pudo enviar el email de prueba.",
+    "testNotConfigured": "El SMTP no está completamente configurado (hacen falta host + contraseña)."
   },
   "featuresCard": {
     "loading": "Cargando features…",

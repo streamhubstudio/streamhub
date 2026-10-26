@@ -4,7 +4,9 @@ import { SystemModule } from '../system/system.module';
 import { LiveKitController } from './livekit.controller';
 import { LiveKitService } from './livekit.service';
 import { IngressAuthService } from './ingress-auth.service';
+import { IngressBackupService } from './ingress-backup.service';
 import { WebhooksController } from './webhooks.controller';
+import { RoomsController } from './rooms.controller';
 
 /**
  * LiveKit integration module. Exports LIVEKIT_SERVICE.
@@ -18,12 +20,18 @@ import { WebhooksController } from './webhooks.controller';
  */
 @Module({
   imports: [SystemModule],
-  controllers: [LiveKitController, WebhooksController],
+  controllers: [LiveKitController, WebhooksController, RoomsController],
   providers: [
     LiveKitService,
     IngressAuthService,
+    IngressBackupService,
     { provide: LIVEKIT_SERVICE, useExisting: LiveKitService },
   ],
-  exports: [LiveKitService, IngressAuthService, LIVEKIT_SERVICE],
+  exports: [
+    LiveKitService,
+    IngressAuthService,
+    IngressBackupService,
+    LIVEKIT_SERVICE,
+  ],
 })
 export class LiveKitModule {}

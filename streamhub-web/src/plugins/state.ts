@@ -8,6 +8,7 @@
 import { buildInitialValues } from './schema.ts'
 import type {
   InstalledPlugin,
+  PluginSectionMeta,
   PluginView,
   RegisteredPlugin,
 } from './types.ts'
@@ -38,9 +39,20 @@ function toView(
     description: reg?.description ?? rec?.description ?? '',
     category: reg?.category ?? rec?.category ?? 'general',
     icon: reg?.icon,
-    version: reg?.version ?? rec?.version,
+    version: rec?.version ?? reg?.version,
     ui: reg?.ui,
     configSchema: reg?.configSchema,
+    // Taxonomy: the backend manifest WINS over the frontend module (same
+    // precedence as `version`), defaulting to 'plugin' when neither declares it.
+    kind: rec?.kind ?? reg?.kind ?? 'plugin',
+    // Edge-capable: backend manifest wins; the frontend module carries it so the
+    // registry-only Marketplace catalog badges it too.
+    edge: Boolean(rec?.edge ?? reg?.edge),
+    // Export + storage are backend-only signals (a frontend module can't know
+    // whether the server can bundle a worker).
+    storage: rec?.storage ?? null,
+    exportable: Boolean(rec?.exportable),
+    needsWorker: rec?.needsWorker,
     hasFrontend: Boolean(reg),
     hasBackend: Boolean(rec),
     installed,
@@ -97,4 +109,101 @@ export function findView(
   id: string,
 ): PluginView | undefined {
   return views.find((v) => v.id === id)
+}
+
+/** A catalog split into the two shelves the Studio surfaces render. */
+export interface KindShelves {
+  /** `kind: 'app'` rows — full Studio applications (shown first). */
+  apps: PluginView[]
+  /** Everything else — simple plugins. */
+  plugins: PluginView[]
+}
+
+/**
+ * Partition a catalog into the Apps / Plugins shelves. Order within each shelf
+ * is preserved from the input (already sorted by category then name), so the
+ * shelf grids stay stable. Pure → unit-tested.
+ */
+export function partitionByKind(views: PluginView[]): KindShelves {
+  const apps: PluginView[] = []
+  const plugins: PluginView[] = []
+  for (const v of views) {
+    if (v.kind === 'app') apps.push(v)
+    else plugins.push(v)
+  }
+  return { apps, plugins }
+}
+
+/**
+ * Where the "Open" action for a view leads: a full Studio App opens as its own
+ * PAGE (`apps/:app/studio/:id`); a plain plugin opens in the in-place MODAL.
+ * Pure decision so the routing stays testable without a router.
+ */
+export function openTargetFor(view: PluginView): 'page' | 'modal' {
+  return view.kind === 'app' ? 'page' : 'modal'
+}
+
+/**
+ * Convenience: the full-page Studio route for an app's Studio App, optionally
+ * deep-linked to one of its declared sections (`…/studio/:id/:section`). Passing
+ * no section yields the canonical section-less URL (back-compat), whose section
+ * defaults to the app's first declared section.
+ */
+export function studioAppPath(app: string, pluginId: string, section?: string): string {
+  const base = `/apps/${encodeURIComponent(app)}/studio/${encodeURIComponent(pluginId)}`
+  return section ? `${base}/${encodeURIComponent(section)}` : base
+}
+
+/** The primary-surface sections a view's frontend module declares (empty when none). */
+export function sectionsOf(view: PluginView): PluginSectionMeta[] {
+  return view.registered?.sections ?? []
+}
+
+/** Outcome of matching a URL `:section` segment against a view's sections. */
+export interface SectionResolution {
+  /** The section to render — the default when the segment is absent/unknown; null when the view declares none. */
+  section: string | null
+  /** True when the segment was present but not a declared section (caller should redirect to the default). */
+  redirect: boolean
+}
+
+/**
+ * Resolve the studio route's `:section` segment against a plugin's declared
+ * sections. Absent segment → the default (first) section, no redirect. Unknown
+ * segment → the default section AND `redirect: true` so the page can replace the
+ * URL rather than render a blank/crashing surface. A view with no declared
+ * sections yields `{ section: null }` (the `:section` param is meaningless).
+ * Pure → node:test-able without a router.
+ */
+export function resolveSection(
+  sections: PluginSectionMeta[],
+  param: string | undefined,
+): SectionResolution {
+  if (sections.length === 0) return { section: null, redirect: false }
+  const def = sections[0].id
+  if (!param) return { section: def, redirect: false }
+  const found = sections.some((s) => s.id === param)
+  return found ? { section: param, redirect: false } : { section: def, redirect: true }
+}
+
+/**
+ * Select the active media-player PROVIDER for a catalog, or null.
+ *
+ * A `player`-slot plugin only wins the player if it is ACTIVE (installed +
+ * enabled for the app), present in the frontend registry, AND actually ships a
+ * `PlayerComponent` — so a backend-only or component-less install never blanks
+ * out the built-in video.js fallback. First match wins (the catalog is sorted by
+ * category then name, so selection is deterministic). Returning null is the
+ * signal for HlsPlayer/VodPlayer to render their video.js path.
+ */
+export function pickPlayerProvider(views: PluginView[]): PluginView | null {
+  return (
+    views.find(
+      (v) =>
+        v.active &&
+        v.hasFrontend &&
+        v.ui === 'player' &&
+        Boolean(v.registered?.PlayerComponent),
+    ) ?? null
+  )
 }

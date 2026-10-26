@@ -7,11 +7,12 @@ import {
 
 /**
  * Reversible at-rest encryption for small auth secrets (the TOTP shared
- * secret). Unlike passwords/API tokens (hash-only, sha256/scrypt), a TOTP
- * secret MUST be recoverable to validate codes — so it is encrypted with
- * AES-256-GCM using a key derived from STREAMHUB_JWT_SECRET (the one secret a
- * deployment already protects). A DB leak alone therefore does not expose
- * enrolled 2FA secrets.
+ * secret, the per-user SMTP password — owner item 29). Unlike passwords/API
+ * tokens (hash-only, sha256/scrypt), these MUST be recoverable — so they are
+ * encrypted with AES-256-GCM using a key derived from STREAMHUB_JWT_SECRET
+ * (the one secret a deployment already protects), DOMAIN-SEPARATED per secret
+ * kind so a leaked TOTP secret's key can never decrypt an SMTP password (and
+ * vice-versa). A DB leak alone therefore does not expose either.
  *
  * Format (self-describing, `$`-joined like password.util's scrypt string):
  *   `aesgcm$<ivB64url>$<tagB64url>$<ciphertextB64url>`
@@ -21,18 +22,26 @@ const ALG = 'aes-256-gcm';
 const IV_BYTES = 12;
 const PREFIX = 'aesgcm';
 
-/** Derive the 32-byte AES key from the deployment secret (domain-separated). */
-function deriveKey(masterSecret: string): Buffer {
+/** Derive the 32-byte AES key for a given secret DOMAIN (domain-separated). */
+function deriveKeyFor(domain: string, masterSecret: string): Buffer {
   return createHash('sha256')
-    .update(`streamhub-totp:${masterSecret}`, 'utf8')
+    .update(`streamhub-${domain}:${masterSecret}`, 'utf8')
     .digest();
 }
 
-/** Encrypt a plaintext secret → `aesgcm$iv$tag$ct` (all base64url). */
-export function encryptSecret(plaintext: string, masterSecret: string): string {
+/** Derive the 32-byte AES key from the deployment secret (TOTP domain). */
+function deriveKey(masterSecret: string): Buffer {
+  return deriveKeyFor('totp', masterSecret);
+}
+
+function encryptWithDomain(
+  domain: string,
+  plaintext: string,
+  masterSecret: string,
+): string {
   if (!masterSecret) throw new Error('encryptSecret: empty master secret');
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv(ALG, deriveKey(masterSecret), iv);
+  const cipher = createCipheriv(ALG, deriveKeyFor(domain, masterSecret), iv);
   const ct = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
@@ -46,11 +55,8 @@ export function encryptSecret(plaintext: string, masterSecret: string): string {
   ].join('$');
 }
 
-/**
- * Decrypt an `aesgcm$…` string. Returns null on any malformed/foreign value or
- * authentication failure (wrong key / tampered ciphertext) instead of throwing.
- */
-export function decryptSecret(
+function decryptWithDomain(
+  domain: string,
   stored: string,
   masterSecret: string,
 ): string | null {
@@ -61,11 +67,47 @@ export function decryptSecret(
     const iv = Buffer.from(parts[1], 'base64url');
     const tag = Buffer.from(parts[2], 'base64url');
     const ct = Buffer.from(parts[3], 'base64url');
-    const decipher = createDecipheriv(ALG, deriveKey(masterSecret), iv);
+    const decipher = createDecipheriv(ALG, deriveKeyFor(domain, masterSecret), iv);
     decipher.setAuthTag(tag);
     const pt = Buffer.concat([decipher.update(ct), decipher.final()]);
     return pt.toString('utf8');
   } catch {
     return null;
   }
+}
+
+/** Encrypt a plaintext secret → `aesgcm$iv$tag$ct` (all base64url). */
+export function encryptSecret(plaintext: string, masterSecret: string): string {
+  return encryptWithDomain('totp', plaintext, masterSecret);
+}
+
+/**
+ * Decrypt an `aesgcm$…` string. Returns null on any malformed/foreign value or
+ * authentication failure (wrong key / tampered ciphertext) instead of throwing.
+ */
+export function decryptSecret(
+  stored: string,
+  masterSecret: string,
+): string | null {
+  return decryptWithDomain('totp', stored, masterSecret);
+}
+
+/**
+ * Encrypt a per-user SMTP password (owner item 29) → `aesgcm$iv$tag$ct`.
+ * Domain-separated from the TOTP secret so the two can never be confused/
+ * cross-decrypted even though both derive from the same master secret.
+ */
+export function encryptUserSmtpSecret(
+  plaintext: string,
+  masterSecret: string,
+): string {
+  return encryptWithDomain('user-smtp', plaintext, masterSecret);
+}
+
+/** Decrypt a per-user SMTP password. Never throws — null on any failure. */
+export function decryptUserSmtpSecret(
+  stored: string,
+  masterSecret: string,
+): string | null {
+  return decryptWithDomain('user-smtp', stored, masterSecret);
 }

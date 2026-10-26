@@ -1,0 +1,74 @@
+[
+  {
+    "id": "lpr",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-lpr",
+    "version": "0.1.0",
+    "sha256": "4fe4c789921afb45b311707dd5a259f2167ec3c7a148316e04769282471f0b44"
+  },
+  {
+    "id": "deface",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-deface",
+    "version": "0.1.0",
+    "sha256": "1a96f7c1a75c19a4d09d66402da510854d27ef4b3e839d307f63419464f7e62e"
+  },
+  {
+    "id": "safety-ppe",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-safety-ppe",
+    "version": "0.1.0",
+    "sha256": "198b1948dae48abe08e7141304cc3b66637b9bd96cf1cee2170d4aebec09d3a8"
+  },
+  {
+    "id": "people-counter",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-people-counter",
+    "version": "0.1.0",
+    "sha256": "25a2aa83ffaebcfd0d38cdf2fd995b59a57cd05d592d3ac06016b48fa7ffc061"
+  },
+  {
+    "id": "transcription",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-transcription",
+    "version": "1.0.0",
+    "sha256": "d378d8d96d5216deddc1a83288baf66e55413f13c0750c747efd5c78bda0863c"
+  },
+  {
+    "id": "presence",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-presence",
+    "version": "0.1.1",
+    "sha256": "19168bc6cc9fc26aecc3e720994f234951899537245c453a20fca6684d1ee55c"
+  },
+  {
+    "id": "perimeter",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-perimeter",
+    "version": "0.1.0",
+    "sha256": "2a7f7bc3aa5334a1a6eca9bb6f242be2b2477d5dbc22d9da591f549fee27b8a4"
+  },
+  {
+    "id": "yolo",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-yolo",
+    "version": "1.0.0",
+    "sha256": "d940a725b17dc140488af321bad0a40a17908806401dcddfec509f8c6395fb4f"
+  },
+  {
+    "id": "occupancy",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
+    "version": "0.1.1",
+    "sha256": "f10b066730cd0c31b0d706cc59dfaeb57f76fd29fa72a130e9d6dbf48f584765"
+  },
+  {
+    "id": "counting",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
+    "version": "0.1.1",
+    "sha256": "9423c3c606a5448e3fcd418bc76b37965c96b620de3b12f53966b13708ad8f1e"
+  },
+  {
+    "id": "crowd",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
+    "version": "0.1.1",
+    "sha256": "1a92290f55af324be196d264db653c032762e961279a3f19e40f6fa52633d04c"
+  },
+  {
+    "id": "demography",
+    "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
+    "version": "0.1.1",
+    "sha256": "cc4ba2efa2fbbad86120579f425440fcd8c7106102747cfdacf8fc1f5fd88829"
+  }
+]

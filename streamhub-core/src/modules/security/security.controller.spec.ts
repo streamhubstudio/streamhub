@@ -100,13 +100,13 @@ describe('security/SecurityController', () => {
       expect(() => controller.status(appCtx)).toThrow(ForbiddenException);
       expect(() => controller.listRules(appCtx)).toThrow(ForbiddenException);
       expect(() =>
-        controller.addRule({ cidr: '1.2.3.4', action: 'block' }, appCtx),
+        controller.addRule({ cidr: '1.2.3.4', action: 'block' }, undefined, appCtx),
       ).toThrow(ForbiddenException);
-      expect(() => controller.removeRule(1, appCtx)).toThrow(
+      expect(() => controller.removeRule(1, undefined, appCtx)).toThrow(
         ForbiddenException,
       );
       expect(() => controller.bans(appCtx)).toThrow(ForbiddenException);
-      expect(() => controller.unban('1.2.3.4', appCtx)).toThrow(
+      expect(() => controller.unban('1.2.3.4', undefined, appCtx)).toThrow(
         ForbiddenException,
       );
       expect(() => controller.offenses(appCtx)).toThrow(ForbiddenException);
@@ -147,6 +147,7 @@ describe('security/SecurityController', () => {
     it('create → list → delete round-trip', () => {
       const created = controller.addRule(
         { cidr: '203.0.113.0/24', action: 'block', note: 'scanner' },
+        undefined,
         superadminCtx,
       );
       expect(created.data.cidr).toBe('203.0.113.0/24');
@@ -155,16 +156,16 @@ describe('security/SecurityController', () => {
       const listed = controller.listRules(superadminCtx);
       expect(listed.data).toHaveLength(1);
 
-      const removed = controller.removeRule(created.data.id, superadminCtx);
+      const removed = controller.removeRule(created.data.id, undefined, superadminCtx);
       expect(removed.data).toEqual({ id: created.data.id, deleted: true });
       expect(controller.listRules(superadminCtx).data).toEqual([]);
     });
 
     it('400 on an invalid CIDR, 404 on an unknown rule id', () => {
       expect(() =>
-        controller.addRule({ cidr: 'bogus', action: 'block' }, superadminCtx),
+        controller.addRule({ cidr: 'bogus', action: 'block' }, undefined, superadminCtx),
       ).toThrow(BadRequestException);
-      expect(() => controller.removeRule(42, superadminCtx)).toThrow(
+      expect(() => controller.removeRule(42, undefined, superadminCtx)).toThrow(
         NotFoundException,
       );
     });
@@ -177,13 +178,13 @@ describe('security/SecurityController', () => {
       const bans = controller.bans(superadminCtx);
       expect(bans.data.active.map((b) => b.ip)).toEqual(['203.0.113.9']);
 
-      const out = controller.unban('203.0.113.9', superadminCtx);
+      const out = controller.unban('203.0.113.9', undefined, superadminCtx);
       expect(out.data).toEqual({ ip: '203.0.113.9', unbanned: true });
       expect(controller.bans(superadminCtx).data.active).toEqual([]);
     });
 
     it('404 when unbanning an IP with no ban record', () => {
-      expect(() => controller.unban('8.8.8.8', superadminCtx)).toThrow(
+      expect(() => controller.unban('8.8.8.8', undefined, superadminCtx)).toThrow(
         NotFoundException,
       );
     });

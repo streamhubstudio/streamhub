@@ -151,13 +151,25 @@ describe('security/ip-cidr.util', () => {
       expect(normalizeIp('  8.8.8.8 ')).toBe('8.8.8.8');
     });
 
-    it('prefers the first X-Forwarded-For hop, then the socket', () => {
+    it('uses the proxy-validated req.ip, then the socket (fix P0-2)', () => {
       const req = (h: Record<string, unknown>, ip?: string): Request =>
         ({ headers: h, ip, socket: { remoteAddress: '127.0.0.1' } }) as unknown as Request;
-      expect(clientIpOf(req({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }))).toBe('203.0.113.9');
-      expect(clientIpOf(req({ 'x-forwarded-for': ['198.51.100.3'] }))).toBe('198.51.100.3');
+      expect(clientIpOf(req({}, '203.0.113.9'))).toBe('203.0.113.9');
       expect(clientIpOf(req({}, '::ffff:9.9.9.9'))).toBe('9.9.9.9');
       expect(clientIpOf(req({}))).toBe('127.0.0.1');
+    });
+
+    it('SECURITY: a spoofed X-Forwarded-For header is IGNORED (fix P0-2)', () => {
+      // Express (trust proxy = 1) resolved the real client as 203.0.113.9;
+      // the attacker injected `X-Forwarded-For: 127.0.0.1` hoping to ride the
+      // private-IP fast-path. The raw header must never win over req.ip.
+      const spoofed = {
+        headers: { 'x-forwarded-for': '127.0.0.1, 203.0.113.9' },
+        ip: '203.0.113.9',
+        socket: { remoteAddress: '172.18.0.2' },
+      } as unknown as Request;
+      expect(clientIpOf(spoofed)).toBe('203.0.113.9');
+      expect(isPrivateOrLoopbackIp(clientIpOf(spoofed)!)).toBe(false);
     });
   });
 });

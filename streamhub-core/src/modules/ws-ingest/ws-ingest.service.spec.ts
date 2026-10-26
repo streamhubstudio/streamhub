@@ -644,4 +644,58 @@ describe('WsIngestService (direct WS MJPEG ingest)', () => {
       );
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Structured data frames (IoT data plane) → iot.data dispatch
+  // ---------------------------------------------------------------------------
+
+  describe('structured data frames', () => {
+    async function connectedCam(): Promise<{ sock: FakeSocket; identity: string }> {
+      const { streamKey } = mintKey();
+      const sock = await connect({ key: streamKey });
+      ctx.mocks.callbacks.dispatch.mockClear(); // drop the stream_started call
+      return { sock, identity: `wscam-${streamKey.slice(-6)}` };
+    }
+
+    it('routes a valid {"type":"data"} frame as an iot.data dispatch', async () => {
+      const { sock, identity } = await connectedCam();
+      sock.text(JSON.stringify({ type: 'data', topic: 'temp', data: { c: 22 } }));
+      await flush();
+      expect(ctx.mocks.callbacks.dispatch).toHaveBeenCalledWith(APP, 'iot.data', {
+        topic: 'temp',
+        deviceId: identity,
+        data: { c: 22 },
+        source: 'ws',
+      });
+    });
+
+    it('drops a data frame with an invalid topic or non-object data (no dispatch)', async () => {
+      const { sock } = await connectedCam();
+      sock.text(JSON.stringify({ type: 'data', topic: 'bad topic!', data: { a: 1 } }));
+      sock.text(JSON.stringify({ type: 'data', topic: 'ok', data: 'not-an-object' }));
+      sock.text(JSON.stringify({ type: 'data', topic: 'ok', data: [1, 2, 3] }));
+      await flush();
+      expect(ctx.mocks.callbacks.dispatch).not.toHaveBeenCalled();
+      expect(sock.closed).toBeNull(); // bad data NEVER closes the socket
+    });
+
+    it('drops an oversized data frame (> maxDataBytes) without closing', async () => {
+      const { sock } = await connectedCam();
+      const big = 'x'.repeat(20 * 1024); // > 16 KB default cap
+      sock.text(JSON.stringify({ type: 'data', topic: 'blob', data: { big } }));
+      await flush();
+      expect(ctx.mocks.callbacks.dispatch).not.toHaveBeenCalled();
+      expect(sock.closed).toBeNull();
+    });
+
+    it('rate-limits data frames per second (token bucket, default 5)', async () => {
+      const { sock } = await connectedCam();
+      for (let i = 0; i < 8; i++) {
+        sock.text(JSON.stringify({ type: 'data', topic: 't', data: { i } }));
+      }
+      await flush();
+      // Time is frozen (fake timers) so the bucket never refills: 5 pass, rest drop.
+      expect(ctx.mocks.callbacks.dispatch).toHaveBeenCalledTimes(5);
+    });
+  });
 });

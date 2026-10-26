@@ -1,0 +1,114 @@
+# Reglas de alerta ADICIONALES para modo cluster (3 nodos).
+# Se cargan junto con alerts.yml (que ya cubre host/servicio single-node).
+# Referenciado desde prometheus.cluster.yml (rule_files). Todas las series de
+# cluster llevan label `node` (stream01|stream02|stream03) — las alertas lo
+# propagan para saber QUÉ nodo está afectado.
+
+groups:
+  # ---------------------------------------------------------------------
+  # Alcanzabilidad de nodos (scrape health por nodo)
+  # ---------------------------------------------------------------------
+  - name: streamhub-cluster-reachability
+    rules:
+      - alert: ClusterNodeCoreDown
+        expr: up{job="streamhub-core"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "core caído/inalcanzable en {{ $labels.node }}"
+          description: "El target streamhub-core del nodo {{ $labels.node }} está down >2m. Si es un nodo remoto, revisá también el nginx del nodo (location /metrics, allow del master) y ufw, no sólo el proceso core."
+
+      - alert: ClusterNodeLiveKitDown
+        expr: up{job="livekit"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "LiveKit caído/inalcanzable en {{ $labels.node }}"
+          description: "El target livekit del nodo {{ $labels.node }} está down >2m (SFU o su exposición de métricas /metrics/livekit)."
+
+      - alert: ClusterNodeExporterDown
+        expr: up{job="node"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "node_exporter inalcanzable en {{ $labels.node }}"
+          description: "Sin métricas de host (CPU/RAM/disco) del nodo {{ $labels.node }} hace >5m. Revisá el node-agent-compose del nodo y la regla ufw allow :9100 from 203.0.113.10."
+
+      - alert: ClusterNodeFullyUnreachable
+        # Todos los targets de un nodo caídos a la vez = nodo/enlace caído, no un
+        # servicio puntual. count por nodo de targets up.
+        expr: sum by (node) (up) == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations:
+          summary: "Nodo {{ $labels.node }} totalmente inalcanzable"
+          description: "Ningún target del nodo {{ $labels.node }} responde hace >3m — probable caída del host o del enlace de red hacia el master."
+
+  # ---------------------------------------------------------------------
+  # Salud del pipeline de logs (Loki + Promtail)
+  # ---------------------------------------------------------------------
+  - name: streamhub-cluster-logs
+    rules:
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Loki (master) caído"
+          description: "El almacén de logs Loki no responde hace >5m — se pierde ingesta de logs de toda la flota mientras esté abajo."
+
+      - alert: PromtailMasterDown
+        expr: up{job="promtail"} == 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Promtail del master caído"
+          description: "El agente de logs del master no expone métricas hace >10m — journald de skyline-core/livekit y docker logs de ingress/egress/redis podrían no estar llegando a Loki."
+
+  # ---------------------------------------------------------------------
+  # Presión de recursos por nodo (mismos umbrales que single-node, pero el
+  # label `node` permite rutear/identificar el nodo afectado)
+  # ---------------------------------------------------------------------
+  - name: streamhub-cluster-node-health
+    rules:
+      - alert: ClusterNodeMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "RAM >85% en {{ $labels.node }}"
+          description: "RAM usada >85% por 5m en {{ $labels.node }} — riesgo directo para egress/Chrome de ese nodo."
+
+      - alert: ClusterNodeDiskLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.15
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Disco <15% libre en {{ $labels.node }}"
+          description: "Espacio libre en / por debajo del 15% por 10m en {{ $labels.node }}."
+
+  # ---------------------------------------------------------------------
+  # Capacidad de scheduling edge (métricas master-side, DB-derived, expuestas
+  # SÓLO en el /metrics del master — los edge están tras NAT). No llevan label
+  # `node`: son escalares de cluster (scheduler + assignments).
+  # ---------------------------------------------------------------------
+  - name: streamhub-cluster-capacity
+    rules:
+      - alert: EdgePendingAssignments
+        expr: streamhub_edge_pending_assignments > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Trabajo edge sin ubicar (>5m)"
+          description: "{{ $value }} assignment(s) edge en 'pending' hace >5m — el scheduler no encontró nodo elegible (nada conectado, sin capacidad VRAM, o todos draining/disabled). Revisá 'streamhub cluster status' + el dashboard 'Edge nodes'."
+
+      - alert: EdgeNoGpuCapacity
+        # Aproximación master-side (los requirements por-assignment no se exportan):
+        # hay trabajo pendiente Y cero nodos GPU elegibles (up+active). Como el
+        # grueso del trabajo edge es visión GPU, esto rutea la alerta sin-GPU.
+        expr: streamhub_edge_pending_assignments > 0 and streamhub_edge_eligible_nodes{gpu="true"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Trabajo edge pendiente y CERO nodos GPU elegibles"
+          description: "Hay assignments edge pendientes y ningún nodo GPU up+active hace >5m — el trabajo de visión no puede ubicarse. Verificá que al menos un nodo GPU esté up y en estado 'active' ('streamhub cluster status' / 'streamhub cluster activate <node>')."

@@ -57,13 +57,13 @@ export function getRequestSessionId(req: Request): string | null {
   return (req as RequestWithSid).sessionId ?? null;
 }
 
-/** Real client IP, honouring the proxy's X-Forwarded-For (first hop). */
+/**
+ * Proxy-validated client IP (fix P0-2): Express resolves `req.ip` honouring
+ * `trust proxy` (1 hop — our Caddy/nginx), so a spoofed X-Forwarded-For never
+ * lands in session rows. Never hand-parse the raw header.
+ */
 export function clientIpFromRequest(req: Request): string | null {
-  const fwd = req.headers['x-forwarded-for'];
-  let ip = '';
-  if (typeof fwd === 'string' && fwd.length > 0) ip = fwd.split(',')[0].trim();
-  else if (Array.isArray(fwd) && fwd.length > 0) ip = fwd[0].trim();
-  else ip = req.ip || req.socket?.remoteAddress || '';
+  const ip = req.ip || req.socket?.remoteAddress || '';
   if (!ip) return null;
   return ip.startsWith('::ffff:') ? ip.slice(7) : ip;
 }

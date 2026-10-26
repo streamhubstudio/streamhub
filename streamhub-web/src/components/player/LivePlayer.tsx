@@ -18,11 +18,14 @@ import { useQuery } from '@tanstack/react-query'
 import {
   LiveKitRoom,
   RoomAudioRenderer,
-  StartAudio,
+  StartMediaButton,
+  useConnectionQualityIndicator,
+  useLocalParticipant,
 } from '@livekit/components-react'
 import { api, ApiRequestError } from '@/api'
 import { Button, Spinner } from '@/ui'
 import { PluginSlot } from '@/plugins'
+import { isDegradedQuality } from '@/lib/playerQuality'
 import { VideoStage } from './VideoStage'
 import { AudioStage } from './AudioStage'
 import { PlayerControls } from './PlayerControls'
@@ -41,6 +44,15 @@ export interface LivePlayerProps {
    *             (no auth). Used by the public /play and /embed player pages.
    */
   access?: 'auth' | 'public'
+  /**
+   * Signed playback capability (P0-3) for a PRIVATE-playback app's public embed:
+   * the /embed page reads `?exp=&sig=` off its URL and forwards them here, and
+   * the server validates the capability before minting the token. Ignored for
+   * `access='auth'` and for public apps (which need no signature). Never an sk_
+   * token or JWT — see api.playTokenSign.
+   */
+  exp?: string | number
+  sig?: string
   /** Which addons to overlay. Omit to show a bare player. */
   addons?: PlayerAddonFeatures
   /** Display name used by the chat/reactions addons. */
@@ -60,6 +72,26 @@ export interface LivePlayerProps {
   onConnected?: () => void
   /** Fired on connection / data-channel errors. */
   onError?: (err: Error) => void
+}
+
+/**
+ * Poor-connection banner (LIVEKIT-UNUSED-FEATURES `connectionQualityChanged`):
+ * watches the LOCAL participant's connection quality — for a subscribe-only
+ * viewer that is their downlink — and shows an amber warning while it is
+ * `poor`/`lost`. Must live inside <LiveKitRoom>.
+ */
+function PoorConnectionBanner() {
+  const { t } = useTranslation('playerComponents')
+  const { localParticipant } = useLocalParticipant()
+  const { quality } = useConnectionQualityIndicator({
+    participant: localParticipant,
+  })
+  if (!isDegradedQuality(quality)) return null
+  return (
+    <div className="absolute inset-x-0 top-0 z-40 bg-amber-500/25 px-3 py-1.5 text-center text-xs text-amber-100 backdrop-blur-sm">
+      {t('live.poorConnection')}
+    </div>
+  )
 }
 
 function Frame({
@@ -86,6 +118,8 @@ export function LivePlayer({
   app,
   room,
   access = 'auth',
+  exp,
+  sig,
   addons,
   identity,
   controls = true,
@@ -109,14 +143,14 @@ export function LivePlayer({
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['live-player-token', access, app, room],
+    queryKey: ['live-player-token', access, app, room, exp ?? '', sig ?? ''],
     enabled: Boolean(app && room),
     staleTime: 5 * 60_000,
     retry: (count, err) =>
       !(err instanceof ApiRequestError && err.status === 401) && count < 2,
     queryFn: () =>
       access === 'public'
-        ? api.playToken(app, room)
+        ? api.playToken(app, room, { exp, sig })
         : api.tokens.mint(app, { room, canSubscribe: true, canPublish: false }),
   })
 
@@ -250,19 +284,26 @@ export function LivePlayer({
             </button>
           )}
 
+          {/* Autoplay unlock: renders ONLY while the browser blocks audio or
+              video playback (Safari/iOS autoplay policy, Low Power Mode); one
+              tap resumes both. StartMediaButton supersedes StartAudio because
+              WebKit can also block muted VIDEO autoplay. */}
           <div
             className={`absolute z-30 ${audioOnly ? 'bottom-3 right-3' : 'bottom-3 left-3'}`}
           >
-            <StartAudio
-              label={t('playerComponents:controls.unmute')}
+            <StartMediaButton
+              label={t('playerComponents:controls.tapToPlay')}
               className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-primary-600"
             />
           </div>
 
-          {connError && (
+          {connError ? (
             <div className="absolute inset-x-0 top-0 z-40 bg-amber-500/20 px-3 py-1.5 text-center text-xs text-amber-200">
               {t('playerComponents:live.connectionProblem', { error: connError })}
             </div>
+          ) : (
+            /* Degraded-quality warning (connectionQualityChanged). */
+            <PoorConnectionBanner />
           )}
         </Frame>
       </div>

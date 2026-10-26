@@ -166,6 +166,55 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   return parsed as T
 }
 
+/**
+ * Fetch a BINARY response (e.g. an example-bundle zip) with the Bearer header,
+ * returning a Blob. Unlike `request`, it never tries to JSON-parse the body.
+ */
+export async function requestBlob(
+  path: string,
+  query?: RequestOptions['query'],
+): Promise<Blob> {
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let res: Response
+  try {
+    res = await fetch(buildUrl(path, query), { headers })
+  } catch (err) {
+    throw new ApiRequestError(
+      err instanceof Error ? err.message : 'Network error',
+      0,
+      err,
+    )
+  }
+
+  if (res.status === 401) onUnauthorized?.()
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`
+    try {
+      msg = extractError(JSON.parse(await res.text())) ?? msg
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiRequestError(msg, res.status)
+  }
+  return res.blob()
+}
+
+/** Trigger a browser "save as" for a Blob (client-side download). */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  // Revoke on the next tick so the download has started.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 function isEnvelope(v: unknown): v is ApiEnvelope<unknown> {
   return (
     typeof v === 'object' &&

@@ -1,0 +1,82 @@
+{
+  "loading": "Cargando…",
+  "enabled": "on",
+  "disabled": "off",
+  "today": "hoy",
+  "activeStreams": "Streams activos",
+  "assignmentsLabel": "Asignaciones edge",
+  "status": "Estado",
+  "section": {
+    "overview": "Resumen",
+    "streams": "Streams",
+    "events": "Eventos"
+  },
+  "model": {
+    "occupancy": "Ocupación",
+    "counting": "Conteo",
+    "crowd": "Aglomeración",
+    "demography": "Demografía"
+  },
+  "noStreams": "No hay streams activos. Empezá a publicar en una sala para configurar esta app.",
+  "configure": "Configurar",
+  "smallScreenHint": "Sugerencia: las zonas y líneas se dibujan mejor en una pantalla más grande.",
+  "editSettings": "Editar ajustes",
+  "backToStreams": "Volver a streams",
+  "actions": {
+    "edit": "Editar",
+    "done": "Listo",
+    "addZone": "Agregar zona",
+    "addLine": "Agregar línea",
+    "addRoi": "Agregar región",
+    "addPoi": "Agregar POI",
+    "save": "Guardar",
+    "saving": "Guardando…"
+  },
+  "savedOk": "Guardado",
+  "savedErr": "Error al guardar",
+  "hint": {
+    "zones": "Hacé clic en el video para agregar puntos del polígono; arrastrá un punto para moverlo.",
+    "lines": "Arrastrá sobre el video para dibujar la línea de conteo; agarrá un extremo para ajustar. Agregá POIs para contar solo cruces dentro de una región.",
+    "roi": "Dibujá uno o más POIs — los clics agregan puntos; arrastrá un punto para moverlo. Cada rostro se etiqueta según el POI donde cae."
+  },
+  "zones": "Zonas",
+  "lines": "Líneas",
+  "pois": "POIs",
+  "noPois": "Sin POIs — se usa el cuadro completo.",
+  "noShapes": "Ninguna todavía — agregá una para empezar.",
+  "detect": "Detecta",
+  "personas": "Personas",
+  "vehiculos": "Vehículos",
+  "inside": "Lado interior",
+  "side": {
+    "top": "Arriba",
+    "bottom": "Abajo",
+    "left": "Izquierda",
+    "right": "Derecha"
+  },
+  "tag": "Etiqueta",
+  "noTag": "Sin etiqueta",
+  "remove": "Quitar",
+  "fps": "FPS",
+  "demography": {
+    "title": "Región y motor",
+    "engine": "Motor",
+    "engineOpt": {
+      "local": "Local (InsightFace)",
+      "openai": "API de visión OpenAI",
+      "deepseek": "API de visión DeepSeek"
+    },
+    "interval": "Intervalo (segundos)",
+    "roiSet": "Región de interés definida",
+    "roiNone": "Cuadro completo (sin región)",
+    "roiHint": "Opcional — dibujá uno o más POIs para restringir + etiquetar por región (cuadro completo si no hay)."
+  },
+  "noEvents": "Todavía no se registraron eventos.",
+  "col": {
+    "event": "Evento",
+    "room": "Sala",
+    "tag": "Etiqueta",
+    "detail": "Detalle",
+    "ts": "Hora"
+  }
+}

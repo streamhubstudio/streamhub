@@ -31,9 +31,15 @@ export { definePlugin } from './types.ts'
 export type {
   PluginModule,
   PluginPlacement,
+  PluginKind,
+  PluginSectionMeta,
+  PluginStorageDescriptor,
   PluginContext,
   PluginComponentProps,
   PluginConfigProps,
+  PlayerComponent,
+  PlayerComponentProps,
+  PlayerSource,
   ConfigSchema,
   ConfigField,
   ConfigFieldType,
@@ -46,13 +52,23 @@ export type {
 } from './types.ts'
 
 // Host runtime
-export { PluginSlot, usePluginSlots } from './host.tsx'
+export {
+  PluginSlot,
+  usePluginSlots,
+  componentFor,
+  PluginErrorBoundary,
+  BoundaryFallback,
+} from './host.tsx'
 export type { PluginSlotProps } from './host.tsx'
+
+// Section state helper for multi-section (deep-linkable) plugin surfaces.
+export { useSection } from './useSection.ts'
 
 // Read model + mutations
 export {
   usePluginCatalog,
   usePluginsByPlacement,
+  usePlayerProvider,
   useInstallPlugin,
   useUninstallPlugin,
   useSetPluginActive,

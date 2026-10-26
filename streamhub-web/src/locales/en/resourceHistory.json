@@ -1,0 +1,35 @@
+{
+  "title": "Resource history",
+  "subtitle": "Host CPU, RAM, Network and Disk usage, sampled hourly.",
+  "lightweightNote": "Lightweight in-app history (hourly samples, kept in the server database). For high-resolution metrics use the Prometheus/Grafana stack.",
+  "retentionNote": "Showing up to {{days}} days of history at 1-hour precision.",
+  "rangeLabel": "Time window",
+  "range": {
+    "24h": "24 h",
+    "7d": "7 d",
+    "30d": "30 d",
+    "90d": "90 d"
+  },
+  "cpu": {
+    "title": "CPU",
+    "hint": "Average utilisation per hour"
+  },
+  "mem": {
+    "title": "RAM",
+    "hint": "Memory used vs total"
+  },
+  "net": {
+    "title": "Network",
+    "hint": "Bytes transferred per hour (rx + tx)"
+  },
+  "disk": {
+    "title": "Disk",
+    "hint": "Data volume usage"
+  },
+  "empty": "No samples yet",
+  "emptyNet": "No network data (Linux only)",
+  "emptyDisk": "No disk data on this host",
+  "forbidden": "This view requires a superadmin (global-scope) account.",
+  "notAvailable": "Resource history isn't available on this server version.",
+  "loadError": "Couldn't load the resource history."
+}

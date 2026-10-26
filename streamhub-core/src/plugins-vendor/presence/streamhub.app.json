@@ -1,0 +1,184 @@
+{
+  "manifestVersion": 1,
+  "id": "presence",
+  "name": "Presence — Workstation Monitoring",
+  "description": "Detects people in configured zones of the live stream and fires absence / return / after-hours events (signed app callbacks + webhook), with a zone editor and per-zone occupancy timeline.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.1",
+  "kind": "app",
+  "icon": "users",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "storage": {
+    "db": "presence.db"
+  },
+  "export": {
+    "workerDir": "presence-worker"
+  },
+  "events": [
+    "presence.absent",
+    "presence.returned",
+    "presence.after_hours"
+  ],
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "office",
+      "help": "HLS room name to monitor — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "zones",
+      "type": "string",
+      "label": "Zones (JSON)",
+      "default": "[]",
+      "placeholder": "[{\"id\":\"desk-1\",\"name\":\"Front desk\",\"x\":0.1,\"y\":0.2,\"w\":0.3,\"h\":0.4}]",
+      "help": "Normalized rectangles ([0-1] fractions of the frame): [{id,name,x,y,w,h}]. Draw them visually in the Presence tab."
+    },
+    {
+      "key": "schedule",
+      "type": "string",
+      "label": "Work schedule",
+      "default": "08:00-18:00",
+      "placeholder": "08:00-18:00",
+      "help": "HH:MM-HH:MM work window. A person present outside it fires presence.after_hours. Empty disables after-hours detection; start > end spans midnight (e.g. 22:00-06:00)."
+    },
+    {
+      "key": "scheduleDays",
+      "type": "string",
+      "label": "Work days",
+      "default": "mon-fri",
+      "placeholder": "mon-fri",
+      "help": "Days the schedule applies: 'mon-fri', 'mon,wed,fri', … Empty = all."
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": "Timezone",
+      "default": "",
+      "placeholder": "America/Argentina/Buenos_Aires",
+      "help": "IANA timezone for the schedule. Empty = server local time."
+    },
+    {
+      "key": "thresholdMin",
+      "type": "number",
+      "label": "Absence threshold (minutes)",
+      "default": 5,
+      "min": 0.1,
+      "max": 1440,
+      "help": "A zone continuously empty longer than this fires presence.absent."
+    },
+    {
+      "key": "afterHours",
+      "type": "boolean",
+      "label": "After-hours detection",
+      "default": true,
+      "help": "Fire presence.after_hours when someone is present outside the schedule."
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Model size",
+      "default": "nano",
+      "options": [
+        {
+          "value": "nano",
+          "label": "Nano (fastest, CPU-friendly)"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium (GPU recommended)"
+        }
+      ]
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the GPU; off runs on CPU (yolov8n @2fps is CPU-viable)."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Confidence threshold",
+      "default": 0.35,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum person-detection confidence (0-1)."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 2,
+      "min": 0.1,
+      "max": 10,
+      "help": "Frames per second to sample (lower = less CPU; 2 is plenty)."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "External webhook (optional)",
+      "default": "",
+      "placeholder": "https://example.com/hooks/presence",
+      "help": "Extra raw-JSON POST target for every presence event. The app's signed callbacks fire regardless — leave empty to use only those."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m presence_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "capabilities": [
+        "yolo"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "PRESENCE_APP": "{{app}}",
+      "PRESENCE_ROOM": "{{config.room}}",
+      "PRESENCE_ZONES": "{{config.zones}}",
+      "PRESENCE_SCHEDULE": "{{config.schedule}}",
+      "PRESENCE_SCHEDULE_DAYS": "{{config.scheduleDays}}",
+      "PRESENCE_TZ": "{{config.timezone}}",
+      "PRESENCE_THRESHOLD_MIN": "{{config.thresholdMin}}",
+      "PRESENCE_AFTER_HOURS": "{{config.afterHours}}",
+      "PRESENCE_MODEL": "{{ config.model | map:nano=yolov8n,small=yolov8s,medium=yolov8m,*=yolov8n }}",
+      "PRESENCE_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "PRESENCE_CONFIDENCE": "{{config.confidence}}",
+      "PRESENCE_FPS": "{{config.fps}}",
+      "PRESENCE_CALLBACK_URL": "{{config.callbackUrl}}",
+      "PRESENCE_DATA_DIR": "{{appDir}}/presence",
+      "PRESENCE_HLS_DIR": "{{appDir}}/hls",
+      "PRESENCE_PUBLIC_BASE": "{{ originUrl ?? publicBase }}",
+      "PRESENCE_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "migrations": {
+    "dir": "migrations",
+    "db": "presence.db"
+  },
+  "standalone": {
+    "supported": true,
+    "docs": "STANDALONE.md"
+  }
+}

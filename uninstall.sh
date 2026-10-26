@@ -26,7 +26,7 @@
 #   --yes | -y       Don't prompt (non-interactive).
 #   --help
 #
-# Target OS: Ubuntu 24.04/26.04 LTS x86_64 (same as install.sh). Idempotent:
+# Target OS: Ubuntu 24.04/26.04 LTS or Debian 12/13 x86_64 (same as install.sh). Idempotent:
 # safe to run when nothing (or only part) is installed.
 # =============================================================================
 set -euo pipefail
@@ -134,7 +134,25 @@ if [ "$PURGE_TLS" = 1 ] && [ -n "$DOMAIN" ] && [ "$DOMAIN" != "localhost" ] && c
   fi
 fi
 
-# ---- 5. installer leftovers -------------------------------------------------
+# ---- 5. managed service + CLI + heartbeat units -----------------------------
+# Remove the single systemd unit, the streamhub CLI symlink, and the heartbeat
+# timer/service the installer added (idempotent — safe if absent).
+if command -v systemctl >/dev/null 2>&1; then
+  for unit in streamhub.service streamhub-heartbeat.timer streamhub-heartbeat.service; do
+    if [ -f "/etc/systemd/system/$unit" ]; then
+      log "removing systemd unit $unit"
+      systemctl disable --now "$unit" >/dev/null 2>&1 || true
+      rm -f "/etc/systemd/system/$unit"
+    fi
+  done
+  systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+# CLI symlink (points into the now-removed install dir) + heartbeat helpers.
+if [ -L /usr/local/bin/streamhub ]; then log "removing /usr/local/bin/streamhub symlink"; rm -f /usr/local/bin/streamhub; fi
+rm -f /usr/local/bin/streamhub-heartbeat.sh 2>/dev/null || true
+if [ "$PURGE" = 1 ]; then rm -rf /etc/streamhub 2>/dev/null || true; fi
+
+# ---- 6. installer leftovers -------------------------------------------------
 rm -f /var/log/streamhub-install.log /var/log/streamhub-regen.log /root/sh-run.sh /root/regen.sh 2>/dev/null || true
 if [ "$PURGE" = 1 ]; then
   log "removing sysctl WebRTC drop-in"

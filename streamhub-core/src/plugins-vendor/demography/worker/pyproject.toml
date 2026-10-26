@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "streamhub-vision-edge"
+version = "0.1.0"
+description = "StreamHub Vision Edge runtime — occupancy / counting / crowd / demography models + edge control-channel daemon, orchestrated by a StreamHub master."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+authors = [{ name = "StreamHub" }]
+dependencies = [
+    "ultralytics>=8.2,<9",
+    "lapx>=0.5.5",
+    "opencv-python-headless>=4.9",
+    "numpy>=1.24",
+    "websockets>=12",
+]
+
+[project.optional-dependencies]
+# Local demography engine (InsightFace buffalo_l + HSEmotion). AI-API engines
+# (openai/deepseek) need none of these — they POST snapshots to a vision LLM.
+demography = ["insightface>=0.7", "onnxruntime>=1.16", "hsemotion>=0.3"]
+telemetry = ["psutil>=5.9"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+vision-edge = "vision_edge.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vision_edge*"]
+
+[tool.setuptools.package-data]
+vision_edge = ["trackers/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

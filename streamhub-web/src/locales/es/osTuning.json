@@ -1,0 +1,30 @@
+{
+  "title": "Ajustes de rendimiento del SO",
+  "subtitle": "Parámetros del kernel y límites de recursos que importan para un servidor de medios LiveKit/WebRTC, y si están aplicados en este host.",
+  "explain": "Solo lectura: el core inspecciona /proc — nunca cambia parámetros del kernel. install.sh los aplica en el host real.",
+  "refreshing": "Refrescando…",
+  "loadError": "No se pudo cargar el reporte de ajustes del SO.",
+  "forbidden": "Los ajustes del SO son una vista solo para superadmin. Ingresá con una cuenta de alcance global para verla.",
+  "unsupported": "Los ajustes del SO requieren una versión más nueva del core de StreamHub. Actualizá el servidor para habilitarla.",
+  "unsupportedPlatform": "Este nodo corre en {{platform}}, donde /proc no es inspeccionable. Estos parámetros aplican en el host Linux de producción.",
+  "checkedAt": "Leído {{at}}",
+  "optionalTag": "opcional",
+  "status": {
+    "applied": "aplicado",
+    "not-applied": "sin aplicar",
+    "unknown": "n/d"
+  },
+  "summary": {
+    "applied": "Aplicados",
+    "notApplied": "Sin aplicar",
+    "unknown": "N/D"
+  },
+  "col": {
+    "knob": "Parámetro",
+    "current": "Actual",
+    "recommended": "Recomendado",
+    "status": "Estado",
+    "howToApply": "Cómo aplicar"
+  },
+  "empty": "—"
+}

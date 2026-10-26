@@ -130,10 +130,12 @@ export function buildMasterPlaylist(entries: MasterPlaylistEntry[]): string {
   return `${lines.join('\n')}\n`;
 }
 
-/** Content-Type for files produced by the HLS transcode. */
+/** Content-Type for files produced by the HLS transcode / DRM packaging. */
 export function hlsContentType(file: string): string {
   if (file.endsWith('.m3u8')) return 'application/vnd.apple.mpegurl';
   if (file.endsWith('.ts')) return 'video/mp2t';
+  if (file.endsWith('.mp4')) return 'video/mp4';
+  if (file.endsWith('.m4s')) return 'video/iso.segment';
   return 'application/octet-stream';
 }
 
@@ -190,6 +192,59 @@ export async function transcodeHlsRendition(
       TRANSCODE_TIMEOUT_MS,
     );
     return fs.existsSync(path.join(outDir, 'index.m3u8'));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Transcode `sourcePath` into ONE mezzanine MP4 rendition at `outPath`
+ * (scaled H.264 + AAC, faststart). This is the intermediate the DRM path
+ * feeds to shaka-packager — the packager encrypts and segments, ffmpeg only
+ * scales/encodes. Same encoder settings as the clear HLS ladder. Returns true
+ * on success; never throws.
+ */
+export async function transcodeRenditionMp4(
+  sourcePath: string,
+  outPath: string,
+  rendition: VodRendition,
+): Promise<boolean> {
+  try {
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    const kbps = rendition.bitrateKbps;
+    await run(
+      'ffmpeg',
+      [
+        '-y',
+        '-i',
+        sourcePath,
+        '-vf',
+        `scale=-2:${rendition.height}`,
+        '-c:v',
+        'libx264',
+        '-profile:v',
+        'main',
+        '-preset',
+        'veryfast',
+        '-b:v',
+        `${kbps}k`,
+        '-maxrate',
+        `${Math.round(kbps * 1.07)}k`,
+        '-bufsize',
+        `${kbps * 2}k`,
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        '-ac',
+        '2',
+        '-movflags',
+        '+faststart',
+        outPath,
+      ],
+      TRANSCODE_TIMEOUT_MS,
+    );
+    return fs.existsSync(outPath);
   } catch {
     return false;
   }

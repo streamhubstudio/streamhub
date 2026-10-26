@@ -18,20 +18,19 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useTranslation } from 'react-i18next'
 import {
   HiOutlineClock,
+  HiOutlineDocumentText,
   HiOutlineDownload,
   HiOutlinePlay,
   HiOutlineTrash,
 } from 'react-icons/hi'
-import { api } from '@/api'
+import { api, ApiRequestError } from '@/api'
 import { Dialog, Notification, Pagination, Tooltip, toast } from '@/ui'
-import type { RecordingConfig, SortDir, Vod, VodOrder } from '@/api'
+import type { SortDir, UpdateAppConfigRequest, Vod, VodOrder } from '@/api'
 import { VodPlayer } from '@/components/player'
-import {
-  formatDateTime,
-  formatDuration,
-  vodDurationS,
-  vodStartedAt,
-} from '@/lib/mediaFormat'
+import { DocsHint } from '@/components/DocsHint'
+import { formatDuration, vodDurationS, vodStartedAt } from '@/lib/mediaFormat'
+import { formatDateTime } from '@/lib/datetime'
+import { useAppTimezone } from '@/lib/appTimezone'
 import {
   Badge,
   Button,
@@ -111,23 +110,31 @@ function RecordingConfigCard({ app }: { app: string }) {
     queryKey: ['app-config', app],
     queryFn: ({ signal }) => api.apps.getConfig(app, signal),
   })
+  const s3 = useQuery({
+    queryKey: ['app-s3', app],
+    queryFn: ({ signal }) => api.apps.getS3(app, signal),
+    staleTime: 30_000,
+  })
 
   const [split, setSplit] = useState(0)
   const [snapshot, setSnapshot] = useState(0)
+  const [enabled, setEnabled] = useState(true)
 
   useEffect(() => {
     const rec = data?.recording
-    setSplit(Number(rec?.split_minutes ?? 0))
-    setSnapshot(Number(rec?.snapshot_seconds ?? 0))
+    setSplit(Number(rec?.splitMinutes ?? 0))
+    setSnapshot(Number(rec?.snapshotSeconds ?? 0))
+    setEnabled(Boolean(rec?.enabled))
   }, [data])
 
+  // Writes the recording block via PATCH /apps/:name (UpdateAppConfigRequest).
   const save = useMutation({
-    mutationFn: (patch: RecordingConfig) =>
-      api.apps.updateConfig(app, {
-        recording: { ...(data?.recording ?? {}), ...patch },
-      }),
+    mutationFn: (patch: UpdateAppConfigRequest) => api.apps.update(app, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['app-config', app] }),
   })
+
+  const bucket = (s3.data?.bucket ?? '').trim()
+  const noBucket = s3.isSuccess && !bucket
 
   if (isLoading) return <Loading label={t('config.loading')} />
   if (isError)
@@ -150,6 +157,39 @@ function RecordingConfigCard({ app }: { app: string }) {
           ) : undefined
         }
       />
+      {noBucket && (
+        <div
+          data-testid="vods-no-bucket-warning"
+          className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[12px] text-amber-300"
+        >
+          {t('config.noBucket')}{' '}
+          <Link
+            to="?tab=config&section=system&sub=integraciones"
+            className="font-semibold underline"
+          >
+            {t('config.noBucketLink')}
+          </Link>
+        </div>
+      )}
+      <div className="mb-4 max-w-xs">
+        <Field
+          label={t('config.enabledLabel')}
+          hint={t('config.enabledHint')}
+        >
+          <Select
+            value={enabled ? 1 : 0}
+            disabled={save.isPending}
+            onChange={(e) => {
+              const v = Number(e.target.value) === 1
+              setEnabled(v)
+              save.mutate({ recordingEnabled: v })
+            }}
+          >
+            <option value={1}>{t('config.on')}</option>
+            <option value={0}>{t('config.off')}</option>
+          </Select>
+        </Field>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label={t('config.splitLabel')}
@@ -161,7 +201,7 @@ function RecordingConfigCard({ app }: { app: string }) {
             onChange={(e) => {
               const v = Number(e.target.value)
               setSplit(v)
-              save.mutate({ split_minutes: v })
+              save.mutate({ splitMinutes: v })
             }}
           >
             {SPLIT_VALUES.map((v) => (
@@ -181,7 +221,7 @@ function RecordingConfigCard({ app }: { app: string }) {
             onChange={(e) => {
               const v = Number(e.target.value)
               setSnapshot(v)
-              save.mutate({ snapshot_seconds: v })
+              save.mutate({ snapshotSeconds: v })
             }}
           >
             {SNAPSHOT_VALUES.map((v) => (
@@ -210,6 +250,7 @@ function vodUrl(v: Vod): string | undefined {
 
 export function VodsTab({ app }: { app: string }) {
   const { t } = useTranslation(['vodsTab', 'common', 'appDetail'])
+  const tz = useAppTimezone()
   const qc = useQueryClient()
   const [playing, setPlaying] = useState<{ vod: Vod; url: string } | null>(null)
   const [confirmDel, setConfirmDel] = useState<Vod | null>(null)
@@ -311,9 +352,13 @@ export function VodsTab({ app }: { app: string }) {
             title={t('title')}
             subtitle={t('subtitle')}
             right={
-              <Button variant="ghost" onClick={() => refetch()}>
-                {isFetching ? t('appDetail:state.updating') : t('common:actions.refresh')}
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Serving these recordings through a CDN → docs deep link. */}
+                <DocsHint section="cdnVod" />
+                <Button variant="ghost" onClick={() => refetch()}>
+                  {isFetching ? t('appDetail:state.updating') : t('common:actions.refresh')}
+                </Button>
+              </div>
             }
           />
 
@@ -435,7 +480,7 @@ export function VodsTab({ app }: { app: string }) {
                     {fmtBytes(v.sizeBytes)}
                   </RTd>
                   <RTd label={t('table.created')} className="text-xs text-slate-400">
-                    {formatDateTime(vodStartedAt(v))}
+                    {formatDateTime(vodStartedAt(v), tz)}
                   </RTd>
                   <RTd actions className="text-right">
                     <div className="inline-flex gap-2 max-md:w-full max-md:justify-end">
@@ -510,7 +555,12 @@ export function VodsTab({ app }: { app: string }) {
               {t('common:actions.close')}
             </Button>
           </div>
-          <VodPlayer src={playing.url} poster={playing.vod.snapshotUrl} />
+          <VodPlayer
+            src={playing.url}
+            poster={playing.vod.snapshotUrl}
+            app={app}
+            room={playing.vod.room ?? undefined}
+          />
           <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:grid-cols-4">
             <Meta label={t('meta.room')} value={playing.vod.room ?? '—'} />
             <Meta
@@ -520,9 +570,10 @@ export function VodsTab({ app }: { app: string }) {
             <Meta label={t('meta.size')} value={fmtBytes(playing.vod.sizeBytes)} />
             <Meta
               label={t('meta.created')}
-              value={formatDateTime(vodStartedAt(playing.vod))}
+              value={formatDateTime(vodStartedAt(playing.vod), tz)}
             />
           </dl>
+          <TranscriptSection app={app} vodId={playing.vod.id} />
         </Dialog>
       )}
 
@@ -577,6 +628,118 @@ function Meta({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-slate-500">{label}</dt>
       <dd className="truncate text-slate-300">{value}</dd>
+    </div>
+  )
+}
+
+/**
+ * Transcript block on the VOD detail dialog (transcription plugin output):
+ * shows the transcript status/text/speakers, a "Download SRT" link (fresh
+ * presigned URL of the SRT stored next to the VOD in S3) and a Transcribe /
+ * Re-transcribe action. A 404 simply means the VOD was never transcribed —
+ * that is the empty state, not an error. Polls while queued/processing.
+ */
+function TranscriptSection({ app, vodId }: { app: string; vodId: number }) {
+  const { t } = useTranslation(['vodsTab', 'common'])
+  const qc = useQueryClient()
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['vod-transcript', app, vodId],
+    queryFn: ({ signal }) => api.vods.transcript(app, vodId, signal),
+    retry: false,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status
+      return s === 'queued' || s === 'processing' ? 4000 : false
+    },
+  })
+
+  const start = useMutation({
+    mutationFn: () => api.vods.transcribe(app, vodId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['vod-transcript', app, vodId] }),
+    onError: (err) => {
+      toast.push(
+        <Notification title={t('transcript.errorTitle')} type="danger">
+          {errMessage(err, t('transcript.triggerError'))}
+        </Notification>,
+      )
+    },
+  })
+
+  const never = error instanceof ApiRequestError && error.status === 404
+  const status = data?.status
+  const pending = status === 'queued' || status === 'processing'
+  const tone =
+    status === 'ready' ? 'green' : status === 'failed' ? 'red' : 'amber'
+
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-3 dark:border-gray-700">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+          <HiOutlineDocumentText className="text-base" />
+          {t('transcript.title')}
+          {data && <Badge tone={tone}>{t(`transcript.status.${status}`)}</Badge>}
+          {data?.language && (
+            <span className="text-xs font-normal text-slate-400">
+              {t('transcript.language', { lang: data.language })}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {data?.srtUrl && status === 'ready' && (
+            <Button
+              variant="ghost"
+              onClick={() => triggerDownload(data.srtUrl as string, `vod-${vodId}.srt`)}
+            >
+              {t('transcript.downloadSrt')}
+            </Button>
+          )}
+          {(never || status === 'ready' || status === 'failed') && (
+            <Button
+              variant="accent"
+              disabled={start.isPending}
+              onClick={() => start.mutate()}
+            >
+              {start.isPending
+                ? t('transcript.starting')
+                : never
+                  ? t('transcript.start')
+                  : t('transcript.restart')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="mt-2 text-xs text-slate-500">{t('transcript.loading')}</p>
+      ) : never ? (
+        <p className="mt-2 text-xs text-slate-500">{t('transcript.empty')}</p>
+      ) : error ? (
+        <p className="mt-2 text-xs text-slate-500">
+          {errMessage(error, t('transcript.loadError'))}
+        </p>
+      ) : pending ? (
+        <p className="mt-2 animate-pulse text-xs text-slate-400">
+          {t('transcript.pending')}
+        </p>
+      ) : status === 'failed' ? (
+        <div className="mt-2">
+          <ErrorBanner message={data?.error ?? t('transcript.failed')} />
+        </div>
+      ) : (
+        <>
+          {(data?.speakers?.length ?? 0) > 0 && (
+            <p className="mt-2 text-xs text-slate-400">
+              {t('transcript.speakers', {
+                speakers: data?.speakers.join(', '),
+              })}
+            </p>
+          )}
+          <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs leading-5 text-slate-600 dark:bg-gray-800 dark:text-slate-300">
+            {data?.text || t('transcript.noText')}
+          </pre>
+        </>
+      )}
     </div>
   )
 }

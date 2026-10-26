@@ -90,3 +90,37 @@ export function formatCooldown(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds))
   return `${s}s`
 }
+
+// ---------------------------------------------------------------------------
+// Cluster edge screen (CLUSTER-ROADMAP §5) — GET /auth/config drives whether
+// the login page shows its forms or an "edge — manage at the master" panel.
+// ---------------------------------------------------------------------------
+
+/** The subset of GET /auth/config the edge decision reads (duck-typed). */
+export interface AuthConfigLike {
+  loginEnabled?: boolean
+  nodeRole?: string
+  masterUrl?: string | null
+}
+
+/**
+ * True when this deployment is a cluster EDGE and the SPA must hide the login
+ * forms. Backward-safe: an older backend omits the fields → treated as a
+ * standalone node with login enabled (false). `loginEnabled === false` OR an
+ * explicit `nodeRole === 'edge'` both count (defensive against either field
+ * being served alone).
+ */
+export function isClusterEdge(config: AuthConfigLike | null | undefined): boolean {
+  if (!config) return false
+  if (config.loginEnabled === false) return true
+  return config.nodeRole === 'edge'
+}
+
+/**
+ * The master URL to link to from the edge screen, trimmed of trailing slashes.
+ * Null when absent/blank (the screen then shows guidance without a link).
+ */
+export function edgeMasterUrl(config: AuthConfigLike | null | undefined): string | null {
+  const raw = (config?.masterUrl ?? '').trim().replace(/\/+$/, '')
+  return raw.length > 0 ? raw : null
+}

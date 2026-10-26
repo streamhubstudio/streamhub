@@ -1,6 +1,8 @@
 {
   "inputType": {
     "rtmp": "RTMP (push)",
+    "srt": "SRT (push)",
+    "mpegts": "MPEG-TS / UDP (multicast pull)",
     "whip": "WHIP",
     "url": "URL (pull)",
     "ws-mjpeg": "WebSocket (ESP32/MJPEG)"
@@ -10,7 +12,25 @@
     "streamKey": "Stream key",
     "streamPassword": "Stream password",
     "playerUrl": "Player URL",
-    "embedIframe": "Embed iframe"
+    "embedIframe": "Embed iframe",
+    "primaryLabel": "Primary",
+    "backupLabel": "Backup (failover)",
+    "primaryStreamKey": "Primary stream key",
+    "backupStreamKey": "Backup stream key",
+    "backupRtmpUrl": "Backup RTMP URL",
+    "backupStreamPassword": "Backup stream password",
+    "failoverHelp": "Both keys publish into the same room, so the player URL is identical. Point a redundant/failover encoder at the backup key and keep it on standby — if the primary drops, start the backup and the channel stays live with no URL change.",
+    "hlsUrl": "HLS URL",
+    "passthroughBadge": "passthrough (remux)",
+    "passthroughLostTitle": "This passthrough ingress gives up:",
+    "passthroughHelp": "Push H.264/AAC to the RTMP URL (port :1937) and play it from the HLS/player URL. There is no WebRTC, recording or room features on this endpoint.",
+    "srtBadge": "SRT",
+    "srtUrl": "SRT URL",
+    "srtLatency": "SRT adds a ~{{ms}} ms receive-latency budget (UDP retransmission window) on top of the HLS latency.",
+    "srtHelp": "Push H.264/AAC over SRT (UDP) to the URL above. The stream key travels as ?streamid= in the URL — the key IS the credential, no user/password applies. Play it from the HLS/player URL.",
+    "mpegtsBadge": "MPEG-TS",
+    "sourceUrl": "UDP source (pulled)",
+    "mpegtsHelp": "This ingress PULLS an MPEG-TS stream from the udp:// source above (a multicast group or a unicast port) and remuxes it straight to HLS. There is no push URL or stream key — the source IS the input. Play it from the HLS/player URL."
   },
   "create": {
     "title": "Create ingress",
@@ -20,9 +40,51 @@
     "identityLabel": "Participant identity",
     "identityHint": "Optional.",
     "urlLabel": "Source URL",
-    "urlHint": "Required for URL type.",
+    "urlHint": "Required for URL type. rtsp://, rtmp:// and http(s):// sources — srt:// is accepted too (LiveKit PULLS the remote SRT source; needs a LiveKit server version with SRT support).",
     "transcodeTitle": "Transcode (multi-layer)",
     "transcodeHint": "Required for RTMP/URL; optional for WHIP.",
+    "backupTitle": "Backup (failover) key",
+    "backupHint": "Also mint a second RTMP key into the same room for encoder redundancy. Same player URL.",
+    "passthrough": {
+      "title": "Passthrough (remux, no transcode)",
+      "hint": "Remux the RTMP straight to HLS (ffmpeg -c copy) on port :1937, bypassing LiveKit. Near-zero CPU, no GPU — but source must be H.264/AAC.",
+      "warningTitle": "Passthrough gives up (media never enters LiveKit):",
+      "lost": {
+        "webrtc": "No WebRTC / sub-second playback — HLS only (~2 segments of latency).",
+        "abr": "No adaptive bitrate (ABR) — a single passthrough rendition.",
+        "h264": "No server-side transcode safety net — the source MUST be H.264/AAC.",
+        "recording": "No egress recording / VOD for this ingress.",
+        "room": "No room features (viewer count, chat, reactions, moderation, snapshots, track plugins).",
+        "backup": "No backup/failover key and no GPU acceleration."
+      },
+      "disabled503": "RTMP/SRT/MPEG-TS passthrough is disabled on this server. Enable STREAMHUB_RTMP_PASSTHROUGH_ENABLE and open the passthrough ports (:1937+ — TCP for RTMP, UDP for SRT; the MPEG-TS udp:// port for multicast), then try again.",
+      "srtForced": "SRT only works in passthrough.",
+      "mpegtsForced": "MPEG-TS / UDP only works in passthrough."
+    },
+    "srt": {
+      "noteTitle": "SRT push (passthrough)",
+      "note": {
+        "udp": "SRT is UDP — open the ingress port as UDP on the firewall (RTMP passthrough uses TCP).",
+        "latency": "Adds an SRT receive-latency budget (~120 ms by default) on top of the HLS latency.",
+        "credential": "The stream key travels as streamid in the push URL — the key IS the credential; no user/password applies."
+      }
+    },
+    "mpegts": {
+      "sourceLabel": "UDP source",
+      "sourceHint": "Required. udp://@GROUP:PORT for multicast (e.g. udp://@239.1.1.1:5000) or udp://@:PORT for unicast. The group must be in 224.0.0.0/4.",
+      "sourcesLabel": "SSM sources (optional)",
+      "sourcesHint": "Source-specific multicast (IGMPv3): comma-separated source IPs to receive from. Multicast only.",
+      "localaddrLabel": "Interface / localaddr (optional)",
+      "localaddrHint": "Local NIC IP to join the group on — for multi-homed hosts.",
+      "fifoLabel": "fifo_size (optional)",
+      "fifoHint": "UDP receive buffer in 188-byte packets (default ≈ 5.4 MB). Raise it for bursty / high-bitrate multicast.",
+      "noteTitle": "MPEG-TS over UDP (passthrough PULL)",
+      "note": {
+        "pull": "This is a PULL — the server connects OUT to the udp:// source; there is no push URL and no stream key.",
+        "multicast": "For multicast, open UDP for the group/port and make sure IGMP/PIM routing reaches this host.",
+        "ssm": "For source-specific multicast (SSM), list the sender IPs in SSM sources (IGMPv3)."
+      }
+    },
     "submitting": "Creating…",
     "submit": "Create ingress",
     "error": "Could not create the ingress."
@@ -39,7 +101,13 @@
     "emptyCta": "Create ingress",
     "idLabel": "ID",
     "passwordBadge": "password",
+    "primaryBadge": "primary",
+    "backupBadge": "backup",
+    "passthroughBadge": "passthrough",
+    "srtBadge": "SRT",
+    "mpegtsBadge": "MPEG-TS",
     "confirmRemove": "Delete ingress {{id}}?",
+    "confirmRemovePrimary": "Delete ingress {{id}}? Its backup (failover) key will be deleted too.",
     "revealTooltip": "View ingest credentials",
     "table": {
       "ingress": "Ingress",
@@ -61,7 +129,11 @@
     "title": "Ingest credentials",
     "server": "Server (OBS \"Server\")",
     "rtmpUrl": "Full RTMP URL",
+    "srtUrl": "Full SRT URL (the key rides as ?streamid=)",
     "streamKey": "Stream key — OBS \"Stream Key\"",
+    "backupStreamKey": "Backup (failover) stream key",
+    "backupRtmpUrl": "Backup full RTMP URL",
+    "failoverNote": "This endpoint has a backup (failover) key. Both keys publish into the same room, so the player URL is unchanged whichever is live.",
     "show": "Show stream key",
     "hide": "Hide stream key",
     "passwordRequired": "This ingress also requires the stream password issued when it was created.",

@@ -13,11 +13,13 @@ import { useTranslation } from 'react-i18next'
 import {
   VideoTrack,
   useConnectionState,
+  useIsSpeaking,
   useTracks,
   type TrackReference,
 } from '@livekit/components-react'
 import { ConnectionState, Track } from 'livekit-client'
 import { Spinner as UiSpinner } from '@/ui'
+import { speakingRingClass } from '@/lib/playerQuality'
 
 function gridCols(count: number): string {
   if (count <= 1) return 'grid-cols-1'
@@ -32,10 +34,15 @@ function trackKey(tr: TrackReference): string {
 function Tile({ trackRef }: { trackRef: TrackReference }) {
   const { t } = useTranslation('playerComponents')
   const isScreen = trackRef.source === Track.Source.ScreenShare
+  // Active-speaker highlight (activeSpeakersChanged): accent ring while the
+  // tile's participant is speaking. Screen-share tiles stay neutral.
+  const speaking = useIsSpeaking(trackRef.participant) && !isScreen
   const name =
     trackRef.participant.name || trackRef.participant.identity || t('video.participant')
   return (
-    <div className="relative aspect-video overflow-hidden rounded-xl bg-black ring-1 ring-white/10">
+    <div
+      className={`relative aspect-video overflow-hidden rounded-xl bg-black transition-shadow ${speakingRingClass(speaking)}`}
+    >
       <VideoTrack
         trackRef={trackRef}
         className={`h-full w-full ${isScreen ? 'object-contain' : 'object-cover'}`}

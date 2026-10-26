@@ -5,9 +5,11 @@ import {
   ForbiddenException,
   Get,
   HttpCode,
+  Optional,
   Param,
   ParseIntPipe,
   Post,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,7 +19,13 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
+import {
+  actorFromCtx,
+  AuditService,
+  requestIp,
+} from '../audit/audit.service';
 import { AuthService, CreatedToken, TokenSummary } from './auth.service';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { CreatedTokenDto, TokenSummaryDto } from './dto/token-response.dto';
@@ -34,7 +42,11 @@ import { CreatedTokenDto, TokenSummaryDto } from './dto/token-response.dto';
 @ApiBearerAuth()
 @Controller('tokens')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    /** Security audit trail (ISO 8.15) — optional for bare-ctor unit specs. */
+    @Optional() private readonly audit?: AuditService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List API tokens (hashes never returned).' })
@@ -49,29 +61,48 @@ export class AuthController {
     summary: 'Create an API token. Plaintext is returned ONCE.',
   })
   @ApiCreatedResponse({ type: CreatedTokenDto })
-  create(
+  async create(
     @Body() dto: CreateTokenDto,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Promise<CreatedToken> {
     this.requireGlobal(ctx);
-    return this.auth.createToken({
+    const created = await this.auth.createToken({
       name: dto.name,
       scope: dto.scope,
       appId: dto.appId ?? null,
       allowedIps: dto.allowedIps,
     });
+    // Audit the mint (ISO 8.15). Metadata only — NEVER the plaintext token.
+    this.audit?.record({
+      action: 'token.create',
+      ...actorFromCtx(ctx),
+      targetType: 'token',
+      targetId: String(created.id),
+      ip: requestIp(req),
+      meta: { name: dto.name, scope: dto.scope, appId: dto.appId ?? null },
+    });
+    return created;
   }
 
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Revoke (soft-delete) an API token.' })
   @ApiNoContentResponse({ description: 'Token revoked.' })
-  revoke(
+  async revoke(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Promise<void> {
     this.requireGlobal(ctx);
-    return this.auth.revokeToken(id);
+    await this.auth.revokeToken(id);
+    this.audit?.record({
+      action: 'token.revoke',
+      ...actorFromCtx(ctx),
+      targetType: 'token',
+      targetId: String(id),
+      ip: requestIp(req),
+    });
   }
 
   /** Token management is global-only (superadmin / global sk_). No-op in dev

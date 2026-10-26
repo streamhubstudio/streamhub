@@ -2,17 +2,28 @@
  * Cockpit — a single grid cell.
  *
  * Renders one camera: a header strip (drag handle + label + per-cell fullscreen)
- * over the app's PUBLIC embed player (<LivePlayer access="public">, i.e. a
- * subscribe-only play-token — no login needed). When auto-play is off the player
- * is mounted lazily behind a click-to-play poster so a wall of cameras doesn't
- * open N connections at once.
+ * over the app's PUBLIC embed player. The player is resolved per tile so the
+ * wall works for every ingest shape AND honours the app's active player plugin:
+ *  - a ws-mjpeg camera → <MjpegPlayer> (an <img>, no LiveKit room);
+ *  - a room with a fresh public HLS playlist (passthrough remux — the low-CPU
+ *    CCTV wall — or a live HLS egress) → <HlsPlayer access="public">, which
+ *    routes through the app's active player PROVIDER (Vidstack) or video.js;
+ *  - otherwise the sub-second WebRTC <LivePlayer access="public"> (unchanged).
+ * See ./playback.ts (pickCellMode) for the pure decision + its regression spec.
+ *
+ * When auto-play is off the player is mounted lazily behind a click-to-play
+ * poster so a wall of cameras doesn't open N connections at once.
  *
  * Dragging is initiated from the header handle ONLY, so the in-player controls
  * (mute / fullscreen / unmute) stay clickable.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LivePlayer } from '@/components/player'
+import { useQuery } from '@tanstack/react-query'
+import { HlsPlayer, LivePlayer, MjpegPlayer } from '@/components/player'
+import { Spinner } from '@/ui'
+import { hlsPlaylistPath, probeHls } from '@/lib/share'
+import { pickCellMode } from './playback.ts'
 
 export interface CockpitCamera {
   /** Stable id used for drag ordering (the public streamId). */
@@ -21,6 +32,8 @@ export interface CockpitCamera {
   room: string
   /** Human label (participant / streamId). */
   label: string
+  /** Ingest type (`Stream.type`) — drives ws-mjpeg detection. */
+  type?: string | null
 }
 
 export interface CockpitCellProps {
@@ -56,6 +69,24 @@ export function CockpitCell({
   const cellRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(autoPlay)
   const [isFs, setIsFs] = useState(false)
+
+  // One-shot public HLS probe (cheap HEAD, no polling) — only once the tile is
+  // actually playing, so an idle wall opens no connections. Never throws:
+  // probeHls resolves { available:false } on any error, so a hiccup just falls
+  // back to WebRTC. ws-mjpeg cameras skip straight to the MJPEG player.
+  const isMjpeg = camera.type === 'ws-mjpeg'
+  const hlsProbe = useQuery({
+    queryKey: ['cockpit-hls-probe', app, camera.room],
+    enabled: playing && !isMjpeg,
+    queryFn: () => probeHls(hlsPlaylistPath(app, camera.room)),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  })
+  const mode = pickCellMode({ streamType: camera.type, hls: hlsProbe.data })
+  // Gate on the probe so a HLS/passthrough camera never flashes the empty
+  // WebRTC stage before switching. MJPEG needs no probe.
+  const resolving = playing && !isMjpeg && hlsProbe.isPending
 
   // Follow the config: turning auto-play on plays idle cells; turning it off
   // does NOT tear down an already-playing cell (avoids flicker on config edits).
@@ -155,12 +186,28 @@ export function CockpitCell({
       {/* Player area (16:9). */}
       <div className="relative aspect-video w-full flex-1 bg-black">
         {playing ? (
-          <LivePlayer
-            app={app}
-            room={camera.room}
-            access="public"
-            className="!rounded-none"
-          />
+          resolving ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner size={24} />
+            </div>
+          ) : mode === 'mjpeg' ? (
+            <MjpegPlayer app={app} room={camera.room} access="public" className="!rounded-none" />
+          ) : mode === 'hls' ? (
+            <HlsPlayer
+              src={hlsPlaylistPath(app, camera.room)}
+              app={app}
+              room={camera.room}
+              access="public"
+              className="!rounded-none"
+            />
+          ) : (
+            <LivePlayer
+              app={app}
+              room={camera.room}
+              access="public"
+              className="!rounded-none"
+            />
+          )
         ) : (
           <button
             type="button"

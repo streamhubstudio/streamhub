@@ -17,7 +17,7 @@ import { authenticator } from 'otplib';
 import { makeUnitContext, type UnitContext } from '../../../test/helpers';
 import { verifyJwt } from '../../shared/auth';
 import { TenancyService } from '../tenancy/tenancy.service';
-import { EmailService, type SendResult } from '../email/email.service';
+import { EmailService, type SendContext, type SendResult } from '../email/email.service';
 import { MagicLinkService } from './magic-link.service';
 import { SessionService } from './session.service';
 import { TotpService } from './totp.service';
@@ -29,7 +29,12 @@ interface Harness {
   tenancy: TenancyService;
   magic: MagicLinkService;
   totp: TotpService;
-  email: { sendMagicLink: jest.Mock<Promise<SendResult>, [string, string]> };
+  email: {
+    sendMagicLink: jest.Mock<
+      Promise<SendResult>,
+      [string, string, SendContext?]
+    >;
+  };
   /** Last URL captured by the fake EmailService. */
   lastUrl: () => string;
   /** Extract the `token` query param from the last emailed URL. */
@@ -50,7 +55,7 @@ function makeMagic(overrides: Record<string, string> = {}): Harness {
   const totp = ctx.newService(TotpService, ctx.config, tenancy);
 
   const sendMagicLink = jest
-    .fn<Promise<SendResult>, [string, string]>()
+    .fn<Promise<SendResult>, [string, string, SendContext?]>()
     .mockResolvedValue({ ok: true, messageId: '<id>' });
   const email = { sendMagicLink } as unknown as EmailService;
 
@@ -139,6 +144,19 @@ describe('auth/MagicLinkService', () => {
       const ttlMs = Date.parse(row.expires_at) - Date.now();
       expect(ttlMs).toBeGreaterThan(13 * 60_000);
       expect(ttlMs).toBeLessThanOrEqual(15 * 60_000 + 2_000);
+    });
+
+    it('owner item 29: passes NO userId context for a brand-new email (no user exists yet)', async () => {
+      await h.magic.requestMagicLink('brand-new@example.com', '1.2.3.4');
+      const ctx = h.email.sendMagicLink.mock.calls[0][2];
+      expect(ctx?.userId).toBeUndefined();
+    });
+
+    it("owner item 29: passes the EXISTING user's id as SMTP-resolution context", async () => {
+      const userId = h.tenancy.createUser({ email: 'existing@example.com' });
+      await h.magic.requestMagicLink('existing@example.com', '1.2.3.4');
+      const ctx = h.email.sendMagicLink.mock.calls[0][2];
+      expect(ctx?.userId).toBe(userId);
     });
 
     it('returns a GENERIC result for an invalid email (no enumeration, no send)', async () => {

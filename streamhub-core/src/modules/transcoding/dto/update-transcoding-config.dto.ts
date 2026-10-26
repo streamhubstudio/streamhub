@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -70,11 +69,13 @@ export class UpdateTranscodingConfigDto {
 
   @ApiPropertyOptional({
     type: [WebrtcLayerDto],
-    description: 'Rendition ladder (e.g. 720/480/240). Replaces the full ladder.',
+    description:
+      'Rendition ladder (e.g. 720/480/240). Replaces the full ladder. An empty ' +
+      'array clears it (no explicit ladder — delivery uses derived/LiveKit ' +
+      'defaults); omit the field to leave it unchanged.',
   })
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(8)
   @ValidateNested({ each: true })
   @Type(() => WebrtcLayerDto)

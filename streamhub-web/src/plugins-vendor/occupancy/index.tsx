@@ -1,0 +1,35 @@
+/**
+ * Frontend Studio App: occupancy — zone dwell & occupancy sessions.
+ *
+ * One of the four vision model-apps (Edge-as-capability). A thin wrapper over the
+ * shared VisionAppTab; the id 'occupancy' drives the per-app API + the polygon
+ * zone editor. Mirrors the streamhub-core `occupancy` manifest so the Studio
+ * settings form renders. Auto-discovered via src/plugins/occupancy/index.tsx.
+ */
+import { makeVisionApp } from '../../plugins/vision-shared/VisionAppTab.tsx'
+
+export default makeVisionApp({
+  id: 'occupancy',
+  name: 'Occupancy — Zone Dwell & Sessions',
+  description:
+    'Tracks people in per-stream polygon zones (YOLO11 + ByteTrack) and emits ' +
+    'dwell sessions + over-limit alerts — co-located or distributed on edge nodes.',
+  icon: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 100-6 3 3 0 000 6z',
+  configSchema: {
+    fields: [
+      {
+        key: 'device',
+        type: 'select',
+        label: 'Inference device',
+        default: 'cpu',
+        description: 'Where the model runs. Edge nodes advertise their own GPU capacity.',
+        options: [
+          { value: 'cpu', label: 'CPU (portable)' },
+          { value: 'cuda', label: 'CUDA GPU (recommended for multi-stream)' },
+        ],
+      },
+      { key: 'fps', type: 'number', label: 'Sample FPS', default: 3.5, min: 0.5, max: 30, step: 0.5 },
+      { key: 'confidence', type: 'number', label: 'Detection confidence', default: 0.35, min: 0, max: 1, step: 0.05 },
+    ],
+  },
+})

@@ -70,6 +70,7 @@ The adaptor resolves credentials in this order:
 | `streamhubApiToken` | StreamHub | Bearer for the mint call (client-side minting only). |
 | `token` + `wsUrl` | StreamHub | pre-minted LiveKit token (skips mint). |
 | `tokenRequest` | StreamHub | extra body for the mint (`ttl`, `metadata`, `hidden`…). |
+| `videoCodec` | StreamHub | published video codec, default **`h264`** (AntMedia parity; hardware codec on Safari/iOS; what HLS/MP4 egress wants). `'vp8' \| 'vp9' \| 'av1'` to override. |
 
 ---
 
@@ -139,6 +140,57 @@ Direct-property compat also provided (apps poke these):
 - `data_received`: `{ streamId, data: string, topic, event }`
 - `available_devices`: the raw `MediaDeviceInfo[]` array
 - `updated_stats`: `{ videoRoundTripTime, audioRoundTripTime, videoJitter, audioJitter, currentOutgoingBitrate, videoPacketsLost, audioPacketsLost, totalVideoPacketsSent, totalAudioPacketsSent, ... }`
+
+### StreamHub extension events (no AntMedia equivalent)
+
+These callbacks surface native LiveKit capabilities that AntMedia never had.
+Apps that only handle the AntMedia set simply never see them.
+
+| `info` string | Emitted from | `obj` payload |
+|---|---|---|
+| `roomMetadataChanged` | `RoomEvent.RoomMetadataChanged` — server called `PATCH /apps/{app}/rooms/{room}/metadata` | `{ room, metadata }` |
+| `participantMetadataChanged` | `RoomEvent.ParticipantMetadataChanged` — server called `PATCH /apps/{app}/rooms/{room}/participants/{identity}` | `{ streamId, metadata, prevMetadata, isLocal }` |
+| `connectionQualityChanged` | `RoomEvent.ConnectionQualityChanged` | `{ streamId, quality: "excellent"\|"good"\|"poor"\|"lost"\|"unknown", isLocal }` — drive a poor-connection banner |
+| `activeSpeakersChanged` | `RoomEvent.ActiveSpeakersChanged` | `{ speakers: string[] }` (identities, loudest first) — drive a speaker highlight |
+| `audioPlaybackStatusChanged` | `RoomEvent.AudioPlaybackStatusChanged` | `{ canPlayback: boolean }` — `false` when Safari/iOS blocked audio autoplay. The adaptor auto-arms a one-shot first-gesture unlock (`room.startAudio()`); apps can also call `adaptor.startAudioPlayback()` from their own tap handler. |
+
+### Safari / iOS behaviour (see `https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT`)
+
+- **Codec:** publishes **H.264 by default** (`videoCodec` option) — hardware
+  encode/decode on every Apple device, AntMedia-compatible.
+- **Autoplay:** blocked audio is unlocked automatically on the first user
+  gesture; `audioPlaybackStatusChanged` lets apps render a "tap to unmute" UI.
+- **Video elements:** `localVideoElement`/`remoteVideoElement` get
+  `playsinline` + `webkit-playsinline` (+ `muted` on the local preview)
+  applied automatically, so iOS never hijacks playback into fullscreen.
+- **getUserMedia errors:** permission/device failures surface the DOMException
+  name (`NotAllowedError`, `NotFoundError`, `NotReadableError`, …) through
+  `callbackError` — same strings AntMedia apps already switch on.
+- **Screen share:** `switchDesktopCapture()` fails fast with a clear
+  `screenShareError` on iOS/iPadOS Safari (no `getDisplayMedia` there).
+- **TURN:** transport-level connect failures append a hint pointing at the
+  server-side TURN configuration (`turn:` in `livekit.yaml`) — Safari behind
+  symmetric NAT/VPN is the most common victim.
+- Helpers are exported for app use: `isIOS`, `isSafari`, `isWebKit`,
+  `supportsScreenShare`, `applyInlinePlaybackAttributes`,
+  `classifyGetUserMediaError`, `installAutoplayUnlock`, `withTurnHint`.
+
+**Server-side data push:** the core can inject data messages into a room
+(`POST /apps/{app}/rooms/{room}/data` or `POST /apps/{app}/streams/{id}/data`);
+they arrive through the same `data_received` callback with the sent `topic`.
+
+### Config: adaptive streaming (default ON)
+
+```js
+new WebRTCAdaptor({
+  // ...
+  adaptiveStream: true, // default true — drop layers the element can't show
+  dynacast: true,       // default true — pause layers nobody subscribes to
+})
+```
+
+Both map 1:1 to the `livekit-client` `RoomOptions`; pass `false` only to debug
+simulcast layer selection.
 
 ---
 

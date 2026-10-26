@@ -13,6 +13,7 @@ import { Link, useParams } from 'react-router-dom'
 import { LivePlayer } from '@/components/player'
 import { SharePanel } from './Player/SharePanel'
 import { Logo } from '@/components/Logo'
+import { DocsHint } from '@/components/DocsHint'
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -52,6 +53,7 @@ export default function Player() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <DocsHint section="players" />
           <button
             type="button"
             role="switch"

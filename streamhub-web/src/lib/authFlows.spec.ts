@@ -7,7 +7,9 @@ import assert from 'node:assert/strict'
 import {
   cooldownSecondsFrom,
   DEFAULT_COOLDOWN_SECONDS,
+  edgeMasterUrl,
   formatCooldown,
+  isClusterEdge,
   isTotpInvalid,
   isTotpRequired,
   validateSignup,
@@ -85,4 +87,26 @@ test('formatCooldown: clamps negatives and rounds up', () => {
   assert.equal(formatCooldown(60), '60s')
   assert.equal(formatCooldown(0.4), '1s')
   assert.equal(formatCooldown(-3), '0s')
+})
+
+test('isClusterEdge: loginEnabled=false OR nodeRole=edge → true', () => {
+  assert.equal(isClusterEdge({ loginEnabled: false }), true)
+  assert.equal(isClusterEdge({ nodeRole: 'edge' }), true)
+  assert.equal(isClusterEdge({ nodeRole: 'edge', loginEnabled: false }), true)
+})
+
+test('isClusterEdge: standalone/master/missing → false (backward-safe)', () => {
+  assert.equal(isClusterEdge({ nodeRole: 'standalone', loginEnabled: true }), false)
+  assert.equal(isClusterEdge({ nodeRole: 'master', loginEnabled: true }), false)
+  assert.equal(isClusterEdge({}), false) // older backend, no fields
+  assert.equal(isClusterEdge(null), false)
+  assert.equal(isClusterEdge(undefined), false)
+})
+
+test('edgeMasterUrl: trims trailing slashes, null when absent/blank', () => {
+  assert.equal(edgeMasterUrl({ masterUrl: 'https://m.example.com//' }), 'https://m.example.com')
+  assert.equal(edgeMasterUrl({ masterUrl: '  ' }), null)
+  assert.equal(edgeMasterUrl({ masterUrl: null }), null)
+  assert.equal(edgeMasterUrl({}), null)
+  assert.equal(edgeMasterUrl(undefined), null)
 })

@@ -1,0 +1,40 @@
+{
+  "name": "@streamhub/mcp-server",
+  "version": "0.2.0",
+  "description": "MCP (Model Context Protocol) server exposing the StreamHub REST API as tools, resources and prompts for AI clients (Claude Desktop, Claude Code, ...).",
+  "type": "module",
+  "bin": {
+    "streamhub-mcp": "dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "node --test --disable-warning=ExperimentalWarning \"src/*.spec.ts\"",
+    "typecheck": "tsc -p tsconfig.typecheck.json"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "streamhub",
+    "livekit",
+    "media-server",
+    "claude"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

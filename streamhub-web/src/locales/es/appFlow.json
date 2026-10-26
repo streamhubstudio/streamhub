@@ -1,0 +1,56 @@
+{
+  "title": "Pipeline",
+  "subtitle": "Cómo está configurada esta app, de punta a punta.",
+  "loading": "Cargando pipeline…",
+  "unavailable": "La vista de pipeline todavía no está disponible en este servidor.",
+  "sr": "Diagrama de flujo en tres bandas. Banda de medios: las fuentes de ingesta habilitadas alimentan el core de StreamHub (a través del router MediaMTX cuando está activo), pasan por las etapas de procesamiento habilitadas (transcodificación, adaptativo) y se distribuyen a los puntos de entrega, mientras un carril de passthrough/remux evita el core. Banda de cómputo: las apps de Studio y los plugins procesadores analizan el stream, y un clúster distribuido de cómputo en el borde ejecuta los modelos de visión habilitados. Banda de eventos: las grabaciones van al almacenamiento y a S3, y las detecciones se distribuyen a callbacks, MQTT, el log y los canales de notificación habilitados.",
+  "svg": {
+    "title": "Pipeline de medios",
+    "desc": "Diagrama animado en tres bandas del pipeline de medios de esta app: cómputo (apps, procesadores, modelos de borde), medios (ingesta, router, procesamiento, entrega, passthrough) y eventos (almacenamiento, callbacks, notificaciones)."
+  },
+  "groups": {
+    "ingest": "Ingesta",
+    "delivery": "Entrega",
+    "plugins": "Plugins de IA",
+    "apps": "Apps de Studio",
+    "processors": "Procesadores",
+    "edge": "Cómputo de borde",
+    "storage": "Almacenamiento",
+    "events": "Eventos"
+  },
+  "nodes": {
+    "core": "StreamHub Core",
+    "mediamtx": "Router MediaMTX",
+    "transcoding": "Transcodificación",
+    "adaptive": "Adaptativo (ABR)",
+    "remux": "Passthrough",
+    "edge": "Clúster de borde",
+    "events": "Bus de eventos",
+    "streamflow": "Streamflow",
+    "recording": "Grabación",
+    "s3": "Bucket S3",
+    "notify-email": "Email",
+    "notify-discord": "Discord",
+    "notify-telegram": "Telegram",
+    "soon": "Pronto",
+    "noIngest": "Sin ingesta habilitada",
+    "noDelivery": "Sin entrega habilitada"
+  },
+  "detail": {
+    "encoder": {
+      "gpu": "Encoder GPU",
+      "cpu": "Encoder CPU"
+    },
+    "split": "segmentos de {{n}} min"
+  },
+  "live": {
+    "streams": "{{n}} en vivo",
+    "viewers": "{{n}} espectadores"
+  },
+  "legend": {
+    "active": "En vivo ahora",
+    "configured": "Configurado",
+    "dormant": "Sin conexión",
+    "soon": "Próximamente"
+  }
+}

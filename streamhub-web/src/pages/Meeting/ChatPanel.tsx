@@ -55,7 +55,7 @@ export default function ChatPanel({
   return (
     <aside
       className={[
-        'flex bg-gray-900/90 ring-1 ring-white/10 backdrop-blur w-full flex-col border-l border-gray-800 transition-transform duration-200 sm:w-80',
+        'flex max-h-[45vh] bg-gray-900/90 ring-1 ring-white/10 backdrop-blur w-full flex-col border-t border-gray-800 transition-transform duration-200 sm:max-h-none sm:border-t-0 sm:border-l sm:w-80',
         open ? 'translate-x-0' : 'pointer-events-none translate-x-full',
       ].join(' ')}
     >

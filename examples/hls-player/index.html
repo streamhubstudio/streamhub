@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StreamHub · HLS player · YOUR_APP</title>
+<style>:root{color-scheme:dark}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b1020;color:#e6ecff}
+header{padding:14px 18px;background:#121a33;border-bottom:1px solid #1f2b4d}
+header b{color:#6ea8ff}
+main{padding:18px;max-width:960px;margin:0 auto}
+video{width:100%;max-height:70vh;background:#000;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+button{background:#2d6cff;color:#fff;border:0;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600}
+button.alt{background:#1f2b4d}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
+input,select{background:#0e1530;color:#e6ecff;border:1px solid #25325a;border-radius:8px;padding:8px 10px}
+label{opacity:.8}
+.log{margin-top:12px;padding:10px;background:#0e1530;border-radius:8px;font-family:ui-monospace,monospace;font-size:12px;white-space:pre-wrap;min-height:40px}
+.live{display:inline-block;padding:2px 8px;border-radius:6px;background:#c0263a;color:#fff;font-weight:700;font-size:11px;letter-spacing:.5px}
+.muted{opacity:.7}</style>
+</head>
+<body>
+<header><b>StreamHub</b> · HLS player (video.js) · app <b>YOUR_APP</b></header>
+<main>
+  <div class="row">
+    <label>room <input id="room" value="demo" /></label>
+    <button id="go">Load HLS</button>
+  </div>
+  <video id="player" class="video-js vjs-default-skin" controls preload="auto" playsinline></video>
+  <div class="log" id="log">idle</div>
+</main>
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<script src="./config.js"></script>
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@videojs/http-streaming@3/dist/videojs-http-streaming.min.js"></script>
+<script>
+
+  // --- Configuration -------------------------------------------------------
+  // A downloadable standalone bundle ships a config.js that sets
+  // window.STREAMHUB_CONFIG and WINS here; the server-generated /samples page
+  // has no config.js, so the values baked in at generation time (below) are
+  // used. Point a bundle at YOUR StreamHub by editing config.js only — nothing
+  // in index.html needs to change.
+  const CFG = (typeof window !== 'undefined' && window.STREAMHUB_CONFIG) || {};
+  const SH_BASE = (CFG.baseUrl || '').replace(/\/+$/, '');
+  const APP = CFG.app || 'YOUR_APP';
+  const WS_URL = CFG.wsUrl || 'wss://your-streamhub.example.com';
+  const API_URL = SH_BASE ? SH_BASE + '/api/v1' : 'https://your-streamhub.example.com/api/v1';
+  const ADAPTOR_URL = CFG.adaptorUrl || (SH_BASE ? SH_BASE + '/sdk/streamhub-adaptor.global.js' : 'https://your-streamhub.example.com/sdk/streamhub-adaptor.global.js');
+  const HLS_BASE = SH_BASE ? SH_BASE + '/hls/' + APP : 'https://your-streamhub.example.com/hls/YOUR_APP';
+  const ROOM = CFG.room || 'demo';
+  function logTo(id){const el=document.getElementById(id);return (m)=>{if(el)el.textContent=String(m);};}
+  function rid(p){return p + Math.random().toString(36).slice(2,8);}
+  function nsRoom(r){ return r || ROOM; }
+  // Read a param from the query string OR the URL hash (so operators can share
+  // a link like  page.html#room=consulta&token=<jwt>&ws=wss://host  without the
+  // token ever hitting a server log).
+  function qp(k){ try{
+    const u = new URL(location.href);
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    return u.searchParams.get(k) || h.get(k) || '';
+  }catch(e){ return ''; } }
+  // Ephemeral (pre-minted) LiveKit credentials from the URL, or null.
+  function ephemeral(){
+    const token = qp('token') || (CFG.token || '');
+    return token ? { token: token, wsUrl: qp('ws') || qp('wsUrl') || WS_URL, room: qp('room') || ROOM } : null;
+  }
+  // Resolve LiveKit credentials for a page, in the ONLY order that works without
+  // a logged-in panel session. POST /apps/:app/tokens requires a management
+  // bearer (it mints publish grants), so a demo opened straight from /samples has
+  // no credential — hitting it blindly is what produced the "authentication
+  // error" (401) on every sample. The supported flows, in priority order:
+  //   1) ephemeral pre-minted token in the URL (#token=…&ws=…) — publish OR
+  //      subscribe, no API call, no login (the operator shares the link);
+  //   2) explicit management bearer (?apitoken=sk_…) — mint via POST /tokens,
+  //      honoring the operator's intent (works even if public playback is off);
+  //   3) no credential + subscribe-only → the PUBLIC play-token (no auth);
+  //   4) no credential + publisher → cannot mint anonymously: fail with an
+  //      actionable message instead of a bare 401.
+  async function getToken(opts){
+    opts = opts || {};
+    const eph = ephemeral();
+    if (eph && eph.token) return { token: eph.token, wsUrl: eph.wsUrl };
+    const bearer = qp('apitoken') || qp('bearer') || (CFG.apiToken || '');
+    if (bearer) {
+      const res = await fetch(API_URL + '/apps/' + APP + '/tokens', {
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + bearer },
+        body: JSON.stringify(opts)
+      });
+      if(!res.ok) throw new Error('token request failed: ' + res.status);
+      const body = await res.json();
+      const d = body && body.data ? body.data : body;
+      return { token: d.token || d, wsUrl: d.wsUrl || WS_URL };
+    }
+    if (opts.canPublish === false) {
+      const pub = await playToken(opts.room || ROOM);
+      return { token: pub.token, wsUrl: pub.wsUrl };
+    }
+    throw new Error('publish demo: open it with an ephemeral token (#token=…&ws=…&room=…) or an operator link (?apitoken=sk_…) — anonymous publishing is disabled');
+  }
+  // Public subscribe-only VIDEO+AUDIO token (no auth). Powers the turnkey
+  // viewer pages; gated server-side by the app 'publicPlayback' feature.
+  async function playToken(roomName){
+    const res = await fetch(API_URL + '/apps/' + APP + '/play-token/' + encodeURIComponent(roomName));
+    if(!res.ok) throw new Error('play-token failed: ' + res.status);
+    const b = await res.json(); const d = b && b.data ? b.data : b;
+    return { token: d.token || d, wsUrl: d.wsUrl || WS_URL, room: d.room || roomName };
+  }
+  // Public subscribe-only AUDIO token for a radio room (no auth).
+  async function radioListenToken(roomName){
+    const res = await fetch(API_URL + '/apps/' + APP + '/radio/' + encodeURIComponent(roomName) + '/listen-token');
+    if(!res.ok) throw new Error('listen-token failed: ' + res.status);
+    const b = await res.json(); const d = b && b.data ? b.data : b;
+    return { token: d.token || d, wsUrl: d.wsUrl || WS_URL, room: d.room || roomName };
+  }
+  // Optional: load the streamhub-adaptor (AntMedia-style) when present.
+  function loadScript(src){return new Promise((ok)=>{const s=document.createElement('script');s.src=src;s.onload=()=>ok(true);s.onerror=()=>ok(false);document.head.appendChild(s);});}
+const log = logTo('log');
+let vjs;
+document.getElementById('go').onclick = () => {
+  try {
+    const roomName = nsRoom(document.getElementById('room').value.trim());
+    const src = HLS_BASE + '/' + encodeURIComponent(roomName) + '/index.m3u8';
+    if (!vjs) vjs = videojs('player', { fluid:true, liveui:true });
+    vjs.src({ src, type:'application/x-mpegURL' });
+    vjs.play().catch(()=>{});
+    log('playing ' + src);
+  } catch (e) { log('error: ' + (e && e.message ? e.message : e)); }
+};
+</script>
+</body></html>

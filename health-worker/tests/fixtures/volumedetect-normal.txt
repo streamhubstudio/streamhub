@@ -1,0 +1,11 @@
+Input #0, mpegts, from 'seg-00042.ts':
+  Duration: 00:00:06.01, start: 1.400000, bitrate: 2296 kb/s
+  Program 1
+    Stream #0:0[0x100]: Video: h264 (Constrained Baseline) ([27][0][0][0] / 0x001B), yuv420p(progressive), 1280x720, 29.97 fps, 29.97 tbr, 90k tbn
+    Stream #0:1[0x101]: Audio: aac (LC) ([15][0][0][0] / 0x000F), 48000 Hz, stereo, fltp, 127 kb/s
+Output #0, null, to 'pipe:':
+    Stream #0:0: Audio: pcm_s16le, 48000 Hz, stereo, s16, 1536 kb/s
+[Parsed_volumedetect_0 @ 0x7f8a2c004a00] n_samples: 576512
+[Parsed_volumedetect_0 @ 0x7f8a2c004a00] mean_volume: -23.4 dB
+[Parsed_volumedetect_0 @ 0x7f8a2c004a00] max_volume: -5.1 dB
+[Parsed_volumedetect_0 @ 0x7f8a2c004a00] histogram_5db: 12

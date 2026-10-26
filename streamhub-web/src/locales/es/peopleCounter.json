@@ -1,0 +1,35 @@
+{
+  "noRoom": "Primero configurá la sala a contar en los ajustes del app de Studio (Studio → People Counter).",
+  "arrow": {
+    "in": "ENTRA",
+    "out": "SALE"
+  },
+  "actions": {
+    "edit": "Editar línea",
+    "done": "Listo",
+    "flip": "Invertir dirección",
+    "save": "Guardar línea",
+    "saving": "Guardando…"
+  },
+  "lineInfo": "Línea a {{angle}}° · entrada = {{side}}",
+  "side": {
+    "right": "derecha de la línea",
+    "left": "izquierda de la línea"
+  },
+  "editHint": "Arrastrá sobre el video para dibujar la línea de conteo; agarrá un extremo para rotarla. La flecha verde marca la dirección de ENTRADA — usá Invertir para darla vuelta. Guardar reinicia el contador con la nueva línea.",
+  "saveError": "No se pudo guardar la línea — probá de nuevo.",
+  "counters": {
+    "title": "Contadores en vivo",
+    "in": "Entradas",
+    "out": "Salidas",
+    "occupancy": "Adentro ahora",
+    "overCapacity": "Límite de aforo alcanzado"
+  },
+  "worker": {
+    "running": "activo",
+    "starting": "iniciando",
+    "stopped": "detenido",
+    "crashed": "caído",
+    "unknown": "desconocido"
+  }
+}

@@ -1,7 +1,7 @@
 /**
  * Event → topic-category mapping for per-app MQTT publishing.
  *
- * Topic layout (documented in streamhub-docs/features/mqtt.md):
+ * Topic layout (documented in https://streamhub.studio/docs/features/mqtt):
  *   <topicPrefix>/<category>/<event>   e.g. streamhub/live/vod/vod_ready
  *   <topicPrefix>/log/<level>          app log lines (mqtt.logs)
  *
@@ -11,7 +11,10 @@
  *   vod         — recording/VOD/snapshot/egress pipeline
  *   plugin      — plugin worker lifecycle (start/stop/error)
  *   interaction — chat / reactions
- *   alert       — stream health alerts (stream.latency_high / _recovered)
+ *   alert       — stream health alerts (stream.latency_high / _recovered and
+ *                 the stream-health app's health.* family)
+ *   iot         — structured IoT device data (iot.data — ws-ingest data frame /
+ *                 generic MQTT-in; see internal design notes)
  *   log         — app log stream (not a CallbackEvent; emitted by publishLog)
  */
 
@@ -20,11 +23,15 @@ export type MqttEventCategory =
   | 'vod'
   | 'plugin'
   | 'interaction'
-  | 'alert';
+  | 'alert'
+  | 'iot';
 
 /** Classify a callback event into its MQTT topic category. */
 export function eventCategory(event: string): MqttEventCategory {
   if (event.startsWith('stream.latency')) return 'alert';
+  // stream-health Studio App family (health.degraded/_recovered/audio_lost/…).
+  if (event.startsWith('health.')) return 'alert';
+  if (event === 'iot.data' || event.startsWith('iot.')) return 'iot';
   if (event.startsWith('plugin_worker')) return 'plugin';
   if (
     event.startsWith('recording_') ||

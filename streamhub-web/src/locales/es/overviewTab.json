@@ -25,6 +25,10 @@
     "viewers": "Espectadores",
     "publishers": "Emisores",
     "since": "Desde",
+    "status": "Estado",
+    "statusLive": "En vivo",
+    "statusOffline": "Sin emisor",
+    "sortBy": "Ordenar por {{col}}",
     "actions": "Acciones",
     "watch": "Ver"
   },
@@ -40,6 +44,7 @@
     "seeAll": "Ver todos",
     "loading": "Cargando eventos…",
     "loadError": "No se pudieron cargar los eventos.",
-    "empty": "Sin eventos en este rango."
+    "empty": "Sin eventos en este rango.",
+    "toggleRow": "Mostrar u ocultar el mensaje completo"
   }
 }

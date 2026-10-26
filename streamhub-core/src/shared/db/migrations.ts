@@ -170,6 +170,28 @@ export const GLOBAL_MIGRATIONS: string[] = [
   // CREATE INDEX IF NOT EXISTS = idempotent.
   `CREATE INDEX IF NOT EXISTS idx_api_tokens_app ON api_tokens(app_id);
    CREATE INDEX IF NOT EXISTS idx_server_logs_app_ts ON server_logs(app_id, ts);`,
+
+  // 9 — Vision Edge assignments (modules/edge). One row = one worker workload
+  // placed on one node: (app, plugin_id, stream_id?) with its resolved config.
+  // Survives master restarts so the scheduler can re-offer work to an edge
+  // that reconnects. `stream_id` NULL = an app-wide (not per-stream) worker.
+  // status: pending → offered → running → (stopped | failed | revoked).
+  // Node rows are global (nodes table), apps are per-tenant — this table is
+  // the JOIN between the two planes, so it lives in the GLOBAL db.
+  `CREATE TABLE IF NOT EXISTS edge_assignments (
+     id TEXT PRIMARY KEY,
+     node_id TEXT NOT NULL,
+     app TEXT NOT NULL,
+     plugin_id TEXT NOT NULL,
+     stream_id TEXT,
+     config_json TEXT,
+     status TEXT NOT NULL DEFAULT 'pending',
+     detail TEXT,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX IF NOT EXISTS idx_edge_assignments_node ON edge_assignments(node_id, status);
+   CREATE INDEX IF NOT EXISTS idx_edge_assignments_app ON edge_assignments(app, plugin_id);`,
 ];
 
 /**
@@ -209,6 +231,25 @@ export const GLOBAL_COLUMN_ADDS: { table: string; column: string; ddl: string }[
     table: 'nodes',
     column: 'stats_json',
     ddl: `ALTER TABLE nodes ADD COLUMN stats_json TEXT`,
+  },
+  // Vision Edge cluster (modules/edge): what KIND of node this is.
+  //   'common' — a full media node (today's only kind; the default keeps every
+  //              pre-existing row meaning exactly what it meant).
+  //   'edge'   — a worker/compute node (vision-first): joins via the outbound
+  //              edge WebSocket, receives worker assignments, runs NO public
+  //              media plane. Set by the installer (--node-type edge) at join.
+  {
+    table: 'nodes',
+    column: 'type',
+    ddl: `ALTER TABLE nodes ADD COLUMN type TEXT NOT NULL DEFAULT 'common'`,
+  },
+  // Vision Edge scheduler: relative priority weight for the 'weighted' policy
+  // (share of new assignments ∝ weight/Σweights among eligible edges). 100 =
+  // the neutral default so round_robin deployments never notice the column.
+  {
+    table: 'nodes',
+    column: 'weight',
+    ddl: `ALTER TABLE nodes ADD COLUMN weight INTEGER NOT NULL DEFAULT 100`,
   },
 ];
 
@@ -397,7 +438,7 @@ export const APP_MIGRATIONS: string[] = [
    CREATE INDEX IF NOT EXISTS idx_restream_targets_status ON restream_targets(status);`,
 
   // 8 — widen streams.type to accept 'ws-mjpeg' (direct WebSocket MJPEG ingest
-  // for ESP32-CAM devices — streamhub-docs/integrations/ESP32-WS-INGEST.md).
+  // for ESP32-CAM devices — https://streamhub.studio/docs/integrations/ESP32-WS-INGEST).
   // SQLite cannot ALTER a CHECK constraint, so the table is rebuilt in place
   // (same columns/ids) and its indices recreated. Runs inside the migration
   // transaction; on a FRESH app.db migration 1 creates the narrow table and
@@ -424,4 +465,94 @@ export const APP_MIGRATIONS: string[] = [
    CREATE INDEX IF NOT EXISTS idx_streams_room ON streams(room);
    CREATE INDEX IF NOT EXISTS idx_streams_started_at ON streams(started_at);
    CREATE INDEX IF NOT EXISTS idx_streams_status_started ON streams(status, started_at);`,
+
+  // 9 — scheduled live premieres (module `scheduled-live`: the agenda of
+  // scheduled live-stream "premieres"). One row per scheduled event:
+  //   * room       — NULL applies the countdown to EVERY room in the app; a
+  //                  non-NULL value scopes it to that one room.
+  //   * start_at   — the absolute reveal instant as unix epoch MILLISECONDS in
+  //                  UTC. The BROWSER converts the operator's picked wall-time +
+  //                  IANA timezone into this absolute ms; the backend does NO
+  //                  timezone math — it only validates a positive integer.
+  //   * timezone   — the IANA zone the wall-time was picked in, kept purely so
+  //                  the editor can round-trip the picker and for display.
+  //   * enabled    — 0/1 soft switch (an event can be drafted then paused).
+  // The public player reads the enabled/upcoming rows to drive the countdown
+  // cover; the reveal happens client-side once now >= start_at.
+  `CREATE TABLE IF NOT EXISTS scheduled_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     app TEXT NOT NULL,
+     room TEXT,
+     title TEXT,
+     start_at INTEGER NOT NULL,
+     timezone TEXT NOT NULL DEFAULT 'UTC',
+     message TEXT,
+     enabled INTEGER NOT NULL DEFAULT 1,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX IF NOT EXISTS idx_scheduled_events_lookup ON scheduled_events(enabled, start_at);`,
+
+  // 10 — per-stream plugin opt-out (module `streams` × `plugins`). By default a
+  // plugin enabled on the app applies to EVERY live stream; this column lets an
+  // operator opt an INDIVIDUAL stream out of specific plugins. It stores a JSON
+  // array of the plugin ids DISABLED for this stream only (e.g. `["watermark"]`
+  // hides just the watermark overlay on that one stream). Default '[]' = the
+  // stream is affected by all of the app's enabled plugins (back-compat: every
+  // existing row keeps behaving exactly as before). `ADD COLUMN … DEFAULT '[]'`
+  // is a legal SQLite ALTER (constant default), so no table rebuild is needed;
+  // the numbered-migration bookkeeping (user_version) makes it run exactly once.
+  `ALTER TABLE streams ADD COLUMN disabled_plugins TEXT NOT NULL DEFAULT '[]';`,
+
+  // 11 — dynamic TAGS (module `tags`). A tag is a small ENTITY with config —
+  // e.g. kind 'store' carrying that store's per-model vision settings — that
+  // operators create once and then APPLY to streams/ingresses. `slug` is the
+  // stable reference stored on streams; `config_json` is the tag's settings
+  // blob (schema owned by whoever consumes the tag — vision models read their
+  // per-model blocks from it). All CRUD via /apps/:app/tags.
+  `CREATE TABLE IF NOT EXISTS tags (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     slug TEXT NOT NULL UNIQUE,
+     label TEXT NOT NULL,
+     kind TEXT NOT NULL DEFAULT 'custom',
+     config_json TEXT NOT NULL DEFAULT '{}',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX IF NOT EXISTS idx_tags_kind ON tags(kind);`,
+
+  // 12 — stream tagging (module `tags` × `streams`). JSON array of tag slugs
+  // applied to this stream (mirrors the `disabled_plugins` column pattern:
+  // constant default = legal ALTER, '[]' = untagged, full back-compat).
+  // Detection events emitted for a stream carry these slugs so downstream
+  // consumers (callback/MQTT/log) can attribute the event to its entities.
+  `ALTER TABLE streams ADD COLUMN tags TEXT NOT NULL DEFAULT '[]';`,
+
+  // 13 — per-app network I/O samples (module `net-metrics`). One row per
+  // (hour-bucket × direction × source): byte counts of what enters/leaves
+  // THROUGH the app (media planes — HLS served, RTMP/SRT/WHIP ingest, egress
+  // pushes), NOT host-wide traffic. The dashboard card reads recent buckets;
+  // the threshold monitor compares a rolling window against the app's
+  // configured limit and emits `network.threshold` through the callbacks
+  // funnel. `source` examples: 'hls', 'rtmp-ingest', 'livekit-egress', 'vod'.
+  `CREATE TABLE IF NOT EXISTS net_samples (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     bucket TEXT NOT NULL,
+     direction TEXT NOT NULL,
+     source TEXT NOT NULL,
+     bytes INTEGER NOT NULL DEFAULT 0,
+     UNIQUE(bucket, direction, source)
+   );
+   CREATE INDEX IF NOT EXISTS idx_net_samples_bucket ON net_samples(bucket);`,
+
+  // 14 — MPEG-TS-over-UDP (unicast + multicast) passthrough ingest
+  // (features/mpegts-multicast.md). Unlike the RTMP/SRT passthrough transports
+  // (push LISTENERS keyed by the port + minted key), an MPEG-TS ingress is a
+  // PULL source: the remux `ffmpeg -f mpegts -i udp://@GROUP:PORT -c copy`
+  // connects OUT to a multicast group / unicast port. The canonical, validated
+  // udp:// input URL is persisted here so boot re-arm can rebuild the exact
+  // ffmpeg source after a core restart (RTMP/SRT need no source — their port +
+  // key define them). NULL for every RTMP/SRT/WS row (constant-free ADD COLUMN
+  // = legal SQLite ALTER, runs exactly once via user_version bookkeeping).
+  `ALTER TABLE ingress_auth ADD COLUMN source_url TEXT;`,
 ];

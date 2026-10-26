@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-query'
 import { pluginsApi } from './api.ts'
 import { getRegisteredPlugins } from './discovery.ts'
-import { mergeCatalog } from './state.ts'
+import { mergeCatalog, pickPlayerProvider } from './state.ts'
 import type { ConfigValues, InstalledPlugin, PluginView } from './types.ts'
 
 /** Base key + per-app key. */
@@ -35,6 +35,13 @@ export interface PluginCatalogOptions {
    * overlays render for anonymous viewers WITHOUT a 401.
    */
   public?: boolean
+  /**
+   * Player scope — the room (or exact stream id) the overlays render over. When
+   * set, the backend subtracts that stream's opted-OUT plugins so per-stream
+   * opt-out is honored. Omitted → the unmodified app-level catalog (marketplace).
+   */
+  room?: string
+  stream?: string
 }
 
 /**
@@ -60,13 +67,23 @@ export function usePluginCatalog(
 } {
   const registered = useMemo(() => getRegisteredPlugins(), [])
   const isPublic = opts.public === true
+  const scope =
+    opts.stream || opts.room
+      ? { stream: opts.stream, room: opts.room }
+      : undefined
+
+  // A stream/room scope makes the list stream-aware, so it must NOT share the
+  // cache key with the unscoped marketplace list (which stays app-level).
+  const scopeKey = scope ? ['scope', opts.stream ?? '', opts.room ?? ''] : []
 
   const query = useQuery({
-    queryKey: isPublic ? [...pluginsKey(app), 'public'] : pluginsKey(app),
+    queryKey: isPublic
+      ? [...pluginsKey(app), 'public', ...scopeKey]
+      : [...pluginsKey(app), ...scopeKey],
     queryFn: ({ signal }) =>
       isPublic
-        ? pluginsApi.listPublicOverlays(app, signal)
-        : pluginsApi.list(app, signal),
+        ? pluginsApi.listPublicOverlays(app, signal, scope)
+        : pluginsApi.list(app, signal, scope),
     enabled: Boolean(app),
     retry: false,
   })
@@ -85,6 +102,23 @@ export function usePluginCatalog(
     backendError: query.isError ? query.error : null,
     refetch: query.refetch,
   }
+}
+
+/**
+ * The app's ACTIVE media-player provider (a `player`-slot plugin), or null.
+ *
+ * HlsPlayer/VodPlayer call this to decide whether to render a provider's
+ * `PlayerComponent` (Vidstack, …) or fall back to the built-in video.js player.
+ * `opts.public` reads the no-auth endpoint so anonymous /play + /embed resolve
+ * the same provider. Returns null while loading or when no provider is active,
+ * which the players read as "use video.js".
+ */
+export function usePlayerProvider(
+  app: string,
+  opts: PluginCatalogOptions = {},
+): PluginView | null {
+  const { views } = usePluginCatalog(app, opts)
+  return useMemo(() => pickPlayerProvider(views), [views])
 }
 
 /** Active (installed + enabled) plugins matching a placement (host read model). */

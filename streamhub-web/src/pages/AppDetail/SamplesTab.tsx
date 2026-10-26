@@ -20,11 +20,13 @@ import {
   errMessage,
 } from './ui'
 import { SamplesManager } from './SamplesManager'
+import { ExampleDownloads } from './ExampleDownloads'
 
 export function SamplesTab({ app }: { app: string }) {
   return (
     <div className="space-y-5">
       <SamplesManager app={app} />
+      <ExampleDownloads app={app} />
       <EmbedGenerator app={app} />
     </div>
   )

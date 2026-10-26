@@ -2,14 +2,15 @@
  * Unit specs for PluginsService.publicOverlays() — the PUBLIC (no-auth) view
  * consumed by the anonymous /play and /embed players.
  *
- * Uses a temp FIXTURE registry with three plugins:
- *   - `ov-secret`  player-overlay carrying a secret + a callback/webhook URL,
- *   - `ov-plain`   player-overlay with only render-safe fields,
- *   - `tab`        app-tab (must never appear in the public view).
+ * Uses a temp FIXTURE registry with four plugins:
+ *   - `ov-secret`   player-overlay carrying a secret + a callback/webhook URL,
+ *   - `ov-plain`    player-overlay with only render-safe fields,
+ *   - `pl-provider` player (swappable media-player provider, e.g. Vidstack),
+ *   - `tab`         app-tab (must never appear in the public view).
  *
- * Asserts the endpoint (a) returns ONLY enabled player-overlays, (b) strips
- * secrets + callback/webhook URLs, and (c) shapes each entry as
- * { id, manifest:{name,ui,configSchema,icon}, config }.
+ * Asserts the endpoint (a) returns ONLY enabled player-slot plugins (overlays
+ * AND providers), (b) strips secrets + callback/webhook URLs, and (c) shapes
+ * each entry as { id, manifest:{name,ui,configSchema,icon}, config }.
  */
 import * as fs from 'fs';
 import * as os from 'os';
@@ -61,6 +62,19 @@ function writeFixtures(dir: string): void {
        id:'ov-plain', name:'Overlay Plain', description:'', category:'tool',
        ui:'player-overlay', icon:'clock',
        configSchema:[{ key:'interval', type:'number', label:'I', default:1000 }] };`,
+  );
+  const plProvider = path.join(dir, 'pl-provider');
+  fs.mkdirSync(plProvider, { recursive: true });
+  fs.writeFileSync(
+    path.join(plProvider, 'plugin.meta.js'),
+    `module.exports.default = {
+       id:'pl-provider', name:'Player Provider', description:'', category:'tool',
+       ui:'player', icon:'play',
+       configSchema:[
+         { key:'theme', type:'select', label:'Theme', default:'auto',
+           options:[{value:'auto',label:'Auto'},{value:'dark',label:'Dark'}] },
+         { key:'apiToken', type:'secret', label:'Token', default:'' }
+       ] };`,
   );
   const tab = path.join(dir, 'tab');
   fs.mkdirSync(tab, { recursive: true });
@@ -132,6 +146,26 @@ describe('PluginsService.publicOverlays', () => {
       configSchema: expect.any(Array),
     });
     expect(overlays[0].config).toEqual({ interval: 1000 });
+  });
+
+  it('includes an enabled `player` provider (so anonymous players resolve it), secret-stripped', async () => {
+    await svc.install(APP, 'pl-provider');
+    await svc.patch(APP, 'pl-provider', {
+      enabled: true,
+      config: { theme: 'dark', apiToken: 'sk_should_not_leak' },
+    });
+
+    const rows = await svc.publicOverlays(APP);
+    expect(rows.map((o) => o.id)).toEqual(['pl-provider']);
+    expect(rows[0].manifest).toEqual({
+      name: 'Player Provider',
+      ui: 'player',
+      icon: 'play',
+      configSchema: expect.any(Array),
+    });
+    // render-safe config kept, the secret dropped entirely
+    expect(rows[0].config).toEqual({ theme: 'dark' });
+    expect(JSON.stringify(rows[0])).not.toContain('sk_should_not_leak');
   });
 
   it('strips secrets AND callback/webhook URLs from the config', async () => {

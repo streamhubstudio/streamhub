@@ -1,6 +1,6 @@
 # LiveKit Egress config — TEMPLATE (grabacion / RTMP out / HLS).
 # Se pasa al contenedor via -e EGRESS_CONFIG_BODY="$(cat egress.yaml)".
-# El contenedor monta un volumen para los archivos: -v /opt/livekit/recordings:/out
+# El contenedor monta un volumen para los archivos: -v /home/ploi/livekit/recordings:/out
 redis:
   address: localhost:6379
 ws_url: ws://localhost:7880

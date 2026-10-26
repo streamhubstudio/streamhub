@@ -1,0 +1,141 @@
+{
+  "title": "Configurar {{app}}",
+  "stepCounter": "Paso {{n}} de {{total}}",
+  "actions": {
+    "skip": "Omitir",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "finish": "Finalizar",
+    "close": "Listo"
+  },
+  "purpose": {
+    "title": "¿Para qué es {{app}}?",
+    "subtitle": "Tu respuesta adapta los siguientes pasos.",
+    "options": {
+      "surveillance": {
+        "label": "Vigilancia / CCTV",
+        "desc": "Cámaras, grabación y analítica de visión por computadora."
+      },
+      "radio": {
+        "label": "Radio por internet",
+        "desc": "Audio 24/7 con un uso de CPU casi nulo."
+      },
+      "events": {
+        "label": "Eventos / transmisión",
+        "desc": "Shows en vivo para una gran audiencia, con chat y reacciones."
+      },
+      "meetings": {
+        "label": "Sesiones 1:1 / reuniones",
+        "desc": "Salas interactivas con pocos participantes."
+      },
+      "live-shopping": {
+        "label": "Live shopping",
+        "desc": "Vendé en vivo con reacciones y contador de espectadores."
+      },
+      "general": {
+        "label": "Uso general",
+        "desc": "Un poco de todo — decidí después."
+      }
+    }
+  },
+  "recording": {
+    "title": "¿Se va a grabar?",
+    "subtitle": "Podés cambiarlo cuando quieras.",
+    "yes": "Sí, grabar las sesiones",
+    "yesDesc": "Las sesiones se guardan como grabaciones (VOD).",
+    "no": "Sin grabación",
+    "noDesc": "Solo en vivo — no se almacena nada.",
+    "s3Hint": "Las grabaciones se suben al bucket S3 propio de esta app, que podés configurar más tarde.",
+    "s3Link": "Abrir configuración de almacenamiento"
+  },
+  "viewers": {
+    "title": "¿Cuántos espectadores simultáneos?",
+    "subtitle": "Esto ajusta la entrega según el tamaño de tu audiencia.",
+    "small": "Menos de 50",
+    "smallDesc": "WebRTC con latencia sub-segundo; una sola capa mantiene la CPU baja.",
+    "medium": "Entre 50 y 500",
+    "mediumDesc": "Adaptativo (simulcast) para que cada espectador reciba una calidad acorde.",
+    "large": "500 o más",
+    "largeDesc": "Adaptativo activado — considerá entrega por HLS para audiencias muy grandes."
+  },
+  "vision": {
+    "title": "Modelos de visión",
+    "subtitle": "Instalá la analítica que necesites — sus workers quedan apagados hasta que los inicies.",
+    "models": {
+      "occupancy": { "label": "Ocupación", "desc": "Cuántas personas hay en cuadro a lo largo del tiempo." },
+      "counting": { "label": "Conteo", "desc": "Contar personas que cruzan una línea (entran / salen)." },
+      "crowd": { "label": "Multitud", "desc": "Estimación de densidad y nivel de aglomeración." },
+      "demography": { "label": "Demografía", "desc": "Agregados anónimos de edad / género." },
+      "lpr": { "label": "Patentes", "desc": "Lectura de patentes con listas de permitidos / bloqueados." },
+      "perimeter": { "label": "Perímetro", "desc": "Alertas de intrusión de persona en zona mientras está armado." },
+      "presence": { "label": "Presencia", "desc": "Eventos de ausencia / regreso y fuera de horario." }
+    }
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "subtitle": "Etiquetá tus streams (por ejemplo por sucursal o zona). Opcional.",
+    "placeholder": "Agregá una etiqueta y presioná Enter",
+    "add": "Agregar",
+    "empty": "Todavía no hay etiquetas."
+  },
+  "extras": {
+    "radio": {
+      "title": "Configuración de radio",
+      "body": "Vamos a crear un ingreso passthrough (RTMP → HLS por remux, CPU casi nula) e instalar el reproductor de radio. Vas a obtener la URL de publicación y la clave en la pantalla final."
+    },
+    "events": {
+      "title": "Herramientas para eventos",
+      "body": "Vamos a habilitar chat, reacciones y el contador de espectadores en vivo, e instalar el overlay selector de calidad."
+    },
+    "live-shopping": {
+      "title": "Herramientas de live shopping",
+      "body": "Vamos a habilitar reacciones y el contador de espectadores en vivo para que tu audiencia reaccione mientras vendés."
+    },
+    "meetings": {
+      "title": "Reuniones",
+      "body": "Las reuniones funcionan en salas interactivas — no hace falta configurar nada acá.",
+      "link": "Abrir el estudio de reuniones"
+    }
+  },
+  "summary": {
+    "title": "Revisar",
+    "subtitle": "Estos cambios se aplicarán a {{app}}.",
+    "empty": "No hay cambios para aplicar — podés finalizar ahora y configurar después.",
+    "actions": {
+      "config": {
+        "recording": {
+          "on": "Habilitar la grabación",
+          "off": "Desactivar la grabación"
+        },
+        "adaptive": {
+          "on": "Habilitar entrega adaptativa (simulcast)",
+          "off": "Usar entrega de una sola capa"
+        }
+      },
+      "features": "Habilitar chat, reacciones y contador de espectadores",
+      "plugin": { "install": "Instalar el plugin {{id}}" },
+      "tag": { "create": "Crear la etiqueta \"{{label}}\"" },
+      "ingress": { "passthrough": "Crear un ingreso passthrough (radio)" }
+    }
+  },
+  "running": {
+    "title": "Aplicando…",
+    "ofTotal": "{{done}} de {{total}} aplicados"
+  },
+  "done": {
+    "title": "¡Todo listo!",
+    "appliedSummaryOk": "Se aplicaron los {{ok}} cambio(s).",
+    "appliedSummary": "{{ok}} aplicados, {{failed}} con error.",
+    "radioPayoff": "Tu ingreso de radio",
+    "rtmpUrl": "URL RTMP",
+    "streamKey": "Clave de stream",
+    "nextSteps": "Próximos pasos",
+    "openApp": "Ir a {{app}}",
+    "recipe": "Leer la receta"
+  },
+  "banner": {
+    "title": "Terminá de configurar {{app}}",
+    "body": "Ejecutá el asistente para adaptar la grabación, la entrega y la analítica de esta app.",
+    "cta": "Asistente de configuración"
+  }
+}

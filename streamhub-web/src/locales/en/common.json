@@ -24,6 +24,9 @@
     "yes": "Yes",
     "no": "No"
   },
+  "docsHint": {
+    "learnMore": "Learn more"
+  },
   "error": {
     "generic": "Something went wrong. Please try again.",
     "network": "Connection error. Check your network.",

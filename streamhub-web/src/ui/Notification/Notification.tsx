@@ -67,7 +67,7 @@ const Notification = forwardRef<HTMLDivElement, NotificationProps>(
                 ref={ref}
                 {...rest}
                 className={notificationClass}
-                style={{ width: width, ...style }}
+                style={{ width: width, maxWidth: 'calc(100vw - 2rem)', ...style }}
             >
                 <div
                     className={classNames(

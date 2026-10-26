@@ -71,8 +71,9 @@ describe('SamplesService — G4 vertical templates', () => {
     expect(fs.existsSync(full)).toBe(true);
     const html = onDisk('shop', file);
 
-    // Resolved to THIS app; no unresolved known placeholders.
-    expect(html).toContain("const APP = 'shop';");
+    // Resolved to THIS app; no unresolved known placeholders. The config block
+    // is config-aware: `CFG.app` (a bundle's config.js) wins over the baked literal.
+    expect(html).toContain("const APP = CFG.app || 'shop';");
     expect(html).not.toContain('{{APP}}');
     expect(html).not.toContain('{{ROOM}}');
     expect(html).not.toContain('{{WS_URL}}');

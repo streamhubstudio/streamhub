@@ -10,10 +10,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiRequestError, type App } from '@/api'
 import { Alert, Button, Card } from '@/ui'
 import { useAuth } from '@/auth/useAuth'
+import { DocsHint } from '@/components/DocsHint'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { CreateAppModal } from './Apps/CreateAppModal'
 import { DeleteAppDialog } from './Apps/DeleteAppDialog'
 
@@ -119,8 +121,12 @@ function AppCard({
 export default function Apps() {
   const { t } = useTranslation(['apps', 'common'])
   const { canEdit } = useAuth()
+  const queryClient = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [toDelete, setToDelete] = useState<App | null>(null)
+  // The app whose onboarding wizard is open (set right after a successful
+  // create — the wizard applies the tailored setup for the new tenant).
+  const [wizardApp, setWizardApp] = useState<string | null>(null)
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
     queryKey: ['apps'],
@@ -135,7 +141,9 @@ export default function Apps() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-fg">{t('apps:page.title')}</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-fg">
+            {t('apps:page.title')} <DocsHint section="apps" />
+          </h1>
           <p className="text-sm text-slate-400">{t('apps:page.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3 max-md:w-full">
@@ -216,7 +224,22 @@ export default function Apps() {
       {showCreate && (
         <CreateAppModal
           onClose={() => setShowCreate(false)}
-          onCreated={() => setShowCreate(false)}
+          onCreated={(app) => {
+            setShowCreate(false)
+            // Launch the onboarding wizard for the freshly-created app.
+            setWizardApp(app.name)
+          }}
+        />
+      )}
+
+      {wizardApp && (
+        <OnboardingWizard
+          app={wizardApp}
+          onClose={() => {
+            setWizardApp(null)
+            queryClient.invalidateQueries({ queryKey: ['apps'] })
+            queryClient.invalidateQueries({ queryKey: ['app-onboarding', wizardApp] })
+          }}
         />
       )}
 

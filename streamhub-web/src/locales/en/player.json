@@ -3,11 +3,21 @@
     "title": "Invalid route",
     "desc": "The app or room is missing from the URL."
   },
+  "embed": {
+    "unavailable": "This embed link is invalid or has expired."
+  },
   "header": {
     "appLabel": "app · {{app}}",
     "audioOnly": "Audio only",
     "audioOnlyTitle": "Play only the room's audio",
     "exit": "Leave"
+  },
+  "mode": {
+    "label": "Playback mode",
+    "webrtc": "WebRTC",
+    "hls": "HLS",
+    "webrtcTitle": "Sub-second latency (WebRTC)",
+    "hlsTitle": "HLS (~6-15s latency, more compatible)"
   },
   "share": {
     "title": "Share",

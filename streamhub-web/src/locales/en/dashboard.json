@@ -50,5 +50,22 @@
     "vods_one": "{{count}} recording",
     "vods_other": "{{count}} recordings"
   },
+  "net": {
+    "title": "Network I/O",
+    "subtitle": "Media-plane bytes in / out per app.",
+    "appLabel": "App scope",
+    "allApps": "All apps",
+    "in": "In (today)",
+    "out": "Out (today)",
+    "last24h": "Last 24h",
+    "ok": "Within threshold",
+    "exceeded": "Threshold exceeded",
+    "exceededCount_one": "{{count}} app over threshold",
+    "exceededCount_other": "{{count}} apps over threshold",
+    "noThreshold": "No threshold",
+    "configure": "Configure",
+    "sparkAria": "Hourly network throughput, last 24 hours",
+    "empty": "No apps to meter yet."
+  },
   "updating": "Updating…"
 }

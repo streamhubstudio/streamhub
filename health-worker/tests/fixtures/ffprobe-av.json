@@ -1,0 +1,29 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "h264",
+      "codec_type": "video",
+      "width": 1280,
+      "height": 720,
+      "r_frame_rate": "30000/1001",
+      "avg_frame_rate": "30000/1001",
+      "start_time": "1.400000",
+      "bit_rate": "2143000"
+    },
+    {
+      "index": 1,
+      "codec_name": "aac",
+      "codec_type": "audio",
+      "sample_rate": "48000",
+      "channels": 2,
+      "start_time": "1.412000",
+      "bit_rate": "128000"
+    }
+  ],
+  "format": {
+    "filename": "seg-00042.ts",
+    "duration": "6.006000",
+    "bit_rate": "2296000"
+  }
+}

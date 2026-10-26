@@ -1,5 +1,10 @@
 {
   "confirmPhrase": "PURGAR",
+  "danger": {
+    "title": "Zona de peligro",
+    "deleteDesc": "Eliminar permanentemente esta app — su configuración, streams, tokens, ingesta y todos los datos de la app. Esto no se puede deshacer. Se te pedirá tipear el nombre de la app para confirmar, y opcionalmente podés borrar también sus grabaciones/VODs.",
+    "deleteApp": "Eliminar esta app"
+  },
   "scope": {
     "vods": {
       "label": "VODs",

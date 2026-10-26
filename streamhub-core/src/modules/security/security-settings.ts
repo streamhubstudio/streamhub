@@ -3,7 +3,7 @@
  * service (ConfigService snapshots process.env at construction, and these
  * settings are read through it so tests can pin values per suite).
  *
- * Documented in streamhub-docs/operations/ENV.md and .env.example.
+ * Documented in https://streamhub.studio/docs/operations/ENV and .env.example.
  */
 import { ConfigService } from '../../shared/config/config.service';
 

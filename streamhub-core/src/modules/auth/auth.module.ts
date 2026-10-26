@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AUTH_VALIDATOR, StreamHubAuthGuard } from '../../shared/auth';
+import { ClusterModule } from '../cluster/cluster.module';
 import { EmailModule } from '../email/email.module';
 import { SecurityModule } from '../security/security.module';
 import { AccountController } from './account.controller';
@@ -35,10 +36,16 @@ import { TotpService } from './totp.service';
  * StreamHub is the identity-of-record; OIDC/Logto was removed. TenancyService
  * (global) owns the users/teams/memberships tables this module reads and writes.
  */
+// @Global so AUTH_VALIDATOR (the Bearer validator) is injectable app-wide WITHOUT
+// re-importing AuthModule (which would double-register the global APP_GUARD). The
+// appstore's dual-auth bundle download uses it to authenticate the superadmin sk_
+// path of a @Public route. AuthModule is imported exactly once (app.module).
+@Global()
 @Module({
   // SecurityModule provides IpReputationService: login/magic/token failures
-  // are reported (fire-and-forget) to the in-app auto-ban.
-  imports: [EmailModule, SecurityModule],
+  // are reported (fire-and-forget) to the in-app auto-ban. ClusterModule
+  // provides NodeRoleService: an edge node blocks every login mint path.
+  imports: [EmailModule, SecurityModule, ClusterModule],
   controllers: [
     AuthController,
     LoginController,
@@ -57,6 +64,6 @@ import { TotpService } from './totp.service';
     { provide: APP_GUARD, useClass: StreamHubAuthGuard },
     { provide: AUTH_VALIDATOR, useExisting: AuthService },
   ],
-  exports: [AuthService],
+  exports: [AuthService, AUTH_VALIDATOR],
 })
 export class AuthModule {}

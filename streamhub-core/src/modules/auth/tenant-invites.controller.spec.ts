@@ -19,7 +19,7 @@ import {
 import { makeUnitContext, type UnitContext } from '../../../test/helpers';
 import { AuthContext } from '../../shared/auth-context';
 import { TenancyService } from '../tenancy/tenancy.service';
-import { EmailService, type SendResult } from '../email/email.service';
+import { EmailService, type SendContext, type SendResult } from '../email/email.service';
 import { MagicLinkService } from './magic-link.service';
 import { SessionService } from './session.service';
 import { TenantInvitesController } from './tenant-invites.controller';
@@ -32,7 +32,10 @@ interface Harness {
   tenancy: TenancyService;
   magic: MagicLinkService;
   controller: TenantInvitesController;
-  sendInvite: jest.Mock<Promise<SendResult>, [string, string, unknown]>;
+  sendInvite: jest.Mock<
+    Promise<SendResult>,
+    [string, string, unknown, SendContext?]
+  >;
   /** Owner ctx over a fresh team. */
   owner: AuthContext;
   /** Extract ?token= from the last invite email URL. */
@@ -51,7 +54,7 @@ function makeInvites(overrides: Record<string, string> = {}): Harness {
   const totp = ctx.newService(TotpService, ctx.config, tenancy);
 
   const sendInvite = jest
-    .fn<Promise<SendResult>, [string, string, unknown]>()
+    .fn<Promise<SendResult>, [string, string, unknown, SendContext?]>()
     .mockResolvedValue({ ok: true, messageId: '<id>' });
   const email = { sendInvite } as unknown as EmailService;
 
@@ -133,6 +136,12 @@ describe('auth/TenantInvitesController', () => {
     expect(to).toBe('new.member@x.com');
     expect(url).toContain('/auth/magic?token=');
     expect(opts).toMatchObject({ teamName: 'Acme', role: 'editor' });
+  });
+
+  it("owner item 29: passes the INVITER's own id as SMTP-resolution context", async () => {
+    await h.controller.invite({ email: 'new2@x.com', role: 'viewer' }, h.owner);
+    const ctx = h.sendInvite.mock.calls[0][3];
+    expect(ctx?.userId).toBe(h.owner.userId);
   });
 
   it('defaults the role to viewer', async () => {

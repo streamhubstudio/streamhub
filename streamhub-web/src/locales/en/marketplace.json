@@ -1,25 +1,25 @@
 {
   "page": {
-    "title": "Plugins",
-    "subtitle": "Extend StreamHub with installable plugins.",
+    "title": "Studio Marketplace",
+    "subtitle": "Extend StreamHub with installable Studio apps.",
     "refreshing": "Refreshing…",
-    "backendOffline": "Couldn't reach the plugins service. Showing the available catalog; install state may be out of date.",
+    "backendOffline": "Couldn't reach the Studio service. Showing the available catalog; install state may be out of date.",
     "actionError": "The action couldn't be completed.",
     "allCategories": "All",
-    "loading": "Loading plugins…",
-    "empty": "No plugins in this category.",
-    "emptyHint": "Plugins drop in automatically — new ones appear here once added."
+    "loading": "Loading Studio apps…",
+    "empty": "No Studio apps in this category.",
+    "emptyHint": "Studio apps drop in automatically — new ones appear here once added."
   },
   "picker": {
-    "subtitle": "Plugins are installed and configured per app. Pick an app to manage its plugins.",
+    "subtitle": "Studio apps are installed and configured per app. Pick an app to manage its Studio apps.",
     "selectApp": "Pick an app",
     "loadingApps": "Loading apps…",
-    "noApps": "No apps yet. Create one to install plugins.",
-    "manage": "Manage plugins"
+    "noApps": "No apps yet. Create one to install Studio apps.",
+    "manage": "Manage Studio"
   },
   "catalog": {
     "title": "Available catalog",
-    "subtitle": "Plugins bundled in this build. Install them inside an app."
+    "subtitle": "Studio apps bundled in this build. Install them inside an app."
   },
   "status": {
     "active": "Active",
@@ -29,7 +29,8 @@
   "placement": {
     "app-tab": "App tab",
     "panel": "Panel",
-    "player-overlay": "Player overlay"
+    "player-overlay": "Player overlay",
+    "player": "Player"
   },
   "card": {
     "noDescription": "No description provided.",
@@ -44,7 +45,19 @@
     "active": "Active",
     "inactive": "Inactive",
     "working": "Working…",
-    "close": "Close"
+    "close": "Close",
+    "details": "Details"
+  },
+  "detail": {
+    "whatItDoes": "What it does",
+    "useCases": "Use cases",
+    "settings": "Settings",
+    "status": "Status",
+    "enabled": "Enabled",
+    "experimental": "Experimental",
+    "viewLogs": "View logs",
+    "manageInApp": "Install this Studio app inside an app to enable and configure it.",
+    "version": "Version"
   },
   "confirm": {
     "uninstall": "Uninstall \"{{name}}\"? Its configuration will be removed."
@@ -55,7 +68,7 @@
     "saving": "Saving…",
     "saved": "Saved",
     "saveError": "Couldn't save the configuration.",
-    "noSettings": "This plugin has no settings.",
+    "noSettings": "This Studio app has no settings.",
     "errors": {
       "required": "This field is required.",
       "nan": "Enter a valid number.",
@@ -70,7 +83,53 @@
     "error": "Couldn't load the logs.",
     "empty": "No logs yet."
   },
+  "shelf": {
+    "apps": "Apps",
+    "plugins": "Plugins",
+    "yourApps": "Your apps"
+  },
+  "kind": {
+    "app": "App",
+    "plugin": "Plugin"
+  },
+  "badge": {
+    "edge": "Edge"
+  },
+  "studio": {
+    "back": "Back to Studio",
+    "openStudio": "Open Studio",
+    "copyLink": "Copy link to this view",
+    "copyLinkDone": "Link copied",
+    "notInstalled": "This app isn't installed here.",
+    "notInstalledHint": "Install it from Studio to open its full page.",
+    "noSurface": "This app has no full-page surface in this build.",
+    "worker": {
+      "running": "Worker running",
+      "stopped": "Worker stopped"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "settings": "Settings",
+      "logs": "Logs",
+      "export": "Export"
+    }
+  },
+  "export": {
+    "title": "Export this app",
+    "description": "Download a self-contained bundle to run this app on your own infrastructure. It talks back to StreamHub over the REST API and signed webhooks, so it can scale and be extended independently.",
+    "download": "Download bundle (.tar.gz)",
+    "downloading": "Preparing…",
+    "notExportable": "This app isn't exportable yet.",
+    "error": "Couldn't export the app.",
+    "contents": {
+      "worker": "The worker source, its requirements and tests.",
+      "docker": "A generated Dockerfile and docker-compose.yml.",
+      "env": "A .env.example with every variable the worker needs (secrets left blank).",
+      "readme": "A README: how to run it and how it talks back to StreamHub.",
+      "license": "The project LICENSE."
+    }
+  },
   "host": {
-    "crashed": "The \"{{id}}\" plugin failed to render."
+    "crashed": "The \"{{id}}\" Studio app failed to render."
   }
 }

@@ -13,10 +13,14 @@ import Account from '@/pages/Account'
 import Dashboard from '@/pages/Dashboard'
 import Apps from '@/pages/Apps'
 import AppDetail from '@/pages/AppDetail'
+import StudioAppPage from '@/pages/StudioAppPage'
 import Marketplace from '@/pages/Marketplace'
 import Logs from '@/pages/Logs'
 import Cluster from '@/pages/Cluster'
 import ServerSettings from '@/pages/ServerSettings'
+import ResourceHistory from '@/pages/ResourceHistory'
+import AuditLog from '@/pages/AuditLog'
+import SecurityPosture from '@/pages/SecurityPosture'
 import Player from '@/pages/Player'
 import PlayPublic from '@/pages/PlayPublic'
 import Embed from '@/pages/Embed'
@@ -51,11 +55,23 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="apps" element={<Apps />} />
           <Route path="apps/:app" element={<AppDetail />} />
-          <Route path="plugins" element={<Marketplace />} />
+          {/* Full-page Studio App (kind: 'app') — opened from the Studio tab
+              instead of the in-place modal that plain plugins use. The optional
+              :section deep-links one of the app's declared views (the section-
+              less URL stays valid and defaults to the first section). */}
+          <Route path="apps/:app/studio/:pluginId" element={<StudioAppPage />} />
+          <Route path="apps/:app/studio/:pluginId/:section" element={<StudioAppPage />} />
+          {/* Studio marketplace. `/studio` is the branded route; `/plugins`
+              stays as a back-compat alias (deep links, bookmarks) → redirects. */}
+          <Route path="studio" element={<Marketplace />} />
+          <Route path="plugins" element={<Navigate to="/studio" replace />} />
           <Route path="account" element={<Account />} />
           <Route path="cluster" element={<Cluster />} />
           <Route path="logs" element={<Logs />} />
+          <Route path="resources" element={<ResourceHistory />} />
           <Route path="settings" element={<ServerSettings />} />
+          <Route path="audit" element={<AuditLog />} />
+          <Route path="compliance" element={<SecurityPosture />} />
         </Route>
 
         {/* Full-screen WebRTC surfaces */}

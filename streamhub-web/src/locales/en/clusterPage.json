@@ -1,6 +1,10 @@
 {
   "title": "Cluster",
   "subtitle": "StreamHub nodes registered in this cluster.",
+  "tab": {
+    "registry": "Registry",
+    "edge": "Edge"
+  },
   "info": {
     "title": "Cluster state",
     "subtitle": "Shared token and the one-liner new nodes run to join.",

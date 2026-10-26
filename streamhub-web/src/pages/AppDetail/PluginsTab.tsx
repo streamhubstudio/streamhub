@@ -16,6 +16,7 @@
  * players (/play, /embed) — that host is untouched.
  */
 import { Component, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth/useAuth'
 import { Dialog as UIDialog } from '@/ui'
@@ -26,10 +27,16 @@ import {
   useSetPluginActive,
   useUninstallPlugin,
 } from '@/plugins'
-import { errMessage } from '@/plugins/ui'
+import { errMessage, PluginIcon } from '@/plugins/ui'
 import type { PluginView } from '@/plugins'
-import { catalogCategories } from '@/plugins/state'
+import {
+  catalogCategories,
+  openTargetFor,
+  partitionByKind,
+  studioAppPath,
+} from '@/plugins/state'
 import { PluginCard } from '../Marketplace/PluginCard'
+import { PluginDetail } from '../Marketplace/PluginDetail'
 import { Modal } from '../Marketplace/Modal'
 import { LogsDialog } from '../Marketplace/LogsDialog'
 import { Button, Card, ErrorBanner } from './ui'
@@ -38,6 +45,7 @@ type Dialog =
   | { kind: 'config'; view: PluginView }
   | { kind: 'logs'; view: PluginView }
   | { kind: 'open'; view: PluginView }
+  | { kind: 'detail'; view: PluginView }
   | null
 
 const ALL = '__all__'
@@ -95,6 +103,7 @@ function PluginSurface({ view, app }: { view: PluginView; app: string }) {
 export function PluginsTab({ app }: { app: string }) {
   const { t } = useTranslation(['marketplace', 'common'])
   const { canEdit } = useAuth()
+  const navigate = useNavigate()
   const { views, isLoading, isFetching, backendError, refetch } =
     usePluginCatalog(app)
 
@@ -112,6 +121,22 @@ export function PluginsTab({ app }: { app: string }) {
     [views, category],
   )
 
+  // Shelves: Apps first, then Plugins (the category filter still applies).
+  const shelves = useMemo(() => partitionByKind(filtered), [filtered])
+
+  // Installed Studio Apps get a quick-launch strip at the top — one click from
+  // the app to the running App page (regardless of category filter).
+  const installedApps = useMemo(
+    () => views.filter((v) => v.kind === 'app' && v.installed && v.hasFrontend),
+    [views],
+  )
+
+  /** Open a view: apps navigate to their full page, plugins open the modal. */
+  function handleOpen(view: PluginView) {
+    if (openTargetFor(view) === 'page') navigate(studioAppPath(app, view.id))
+    else setDialog({ kind: 'open', view })
+  }
+
   // A plugin is "busy" while any of its mutations are in flight.
   const pendingId =
     (install.isPending && install.variables) ||
@@ -124,6 +149,25 @@ export function PluginsTab({ app }: { app: string }) {
   function onUninstall(view: PluginView) {
     if (!window.confirm(t('confirm.uninstall', { name: view.name }))) return
     uninstall.mutate(view.id)
+  }
+
+  /** One catalog card — shared by the Apps and Plugins shelves. */
+  function renderCard(view: PluginView) {
+    return (
+      <PluginCard
+        key={view.id}
+        view={view}
+        canEdit={canEdit}
+        busy={pendingId === view.id}
+        onInstall={() => install.mutate(view.id)}
+        onUninstall={() => onUninstall(view)}
+        onToggleActive={(active) => setActive.mutate({ id: view.id, active })}
+        onOpen={isOpenable(view) ? () => handleOpen(view) : undefined}
+        onConfigure={() => setDialog({ kind: 'config', view })}
+        onLogs={() => setDialog({ kind: 'logs', view })}
+        onDetails={() => setDialog({ kind: 'detail', view })}
+      />
+    )
   }
 
   return (
@@ -145,6 +189,37 @@ export function PluginsTab({ app }: { app: string }) {
         <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
           {errMessage(actionError, t('page.actionError'))}
         </div>
+      )}
+
+      {/* Quick-launch: installed Studio Apps, one click to their full page. */}
+      {!isLoading && installedApps.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold text-fg">
+            {t('shelf.yourApps')}
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {installedApps.map((view) => (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => navigate(studioAppPath(app, view.id))}
+                className="glass flex items-center gap-2 rounded-lg px-3 py-2 text-left transition hover:ring-1 hover:ring-blue2/40"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-blue2/15 text-sky2">
+                  <PluginIcon icon={view.icon} className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-fg">
+                    {view.name}
+                  </span>
+                  <span className="block text-[11px] text-slate-500">
+                    {view.active ? t('actions.active') : t('actions.inactive')}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Category filter — Elstar pill tabs. */}
@@ -170,7 +245,7 @@ export function PluginsTab({ app }: { app: string }) {
         </div>
       )}
 
-      {/* Catalog */}
+      {/* Catalog — Apps shelf first, then Plugins. */}
       {isLoading ? (
         <Card className="text-center">
           <div className="px-5 py-11 text-sm text-fg-subtle">
@@ -185,28 +260,43 @@ export function PluginsTab({ app }: { app: string }) {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((view) => (
-            <PluginCard
-              key={view.id}
-              view={view}
-              canEdit={canEdit}
-              busy={pendingId === view.id}
-              onInstall={() => install.mutate(view.id)}
-              onUninstall={() => onUninstall(view)}
-              onToggleActive={(active) =>
-                setActive.mutate({ id: view.id, active })
-              }
-              onOpen={
-                isOpenable(view)
-                  ? () => setDialog({ kind: 'open', view })
-                  : undefined
-              }
-              onConfigure={() => setDialog({ kind: 'config', view })}
-              onLogs={() => setDialog({ kind: 'logs', view })}
-            />
-          ))}
+        <div className="space-y-8">
+          {shelves.apps.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-fg">
+                {t('shelf.apps')}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {shelves.apps.map(renderCard)}
+              </div>
+            </section>
+          )}
+          {shelves.plugins.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-fg">
+                {t('shelf.plugins')}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {shelves.plugins.map(renderCard)}
+              </div>
+            </section>
+          )}
         </div>
+      )}
+
+      {/* Detail / mini-landing + config view */}
+      {dialog?.kind === 'detail' && (
+        <PluginDetail
+          view={dialog.view}
+          app={app}
+          canEdit={canEdit}
+          busy={pendingId === dialog.view.id}
+          onToggleActive={(active) =>
+            setActive.mutate({ id: dialog.view.id, active })
+          }
+          onShowLogs={() => setDialog({ kind: 'logs', view: dialog.view })}
+          onClose={() => setDialog(null)}
+        />
       )}
 
       {/* Configure dialog */}

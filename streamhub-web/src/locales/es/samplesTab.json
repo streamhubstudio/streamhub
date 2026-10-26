@@ -11,6 +11,23 @@
     "loadError": "No se pudieron cargar los samples.",
     "empty": "Esta app no tiene samples. Usá «Regenerar» para crearlos."
   },
+  "downloads": {
+    "title": "Descargar bundles autónomos",
+    "subtitle": "Bundles de ejemplo auto-contenidos (index.html + config.js + README). Subí una carpeta a cualquier hosting estático — S3, Netlify, nginx, GitHub Pages — y editá config.js para apuntar a tu StreamHub. Sin build.",
+    "downloadAll": "Descargar todo (.zip)",
+    "download": "Descargar .zip",
+    "downloading": "Preparando…",
+    "loading": "Cargando ejemplos…",
+    "loadError": "No se pudieron cargar los ejemplos.",
+    "empty": "No hay ejemplos descargables.",
+    "downloadError": "No se pudo descargar el bundle.",
+    "configHint": "Claves de config.js: {{keys}}",
+    "auth": {
+      "public": "Token público",
+      "ephemeral": "Token efímero",
+      "publisher": "Token de publisher"
+    }
+  },
   "editor": {
     "loadingFile": "Cargando {{file}}…",
     "loadFileError": "No se pudo cargar {{file}}.",

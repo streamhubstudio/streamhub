@@ -7,9 +7,11 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Optional,
   Param,
   ParseIntPipe,
   Post,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,9 +21,15 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
 import { ConfigService } from '../../shared/config/config.service';
+import {
+  actorFromCtx,
+  AuditService,
+  requestIp,
+} from '../audit/audit.service';
 import { IpRule, IpRulesService } from './ip-rules.service';
 import {
   BanView,
@@ -79,6 +87,8 @@ export class SecurityController {
     config: ConfigService,
     private readonly rules: IpRulesService,
     private readonly reputation: IpReputationService,
+    /** Security audit trail (ISO 8.15) — optional for bare-ctor unit specs. */
+    @Optional() private readonly audit?: AuditService,
   ) {
     this.settings = resolveSecuritySettings(config);
   }
@@ -135,17 +145,26 @@ export class SecurityController {
   @ApiOkResponse({ description: '{ data: IpRule } — the created rule.' })
   addRule(
     @Body() dto: CreateIpRuleDto,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Envelope<IpRule> {
     this.requireGlobal(ctx);
-    return ok(
-      this.rules.add({
-        cidr: dto.cidr,
-        action: dto.action,
-        note: dto.note ?? null,
-        createdBy: ctx?.userId ?? null,
-      }),
-    );
+    const rule = this.rules.add({
+      cidr: dto.cidr,
+      action: dto.action,
+      note: dto.note ?? null,
+      createdBy: ctx?.userId ?? null,
+    });
+    // Network-access-control change → security audit trail (ISO 8.20/8.15).
+    this.audit?.record({
+      action: 'security.ip_rule.create',
+      ...actorFromCtx(ctx),
+      targetType: 'ip_rule',
+      targetId: String(rule.id),
+      ip: requestIp(req),
+      meta: { cidr: rule.cidr, ruleAction: rule.action, note: rule.note },
+    });
+    return ok(rule);
   }
 
   @Delete('ip-rules/:id')
@@ -155,10 +174,18 @@ export class SecurityController {
   @ApiNotFoundResponse({ description: 'Unknown rule.' })
   removeRule(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Envelope<{ id: number; deleted: true }> {
     this.requireGlobal(ctx);
     this.rules.remove(id);
+    this.audit?.record({
+      action: 'security.ip_rule.delete',
+      ...actorFromCtx(ctx),
+      targetType: 'ip_rule',
+      targetId: String(id),
+      ip: requestIp(req),
+    });
     return ok({ id, deleted: true as const });
   }
 
@@ -191,12 +218,20 @@ export class SecurityController {
   @ApiNotFoundResponse({ description: 'IP has no ban record.' })
   unban(
     @Param('ip') ip: string,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Envelope<{ ip: string; unbanned: true }> {
     this.requireGlobal(ctx);
     if (!this.reputation.unban(ip)) {
       throw new NotFoundException(`no ban record for ${ip}`);
     }
+    this.audit?.record({
+      action: 'security.unban',
+      ...actorFromCtx(ctx),
+      targetType: 'ip',
+      targetId: ip,
+      ip: requestIp(req),
+    });
     return ok({ ip, unbanned: true as const });
   }
 

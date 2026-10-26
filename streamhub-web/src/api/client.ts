@@ -6,26 +6,38 @@
  *   import { api } from '@/api'
  *   const apps = await api.apps.list()
  */
-import { request } from './http'
+import { request, requestBlob } from './http'
 import {
   buildIngressQuery,
   buildLogsQuery,
   buildVodsQuery,
   toQueryRecord,
 } from '@/lib/queryParams'
+import { buildAuditQuery, type AuditQueryInput } from '@/lib/audit'
 import type {
   AccountInfo,
   App,
+  AppPipeline,
+  AuditPage,
+  AuditVerifyResult,
+  ComplianceReport,
   AppSizes,
   AppStats,
+  NetSummary,
+  NetHistory,
   AuthConfig,
   ChangePasswordRequest,
   ClusterInfo,
   ClusterNode,
   UpdateNodeRequest,
+  EdgeNodeView,
+  EdgeNodeCommand,
+  EdgeAssignment,
+  PatchEdgeNodeRequest,
   VodListParams,
   VodsPage,
   VodDownload,
+  VodTranscript,
   CreateAppRequest,
   CreatedToken,
   CreateIngressRequest,
@@ -67,6 +79,9 @@ import type {
   MagicLinkResponse,
   MagicVerifyRequest,
   MagicVerifyResponse,
+  MetricsHistoryMetric,
+  MetricsHistoryRange,
+  MetricsHistoryResponse,
   SessionInfo,
   SignupRequest,
   LogQuery,
@@ -74,16 +89,29 @@ import type {
   MintedToken,
   MintTokenRequest,
   PlayToken,
+  SignedPlayback,
   RawConfig,
   RecordingHandle,
+  ExampleInfo,
   RegenerateSamplesResult,
   Sample,
   S3Config,
   MqttConfig,
   UpdateMqttRequest,
+  SmtpConfig,
+  UpdateSmtpRequest,
+  TestSmtpRequest,
+  SendResult,
+  OsTuningReport,
   RecordStopResult,
   AddRestreamRequest,
   RestreamTarget,
+  MuteParticipantRequest,
+  MuteParticipantResult,
+  RoomParticipant,
+  BackupRestoreResult,
+  BackupRunResult,
+  BackupsOverview,
   SecurityBan,
   SecurityIpRule,
   SecurityOffender,
@@ -97,6 +125,10 @@ import type {
   StopBroadcastResult,
   Stats,
   Stream,
+  StreamPluginsState,
+  StreamTagsState,
+  Tag,
+  CreateTagRequest,
   StartRecordingRequest,
   TokenSummary,
   TranscodingConfig,
@@ -189,6 +221,55 @@ const system = {
   settings(signal?: AbortSignal): Promise<ServerSettings> {
     return request<ServerSettings>('/system/settings', { signal })
   },
+  /**
+   * GET /system/audit — the tamper-evident audit log (newest first), filtered
+   * by action prefix / actor / result / date range and paginated. Same
+   * superadmin (global-scope) surface as /system/settings; an app-scoped token
+   * gets 403, and a core that predates the feature answers 404.
+   */
+  audit(params: AuditQueryInput = {}, signal?: AbortSignal): Promise<AuditPage> {
+    return request<AuditPage>('/system/audit', {
+      query: toQueryRecord(buildAuditQuery(params)),
+      signal,
+    })
+  },
+  /** GET /system/audit/verify — hash-chain integrity check of the audit log. */
+  auditVerify(signal?: AbortSignal): Promise<AuditVerifyResult> {
+    return request<AuditVerifyResult>('/system/audit/verify', { signal })
+  },
+  /**
+   * GET /system/compliance — live evidence of which ISO 27002 §8 technological
+   * controls are active on this deployment. Superadmin surface (403/404 like
+   * the audit endpoints).
+   */
+  compliance(signal?: AbortSignal): Promise<ComplianceReport> {
+    return request<ComplianceReport>('/system/compliance', { signal })
+  },
+  /**
+   * GET /system/os-tuning — live OS performance-tuning posture: per kernel/limit
+   * knob (UDP buffers, somaxconn, udp_mem, ephemeral port range, fd limits,
+   * swappiness, transparent hugepages) → current / recommended / applied verdict.
+   * Read-only; superadmin (global-scope) surface (403/404 like /system/settings).
+   */
+  osTuning(signal?: AbortSignal): Promise<OsTuningReport> {
+    return request<OsTuningReport>('/system/os-tuning', { signal })
+  },
+  /**
+   * GET /system/metrics/history — bucketed host resource-usage history (CPU /
+   * RAM / Disk / Network) at 1-hour precision for the dashboard dot charts.
+   * Superadmin (global-scope) surface: an app-scoped token gets 403, and a core
+   * that predates the feature answers 404. `metric` narrows to one series
+   * (default all); `range` defaults to 30d.
+   */
+  metricsHistory(
+    params: { range?: MetricsHistoryRange; metric?: MetricsHistoryMetric } = {},
+    signal?: AbortSignal,
+  ): Promise<MetricsHistoryResponse> {
+    return request<MetricsHistoryResponse>('/system/metrics/history', {
+      query: { range: params.range, metric: params.metric },
+      signal,
+    })
+  },
 }
 
 // --- apps -------------------------------------------------------------------
@@ -211,6 +292,16 @@ const apps = {
    */
   stats(name: string, signal?: AbortSignal): Promise<AppStats> {
     return request<AppStats>(`/apps/${encodeURIComponent(name)}/stats`, { signal })
+  },
+  /**
+   * GET /apps/:app/pipeline → the app's configured media pipeline (ingest →
+   * processing → delivery + storage + plugins), the data source of the
+   * Tablero's <AppFlowDiagram>. Enveloped ({ data }).
+   */
+  pipeline(name: string, signal?: AbortSignal): Promise<AppPipeline> {
+    return request<AppPipeline>(`/apps/${encodeURIComponent(name)}/pipeline`, {
+      signal,
+    })
   },
   create(payload: CreateAppRequest): Promise<App> {
     return request<App>('/apps', { method: 'POST', body: payload })
@@ -295,6 +386,19 @@ const apps = {
       { method: 'POST' },
     )
   },
+  /**
+   * POST /apps/:app/presets/:preset/deactivate → G4 fold-2: the inverse of
+   * apply. Reverts every key the preset sets to the app's factory default
+   * (credential-safe); keys with no factory default (the forward-looking
+   * distribution/hls blocks) are removed. Backs up, writes and hot-reloads.
+   * Returns the diff of the change.
+   */
+  deactivatePreset(name: string, preset: string): Promise<ApplyPresetResult> {
+    return request<ApplyPresetResult>(
+      `/apps/${encodeURIComponent(name)}/presets/${encodeURIComponent(preset)}/deactivate`,
+      { method: 'POST' },
+    )
+  },
 
   // --- Wave 5 / Fold 2: dry-run validation + timestamped backups ------------
 
@@ -374,6 +478,36 @@ const apps = {
     })
   },
 
+  // --- Owner item 29: per-app SMTP override ---------------------------------
+
+  /** GET /apps/:app/smtp → config with the password masked. */
+  getSmtp(name: string, signal?: AbortSignal): Promise<SmtpConfig> {
+    return request<SmtpConfig>(`/apps/${encodeURIComponent(name)}/smtp`, {
+      signal,
+    })
+  },
+  /**
+   * PUT /apps/:app/smtp — writes the smtp block to config.yaml and the
+   * password to secrets.json. Omit pass to keep the stored one.
+   */
+  putSmtp(name: string, payload: UpdateSmtpRequest): Promise<SmtpConfig> {
+    return request<SmtpConfig>(`/apps/${encodeURIComponent(name)}/smtp`, {
+      method: 'PUT',
+      body: payload,
+    })
+  },
+  /**
+   * POST /apps/:app/smtp/test — sends a probe email using THIS app's
+   * configured SMTP (bypasses its enabled gate). Never an HTTP error — the
+   * result body carries ok/error/skipped.
+   */
+  testSmtp(name: string, payload: TestSmtpRequest): Promise<SendResult> {
+    return request<SendResult>(`/apps/${encodeURIComponent(name)}/smtp/test`, {
+      method: 'POST',
+      body: payload,
+    })
+  },
+
   // --- Wave 4: per-app HTML samples ----------------------------------------
 
   /** GET /apps/:app/samples → list. Tolerates string[] | Sample[] | {files}. */
@@ -424,6 +558,26 @@ const apps = {
     )
   },
 
+  // --- Downloadable, self-contained example bundles -------------------------
+
+  /** GET /apps/:app/examples → the downloadable example-bundle catalogue. */
+  listExamples(name: string, signal?: AbortSignal): Promise<ExampleInfo[]> {
+    return request<ExampleInfo[]>(
+      `/apps/${encodeURIComponent(name)}/examples`,
+      { signal },
+    )
+  },
+  /** GET /apps/:app/examples/:id.zip → one bundle as a zip (Blob). */
+  downloadExampleZip(name: string, id: string): Promise<Blob> {
+    return requestBlob(
+      `/apps/${encodeURIComponent(name)}/examples/${encodeURIComponent(id)}.zip`,
+    )
+  },
+  /** GET /apps/:app/examples/all.zip → every bundle in one zip (Blob). */
+  downloadAllExamplesZip(name: string): Promise<Blob> {
+    return requestBlob(`/apps/${encodeURIComponent(name)}/examples/all.zip`)
+  },
+
   // --- Wave 4: radio listen token ------------------------------------------
 
   /**
@@ -438,6 +592,32 @@ const apps = {
     return request<ListenToken>(
       `/apps/${encodeURIComponent(name)}/radio/${encodeURIComponent(room)}/listen-token`,
       { signal },
+    )
+  },
+
+  // --- Wave 1C: per-app network I/O counters -------------------------------
+
+  /**
+   * GET /apps/:app/net → rolling network I/O summary (today / 24h / 7d byte
+   * totals per direction + source) plus the configured threshold posture.
+   */
+  net(name: string, signal?: AbortSignal): Promise<NetSummary> {
+    return request<NetSummary>(`/apps/${encodeURIComponent(name)}/net`, {
+      signal,
+    })
+  },
+  /**
+   * GET /apps/:app/net/history?hours → hourly-bucketed in/out byte rows for the
+   * dashboard sparkline. `hours` (default 48) is clamped server-side to [1,720].
+   */
+  netHistory(
+    name: string,
+    hours = 48,
+    signal?: AbortSignal,
+  ): Promise<NetHistory> {
+    return request<NetHistory>(
+      `/apps/${encodeURIComponent(name)}/net/history`,
+      { query: { hours }, signal },
     )
   },
 }
@@ -497,6 +677,32 @@ const ingress = {
   remove(app: string, id: string): Promise<void> {
     return request<void>(
       `/apps/${encodeURIComponent(app)}/ingress/${encodeURIComponent(id)}`,
+      { method: 'DELETE' },
+    )
+  },
+}
+
+// --- tags (per-app dynamic labels — /apps/:app/tags) -------------------------
+
+const tags = {
+  /** GET /apps/:app/tags — every tag for the app (optionally filtered by kind). */
+  list(app: string, kind?: string, signal?: AbortSignal): Promise<Tag[]> {
+    return request<Tag[]>(`/apps/${encodeURIComponent(app)}/tags`, {
+      query: kind ? { kind } : undefined,
+      signal,
+    })
+  },
+  /** POST /apps/:app/tags — create a tag (slug must be kebab-case). */
+  create(app: string, payload: CreateTagRequest): Promise<Tag> {
+    return request<Tag>(`/apps/${encodeURIComponent(app)}/tags`, {
+      method: 'POST',
+      body: payload,
+    })
+  },
+  /** DELETE /apps/:app/tags/:slug — delete a tag (prunes it off every stream). */
+  remove(app: string, slug: string): Promise<void> {
+    return request<void>(
+      `/apps/${encodeURIComponent(app)}/tags/${encodeURIComponent(slug)}`,
       { method: 'DELETE' },
     )
   },
@@ -600,6 +806,31 @@ const vods = {
   probe(app: string, id: number): Promise<Vod & { probed: boolean }> {
     return request<Vod & { probed: boolean }>(
       `/apps/${encodeURIComponent(app)}/vods/${id}/probe`,
+      { method: 'POST' },
+    )
+  },
+  /**
+   * GET /apps/:app/vods/:id/transcript — the transcription plugin's output
+   * for a VOD (status/text/segments/speakers + a presigned `srtUrl`).
+   * Throws ApiRequestError(404) while the VOD was never transcribed.
+   */
+  transcript(
+    app: string,
+    id: number,
+    signal?: AbortSignal,
+  ): Promise<VodTranscript> {
+    return request<VodTranscript>(
+      `/apps/${encodeURIComponent(app)}/vods/${id}/transcript`,
+      { signal },
+    )
+  },
+  /**
+   * POST /apps/:app/vods/:id/transcribe — queue a (re)transcription.
+   * Needs the `transcription` plugin installed + enabled in the app.
+   */
+  transcribe(app: string, id: number): Promise<VodTranscript> {
+    return request<VodTranscript>(
+      `/apps/${encodeURIComponent(app)}/vods/${id}/transcribe`,
       { method: 'POST' },
     )
   },
@@ -730,6 +961,102 @@ const streams = {
     return request<HlsStatus>(
       `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/hls`,
       { signal },
+    )
+  },
+
+  /**
+   * Get a stream's per-stream plugin opt-out list.
+   * GET /apps/:app/streams/:id/plugins → { streamId, disabled }.
+   */
+  getPlugins(
+    app: string,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<StreamPluginsState> {
+    return request<StreamPluginsState>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/plugins`,
+      { signal },
+    )
+  },
+  /**
+   * Replace a stream's per-stream plugin opt-out list.
+   * PATCH /apps/:app/streams/:id/plugins { disabled } → { streamId, disabled }.
+   */
+  setPlugins(
+    app: string,
+    id: string,
+    disabled: string[],
+  ): Promise<StreamPluginsState> {
+    return request<StreamPluginsState>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/plugins`,
+      { method: 'PATCH', body: { disabled } },
+    )
+  },
+
+  /**
+   * Get the tag slugs applied to a stream.
+   * GET /apps/:app/streams/:id/tags → { streamId, tags }.
+   */
+  getTags(app: string, id: string, signal?: AbortSignal): Promise<StreamTagsState> {
+    return request<StreamTagsState>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/tags`,
+      { signal },
+    )
+  },
+  /**
+   * Replace the tag slugs applied to a stream (every slug must reference an
+   * existing app tag). PATCH /apps/:app/streams/:id/tags { tags } → { streamId, tags }.
+   */
+  setTags(app: string, id: string, tags: string[]): Promise<StreamTagsState> {
+    return request<StreamTagsState>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/tags`,
+      { method: 'PATCH', body: { tags } },
+    )
+  },
+}
+
+// --- rooms (metadata + server-side moderation — /apps/:app/rooms/*) ----------
+
+const rooms = {
+  /** GET /apps/:app/rooms/:room/participants — identities + track sids. */
+  participants(
+    app: string,
+    room: string,
+    signal?: AbortSignal,
+  ): Promise<RoomParticipant[]> {
+    return request<RoomParticipant[]>(
+      `/apps/${encodeURIComponent(app)}/rooms/${encodeURIComponent(room)}/participants`,
+      { signal },
+    )
+  },
+  /** DELETE .../participants/:identity — kick the participant out. */
+  kickParticipant(
+    app: string,
+    room: string,
+    identity: string,
+  ): Promise<{ room: string; identity: string; removed: boolean }> {
+    return request(
+      `/apps/${encodeURIComponent(app)}/rooms/${encodeURIComponent(room)}/participants/${encodeURIComponent(identity)}`,
+      { method: 'DELETE' },
+    )
+  },
+  /** POST .../participants/:identity/mute — server-side (un)mute of tracks. */
+  muteParticipant(
+    app: string,
+    room: string,
+    identity: string,
+    body: MuteParticipantRequest = {},
+  ): Promise<MuteParticipantResult> {
+    return request<MuteParticipantResult>(
+      `/apps/${encodeURIComponent(app)}/rooms/${encodeURIComponent(room)}/participants/${encodeURIComponent(identity)}/mute`,
+      { method: 'POST', body },
+    )
+  },
+  /** PATCH /apps/:app/rooms/:room/metadata — set the room's live metadata. */
+  updateMetadata(app: string, room: string, metadata: string): Promise<unknown> {
+    return request(
+      `/apps/${encodeURIComponent(app)}/rooms/${encodeURIComponent(room)}/metadata`,
+      { method: 'PATCH', body: { metadata } },
     )
   },
 }
@@ -891,6 +1218,36 @@ const cluster = {
   },
 }
 
+// --- edge (distributed processing — global/superadmin) ------------------------
+
+const edge = {
+  /** GET /edge/nodes → cluster nodes with live liveness + telemetry (cpu/mem/disk/grid). */
+  nodes(signal?: AbortSignal): Promise<EdgeNodeView[]> {
+    return request<EdgeNodeView[]>('/edge/nodes', { signal })
+  },
+  /** POST /edge/nodes/:id/command → relay restart|reboot|ping over the WS channel. */
+  command(id: string, command: EdgeNodeCommand): Promise<{ ok: boolean; output?: string }> {
+    return request<{ ok: boolean; output?: string }>(
+      `/edge/nodes/${encodeURIComponent(id)}/command`,
+      { method: 'POST', body: { command } },
+    )
+  },
+  /** PATCH /edge/nodes/:id → retype a node and/or set its scheduling weight. */
+  patchNode(id: string, payload: PatchEdgeNodeRequest): Promise<EdgeNodeView> {
+    return request<EdgeNodeView>(`/edge/nodes/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: payload,
+    })
+  },
+  /** GET /edge/assignments → every app's edge workloads (optionally one app). */
+  assignments(app?: string, signal?: AbortSignal): Promise<EdgeAssignment[]> {
+    return request<EdgeAssignment[]>('/edge/assignments', {
+      query: app ? { app } : undefined,
+      signal,
+    })
+  },
+}
+
 // --- network security (/security/* — superadmin) ------------------------------
 
 const security = {
@@ -935,6 +1292,34 @@ const security = {
   /** GET /security/offenses → recent offenders (window counts). */
   offenses(signal?: AbortSignal): Promise<SecurityOffender[]> {
     return request<SecurityOffender[]>('/security/offenses', { signal })
+  },
+}
+
+// --- backups (/system/backups — superadmin) ------------------------------------
+
+const backups = {
+  /** GET /system/backups → settings + per-DB snapshot inventory. */
+  overview(signal?: AbortSignal): Promise<BackupsOverview> {
+    return request<BackupsOverview>('/system/backups', { signal })
+  },
+  /** POST /system/backups — snapshot every SQLite DB now (+ prune). */
+  run(): Promise<BackupRunResult> {
+    return request<BackupRunResult>('/system/backups', { method: 'POST' })
+  },
+  /**
+   * POST /system/backups/restore — overwrite the LIVE db with a snapshot.
+   * Destructive: integrity-checked first, a `.pre-restore` safety copy is
+   * auto-created, and `confirm: true` is mandatory.
+   */
+  restore(payload: {
+    db: string
+    snapshot: string
+    confirm: true
+  }): Promise<BackupRestoreResult> {
+    return request<BackupRestoreResult>('/system/backups/restore', {
+      method: 'POST',
+      body: payload,
+    })
   },
 }
 
@@ -999,6 +1384,31 @@ const account = {
   /** DELETE /auth/sessions — sign out every OTHER session, keeping this one. */
   revokeOtherSessions(): Promise<{ revoked: number }> {
     return request<{ revoked: number }>('/auth/sessions', { method: 'DELETE' })
+  },
+
+  // --- Owner item 29: per-user SMTP override ---------------------------------
+
+  /** GET /account/smtp → my SMTP override, password masked. */
+  getSmtp(signal?: AbortSignal): Promise<SmtpConfig> {
+    return request<SmtpConfig>('/account/smtp', { signal })
+  },
+  /**
+   * PUT /account/smtp — update my SMTP override. The password is stored
+   * ENCRYPTED, never plaintext. Omit pass to keep the stored one.
+   */
+  putSmtp(payload: UpdateSmtpRequest): Promise<SmtpConfig> {
+    return request<SmtpConfig>('/account/smtp', { method: 'PUT', body: payload })
+  },
+  /**
+   * POST /account/smtp/test — sends a probe email using MY configured SMTP
+   * (bypasses the enabled gate). Never an HTTP error — the result body
+   * carries ok/error/skipped.
+   */
+  testSmtp(payload: TestSmtpRequest): Promise<SendResult> {
+    return request<SendResult>('/account/smtp/test', {
+      method: 'POST',
+      body: payload,
+    })
   },
 }
 
@@ -1091,10 +1501,45 @@ const tenants = {
  * LiveKit token + wsUrl for the public /play and /embed player surfaces. Used
  * by <LivePlayer access="public"> so anonymous viewers can watch without login.
  */
-function playToken(app: string, room: string, signal?: AbortSignal): Promise<PlayToken> {
+/** Optional signed-capability params for a private-playback app's embed. */
+export interface PlayTokenOptions {
+  /** `exp` from a signed playback URL (playTokenSign) — rides as ?exp=. */
+  exp?: string | number
+  /** `sig` HMAC from a signed playback URL — rides as ?sig=. */
+  sig?: string
+  signal?: AbortSignal
+}
+
+function playToken(
+  app: string,
+  room: string,
+  opts: PlayTokenOptions = {},
+): Promise<PlayToken> {
+  // For a public_playback app no signature is needed (back-compat). For a
+  // private app the embed page forwards ?exp=&sig= here, and the SERVER
+  // validates the capability (verifyPlayback) before minting the token — so the
+  // embed is gated by a scoped, expiring token, never a bearer credential.
   return request<PlayToken>(
     `/apps/${encodeURIComponent(app)}/play-token/${encodeURIComponent(room)}`,
-    { auth: false, signal },
+    { auth: false, signal: opts.signal, query: { exp: opts.exp, sig: opts.sig } },
+  )
+}
+
+/**
+ * POST /apps/:app/play-token/:room/sign — mint a SIGNED, expiring playback
+ * capability + ready-to-paste tokenized /play, /embed and <iframe> snippet.
+ * Authenticated (stream:read): the operator mints it once, then shares the
+ * returned public URL/iframe. The capability is an app+room-scoped HMAC, NOT an
+ * sk_ token or JWT — so nothing sensitive ends up in the embed snippet.
+ */
+function playTokenSign(
+  app: string,
+  room: string,
+  body: { ttlSeconds?: number } = {},
+): Promise<SignedPlayback> {
+  return request<SignedPlayback>(
+    `/apps/${encodeURIComponent(app)}/play-token/${encodeURIComponent(room)}/sign`,
+    { method: 'POST', body },
   )
 }
 
@@ -1102,6 +1547,7 @@ function playToken(app: string, room: string, signal?: AbortSignal): Promise<Pla
 
 export const api = {
   playToken,
+  playTokenSign,
   auth,
   account,
   teams,
@@ -1111,6 +1557,7 @@ export const api = {
   admin,
   apps,
   ingress,
+  tags,
   wsIngest,
   broadcast,
   restream,
@@ -1118,11 +1565,14 @@ export const api = {
   vods,
   db,
   streams,
+  rooms,
   snapshots,
   tokens,
   logs,
   cluster,
+  edge,
   security,
+  backups,
 }
 
 export type StreamHubApi = typeof api

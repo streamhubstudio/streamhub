@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
 import { DbSizesService } from '../../shared/db/db-sizes.service';
+import { getAppVersion } from '../health/app-version';
 import {
   AuthzEnforce,
   ServerSettings,
@@ -23,7 +24,7 @@ const SUPERADMIN_EMAIL_DEFAULT = 'info@streamhub.studio';
 
 /** Suffix appended to every guidance hint — edit the .env, then restart the core. */
 const RESTART_HINT =
-  'reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `streamhub-core`).';
+  'reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).';
 
 /**
  * Read-only "Server settings" reporter (#16).
@@ -180,9 +181,9 @@ export class SettingsService {
     }
   }
 
-  /** Core build version (npm_package_version, else package default). */
+  /** Product version (repo-root VERSION file, else package.json, else dev). */
   private coreVersion(): string {
-    return process.env.npm_package_version ?? '0.1.0';
+    return getAppVersion();
   }
 
   // ---------------------------------------------------------------------------
@@ -193,7 +194,7 @@ export class SettingsService {
     return {
       setting,
       envVar,
-      howToChange: `${what} Editá \`${envVar}\` en el archivo \`.env\` del server (p. ej. \`/opt/streamhub-core/.env\`) y ${RESTART_HINT}`,
+      howToChange: `${what} Editá \`${envVar}\` en el archivo \`.env\` del server (p. ej. \`/home/ploi/skyline-core/.env\`) y ${RESTART_HINT}`,
     };
   }
 

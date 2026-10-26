@@ -9,15 +9,15 @@ docs, tests, and features.
 - Keep changes focused; one logical change per PR.
 - Add or update tests for behavior changes. Every component's tests run without external
   infrastructure (Redis, LiveKit, S3 and network are mocked) — please keep it that way.
-- Update the relevant docs under [`streamhub-docs/`](streamhub-docs/) when you change
-  behavior. The unit-test catalogue lives in
-  [`streamhub-docs/testing/UNIT-TESTS.md`](streamhub-docs/testing/UNIT-TESTS.md).
+- Describe user-visible behavior changes in the PR so the published docs
+  ([streamhub.studio/docs](https://streamhub.studio/docs)) can be updated. The unit-test catalogue is at
+  [testing/UNIT-TESTS](https://streamhub.studio/docs/testing/UNIT-TESTS).
 - Never commit secrets (`.env`, `data/secrets.json`, `sk_`/`clt_`/`wsk_` tokens, S3 keys).
 - Security issues: do **not** open a public issue — see [`SECURITY.md`](SECURITY.md).
 
 ## Repository layout
 
-See [`CLAUDE.md`](CLAUDE.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full map. Each
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) and the [architecture docs](https://streamhub.studio/docs/architecture/README) for the full map. Each
 component has its own `package.json`:
 
 | Path | Stack | Role |
@@ -25,7 +25,8 @@ component has its own `package.json`:
 | `streamhub-core/` | NestJS + TypeScript | REST API `/api/v1`, serves the SPA, HLS, SDK |
 | `streamhub-web/` | React 19 + Vite + Tailwind | dashboard SPA (built into the core image) |
 | `streamhub-adaptor/` | TypeScript + tsup | browser SDK (`WebRTCAdaptor` shim over `livekit-client`) |
-| `yolo-worker/` | Python | worker process spawned by the `yolo` plugin |
+| `*/src/plugins-vendor/` | Python + TS | the worker-backed Studio Apps (pre-composed) |
+| `mcp-server/` | TypeScript + MCP SDK | MCP server over the REST API |
 | `deploy/` | Docker/Caddy/nginx/systemd | both deploy shapes |
 
 ## Development commands
@@ -49,18 +50,18 @@ npm test                 # node --test over src/{plugins,lib}/**/*.spec.ts
 npm run lint             # oxlint
 ```
 
-### streamhub-adaptor / yolo-worker
+### streamhub-adaptor / mcp-server
 
 ```bash
 cd streamhub-adaptor && npm run build      # tsup → dist/*.global.js ; npm run typecheck
-cd yolo-worker && pytest                   # pure-logic tests, no torch/opencv needed
+cd mcp-server && npm run build && npm test # node --test, mocked fetch — no network
 ```
 
 ## Running the full stack
 
 The full stack (LiveKit + core + ingress + egress + redis + Caddy) targets a **Linux host**
 because LiveKit uses host networking for media. See
-[`streamhub-docs/operations/DEPLOY.md`](streamhub-docs/operations/DEPLOY.md) and
+[operations/DEPLOY](https://streamhub.studio/docs/operations/DEPLOY) and
 [`INSTALL.md`](INSTALL.md).
 
 ```bash
@@ -72,7 +73,8 @@ curl http://127.0.0.1:3020/api/v1/health   # Swagger at /api/v1/docs
 
 StreamHub auto-discovers plugins on both sides — no central registry to edit. Backend:
 drop `streamhub-core/src/plugins/<id>/plugin.meta.ts`. Frontend: drop
-`streamhub-web/src/plugins/<id>/index.ts(x)`. See `CLAUDE.md` for the contract.
+`streamhub-web/src/plugins/<id>/index.ts(x)`. The contract is
+`streamhub-core/src/modules/plugins/plugin.contract.ts`; see [features/plugins](https://streamhub.studio/docs/features/plugins).
 
 ## License
 

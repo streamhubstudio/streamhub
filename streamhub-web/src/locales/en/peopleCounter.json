@@ -1,0 +1,35 @@
+{
+  "noRoom": "Set the room to count in the Studio app settings first (Studio → People Counter).",
+  "arrow": {
+    "in": "IN",
+    "out": "OUT"
+  },
+  "actions": {
+    "edit": "Edit line",
+    "done": "Done",
+    "flip": "Flip direction",
+    "save": "Save line",
+    "saving": "Saving…"
+  },
+  "lineInfo": "Line at {{angle}}° · in = {{side}}",
+  "side": {
+    "right": "right of the line",
+    "left": "left of the line"
+  },
+  "editHint": "Drag on the video to draw the counting line; grab an endpoint to rotate it. The green arrow marks the IN direction — use Flip to reverse it. Save restarts the counter with the new line.",
+  "saveError": "Could not save the line — try again.",
+  "counters": {
+    "title": "Live counters",
+    "in": "In",
+    "out": "Out",
+    "occupancy": "Inside now",
+    "overCapacity": "Capacity limit reached"
+  },
+  "worker": {
+    "running": "running",
+    "starting": "starting",
+    "stopped": "stopped",
+    "crashed": "crashed",
+    "unknown": "unknown"
+  }
+}

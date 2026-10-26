@@ -252,4 +252,127 @@ describe('quotas/QuotasService', () => {
       expect(report.exceeded.apps).toBe(false); // -1 is never "over"
     });
   });
+
+  // ===========================================================================
+  // "Broadcaster / linear" plan preset (endless-radio Tier 1, QW-3)
+  // ===========================================================================
+  describe('broadcaster/linear plan preset', () => {
+    /** Seed N active streams into the app's app.db. */
+    function seedActiveStreams(app: string, n: number): void {
+      const stmt = ctx.db
+        .appDb(app)
+        .prepare(
+          "INSERT INTO streams (app_id, stream_id, type, room, status) VALUES (1, ?, 'webrtc', 'r', 'active')",
+        );
+      for (let i = 0; i < n; i++) stmt.run(`s${i}`);
+    }
+
+    it('assigning plan=broadcaster applies unlimited concurrent streams (-1)', () => {
+      seedTenant(ctx, 'tnt_bc', { max_concurrent_streams: 1 }); // starts capped
+      quotas.setQuotas('tnt_bc', { plan: 'broadcaster' });
+      const report = quotas.getUsage('tnt_bc');
+      expect(report.plan).toBe('broadcaster');
+      expect(report.quotas.maxConcurrentStreams).toBe(-1);
+      expect(report.quotas.maxApps).toBe(50); // generous app allowance
+    });
+
+    it('enforceConcurrentStreams never throws for a broadcaster tenant, regardless of active count', async () => {
+      process.env[ENV] = 'on';
+      seedTenant(ctx, 'tnt_bc', { max_concurrent_streams: 1 });
+      quotas.setQuotas('tnt_bc', { plan: 'broadcaster' });
+      seedApps(ctx, 'tnt_bc', ['live']);
+      seedActiveStreams('live', 25); // way over any finite cap
+
+      await expect(
+        quotas.enforceConcurrentStreams(userCtx('tnt_bc')),
+      ).resolves.toBeUndefined();
+    });
+
+    it('an explicit per-metric override in the same patch still wins over the preset', () => {
+      seedTenant(ctx, 'tnt_bc', { max_concurrent_streams: 1 });
+      quotas.setQuotas('tnt_bc', {
+        plan: 'broadcaster',
+        maxConcurrentStreams: 5,
+      });
+      expect(quotas.getUsage('tnt_bc').quotas.maxConcurrentStreams).toBe(5);
+    });
+
+    it('an unknown plan label leaves the current limits untouched', () => {
+      seedTenant(ctx, 'tnt_x', { max_concurrent_streams: 3 });
+      quotas.setQuotas('tnt_x', { plan: 'mystery' });
+      expect(quotas.getUsage('tnt_x').quotas.maxConcurrentStreams).toBe(3);
+    });
+  });
+
+  // ===========================================================================
+  // Per-APP and per-STREAM quotas (default unlimited)
+  // ===========================================================================
+  describe('enforceAppConcurrentStreams (per-app quota)', () => {
+    const seedActive = (app: string, n: number): void => {
+      const stmt = ctx.db
+        .appDb(app)
+        .prepare(
+          "INSERT INTO streams (app_id, stream_id, type, room, status) VALUES (1, ?, 'webrtc', 'r', 'active')",
+        );
+      for (let i = 0; i < n; i++) stmt.run(`s${i}`);
+    };
+
+    it('is UNLIMITED by default: limit <= 0 never throws, even at high usage', async () => {
+      process.env[ENV] = 'on';
+      seedActive('live', 5);
+      await expect(quotas.enforceAppConcurrentStreams('live', -1, userCtx('t'))).resolves.toBeUndefined();
+      await expect(quotas.enforceAppConcurrentStreams('live', 0, userCtx('t'))).resolves.toBeUndefined();
+    });
+
+    it('mode=on: rejects 429 app_quota_exceeded at the app limit', async () => {
+      process.env[ENV] = 'on';
+      seedActive('live', 2);
+      await expect(quotas.enforceAppConcurrentStreams('live', 2, userCtx('t'))).rejects.toBeInstanceOf(HttpException);
+      try {
+        await quotas.enforceAppConcurrentStreams('live', 2, userCtx('t'));
+      } catch (e) {
+        const body = (e as HttpException).getResponse() as Record<string, unknown>;
+        expect(body).toMatchObject({ error: 'app_quota_exceeded', scope: 'app', limit: 2, used: 2 });
+        expect((e as HttpException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
+      }
+    });
+
+    it('mode=off / mode=log never throws', async () => {
+      seedActive('live', 5);
+      process.env[ENV] = 'off';
+      await expect(quotas.enforceAppConcurrentStreams('live', 1, userCtx('t'))).resolves.toBeUndefined();
+      process.env[ENV] = 'log';
+      await expect(quotas.enforceAppConcurrentStreams('live', 1, userCtx('t'))).resolves.toBeUndefined();
+    });
+
+    it('superadmin + api_token bypass the per-app quota', async () => {
+      process.env[ENV] = 'on';
+      seedActive('live', 5);
+      await expect(
+        quotas.enforceAppConcurrentStreams('live', 1, { ...userCtx('t'), isSuperadmin: true }),
+      ).resolves.toBeUndefined();
+      await expect(
+        quotas.enforceAppConcurrentStreams('live', 1, { ...userCtx('t'), via: 'api_token' }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('stays under the limit → passes', async () => {
+      process.env[ENV] = 'on';
+      seedActive('live', 1);
+      await expect(quotas.enforceAppConcurrentStreams('live', 5, userCtx('t'))).resolves.toBeUndefined();
+    });
+  });
+
+  describe('enforceStreamViewers (per-stream quota)', () => {
+    it('is UNLIMITED by default (limit <= 0)', async () => {
+      process.env[ENV] = 'on';
+      await expect(quotas.enforceStreamViewers(-1, 999, userCtx('t'))).resolves.toBeUndefined();
+    });
+
+    it('mode=on: rejects 429 stream_quota_exceeded when viewers reach the cap', async () => {
+      process.env[ENV] = 'on';
+      await expect(quotas.enforceStreamViewers(10, 10, userCtx('t'))).rejects.toBeInstanceOf(HttpException);
+      await expect(quotas.enforceStreamViewers(10, 3, userCtx('t'))).resolves.toBeUndefined();
+    });
+  });
 });

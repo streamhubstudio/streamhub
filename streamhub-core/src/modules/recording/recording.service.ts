@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -35,6 +37,7 @@ import {
   VodRecord,
   VodStatus,
 } from '../../shared/contracts';
+import { LiveKitService } from '../livekit/livekit.service';
 import {
   SortDir,
   VodInsert,
@@ -48,7 +51,9 @@ import {
   VodVariantsRepository,
 } from './vod-variants.repository';
 import { VodTranscodeService } from './vod-transcode.service';
+import { TranscriptionService } from '../transcription/transcription.service';
 import { extractSnapshot, probeMedia } from './media.util';
+import { renderFilenameTemplate } from './filename-template';
 import { bullConnectionOptions } from './bull-conn.util';
 import { MetricsService } from '../metrics/metrics.service';
 
@@ -119,6 +124,23 @@ export type VodDetail = VodRecord & {
   variants: VodVariantView[];
 };
 
+/**
+ * API-level record mode (LIVEKIT-UNUSED-FEATURES "track/audio-only egress"):
+ *  - `composite` (default) — the app-config behaviour: room-composite (or
+ *    participant) egress rendered by a headless Chrome;
+ *  - `track` — TrackCompositeEgress of ONE publisher's audio+video, muxed by
+ *    ffmpeg with NO Chrome (big RAM win for 1-publisher rooms);
+ *  - `audio` — TrackCompositeEgress with only the audio track (radio apps).
+ */
+export type RecordMode = 'composite' | 'track' | 'audio';
+
+/** start() input, extended with the optional record mode (module-local). */
+export type StartRecordingInputEx = StartRecordingInput & {
+  recordMode?: RecordMode;
+  /** Publisher identity for track/audio modes (default: the streamId). */
+  participantIdentity?: string;
+};
+
 /** Payload enqueued on egress completion. */
 interface UploadJobData {
   appName: string;
@@ -145,11 +167,18 @@ interface RecordingSession {
   id: string;
   appName: string;
   roomName: string;
-  mode: 'room-composite' | 'participant';
+  mode: 'room-composite' | 'participant' | 'track' | 'audio';
   participantIdentity?: string;
   layout?: string;
   streamId: string;
   baseSlug: string;
+  /**
+   * Filename STEM used for each part's MP4 (and the S3 key derived from it).
+   * Equals `baseSlug` unless the app sets `recording.filenameTemplate`, in which
+   * case it is the rendered (sanitized) template. `baseSlug` always stays the
+   * unique session-id component so the sessions map never collides.
+   */
+  fileStem: string;
   splitMinutes: number;
   snapshotSeconds: number;
   partIndex: number;
@@ -198,6 +227,16 @@ export class RecordingService
     private readonly callbacks: CallbacksServiceContract,
     @Optional() private readonly metrics?: MetricsService,
     @Optional() private readonly vodTranscode?: VodTranscodeService,
+    // Concrete LiveKitService (exported by LiveKitModule) for the track/audio
+    // record modes — startTrackCompositeEgress is not part of the frozen
+    // LIVEKIT_SERVICE contract. Optional so unit tests that only exercise the
+    // composite flow construct the service unchanged.
+    @Optional() private readonly livekitTrack?: LiveKitService,
+    // Transcription plugin hook (modules/transcription): pinged after each
+    // vod_ready so apps with the plugin enabled + autoTranscribe get their
+    // VOD transcribed. Optional + fire-and-forget — the recording flow never
+    // depends on it, and existing manual constructions keep compiling.
+    @Optional() private readonly transcription?: TranscriptionService,
   ) {}
 
   // ---- lifecycle: BullMQ wiring ----------------------------------------
@@ -261,7 +300,7 @@ export class RecordingService
 
   // ---- public API (RecordingServiceContract) ---------------------------
 
-  async start(input: StartRecordingInput): Promise<RecordingHandle> {
+  async start(input: StartRecordingInputEx): Promise<RecordingHandle> {
     const { appName, roomName } = input;
     if (!roomName) {
       throw new BadRequestException('roomName is required');
@@ -273,25 +312,51 @@ export class RecordingService
         `recording is disabled for app '${appName}'`,
       );
     }
+    // Bucket guard: a recording with nowhere to land is a guaranteed failure —
+    // fail FAST with a machine-readable, i18n-able code (409) so the UI can link
+    // to storage config, instead of starting an egress whose upload will bounce.
+    this.assertStorageConfigured(appName, config);
 
-    const mode = config.recording.mode ?? 'room-composite';
+    // recordMode (API override): `track`/`audio` force a TrackComposite egress
+    // (no Chrome); `composite`/omitted keeps the app-config behaviour.
+    const mode: RecordingSession['mode'] =
+      input.recordMode === 'track' || input.recordMode === 'audio'
+        ? input.recordMode
+        : (config.recording.mode ?? 'room-composite');
     const streamId = input.streamId?.trim() || roomName;
-    // StartRecordingInput carries no participant identity; in participant mode
-    // we egress the participant whose identity == streamId (fallback room).
+    // participant/track/audio egress ONE publisher: the explicit identity when
+    // given, else the participant whose identity == streamId (fallback room).
     const participantIdentity =
-      mode === 'participant' ? streamId : undefined;
+      mode === 'participant' || mode === 'track' || mode === 'audio'
+        ? input.participantIdentity?.trim() || streamId
+        : undefined;
 
     const splitMinutes = this.normalize(
       config.recording.splitMinutes,
       SPLIT_MINUTES_ALLOWED,
     );
-    const snapshotSeconds = this.normalize(
-      config.recording.snapshotSeconds,
-      SNAPSHOT_SECONDS_ALLOWED,
-    );
+    // Live ImageOutput snapshots ride the web (Chrome) egresses only; the
+    // track/audio modes skip them (the post-upload ffmpeg snapshot remains).
+    const snapshotSeconds =
+      mode === 'track' || mode === 'audio'
+        ? 0
+        : this.normalize(
+            config.recording.snapshotSeconds,
+            SNAPSHOT_SECONDS_ALLOWED,
+          );
 
     // Build the session shell first; the (first) egress part is launched into it.
     const baseSlug = `${this.slug(streamId)}-${Date.now()}`;
+    // Filename stem: the app template (rendered, sanitized) OR the unique
+    // baseSlug. `${type}` = mp4 here; the extension is appended by launchEgressPart.
+    const fileStem =
+      renderFilenameTemplate(config.recording.filenameTemplate, {
+        app: appName,
+        streamId,
+        room: roomName,
+        type: 'mp4',
+        variables: config.variables,
+      }) || baseSlug;
     const session: RecordingSession = {
       id: `${appName}:${baseSlug}`,
       appName,
@@ -301,6 +366,7 @@ export class RecordingService
       layout: config.recording.layout,
       streamId,
       baseSlug,
+      fileStem,
       splitMinutes,
       snapshotSeconds,
       partIndex: 0,
@@ -384,7 +450,7 @@ export class RecordingService
     const partTag = splitting
       ? `-p${String(session.partIndex).padStart(3, '0')}`
       : '';
-    const filename = `${session.baseSlug}${partTag}.mp4`;
+    const filename = `${session.fileStem}${partTag}.mp4`;
     const outputFilepath = path.join(recordingsDir, filename);
 
     try {
@@ -410,17 +476,33 @@ export class RecordingService
 
     let egress;
     try {
-      egress = await this.livekit.startEgress({
-        appName,
-        roomName,
-        mode,
-        participantIdentity,
-        layout: config.recording.layout,
-        outputFilepath,
-        snapshotIntervalS:
-          session.snapshotSeconds > 0 ? session.snapshotSeconds : undefined,
-        snapshotFilePrefix,
-      });
+      if (mode === 'track' || mode === 'audio') {
+        // TrackComposite egress (ffmpeg, no Chrome) of ONE publisher.
+        if (!this.livekitTrack) {
+          throw new Error(
+            'track/audio record modes unavailable (LiveKitService not wired)',
+          );
+        }
+        egress = await this.livekitTrack.startTrackCompositeEgress({
+          appName,
+          roomName,
+          participantIdentity: participantIdentity as string,
+          outputFilepath,
+          audioOnly: mode === 'audio',
+        });
+      } else {
+        egress = await this.livekit.startEgress({
+          appName,
+          roomName,
+          mode,
+          participantIdentity,
+          layout: config.recording.layout,
+          outputFilepath,
+          snapshotIntervalS:
+            session.snapshotSeconds > 0 ? session.snapshotSeconds : undefined,
+          snapshotFilePrefix,
+        });
+      }
     } catch (e) {
       this.logs.write('error', 'recording', 'startEgress failed', {
         appName,
@@ -569,14 +651,16 @@ export class RecordingService
 
   /**
    * Start recording for a live stream id (POST /apps/:app/streams/:id/record/start).
-   * Resolves the stream's room and reuses the standard start() flow.
+   * Resolves the stream's room and reuses the standard start() flow. `opts`
+   * forwards the optional recordMode (composite|track|audio) + participant.
    */
   async startForStream(
     appName: string,
     streamId: string,
     roomName: string,
+    opts?: Pick<StartRecordingInputEx, 'recordMode' | 'participantIdentity'>,
   ): Promise<RecordingHandle> {
-    return this.start({ appName, roomName, streamId });
+    return this.start({ appName, roomName, streamId, ...opts });
   }
 
   /**
@@ -594,6 +678,29 @@ export class RecordingService
       );
     }
     return this.stop(appName, String(vod.id));
+  }
+
+  /**
+   * Guard: refuse to start a recording when the app has no S3/storage bucket
+   * configured. Throws a 409 with the machine-readable, i18n-able code
+   * `storage_not_configured` — the dashboard maps it to a friendly warning that
+   * links to the storage settings. Applies to manual AND auto recording (both
+   * funnel through start()).
+   */
+  private assertStorageConfigured(appName: string, config: AppConfig): void {
+    if (!config.s3?.bucket || !config.s3.bucket.trim()) {
+      this.logs.write('warn', 'recording', 'recording blocked: no S3 bucket', {
+        appName,
+      });
+      throw new HttpException(
+        {
+          error: 'storage_not_configured',
+          message: `app '${appName}' has no S3 storage bucket configured; recordings cannot be uploaded`,
+          app: appName,
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
   }
 
   /** Clamp a configured interval to its allowed set (else 0). */
@@ -677,7 +784,7 @@ export class RecordingService
           sessionId,
           key: uploaded.key,
         });
-        await this.dispatch(session.appName, 'snapshot_taken', {
+        const snapPayload = {
           app: session.appName,
           room: session.roomName,
           streamId: session.streamId,
@@ -685,6 +792,13 @@ export class RecordingService
           key: uploaded.key,
           url,
           sizeBytes: uploaded.sizeBytes,
+        };
+        // Legacy event (back-compat) + the canonical `stream.snapshot` family
+        // event so plugins/Streamflow can subscribe to ANY snapshot.
+        await this.dispatch(session.appName, 'snapshot_taken', snapPayload);
+        await this.dispatch(session.appName, 'stream.snapshot', {
+          ...snapPayload,
+          source: 'periodic',
         });
       } catch (e) {
         session.uploadedSnaps.delete(file); // allow a retry next sweep
@@ -1315,6 +1429,11 @@ export class RecordingService
         });
       }
 
+      // 7.5. transcription plugin hook: fire-and-forget — the transcription
+      //      module decides whether the app wants an auto-transcript (plugin
+      //      installed + enabled + autoTranscribe) and never throws back.
+      this.transcription?.onVodReady(appName, vodId);
+
       // 8. post-transcode variants (adaptive HLS ladder / WebM alternate).
       //    Strictly best-effort AFTER the VOD is ready — the base MP4 flow
       //    never depends on ffmpeg succeeding.
@@ -1348,10 +1467,20 @@ export class RecordingService
       const snapsDir = path.join(this.apps.appDir(appName), 'snapshots');
       fs.mkdirSync(snapsDir, { recursive: true });
       const base = path.basename(localPath, path.extname(localPath));
-      const snapLocal = path.join(snapsDir, `${base}.jpg`);
+      // Snapshot template (when set) names the thumbnail; else it rides the
+      // recording base so deleteVod's local-cleanup guess keeps working.
+      const stem =
+        renderFilenameTemplate(cfg.recording.snapshotTemplate, {
+          app: appName,
+          streamId: vod.streamId ?? '',
+          room: vod.room ?? '',
+          type: 'jpg',
+          variables: cfg.variables,
+        }) || base;
+      const snapLocal = path.join(snapsDir, `${stem}.jpg`);
       const ok = await extractSnapshot(localPath, snapLocal, 1);
       if (!ok || !fs.existsSync(snapLocal)) return null;
-      const snapKey = `${base}.jpg`;
+      const snapKey = `${stem}.jpg`;
       const res = await this.s3.upload(
         cfg.s3,
         snapLocal,

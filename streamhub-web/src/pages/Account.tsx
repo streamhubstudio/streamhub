@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth/useAuth'
 import { ProfileCard } from './Account/ProfileCard'
 import { SecurityCard } from './Account/SecurityCard'
+import { SmtpCard } from './Account/SmtpCard'
 import { SessionsCard } from './Account/SessionsCard'
 import { TeamCard } from './Account/TeamCard'
 import { SuperadminTenants } from './Account/SuperadminTenants'
@@ -83,6 +84,7 @@ export default function Account() {
       {active === 'security' && (
         <div className="space-y-5">
           <SecurityCard />
+          <SmtpCard />
           <SessionsCard />
         </div>
       )}

@@ -1,0 +1,25 @@
+{
+  "panel": {
+    "noRoom": "Configurá el Room / stream del plugin para que el worker sepa qué cámara leer.",
+    "recentTitle": "Lecturas recientes",
+    "empty": "Todavía no hay patentes leídas — las lecturas aparecen acá a medida que el worker las ve.",
+    "colPlate": "Patente",
+    "colTime": "Hora",
+    "colConfidence": "Conf.",
+    "colMatch": "Lista",
+    "colSnapshot": "Captura",
+    "allowed": "Permitida",
+    "denied": "Denegada",
+    "noMatch": "—",
+    "listsTitle": "Lista blanca / lista negra",
+    "whitelist": "Lista blanca",
+    "blacklist": "Lista negra",
+    "listHint": "Una patente por línea (o separadas por coma). La comparación ignora mayúsculas, espacios y guiones.",
+    "blacklistHint": "Una patente en ambas listas queda DENEGADA (gana la lista negra).",
+    "save": "Guardar listas",
+    "saving": "Guardando…",
+    "savedNote": "Guardado — el worker se reinicia con las listas nuevas.",
+    "saveError": "No se pudieron guardar las listas.",
+    "eventsNote": "Cada lectura dispara plate.detected por los callbacks firmados de la app (más plate.allowed / plate.denied si matchea una lista) — apuntá el webhook de tu barrera ahí."
+  }
+}

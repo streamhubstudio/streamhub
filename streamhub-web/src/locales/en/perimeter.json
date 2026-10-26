@@ -1,0 +1,39 @@
+{
+  "badge": {
+    "armed": "ARMED",
+    "disarmed": "Disarmed",
+    "offline": "No signal"
+  },
+  "mode": {
+    "schedule": "Schedule",
+    "armed": "Arm",
+    "disarmed": "Disarm"
+  },
+  "zones": {
+    "title": "Restricted zones",
+    "stageAria": "Zone editor — drag to draw a restricted zone",
+    "frameAlt": "Live camera frame",
+    "noFrame": "Waiting for the worker's frame preview…",
+    "noRoom": "Set the room/camera in the plugin settings to start watching.",
+    "hint": "Drag on the frame to draw a restricted zone. Green boxes are live person detections; red areas alert while armed.",
+    "empty": "No zones yet — drag on the frame above to draw the first one.",
+    "nameAria": "Zone name",
+    "remove": "Remove",
+    "save": "Save zones",
+    "saving": "Saving…",
+    "discard": "Discard",
+    "saveNote": "Saving restarts the worker with the new zones."
+  },
+  "alerts": {
+    "title": "Alert queue",
+    "unacked_one": "{{count}} new",
+    "unacked_other": "{{count}} new",
+    "empty": "No intrusions recorded.",
+    "offline": "Worker offline — no live alert feed. Check the plugin worker status.",
+    "thumbAlt": "Intrusion snapshot — zone {{zone}}",
+    "noThumb": "no preview",
+    "ack": "Acknowledge",
+    "acked": "acked",
+    "ackNote": "Acknowledging marks the alert and everything older as handled (the worker restarts to apply it). Full-size snapshots and clips live under apps/<app>/perimeter/evidence/ on the server."
+  }
+}

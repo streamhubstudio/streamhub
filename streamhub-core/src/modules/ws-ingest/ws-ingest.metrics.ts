@@ -40,7 +40,9 @@ export class WsIngestMetrics {
     });
     this.dropped = new Counter({
       name: `${PREFIX}ws_ingest_dropped_frames_total`,
-      help: 'Frames dropped by the gateway, by reason (fps|too_large|not_jpeg).',
+      help:
+        'Frames dropped by the gateway, by reason ' +
+        '(fps|too_large|not_jpeg|data_too_large|data_rate).',
       labelNames: ['reason'],
       registers,
     });
@@ -61,7 +63,9 @@ export class WsIngestMetrics {
     if (bytes > 0) this.bytes.inc(bytes);
   }
 
-  droppedFrame(reason: 'fps' | 'too_large' | 'not_jpeg'): void {
+  droppedFrame(
+    reason: 'fps' | 'too_large' | 'not_jpeg' | 'data_too_large' | 'data_rate',
+  ): void {
     this.dropped.inc({ reason });
   }
 

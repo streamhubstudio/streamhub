@@ -2,7 +2,7 @@
  * <HlsPlayer> — live HLS playback for a `.m3u8` playlist using video.js.
  *
  * This is the SEPARATE livestreaming player (≈6-15s latency, AntMedia-style,
- * embeddable) described in streamhub-docs/history/WAVE3.md §1b. It is NOT the WebRTC <LivePlayer>
+ * embeddable) described in https://streamhub.studio/docs/history/WAVE3 §1b. It is NOT the WebRTC <LivePlayer>
  * (sub-second, used for "Ver" en vivo) nor the <VodPlayer> (recorded MP4).
  *
  * video.js v8 ships @videojs/http-streaming (VHS), so an HLS source plays with
@@ -22,7 +22,9 @@ import videojs from 'video.js'
 import type Player from 'video.js/dist/types/player'
 import 'video.js/dist/video-js.css'
 import { Button, Spinner } from '@/ui'
-import { PluginSlot } from '@/plugins'
+import { PluginSlot, usePlayerProvider } from '@/plugins'
+import { applyInlinePlayback, isAutoplayBlockedError } from '@/lib/browserCompat'
+import { ProviderPlayer } from './ProviderPlayer'
 
 export interface HlsPlayerProps {
   /** Live HLS playlist URL (`.m3u8`). */
@@ -49,14 +51,63 @@ export interface HlsPlayerProps {
    *  - 'public' the no-auth overlay endpoint, for anonymous embeds (no 401).
    */
   access?: 'auth' | 'public'
+  /**
+   * Which player renders when an app player PROVIDER (Vidstack) is installed:
+   *  - 'auto'     (default) the provider when active, else video.js — the
+   *               historical behavior every existing call site relies on;
+   *  - 'provider' force the provider (still falls back to video.js when none is
+   *               active, so it never blanks out);
+   *  - 'builtin'  force the built-in video.js player even if a provider is active.
+   * Powers the Live view's Vidstack | video.js dual-player selector.
+   */
+  forcePlayer?: 'auto' | 'provider' | 'builtin'
 }
 
-type Status = 'loading' | 'offline' | 'playing' | 'error'
+/**
+ * `blocked` = the browser refused autoplay (Safari Low Power Mode, per-site
+ * autoplay settings): the stream is fine, we just need a user gesture — show a
+ * tap-to-play overlay instead of retrying or erroring.
+ */
+type Status = 'loading' | 'offline' | 'playing' | 'error' | 'blocked'
 
 const HLS_TYPE = 'application/x-mpegURL'
 const MAX_ATTEMPTS = 20
 
-export function HlsPlayer({
+/**
+ * Live HLS player — resolves the app's active player PROVIDER first. When a
+ * `player`-slot plugin (Vidstack, …) is installed + enabled it renders that
+ * provider's player for this `.m3u8`; otherwise it falls back to the built-in
+ * video.js player below. The external props are unchanged, so every call site
+ * (StreamsTab, embeds) keeps working whichever player renders.
+ */
+export function HlsPlayer(props: HlsPlayerProps) {
+  const provider = usePlayerProvider(props.app ?? '', {
+    public: props.access === 'public',
+  })
+  // 'builtin' forces video.js even when a provider is active (the selector's
+  // video.js choice); 'auto'/'provider' use the provider whenever one is active.
+  const forced = props.forcePlayer ?? 'auto'
+  if (provider && forced !== 'builtin') {
+    return (
+      <ProviderPlayer
+        provider={provider}
+        src={props.src}
+        type="hls"
+        live
+        autoplay={props.autoplay ?? true}
+        poster={props.poster}
+        app={props.app}
+        room={props.room}
+        access={props.access}
+        className={props.className}
+      />
+    )
+  }
+  return <VideoJsHlsPlayer {...props} />
+}
+
+/** The built-in video.js live-HLS player (the fallback when no provider). */
+function VideoJsHlsPlayer({
   src,
   poster,
   autoplay = true,
@@ -73,9 +124,11 @@ export function HlsPlayer({
   const srcRef = useRef(src)
   const attempts = useRef(0)
   const [status, setStatus] = useState<Status>('loading')
+  const statusRef = useRef<Status>(status)
 
-  // Always read the freshest src from the (stable) load callback.
+  // Always read the freshest src/status from the (stable, init-once) callbacks.
   srcRef.current = src
+  statusRef.current = status
 
   const clearRetry = useCallback(() => {
     if (retryTimer.current) {
@@ -91,8 +144,16 @@ export function HlsPlayer({
     player.src({ src: srcRef.current, type: HLS_TYPE })
     player.load()
     const p = player.play()
-    if (p && typeof p.catch === 'function') p.catch(() => {})
-  }, [])
+    if (p && typeof p.catch === 'function')
+      p.catch((err: unknown) => {
+        // Autoplay refused (Safari Low Power Mode / autoplay settings): the
+        // stream is healthy — ask for a tap instead of spinning or erroring.
+        if (isAutoplayBlockedError(err)) {
+          clearRetry()
+          setStatus('blocked')
+        }
+      })
+  }, [clearRetry])
 
   // Schedule a soft retry (live not ready / dropped). Hard-error after the cap.
   const scheduleRetry = useCallback(() => {
@@ -118,6 +179,14 @@ export function HlsPlayer({
     loadSrc()
   }, [clearRetry, loadSrc])
 
+  // Tap-to-play: the user gesture that satisfies the autoplay policy.
+  const tapToPlay = useCallback(() => {
+    const player = playerRef.current
+    if (!player || player.isDisposed()) return
+    const p = player.play()
+    if (p && typeof p.catch === 'function') p.catch(() => {})
+  }, [])
+
   // Initialise the player once.
   useEffect(() => {
     if (playerRef.current || !containerRef.current) return
@@ -133,16 +202,23 @@ export function HlsPlayer({
       preload: 'auto',
       fluid: true,
       liveui: true, // live edge / DVR UI for HLS
+      playsinline: true, // iOS: never hijack into fullscreen (WEBRTC-BROWSER-COMPAT)
       html5: { vhs: { overrideNative: true } },
     })
     playerRef.current = player
+    // Belt-and-braces for embedded WebViews: legacy webkit-playsinline too.
+    applyInlinePlayback(videoEl)
 
     const onPlaying = () => {
       attempts.current = 0
       clearRetry()
       setStatus('playing')
     }
-    player.on('loadeddata', onPlaying)
+    // `loadeddata` fires even when autoplay was refused — it must not clear a
+    // `blocked` state (the tap-to-play overlay). Real `playing` always wins.
+    player.on('loadeddata', () => {
+      if (statusRef.current !== 'blocked') onPlaying()
+    })
     player.on('playing', onPlaying)
     player.on('error', () => scheduleRetryRef.current())
 
@@ -201,6 +277,22 @@ export function HlsPlayer({
                 </Button>
               </div>
             </>
+          ) : status === 'blocked' ? (
+            /* Autoplay refused — one tap satisfies the browser's gesture rule. */
+            <button
+              type="button"
+              onClick={tapToPlay}
+              className="pointer-events-auto flex flex-col items-center gap-3 text-white"
+            >
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-500 shadow-lg transition hover:bg-primary-600">
+                <svg className="ml-1 h-7 w-7" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.8-6.86a1.04 1.04 0 000-1.76L9.56 4.26A1.04 1.04 0 008 5.14z" />
+                </svg>
+              </span>
+              <span className="text-sm font-medium">
+                {t('playerComponents:controls.tapToPlay')}
+              </span>
+            </button>
           ) : (
             <>
               <Spinner size={28} />

@@ -7,11 +7,13 @@
  *   1. the route is marked @Public() (the global auth guard skips it),
  *   2. it mints a HIDDEN, subscribe-only, non-publishing token (a viewer must
  *      never become a stream/participant),
- *   3. the per-app `publicPlayback` feature gate (default ON) can disable it.
+ *   3. the per-app `publicPlayback` feature gate (default ON): when disabled,
+ *      an unsigned request is 403 (fix P0-3 — the signed-URL contract itself
+ *      is pinned in livekit.playback.spec.ts).
  *
  * The controller is driven directly with light fakes — no HTTP/DI boot needed.
  */
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 import { LiveKitController } from './livekit.controller';
@@ -35,9 +37,19 @@ function makeController(publicPlayback = true) {
     }),
   } as any;
 
-  const config = { publicWsUrl: 'wss://media.test', env: () => '' } as any;
+  const config = {
+    publicWsUrl: 'wss://media.test',
+    env: () => '',
+    jwtSecret: 'test-master-secret',
+  } as any;
   const ingressAuth = {} as any;
   const quotas = {} as any;
+  const ingressBackup = {
+    getRoleInfo: () => ({ role: null, pairedIngressId: null }),
+    getLinkFor: () => null,
+    remove: () => {},
+    link: () => {},
+  } as any;
 
   const controller = new LiveKitController(
     livekit,
@@ -45,6 +57,7 @@ function makeController(publicPlayback = true) {
     ingressAuth,
     moduleRef,
     quotas,
+    ingressBackup,
   );
   return { controller, mintTokenAdvanced, apps };
 }
@@ -84,11 +97,138 @@ describe('LiveKitController — public play-token', () => {
     });
   });
 
-  it('honours the publicPlayback feature gate: 404 when disabled', async () => {
+  it('honours the publicPlayback feature gate: 403 without a signed URL (P0-3)', async () => {
     const { controller, mintTokenAdvanced } = makeController(false);
     await expect(controller.playToken('live', 'room1')).rejects.toBeInstanceOf(
-      NotFoundException,
+      ForbiddenException,
     );
     expect(mintTokenAdvanced).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// QW-1 — 24/7 persistent room pre-create on ingress
+// ============================================================================
+//
+// A 24/7 linear channel opts into `features.linear.persistentRoom`. The ingress
+// controller must PRE-CREATE the LiveKit room with a long `emptyTimeout` BEFORE
+// createIngress, so a source outage never recycles the room (which would change
+// its SID and drop viewers). A normal app must NOT pre-create the room (it keeps
+// LiveKit's ~300s server default).
+function makeIngressController(
+  linear?: Partial<{
+    persistentRoom: boolean;
+    roomEmptyTimeoutSeconds: number;
+    alwaysOnHls: boolean;
+    dvr: boolean;
+    dvrWindowSeconds: number;
+  }>,
+) {
+  const createRoom = jest.fn(async () => ({
+    name: 'live-ch1',
+    sid: 'RM_1',
+    numParticipants: 0,
+    creationTime: 0,
+  }));
+  const createIngress = jest.fn(async () => ({
+    ingressId: 'IN_1',
+    url: 'rtmp://host/live/key1',
+    streamKey: 'key1',
+    roomName: 'live-ch1',
+  }));
+  const livekit = { createRoom, createIngress } as any;
+
+  const features: any = { adaptivePlayer: false, rtmpPassword: false };
+  if (linear) {
+    features.linear = {
+      persistentRoom: false,
+      roomEmptyTimeoutSeconds: 86400,
+      alwaysOnHls: false,
+      dvr: false,
+      dvrWindowSeconds: 3600,
+      ...linear,
+    };
+  }
+  const cfg = {
+    name: 'live',
+    roomPrefix: 'live',
+    features,
+    rtmp: { transcode: false },
+  } as unknown as AppConfig;
+  const apps = { getConfig: jest.fn(async () => cfg) };
+  const moduleRef = {
+    get: jest.fn((token: symbol) => {
+      if (token === APPS_SERVICE) return apps;
+      throw new Error('not found');
+    }),
+  } as any;
+  const config = { publicWsUrl: 'wss://m', env: () => '', jwtSecret: 's' } as any;
+  const ingressAuth = { register: jest.fn(() => ({ password: undefined })) } as any;
+  const quotas = { enforceConcurrentStreams: jest.fn(async () => {}) } as any;
+  const ingressBackup = {
+    link: () => {},
+    getRoleInfo: () => ({ role: null, pairedIngressId: null }),
+    getLinkFor: () => null,
+    remove: () => {},
+  } as any;
+
+  const controller = new LiveKitController(
+    livekit,
+    config,
+    ingressAuth,
+    moduleRef,
+    quotas,
+    ingressBackup,
+  );
+  return { controller, createRoom, createIngress };
+}
+
+describe('LiveKitController — QW-1 persistent room on ingress', () => {
+  const dto = { inputType: 'rtmp', room: 'ch1' } as any;
+
+  it('a persistent-channel app pre-creates the room with a long emptyTimeout BEFORE createIngress', async () => {
+    const { controller, createRoom, createIngress } = makeIngressController({
+      persistentRoom: true,
+      roomEmptyTimeoutSeconds: 86400,
+    });
+
+    await controller.createIngress('live', dto);
+
+    expect(createRoom).toHaveBeenCalledTimes(1);
+    expect(createRoom).toHaveBeenCalledWith('live-ch1', 86400);
+    expect(createIngress).toHaveBeenCalledTimes(1);
+    // Ordering: the room must be pre-created before the ingress.
+    expect(createRoom.mock.invocationCallOrder[0]).toBeLessThan(
+      createIngress.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('a normal app does NOT pre-create the room (keeps the 300s default)', async () => {
+    const { controller, createRoom, createIngress } = makeIngressController();
+
+    await controller.createIngress('live', dto);
+
+    expect(createRoom).not.toHaveBeenCalled();
+    expect(createIngress).toHaveBeenCalledTimes(1);
+  });
+
+  it('persistentRoom:false is treated as a normal app (no pre-create)', async () => {
+    const { controller, createRoom } = makeIngressController({
+      persistentRoom: false,
+    });
+
+    await controller.createIngress('live', dto);
+
+    expect(createRoom).not.toHaveBeenCalled();
+  });
+
+  it('a createRoom hiccup never blocks ingress creation (best-effort)', async () => {
+    const { controller, createRoom, createIngress } = makeIngressController({
+      persistentRoom: true,
+    });
+    createRoom.mockRejectedValueOnce(new Error('livekit down'));
+
+    await expect(controller.createIngress('live', dto)).resolves.toBeDefined();
+    expect(createIngress).toHaveBeenCalledTimes(1);
   });
 });

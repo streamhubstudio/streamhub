@@ -2,8 +2,8 @@
 # raíz del repo). No comparte ciclo de vida ni red con `redis/livekit/ingress/
 # egress/core/caddy`: se levanta y se destruye de forma independiente.
 #
-# Diseño completo: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md (§4).
-# Fase 1 — un solo nodo (`your-server`, 8 GB RAM + 8 GB swap, compartido con el
+# Diseño completo: https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP (§4).
+# Fase 1 — un solo nodo (`stream01`, 8 GB RAM + 8 GB swap, compartido con el
 # media stack). Objetivo: caber en ~800 MB de RAM sin competir con el headroom
 # de los `egress` (cada uno es un Chrome headless).
 #
@@ -46,7 +46,11 @@ services:
       # disco del nodo: ~4 GB alcanza sobrado para el volumen de métricas
       # actual (§4.6 del roadmap) dentro del presupuesto de 8 GB del nodo.
       - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-4GB}
-      - --web.listen-address=127.0.0.1:9090
+      # NOTE: port 9091, NOT 9090. On a node running the media stack the LiveKit
+      # `ingress` binds 127.0.0.1:9090 (its debug/health server) — verified on a
+      # live node — so a co-located Prometheus MUST NOT use 9090 or it crash-loops
+      # with "bind: address already in use". (Ingress *metrics* are on 6790.)
+      - --web.listen-address=127.0.0.1:${PROMETHEUS_PORT:-9091}
       - --web.enable-lifecycle
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro

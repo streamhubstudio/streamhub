@@ -1,0 +1,35 @@
+{
+  "title": "Historial de recursos",
+  "subtitle": "Uso de CPU, RAM, Red y Disco del host, muestreado cada hora.",
+  "lightweightNote": "Historial liviano integrado (muestras horarias, guardadas en la base de datos del servidor). Para métricas de alta resolución usá el stack Prometheus/Grafana.",
+  "retentionNote": "Mostrando hasta {{days}} días de historial con precisión de 1 hora.",
+  "rangeLabel": "Ventana de tiempo",
+  "range": {
+    "24h": "24 h",
+    "7d": "7 d",
+    "30d": "30 d",
+    "90d": "90 d"
+  },
+  "cpu": {
+    "title": "CPU",
+    "hint": "Utilización promedio por hora"
+  },
+  "mem": {
+    "title": "RAM",
+    "hint": "Memoria usada vs total"
+  },
+  "net": {
+    "title": "Red",
+    "hint": "Bytes transferidos por hora (rx + tx)"
+  },
+  "disk": {
+    "title": "Disco",
+    "hint": "Uso del volumen de datos"
+  },
+  "empty": "Aún no hay muestras",
+  "emptyNet": "Sin datos de red (solo Linux)",
+  "emptyDisk": "Sin datos de disco en este host",
+  "forbidden": "Esta vista requiere una cuenta superadmin (alcance global).",
+  "notAvailable": "El historial de recursos no está disponible en esta versión del servidor.",
+  "loadError": "No se pudo cargar el historial de recursos."
+}

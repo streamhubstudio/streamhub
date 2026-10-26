@@ -15,6 +15,9 @@ import { ParticipantInfo_Kind } from '@livekit/protocol';
 import {
   APPS_SERVICE,
   AppsServiceContract,
+  CALLBACKS_SERVICE,
+  CallbackEvent,
+  CallbacksServiceContract,
   S3_SERVICE,
   S3ServiceContract,
   SnapshotInput,
@@ -93,6 +96,9 @@ export class StreamsService implements StreamsServiceContract {
     @Inject(S3_SERVICE)
     private readonly s3?: S3ServiceContract,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional()
+    @Inject(CALLBACKS_SERVICE)
+    private readonly callbacks?: CallbacksServiceContract,
   ) {
     const host = StreamsService.httpUrl(this.config.livekitUrl);
     const key = this.config.livekitApiKey;
@@ -361,13 +367,59 @@ export class StreamsService implements StreamsServiceContract {
     const app = this.requireApp(input.appName);
     const room = (input.roomName ?? '').trim();
     if (!room) throw new BadRequestException('roomName is required');
+    const source = this.snapshotSource(app, room, input.participantIdentity);
+    return this.captureUpload(app, room, undefined, source);
+  }
 
-    const dir = path.join(
-      this.config.dataDir,
-      'apps',
-      app.name,
-      'snapshots',
-    );
+  /**
+   * On-demand snapshot addressed by STREAM ID (POST /apps/:app/streams/:id/
+   * snapshot). Resolves the stream's media source:
+   *  - a passthrough stream (no LiveKit room) → the latest on-disk HLS `.ts`
+   *    segment frame (ffmpeg), since there is no room to composite;
+   *  - any LiveKit-backed stream → the room's RTMP namespace (same source the
+   *    room-addressed `snapshot()` uses).
+   * 404 when the stream is unknown, 503 when no snapshot source is available.
+   */
+  async snapshotByStream(
+    appName: string,
+    streamId: string,
+  ): Promise<SnapshotResult> {
+    const app = this.requireApp(appName);
+    const stream = await this.get(appName, streamId);
+    if (!stream) throw new NotFoundException(`stream '${streamId}' not found`);
+    const room = (stream.room ?? '').trim();
+    // Passthrough (remux) streams bypass LiveKit: no room to composite, so the
+    // only live media is the on-disk HLS timeline.
+    const isPassthrough = stream.participant === 'passthrough' || !room;
+
+    let source: string;
+    if (isPassthrough) {
+      const segment = this.latestHlsSegment(app.name, room || streamId);
+      if (!segment) {
+        throw new ServiceUnavailableException(
+          `no live HLS segment available to snapshot stream '${streamId}'`,
+        );
+      }
+      source = segment;
+    } else {
+      source = this.snapshotSource(app, room, stream.participant ?? undefined);
+    }
+    return this.captureUpload(app, room || streamId, streamId, source);
+  }
+
+  /**
+   * Shared capture → best-effort S3 upload → `stream.snapshot` dispatch. The
+   * local JPEG is always timestamped (`<room>-<ts>.jpg`) so repeated on-demand
+   * captures never overwrite. Returns the S3 key/URL (or a `file://` local
+   * reference when S3 is unavailable).
+   */
+  private async captureUpload(
+    app: AppRow,
+    room: string,
+    streamId: string | undefined,
+    source: string,
+  ): Promise<SnapshotResult> {
+    const dir = path.join(this.config.dataDir, 'apps', app.name, 'snapshots');
     try {
       fs.mkdirSync(dir, { recursive: true });
     } catch (err) {
@@ -379,13 +431,14 @@ export class StreamsService implements StreamsServiceContract {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `${StreamsService.safe(room)}-${stamp}.jpg`;
     const localPath = path.join(dir, fileName);
-    const source = this.snapshotSource(app, room, input.participantIdentity);
 
     await this.captureFrame(source, localPath);
     this.metrics?.snapshotTaken(app.name);
 
     // Best-effort S3 upload; on any failure fall back to a local file reference.
     const logicalKey = `snapshots/${fileName}`;
+    let result: SnapshotResult = { key: logicalKey, url: `file://${localPath}` };
+    let sizeBytes: number | undefined;
     if (this.apps && this.s3) {
       try {
         const cfg = await this.apps.getConfig(app.name);
@@ -393,20 +446,78 @@ export class StreamsService implements StreamsServiceContract {
           ? `${cfg.s3.prefix}/${logicalKey}`
           : logicalKey;
         const res = await this.s3.upload(cfg.s3, localPath, key, 'image/jpeg');
+        sizeBytes = res.sizeBytes;
         let url = res.url;
         try {
           url = await this.s3.presignGet(cfg.s3, res.key, 3600);
         } catch (err) {
           this.logger.debug(`presign failed, using object url: ${String(err)}`);
         }
-        return { key: res.key, url };
+        result = { key: res.key, url };
       } catch (err) {
         this.logger.warn(
           `snapshot S3 upload failed, returning local: ${String(err)}`,
         );
       }
     }
-    return { key: logicalKey, url: `file://${localPath}` };
+
+    await this.dispatch(app.name, 'stream.snapshot', {
+      app: app.name,
+      room,
+      ...(streamId ? { streamId } : {}),
+      key: result.key,
+      url: result.url,
+      ...(sizeBytes !== undefined ? { sizeBytes } : {}),
+      source: 'on_demand',
+    });
+    return result;
+  }
+
+  /**
+   * Newest non-empty `.ts` HLS segment for a room, or null. Checks both the
+   * passthrough dir (`apps/<app>/hls/<room>`) and the LiveKit-egress dir
+   * (`apps/<app>/hls/<safe(room)>`) — both write to the same HLS tree.
+   */
+  private latestHlsSegment(appName: string, room: string): string | null {
+    const slugs = Array.from(new Set([room, StreamsService.safe(room)]));
+    for (const slug of slugs) {
+      const dir = path.join(this.config.dataDir, 'apps', appName, 'hls', slug);
+      let entries: string[];
+      try {
+        entries = fs.readdirSync(dir);
+      } catch {
+        continue;
+      }
+      let best: { path: string; mtimeMs: number } | null = null;
+      for (const name of entries) {
+        if (!name.endsWith('.ts')) continue;
+        const full = path.join(dir, name);
+        try {
+          const st = fs.statSync(full);
+          if (st.isFile() && st.size > 0 && (!best || st.mtimeMs > best.mtimeMs)) {
+            best = { path: full, mtimeMs: st.mtimeMs };
+          }
+        } catch {
+          /* unstatable → skip */
+        }
+      }
+      if (best) return best.path;
+    }
+    return null;
+  }
+
+  /** Fire a callback event through the funnel (best-effort; never throws). */
+  private async dispatch(
+    appName: string,
+    event: CallbackEvent,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    if (!this.callbacks) return;
+    try {
+      await this.callbacks.dispatch(appName, event, payload);
+    } catch (err) {
+      this.logger.warn(`callback ${event} failed: ${String(err)}`);
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -538,8 +649,13 @@ export class StreamsService implements StreamsServiceContract {
       // gateway, not from webhooks): their liveness is owned by the gateway
       // (connect → upsert, disconnect/idle → end), so reconcile must NEVER
       // prune them — pruning here would end every live ESP32 camera on each
-      // list() call. See streamhub-docs/integrations/ESP32-WS-INGEST.md §2.
+      // list() call. See https://streamhub.studio/docs/integrations/ESP32-WS-INGEST §2.
       if (s.type === 'ws-mjpeg') continue;
+      // Passthrough (remux) streams do NOT live in LiveKit either — no room is
+      // ever created for them. Their liveness is owned by the PassthroughService
+      // playlist-freshness sync (fresh → active, stale/removed → ended), so
+      // pruning here would end every live passthrough channel on each list().
+      if (s.participant === 'passthrough') continue;
       // Grace: leave very new rows alone so a not-yet-publishing participant
       // doesn't get pruned on the next tick.
       if (this.ageMs(s.started_at) < StreamsService.PRUNE_GRACE_MS) continue;

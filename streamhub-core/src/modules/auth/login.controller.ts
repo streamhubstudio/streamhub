@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Optional,
+  Post,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -8,6 +16,9 @@ import {
 import type { Request } from 'express';
 import { Public } from '../../shared/auth';
 import { AuthContext, getAuthCtx } from '../../shared/auth-context';
+import { AuditService, requestIp } from '../audit/audit.service';
+import { NodeRoleService, type NodeRole } from '../cluster/node-role.service';
+import { getAppVersion } from '../health/app-version';
 import { AuthService } from './auth.service';
 import { sessionContextFromRequest } from './session.service';
 import { LoginDto } from './dto/login.dto';
@@ -22,22 +33,57 @@ import { SignupDto } from './dto/signup.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class LoginController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    /** Security audit trail (ISO 8.15) — optional for bare-ctor unit specs. */
+    @Optional() private readonly audit?: AuditService,
+    /**
+     * Cluster role (optional for bare-ctor unit specs) — drives the SPA's edge
+     * screen. Undefined → treated as a `standalone` node (login enabled).
+     */
+    @Optional() private readonly nodeRole?: NodeRoleService,
+  ) {}
 
   @Public()
   @Get('config')
   @ApiOperation({
     summary: 'Public auth capabilities (public, no auth)',
     description:
-      'Tells the SPA which auth flows this deployment offers. Currently: ' +
-      '`allowSignup` (STREAMHUB_ALLOW_SIGNUP env flag — public self-signup vs ' +
-      'invite-only). Safe to expose: it reveals no accounts or secrets.',
+      'Tells the SPA which auth flows this deployment offers: `allowSignup` ' +
+      '(STREAMHUB_PUBLIC_REGISTRATION, alias STREAMHUB_ALLOW_SIGNUP — public ' +
+      'self-signup vs invite-only) and the cluster ROLE (`nodeRole`, ' +
+      '`masterUrl`, `loginEnabled`) so the login page renders an "edge — ' +
+      'manage at the master" screen instead of the form on a cluster edge. ' +
+      'Also carries `appVersion` — the real product version (repo-root ' +
+      'VERSION file) the dashboard footer displays. ' +
+      'Safe to expose: reveals no accounts or secrets.',
   })
   @ApiOkResponse({
-    description: '{ data: { allowSignup: boolean } }',
+    description:
+      '{ data: { allowSignup, nodeRole, masterUrl, loginEnabled, appVersion } }',
   })
-  config(): { data: { allowSignup: boolean } } {
-    return { data: { allowSignup: this.auth.allowSignup } };
+  config(): {
+    data: {
+      allowSignup: boolean;
+      nodeRole: NodeRole;
+      masterUrl: string | null;
+      loginEnabled: boolean;
+      appVersion: string;
+    };
+  } {
+    const nodeRole: NodeRole = this.nodeRole?.getRole() ?? 'standalone';
+    const masterUrl = this.nodeRole?.getMasterUrl() ?? null;
+    // Login is offered everywhere except a cluster edge (managed at the master).
+    const loginEnabled = nodeRole !== 'edge';
+    return {
+      data: {
+        allowSignup: this.auth.allowSignup,
+        nodeRole,
+        masterUrl,
+        loginEnabled,
+        appVersion: getAppVersion(),
+      },
+    };
   }
 
   @Public()
@@ -49,23 +95,45 @@ export class LoginController {
       'Creates a built-in user (scrypt-hashed password), a new team (tenant) ' +
       'on the free plan and an owner membership, then returns a JWT ' +
       '(sub=user id, ~12h) signed with STREAMHUB_JWT_SECRET. Gated by ' +
-      'STREAMHUB_ALLOW_SIGNUP: when OFF only an invited PENDING user may ' +
-      'complete signup — a brand-new email gets 403 `signup_disabled`.',
+      'STREAMHUB_PUBLIC_REGISTRATION (alias STREAMHUB_ALLOW_SIGNUP): when OFF ' +
+      'only an invited PENDING user may complete signup — a brand-new email ' +
+      'gets 403 `signup_disabled`.',
   })
   @ApiOkResponse({ type: LoginResponseDto })
   async signup(
     @Body() dto: SignupDto,
     @Req() req: Request,
   ): Promise<LoginResponseDto> {
-    const { token } = await this.auth.signup(
-      {
-        email: dto.email,
-        password: dto.password,
-        teamName: dto.teamName,
-      },
-      sessionContextFromRequest(req),
-    );
-    return { data: { token } };
+    try {
+      const { token } = await this.auth.signup(
+        {
+          email: dto.email,
+          password: dto.password,
+          teamName: dto.teamName,
+        },
+        sessionContextFromRequest(req),
+      );
+      this.audit?.record({
+        action: 'user.signup',
+        actorType: 'user',
+        actorId: dto.email,
+        ip: requestIp(req),
+        result: 'success',
+      });
+      return { data: { token } };
+    } catch (err) {
+      // Audit the failed signup attempt (identity only — NEVER the password),
+      // then rethrow so the HTTP outcome is unchanged.
+      this.audit?.record({
+        action: 'user.signup',
+        actorType: 'user',
+        actorId: dto.email,
+        ip: requestIp(req),
+        result: 'failure',
+        meta: { error: (err as Error).message },
+      });
+      throw err;
+    }
   }
 
   @Public()
@@ -84,13 +152,34 @@ export class LoginController {
     @Body() dto: LoginDto,
     @Req() req: Request,
   ): Promise<LoginResponseDto> {
-    const { token } = await this.auth.login(
-      dto.user,
-      dto.password,
-      dto.code,
-      sessionContextFromRequest(req),
-    );
-    return { data: { token } };
+    try {
+      const { token } = await this.auth.login(
+        dto.user,
+        dto.password,
+        dto.code,
+        sessionContextFromRequest(req),
+      );
+      this.audit?.record({
+        action: 'auth.login',
+        actorType: 'user',
+        actorId: dto.user,
+        ip: requestIp(req),
+        result: 'success',
+      });
+      return { data: { token } };
+    } catch (err) {
+      // Audit the failed attempt (submitted identity only — NEVER the
+      // password/TOTP code), then rethrow so the HTTP outcome is unchanged.
+      this.audit?.record({
+        action: 'auth.login',
+        actorType: 'user',
+        actorId: dto.user,
+        ip: requestIp(req),
+        result: 'failure',
+        meta: { error: (err as Error).message },
+      });
+      throw err;
+    }
   }
 
   /**

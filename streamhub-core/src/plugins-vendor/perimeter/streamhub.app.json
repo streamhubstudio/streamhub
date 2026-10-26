@@ -1,0 +1,226 @@
+{
+  "manifestVersion": 1,
+  "id": "perimeter",
+  "name": "Perimeter — Intrusion Detection",
+  "description": "Watches restricted zones on a live camera and, while armed (schedule or manual), alerts on any person inside them — with snapshot + clip evidence and an acknowledgeable alert queue.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.0",
+  "kind": "app",
+  "storage": {
+    "db": "perimeter.db"
+  },
+  "export": {
+    "workerDir": "perimeter-worker"
+  },
+  "icon": "shield-alert",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / camera",
+      "default": "",
+      "required": true,
+      "placeholder": "cam-1",
+      "help": "HLS room to watch — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "zones",
+      "type": "string",
+      "label": "Restricted zones (JSON)",
+      "default": "[]",
+      "placeholder": "[{\"id\":\"gate\",\"rect\":[0.6,0.4,0.35,0.55]}]",
+      "help": "Normalized 0-1 rects/polygons — draw them in the Perimeter tab instead of editing this by hand."
+    },
+    {
+      "key": "armMode",
+      "type": "select",
+      "label": "Arming",
+      "default": "schedule",
+      "options": [
+        {
+          "value": "schedule",
+          "label": "Follow schedule"
+        },
+        {
+          "value": "armed",
+          "label": "Armed (manual override)"
+        },
+        {
+          "value": "disarmed",
+          "label": "Disarmed (manual override)"
+        }
+      ],
+      "help": "The dashboard arm/disarm toggle writes this field."
+    },
+    {
+      "key": "armSchedule",
+      "type": "string",
+      "label": "Armed window (daily)",
+      "default": "22:00-06:00",
+      "placeholder": "22:00-06:00",
+      "help": "HH:MM-HH:MM local time, wraps past midnight. Empty = weekends only."
+    },
+    {
+      "key": "armWeekends",
+      "type": "boolean",
+      "label": "Armed all weekend",
+      "default": true,
+      "help": "Arms all day Saturday + Sunday in addition to the daily window."
+    },
+    {
+      "key": "timezone",
+      "type": "string",
+      "label": "Schedule timezone",
+      "default": "",
+      "placeholder": "America/Argentina/Buenos_Aires",
+      "help": "IANA name the schedule is evaluated in. Empty = host local time (usually UTC inside Docker — set this for on-site wall-clock arming)."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Person confidence",
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum detection confidence (0-1) to count a person."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 1,
+      "min": 0.1,
+      "max": 10,
+      "help": "1-2 fps is the honest CPU budget; more needs CUDA."
+    },
+    {
+      "key": "cooldown",
+      "type": "number",
+      "label": "Per-zone cooldown (s)",
+      "default": 60,
+      "min": 1,
+      "max": 3600,
+      "help": "Seconds before the SAME zone may alert again (anti alert-storm)."
+    },
+    {
+      "key": "clipSeconds",
+      "type": "number",
+      "label": "Evidence clip length (s)",
+      "default": 10,
+      "min": 0,
+      "max": 60,
+      "help": "Copies the last HLS segments (-c copy, cheap) next to the snapshot; 0 disables the clip."
+    },
+    {
+      "key": "anchor",
+      "type": "select",
+      "label": "Trigger point",
+      "default": "foot",
+      "options": [
+        {
+          "value": "foot",
+          "label": "Feet (bottom-center — floor zones)"
+        },
+        {
+          "value": "center",
+          "label": "Box center"
+        }
+      ]
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Model size",
+      "default": "nano",
+      "options": [
+        {
+          "value": "nano",
+          "label": "Nano (CPU-friendly, default)"
+        },
+        {
+          "value": "small",
+          "label": "Small (better far-person recall, 2x CPU)"
+        }
+      ]
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "Alert webhook URL",
+      "default": "",
+      "placeholder": "https://example.com/hooks/perimeter",
+      "help": "Optional: every perimeter.intrusion event is POSTed here (in addition to the dashboard alert queue)."
+    },
+    {
+      "key": "callbackSecret",
+      "type": "secret",
+      "label": "Webhook HMAC secret",
+      "default": "",
+      "help": "When set, events are signed into X-StreamHub-Signature (sha256=<hex>) exactly like the app signed callbacks."
+    },
+    {
+      "key": "ackThrough",
+      "type": "string",
+      "label": "Acknowledged through (ts)",
+      "default": "",
+      "help": "Managed by the alert queue panel — alerts at or before this unix timestamp are marked acknowledged on worker start."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m perimeter_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "capabilities": [
+        "yolo"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "PERIMETER_APP": "{{app}}",
+      "PERIMETER_ROOM": "{{config.room}}",
+      "PERIMETER_ZONES": "{{config.zones}}",
+      "PERIMETER_MODEL": "{{ config.model | map:small=yolov8s,*=yolov8n }}",
+      "PERIMETER_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "PERIMETER_CONFIDENCE": "{{config.confidence}}",
+      "PERIMETER_FPS": "{{config.fps}}",
+      "PERIMETER_ANCHOR": "{{config.anchor}}",
+      "PERIMETER_ARM_MODE": "{{config.armMode}}",
+      "PERIMETER_ARM_SCHEDULE": "{{config.armSchedule}}",
+      "PERIMETER_ARM_WEEKENDS": "{{config.armWeekends}}",
+      "PERIMETER_TIMEZONE": "{{config.timezone}}",
+      "PERIMETER_COOLDOWN": "{{config.cooldown}}",
+      "PERIMETER_CLIP_SECONDS": "{{config.clipSeconds}}",
+      "PERIMETER_ACK_THROUGH": "{{config.ackThrough}}",
+      "PERIMETER_CALLBACK_URL": "{{config.callbackUrl}}",
+      "PERIMETER_CALLBACK_SECRET": "{{config.callbackSecret}}",
+      "PERIMETER_DATA_DIR": "{{appDir}}/perimeter",
+      "PERIMETER_HLS_DIR": "{{appDir}}/hls",
+      "PERIMETER_PUBLIC_BASE": "{{publicBase}}",
+      "PERIMETER_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true
+  }
+}

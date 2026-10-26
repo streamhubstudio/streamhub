@@ -1,0 +1,35 @@
+{
+  "title": "Security posture",
+  "subtitle": "ISO 27002 §8 technological controls and their live state on this deployment.",
+  "explain": "Live evidence of which ISO 27002 §8 technological controls are active on this deployment.",
+  "refreshing": "Refreshing…",
+  "loadError": "Couldn't load the security posture.",
+  "forbidden": "Security posture is a superadmin-only surface. Sign in with a global-scope account to view it.",
+  "unsupported": "Security posture requires a newer StreamHub core. Update the server to enable it.",
+  "isoPrefix": "ISO 27002 §",
+  "checkedAt": "Evidence gathered {{at}}",
+  "state": {
+    "active": "active",
+    "partial": "partial",
+    "off": "off",
+    "unknown": "unknown"
+  },
+  "col": {
+    "control": "Control",
+    "state": "State",
+    "iso": "ISO 27002 §",
+    "detail": "Evidence"
+  },
+  "control": {
+    "authz_enforce": "Authorization enforcement",
+    "tls": "Transport encryption (TLS)",
+    "ip_filtering": "IP access control",
+    "auto_ban": "Abuse auto-ban",
+    "audit_log": "Audit logging",
+    "backups": "Backups",
+    "http_hardening": "HTTP security headers",
+    "metrics_protected": "Metrics endpoint protection",
+    "public_registration": "Public registration",
+    "log_retention": "Log retention"
+  }
+}

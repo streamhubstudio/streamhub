@@ -1,7 +1,60 @@
 {
-  "advanced": {
-    "summary": "Advanced",
-    "hint": "Raw YAML editor and backups. The controls above are shortcuts that write into it."
+  "recordingStorage": {
+    "title": "Recording naming & retention",
+    "subtitle": "Filename templates for recordings and snapshots, per-app variables, and how long VODs are kept.",
+    "loading": "Loading recording config…",
+    "loadError": "Could not load the recording config.",
+    "noBucket": "No storage bucket is configured — recordings can't be uploaded and starting a recording will fail.",
+    "noBucketLink": "Configure storage →",
+    "filenameTemplate": {
+      "label": "Recording filename template",
+      "hint": "Empty = built-in naming. Applies to the local file and the S3 key. Include a time token for uniqueness."
+    },
+    "snapshotTemplate": {
+      "label": "Snapshot filename template",
+      "hint": "Empty = built-in naming. Names the recording thumbnail (${type} = jpg)."
+    },
+    "tokens": "Tokens: ${app} ${streamId} ${room} ${type} ${ts} ${date:yyyy-MM-dd} ${var.NAME}. Rendered to one safe filename segment (no folders / path traversal).",
+    "retention": {
+      "label": "VOD retention",
+      "hint": "Delete VODs older than this from both the database and S3 storage. Off = keep forever.",
+      "off": "Off (keep forever)",
+      "days": "{{n}} days"
+    },
+    "variables": {
+      "label": "Variables",
+      "hint": "Plain key/value config used in filename templates as ${var.NAME}. Keys must be letters, digits or underscore. These are NOT secrets — use storage credentials for secrets.",
+      "keyPlaceholder": "NAME",
+      "valuePlaceholder": "value",
+      "add": "+ Add variable",
+      "remove": "Remove variable"
+    },
+    "save": "Save",
+    "saved": "Saved",
+    "saveError": "Could not save the recording config."
+  },
+  "timezone": {
+    "title": "Timezone",
+    "subtitle": "Renders this app's dashboard timestamps (logs, streams, VODs, backups…) in a fixed timezone instead of each operator's own local time. It's also the DEFAULT for any plugin/schedule that leaves its own timezone empty (an explicit plugin-level timezone always wins).",
+    "loading": "Loading timezone…",
+    "loadError": "Could not load the timezone.",
+    "label": "App timezone",
+    "hint": "Search an IANA timezone name (e.g. America/Argentina/Buenos_Aires). Empty = server/host local time.",
+    "placeholder": "e.g. America/Argentina/Buenos_Aires",
+    "invalid": "Not a recognized IANA timezone name.",
+    "preview": "Right now there: {{time}}",
+    "serverDefault": "No override set — dashboard timestamps for this app use the server/host's local time.",
+    "clear": "Use server default",
+    "save": "Save",
+    "saved": "Saved",
+    "saveError": "Could not save the timezone."
+  },
+  "system": {
+    "title": "System",
+    "subtitle": "API/room tokens, integrations (callbacks, storage, email) and logs for this app.",
+    "tokens": "Tokens",
+    "integraciones": "Integrations",
+    "logs": "Logs"
   },
   "presets": {
     "title": "Config presets",
@@ -14,12 +67,23 @@
     "applying": "Applying…",
     "confirm": "Apply the \"{{title}}\" preset to {{app}}? The current config.yaml is backed up first and the app is hot-reloaded. Continue?",
     "applyError": "Could not apply the preset.",
+    "appliedBadge": "Applied ✓",
+    "deactivate": "Deactivate",
+    "deactivating": "Deactivating…",
+    "confirmDeactivate": "Deactivate the \"{{title}}\" preset on {{app}}? Its keys are reverted to the server's factory defaults (the current config.yaml is backed up first and the app is hot-reloaded). Continue?",
+    "deactivateError": "Could not deactivate the preset.",
+    "deactivateHint": "Deactivating reverts these keys to the server's factory defaults, not necessarily whatever they held before the preset was applied. For the exact prior state, use the Backups tab.",
     "diffLabel": "Applied changes",
     "warningsLabel": "Warnings",
     "result": {
       "noChange": "The config already matched the preset — nothing changed.",
       "appliedReloaded": "Preset applied and hot-reloaded ({{added}} lines +, {{removed}} −).",
       "appliedWritten": "Preset applied (check the warnings)."
+    },
+    "deactivateResult": {
+      "noChange": "The config was already at the factory defaults — nothing changed.",
+      "appliedReloaded": "Preset deactivated and hot-reloaded ({{added}} lines +, {{removed}} −).",
+      "appliedWritten": "Preset deactivated (check the warnings)."
     }
   },
   "transcoding": {
@@ -57,6 +121,22 @@
     "saveError": "Could not save.",
     "saveChanges": "Save changes",
     "saved": "Saved."
+  },
+  "passthrough": {
+    "label": "RTMP → HLS passthrough (remux, no transcode)",
+    "hint": "Remux the RTMP push straight to HLS (ffmpeg -c copy), bypassing LiveKit. Near-zero CPU, no GPU. Mutually exclusive with transcoding/adaptive — turning it on disables them.",
+    "warningTitle": "Passthrough gives up (media never enters LiveKit):",
+    "lost": {
+      "webrtc": "No WebRTC / sub-second playback — HLS only.",
+      "abr": "No adaptive bitrate (ABR) — a single rendition.",
+      "h264": "No transcode safety net — the source MUST be H.264/AAC.",
+      "recording": "No egress recording / VOD.",
+      "room": "No room features (viewer count, chat, reactions, moderation)."
+    },
+    "serverNote": "Passthrough ingest also needs STREAMHUB_RTMP_PASSTHROUGH_ENABLE on the server and port :1937 open. Without it, creating a passthrough ingress returns 503.",
+    "transcodeDisabledNote": "Passthrough is on — transcoding/adaptive are disabled. Turn passthrough off to edit them.",
+    "saveError": "Could not update passthrough.",
+    "disabled503": "RTMP passthrough is disabled on this server. Enable STREAMHUB_RTMP_PASSTHROUGH_ENABLE and open port :1937."
   },
   "raw": {
     "loading": "Loading config.yaml…",

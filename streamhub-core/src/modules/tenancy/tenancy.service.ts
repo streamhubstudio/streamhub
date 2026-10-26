@@ -224,6 +224,13 @@ export class TenancyService implements OnModuleInit {
     add('totp_secret', 'totp_secret TEXT');
     add('totp_pending_secret', 'totp_pending_secret TEXT');
     add('totp_enabled', 'totp_enabled INTEGER NOT NULL DEFAULT 0');
+    // Owner item 29: per-user SMTP override (password ENCRYPTED at rest).
+    add('smtp_enabled', 'smtp_enabled INTEGER NOT NULL DEFAULT 0');
+    add('smtp_host', 'smtp_host TEXT');
+    add('smtp_port', 'smtp_port INTEGER');
+    add('smtp_user', 'smtp_user TEXT');
+    add('smtp_from', 'smtp_from TEXT');
+    add('smtp_pass_enc', 'smtp_pass_enc TEXT');
   }
 
   getUser(userId: string): UserRow | null {
@@ -364,6 +371,97 @@ export class TenancyService implements OnModuleInit {
           WHERE id = ?`,
       )
       .run(userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-user SMTP override (owner item 29 — password ENCRYPTED by auth/AccountService)
+  // ---------------------------------------------------------------------------
+
+  /** Raw per-user SMTP state (the password stays ENCRYPTED — not decrypted here). */
+  getUserSmtp(userId: string): {
+    enabled: boolean;
+    host: string;
+    port: number | null;
+    user: string;
+    from: string;
+    passEnc: string | null;
+  } | null {
+    const row = this.db
+      .global()
+      .prepare(
+        `SELECT smtp_enabled, smtp_host, smtp_port, smtp_user, smtp_from, smtp_pass_enc
+           FROM users WHERE id = ?`,
+      )
+      .get(userId) as
+      | {
+          smtp_enabled: number;
+          smtp_host: string | null;
+          smtp_port: number | null;
+          smtp_user: string | null;
+          smtp_from: string | null;
+          smtp_pass_enc: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    return {
+      enabled: !!row.smtp_enabled,
+      host: row.smtp_host ?? '',
+      port: row.smtp_port,
+      user: row.smtp_user ?? '',
+      from: row.smtp_from ?? '',
+      passEnc: row.smtp_pass_enc,
+    };
+  }
+
+  /**
+   * Update a user's SMTP override. Fields set to `undefined` are left
+   * untouched; `passEnc` is the already-ENCRYPTED value (the caller encrypts
+   * via `encryptUserSmtpSecret` — this service never sees plaintext). No-op
+   * when nothing changes.
+   */
+  setUserSmtp(
+    userId: string,
+    patch: {
+      enabled?: boolean;
+      host?: string;
+      port?: number | null;
+      user?: string;
+      from?: string;
+      passEnc?: string;
+    },
+  ): void {
+    const sets: string[] = [];
+    const args: unknown[] = [];
+    if (patch.enabled !== undefined) {
+      sets.push('smtp_enabled = ?');
+      args.push(patch.enabled ? 1 : 0);
+    }
+    if (patch.host !== undefined) {
+      sets.push('smtp_host = ?');
+      args.push(patch.host);
+    }
+    if (patch.port !== undefined) {
+      sets.push('smtp_port = ?');
+      args.push(patch.port);
+    }
+    if (patch.user !== undefined) {
+      sets.push('smtp_user = ?');
+      args.push(patch.user);
+    }
+    if (patch.from !== undefined) {
+      sets.push('smtp_from = ?');
+      args.push(patch.from);
+    }
+    if (patch.passEnc !== undefined) {
+      sets.push('smtp_pass_enc = ?');
+      args.push(patch.passEnc);
+    }
+    if (sets.length === 0) return;
+    args.push(userId);
+    this.db
+      .global()
+      .prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`)
+      .run(...args);
   }
 
   /**

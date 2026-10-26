@@ -88,14 +88,23 @@ function head(title: string): string {
 /** Shared bootstrap: app constants + token fetch + adaptor/livekit loaders. */
 function bootstrap(): string {
   return `
-  const APP = '{{APP}}';
-  const WS_URL = '{{WS_URL}}';
-  const API_URL = '{{API_URL}}';
-  const ADAPTOR_URL = '{{ADAPTOR_URL}}';
-  const HLS_BASE = '{{HLS_URL}}';
+  // --- Configuration -------------------------------------------------------
+  // A downloadable standalone bundle ships a config.js that sets
+  // window.STREAMHUB_CONFIG and WINS here; the server-generated /samples page
+  // has no config.js, so the values baked in at generation time (below) are
+  // used. Point a bundle at YOUR StreamHub by editing config.js only — nothing
+  // in index.html needs to change.
+  const CFG = (typeof window !== 'undefined' && window.STREAMHUB_CONFIG) || {};
+  const SH_BASE = (CFG.baseUrl || '').replace(/\\/+$/, '');
+  const APP = CFG.app || '{{APP}}';
+  const WS_URL = CFG.wsUrl || '{{WS_URL}}';
+  const API_URL = SH_BASE ? SH_BASE + '/api/v1' : '{{API_URL}}';
+  const ADAPTOR_URL = CFG.adaptorUrl || (SH_BASE ? SH_BASE + '/sdk/streamhub-adaptor.global.js' : '{{ADAPTOR_URL}}');
+  const HLS_BASE = SH_BASE ? SH_BASE + '/hls/' + APP : '{{HLS_URL}}';
+  const ROOM = CFG.room || '{{ROOM}}';
   function logTo(id){const el=document.getElementById(id);return (m)=>{if(el)el.textContent=String(m);};}
   function rid(p){return p + Math.random().toString(36).slice(2,8);}
-  function nsRoom(r){ return r || '{{ROOM}}'; }
+  function nsRoom(r){ return r || ROOM; }
   // Read a param from the query string OR the URL hash (so operators can share
   // a link like  page.html#room=consulta&token=<jwt>&ws=wss://host  without the
   // token ever hitting a server log).
@@ -106,22 +115,42 @@ function bootstrap(): string {
   }catch(e){ return ''; } }
   // Ephemeral (pre-minted) LiveKit credentials from the URL, or null.
   function ephemeral(){
-    const token = qp('token');
-    return token ? { token: token, wsUrl: qp('ws') || qp('wsUrl') || WS_URL, room: qp('room') } : null;
+    const token = qp('token') || (CFG.token || '');
+    return token ? { token: token, wsUrl: qp('ws') || qp('wsUrl') || WS_URL, room: qp('room') || ROOM } : null;
   }
+  // Resolve LiveKit credentials for a page, in the ONLY order that works without
+  // a logged-in panel session. POST /apps/:app/tokens requires a management
+  // bearer (it mints publish grants), so a demo opened straight from /samples has
+  // no credential — hitting it blindly is what produced the "authentication
+  // error" (401) on every sample. The supported flows, in priority order:
+  //   1) ephemeral pre-minted token in the URL (#token=…&ws=…) — publish OR
+  //      subscribe, no API call, no login (the operator shares the link);
+  //   2) explicit management bearer (?apitoken=sk_…) — mint via POST /tokens,
+  //      honoring the operator's intent (works even if public playback is off);
+  //   3) no credential + subscribe-only → the PUBLIC play-token (no auth);
+  //   4) no credential + publisher → cannot mint anonymously: fail with an
+  //      actionable message instead of a bare 401.
   async function getToken(opts){
-    const headers = { 'Content-Type':'application/json' };
-    // Optional management bearer for minting (dev / operator links). Omitted in
-    // production embeds — those use the public/ephemeral flows below.
-    const bearer = qp('apitoken') || qp('bearer');
-    if (bearer) headers['Authorization'] = 'Bearer ' + bearer;
-    const res = await fetch(API_URL + '/apps/' + APP + '/tokens', {
-      method:'POST', headers: headers, body: JSON.stringify(opts)
-    });
-    if(!res.ok) throw new Error('token request failed: ' + res.status);
-    const body = await res.json();
-    const d = body && body.data ? body.data : body;
-    return { token: d.token || d, wsUrl: d.wsUrl || WS_URL };
+    opts = opts || {};
+    const eph = ephemeral();
+    if (eph && eph.token) return { token: eph.token, wsUrl: eph.wsUrl };
+    const bearer = qp('apitoken') || qp('bearer') || (CFG.apiToken || '');
+    if (bearer) {
+      const res = await fetch(API_URL + '/apps/' + APP + '/tokens', {
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + bearer },
+        body: JSON.stringify(opts)
+      });
+      if(!res.ok) throw new Error('token request failed: ' + res.status);
+      const body = await res.json();
+      const d = body && body.data ? body.data : body;
+      return { token: d.token || d, wsUrl: d.wsUrl || WS_URL };
+    }
+    if (opts.canPublish === false) {
+      const pub = await playToken(opts.room || ROOM);
+      return { token: pub.token, wsUrl: pub.wsUrl };
+    }
+    throw new Error('publish demo: open it with an ephemeral token (#token=…&ws=…&room=…) or an operator link (?apitoken=sk_…) — anonymous publishing is disabled');
   }
   // Public subscribe-only VIDEO+AUDIO token (no auth). Powers the turnkey
   // viewer pages; gated server-side by the app 'publicPlayback' feature.
@@ -140,6 +169,22 @@ function bootstrap(): string {
   }
   // Optional: load the streamhub-adaptor (AntMedia-style) when present.
   function loadScript(src){return new Promise((ok)=>{const s=document.createElement('script');s.src=src;s.onload=()=>ok(true);s.onerror=()=>ok(false);document.head.appendChild(s);});}`;
+}
+
+/**
+ * Resolve all `{{KEY}}` placeholders in a template. Unknown keys are left as-is.
+ * Shared by SamplesService (server-rendered `/samples` pages) and the
+ * example-bundle builder (downloadable standalone bundles) so both consume the
+ * EXACT same template source — the only difference between them is whether a
+ * `config.js` (window.STREAMHUB_CONFIG) is present at runtime.
+ */
+export function renderPlaceholders(
+  template: string,
+  ctx: Record<string, string>,
+): string {
+  return template.replace(/\{\{([A-Z_]+)\}\}/g, (m, key: string) =>
+    Object.prototype.hasOwnProperty.call(ctx, key) ? ctx[key] : m,
+  );
 }
 
 export const TEMPLATES: Record<SampleTemplateName, string> = {
@@ -597,7 +642,7 @@ const badge = document.getElementById('livebadge');
 const disc = document.getElementById('disc');
 const countEl = document.getElementById('count');
 let room = null, playing = false;
-document.getElementById('name').textContent = qp('station') || 'Radio {{APP}}';
+document.getElementById('name').textContent = qp('station') || ('Radio ' + APP);
 function updateCount(){ if(!room) return; let n=0; room.remoteParticipants.forEach(()=>n++); countEl.textContent = n > 0 ? 'transmisión activa' : 'esperando al máster…'; }
 async function tune(){
   const roomName = nsRoom(document.getElementById('room').value.trim());

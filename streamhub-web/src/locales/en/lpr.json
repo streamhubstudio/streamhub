@@ -1,0 +1,25 @@
+{
+  "panel": {
+    "noRoom": "Set the plugin's Room / stream in its configuration so the worker knows which camera to read.",
+    "recentTitle": "Recent reads",
+    "empty": "No plates read yet — reads appear here as the worker sees them.",
+    "colPlate": "Plate",
+    "colTime": "Time",
+    "colConfidence": "Conf.",
+    "colMatch": "List",
+    "colSnapshot": "Snapshot",
+    "allowed": "Allowed",
+    "denied": "Denied",
+    "noMatch": "—",
+    "listsTitle": "Whitelist / blacklist",
+    "whitelist": "Whitelist",
+    "blacklist": "Blacklist",
+    "listHint": "One plate per line (or comma-separated). Matching ignores case, spaces and dashes.",
+    "blacklistHint": "A plate on both lists is DENIED (blacklist wins).",
+    "save": "Save lists",
+    "saving": "Saving…",
+    "savedNote": "Saved — the worker restarts with the new lists.",
+    "saveError": "Could not save the lists.",
+    "eventsNote": "Every read fires plate.detected through the app's signed callbacks (plus plate.allowed / plate.denied on a list match) — point your barrier webhook at them."
+  }
+}

@@ -8,7 +8,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import type { LogEntry, LogLevel } from '@/api'
+import { formatDateTime } from '@/lib/datetime'
 import { Pagination } from '@/ui'
+import { useAppTimezone } from '@/lib/appTimezone'
 import {
   Button,
   Card,
@@ -51,6 +53,7 @@ function useDebounced<T>(value: T, ms = 400): T {
 
 export function LogsTab({ app }: { app: string }) {
   const { t } = useTranslation(['logsTab', 'common', 'appDetail'])
+  const tz = useAppTimezone()
   const [level, setLevel] = useState<LogLevel | ''>('')
   const [source, setSource] = useState('')
   const [q, setQ] = useState('')
@@ -153,7 +156,7 @@ export function LogsTab({ app }: { app: string }) {
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 md:contents">
                   <span className="text-slate-500 md:w-44 md:shrink-0">
-                    {field(entry, 'ts', 'time')}
+                    {formatDateTime(field(entry, 'ts', 'time') || undefined, tz)}
                   </span>
                   <span className={`shrink-0 md:w-12 ${levelClass(lvl)}`}>
                     {lvl.toUpperCase()}

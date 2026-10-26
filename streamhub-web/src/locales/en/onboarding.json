@@ -1,0 +1,141 @@
+{
+  "title": "Set up {{app}}",
+  "stepCounter": "Step {{n}} of {{total}}",
+  "actions": {
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "close": "Done"
+  },
+  "purpose": {
+    "title": "What is {{app}} for?",
+    "subtitle": "Your answer tailors the next steps.",
+    "options": {
+      "surveillance": {
+        "label": "Surveillance / CCTV",
+        "desc": "Cameras, recording and computer-vision analytics."
+      },
+      "radio": {
+        "label": "Internet radio",
+        "desc": "24/7 audio streaming with near-zero CPU."
+      },
+      "events": {
+        "label": "Events / broadcast",
+        "desc": "Live shows to a wide audience, with chat and reactions."
+      },
+      "meetings": {
+        "label": "1:1 sessions / meetings",
+        "desc": "Interactive rooms with a handful of participants."
+      },
+      "live-shopping": {
+        "label": "Live shopping",
+        "desc": "Sell live with reactions and a viewer count."
+      },
+      "general": {
+        "label": "General use",
+        "desc": "A bit of everything — decide later."
+      }
+    }
+  },
+  "recording": {
+    "title": "Will you record?",
+    "subtitle": "You can change this any time.",
+    "yes": "Yes, record sessions",
+    "yesDesc": "Sessions are saved as recordings (VOD).",
+    "no": "No recording",
+    "noDesc": "Live only — nothing is stored.",
+    "s3Hint": "Recordings upload to this app's own S3 bucket, which you can configure later.",
+    "s3Link": "Open storage settings"
+  },
+  "viewers": {
+    "title": "How many concurrent viewers?",
+    "subtitle": "This tunes delivery for your audience size.",
+    "small": "Under 50",
+    "smallDesc": "WebRTC with sub-second latency; single-layer keeps CPU low.",
+    "medium": "50 to 500",
+    "mediumDesc": "Adaptive (simulcast) so each viewer gets a fitting quality.",
+    "large": "500 or more",
+    "largeDesc": "Adaptive on — consider HLS delivery for very large audiences."
+  },
+  "vision": {
+    "title": "Vision models",
+    "subtitle": "Install the analytics you need — their workers stay off until you start them.",
+    "models": {
+      "occupancy": { "label": "Occupancy", "desc": "How many people are in view over time." },
+      "counting": { "label": "Counting", "desc": "Count people crossing a line (in / out)." },
+      "crowd": { "label": "Crowd", "desc": "Density and crowd-level estimation." },
+      "demography": { "label": "Demography", "desc": "Anonymous age / gender aggregates." },
+      "lpr": { "label": "License plates", "desc": "Read vehicle plates with allow / block lists." },
+      "perimeter": { "label": "Perimeter", "desc": "Person-in-zone intrusion alerts while armed." },
+      "presence": { "label": "Presence", "desc": "Absence / return and after-hours events." }
+    }
+  },
+  "tags": {
+    "title": "Tags",
+    "subtitle": "Label your streams (e.g. by store or zone). Optional.",
+    "placeholder": "Add a tag and press Enter",
+    "add": "Add",
+    "empty": "No tags yet."
+  },
+  "extras": {
+    "radio": {
+      "title": "Radio setup",
+      "body": "We'll create a passthrough ingress (RTMP → HLS remux, near-zero CPU) and install the radio player. You'll get the push URL and key on the final screen."
+    },
+    "events": {
+      "title": "Event tools",
+      "body": "We'll enable chat, reactions and the live viewer count, and install the quality selector overlay."
+    },
+    "live-shopping": {
+      "title": "Live-shopping tools",
+      "body": "We'll enable reactions and the live viewer count so your audience can react as you sell."
+    },
+    "meetings": {
+      "title": "Meetings",
+      "body": "Meetings run in interactive rooms — no extra setup needed here.",
+      "link": "Open the meeting studio"
+    }
+  },
+  "summary": {
+    "title": "Review",
+    "subtitle": "These changes will be applied to {{app}}.",
+    "empty": "No changes to apply — you can finish now and set things up later.",
+    "actions": {
+      "config": {
+        "recording": {
+          "on": "Enable recording",
+          "off": "Turn recording off"
+        },
+        "adaptive": {
+          "on": "Enable adaptive (simulcast) delivery",
+          "off": "Use single-layer delivery"
+        }
+      },
+      "features": "Enable chat, reactions and the viewer count",
+      "plugin": { "install": "Install the {{id}} plugin" },
+      "tag": { "create": "Create tag \"{{label}}\"" },
+      "ingress": { "passthrough": "Create a passthrough (radio) ingress" }
+    }
+  },
+  "running": {
+    "title": "Applying…",
+    "ofTotal": "{{done}} of {{total}} applied"
+  },
+  "done": {
+    "title": "You're all set",
+    "appliedSummaryOk": "All {{ok}} change(s) applied.",
+    "appliedSummary": "{{ok}} applied, {{failed}} failed.",
+    "radioPayoff": "Your radio ingress",
+    "rtmpUrl": "RTMP URL",
+    "streamKey": "Stream key",
+    "nextSteps": "Next steps",
+    "openApp": "Go to {{app}}",
+    "recipe": "Read the recipe"
+  },
+  "banner": {
+    "title": "Finish setting up {{app}}",
+    "body": "Run the setup wizard to tailor recording, delivery and analytics for this app.",
+    "cta": "Setup wizard"
+  }
+}

@@ -9,7 +9,6 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   formatBitrate,
-  formatDateTime,
   formatDuration,
   vodDurationS,
   vodStartedAt,
@@ -68,14 +67,4 @@ test('vodStartedAt: startedAt wins, createdAt is the legacy fallback', () => {
     'A',
   )
   assert.equal(vodStartedAt({}), undefined)
-})
-
-test('formatDateTime: dash when empty, verbatim when unparseable', () => {
-  assert.equal(formatDateTime(undefined), '—')
-  assert.equal(formatDateTime(''), '—')
-  assert.equal(formatDateTime('not-a-date'), 'not-a-date')
-  // A valid ISO date renders as *something* locale-dependent (non-dash).
-  const out = formatDateTime('2026-01-01T10:00:00.000Z')
-  assert.notEqual(out, '—')
-  assert.ok(out.length > 5)
 })

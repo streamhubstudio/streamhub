@@ -9,7 +9,9 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
+import { formatDateTime } from '@/lib/datetime'
 import { CodeEditor } from './CodeEditor'
+import { useAppTimezone } from '@/lib/appTimezone'
 import {
   Button,
   Card,
@@ -21,16 +23,14 @@ import {
   errMessage,
 } from './ui'
 
-function backupLabel(file: string, createdAt?: string): string {
-  if (createdAt) {
-    const d = new Date(createdAt)
-    if (!Number.isNaN(d.getTime())) return `${file} · ${d.toLocaleString()}`
-  }
-  return file
+function backupLabel(file: string, createdAt: string | undefined, tz: string): string {
+  if (!createdAt || Number.isNaN(new Date(createdAt).getTime())) return file
+  return `${file} · ${formatDateTime(createdAt, tz)}`
 }
 
 export function ConfigBackupsCard({ app }: { app: string }) {
   const { t } = useTranslation(['configTab', 'common', 'appDetail'])
+  const tz = useAppTimezone()
   const qc = useQueryClient()
   const list = useQuery({
     queryKey: ['app-config-backups', app],
@@ -99,7 +99,7 @@ export function ConfigBackupsCard({ app }: { app: string }) {
               <Select value={selected} onChange={(e) => setSelected(e.target.value)}>
                 {(list.data ?? []).map((b) => (
                   <option key={b.ts} value={b.ts}>
-                    {backupLabel(b.file, b.createdAt)}
+                    {backupLabel(b.file, b.createdAt, tz)}
                   </option>
                 ))}
               </Select>

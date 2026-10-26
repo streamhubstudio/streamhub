@@ -1,0 +1,80 @@
+# Loki single-binary — almacén de logs del cluster. Corre SOLO en el master
+# (stream01) dentro del overlay cluster/docker-compose.cluster.yml.
+# Diseño: https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY §Logs.
+#
+# Bindea a 127.0.0.1 (network_mode: host en el compose): NO se expone directo a
+# Internet. Los Promtail de los nodos remotos empujan vía el nginx del master
+# (location /loki/api/v1/push, allow node IPs) — ver cluster/nginx-loki-push.conf.
+#
+# Almacenamiento: filesystem local (chunks en el volumen loki_data). El roadmap
+# (§3.3) contempla mover los chunks a S3 en el futuro; para eso se cambia el
+# bloque `common.storage` / `schema_config.object_store` a `s3`. Retención 30d.
+# Presupuesto RAM: ~300-500 MB con ingesta real (mem_limit 512m en el compose).
+
+auth_enabled: false
+
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 3100
+  grpc_listen_address: 127.0.0.1
+  grpc_listen_port: 9096
+  log_level: info
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb-index
+    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki/chunks
+
+limits_config:
+  # Retención 30 días (alinea con la retención objetivo de logs de la app).
+  retention_period: 720h
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  # Permite structured metadata (campos parseados de pino: source, appId, msg).
+  allow_structured_metadata: true
+  # Topes defensivos para no dejar que un nodo con log-spam tumbe el almacén en
+  # un master de 8 GB compartido con el media stack.
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+  max_streams_per_user: 5000
+  max_label_names_per_series: 20
+  volume_enabled: true
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+  compaction_interval: 10m
+  retention_delete_delay: 2h
+
+# Sin ruler/alertmanager en Fase cluster: las alertas de logs van por métricas
+# (streamhub_log_events_total en Prometheus) y por los paneles de cluster-logs.
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules

@@ -16,7 +16,7 @@
     },
     "cuda": {
       "label": "Usar CUDA (GPU)",
-      "help": "Activado usa la GPU; desactivado corre en CPU. your-server no tiene GPU — dejalo apagado ahí."
+      "help": "Activado usa la GPU; desactivado corre en CPU. stream01 no tiene GPU — dejalo apagado ahí."
     },
     "confidence": {
       "label": "Umbral de confianza",

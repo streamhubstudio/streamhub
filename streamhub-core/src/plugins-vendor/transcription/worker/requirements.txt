@@ -1,0 +1,13 @@
+# StreamHub transcription worker runtime deps.
+#
+# faster-whisper = Whisper re-implemented on CTranslate2 — the fastest
+# open-source engine on CPU (int8) and GPU (float16). Models auto-download on
+# first use into TRANSCRIBE_MODEL_DIR (<DATA_DIR>/models/transcription).
+#
+# CPU is fine for VOD (batch) transcription with the tiny/base/small models;
+# medium/large-v3 want a GPU (TRANSCRIBE_DEVICE=cuda). The worker itself does
+# NOT need ffmpeg: the core extracts the mp3 before handing over the job.
+faster-whisper>=1.0
+
+# Dev/test only (the pure-logic tests need no faster-whisper):
+#   pip install pytest

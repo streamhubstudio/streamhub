@@ -24,6 +24,7 @@ import {
 } from '../../shared/auth-context';
 import { TenancyService } from '../tenancy/tenancy.service';
 import { IpReputationService } from '../security/ip-reputation.service';
+import { NodeRoleService } from '../cluster/node-role.service';
 import { hashPassword, verifyPassword } from './password.util';
 import { TotpService } from './totp.service';
 import {
@@ -129,6 +130,13 @@ export class AuthService implements AuthValidatorContract {
      * fire-and-forget — recordOffense never throws.
      */
     @Optional() private readonly reputation?: IpReputationService,
+    /**
+     * Cluster role (optional so bare unit harnesses keep building). When this
+     * node is an EDGE, every mint path (signup / password login / break-glass)
+     * is refused — operators sign in at the master. Already-issued JWTs and
+     * `sk_` API tokens are unaffected (validate/validateJwt do NOT consult it).
+     */
+    @Optional() private readonly nodeRole?: NodeRoleService,
   ) {}
 
   /**
@@ -156,14 +164,20 @@ export class AuthService implements AuthValidatorContract {
   // ---------------------------------------------------------------------------
 
   /**
-   * Whether PUBLIC self-signup is enabled (STREAMHUB_ALLOW_SIGNUP env flag,
-   * default OFF → invite-only). Surfaced to the SPA via GET /auth/config so the
-   * login screen only offers "Create account" when it will actually work.
+   * Whether PUBLIC self-signup (registration) is enabled. Canonical flag:
+   * `STREAMHUB_PUBLIC_REGISTRATION` (default OFF → invite-only);
+   * `STREAMHUB_ALLOW_SIGNUP` is retained as a backward-compatible alias. When
+   * the canonical flag is set it wins; otherwise the legacy alias is consulted.
+   * A truthy value (`1`/`true`/`on`/`yes`) enables public registration.
+   * Surfaced to the SPA via GET /auth/config so the login screen only offers
+   * "Create account" when it will actually work.
    */
   get allowSignup(): boolean {
-    const v = (this.config.env('STREAMHUB_ALLOW_SIGNUP') || '')
-      .trim()
-      .toLowerCase();
+    const raw =
+      this.config.env('STREAMHUB_PUBLIC_REGISTRATION') ||
+      this.config.env('STREAMHUB_ALLOW_SIGNUP') ||
+      '';
+    const v = raw.trim().toLowerCase();
     return v === '1' || v === 'true' || v === 'on' || v === 'yes';
   }
 
@@ -173,9 +187,10 @@ export class AuthService implements AuthValidatorContract {
    * then mints a login JWT (sub = user id). Teams are isolated — the tenant
    * scoping enforced by Casbin/quotas already keeps a user to their own team.
    *
-   * Gated by STREAMHUB_ALLOW_SIGNUP: when OFF, only a previously-invited
-   * PENDING user may "sign up" (that completes their invite by attaching a
-   * password); a brand-new email is refused with 403.
+   * Gated by STREAMHUB_PUBLIC_REGISTRATION (alias: STREAMHUB_ALLOW_SIGNUP):
+   * when OFF, only a previously-invited PENDING user may "sign up" (that
+   * completes their invite by attaching a password); a brand-new email is
+   * refused with 403.
    */
   async signup(
     input: SignupInput,
@@ -298,8 +313,27 @@ export class AuthService implements AuthValidatorContract {
     throw new UnauthorizedException('Invalid username or password');
   }
 
-  /** Resolve STREAMHUB_JWT_SECRET or refuse to mint/verify (login disabled). */
+  /**
+   * The choke point EVERY human mint path funnels through (signup / password
+   * login / break-glass). Refuses to mint on a cluster EDGE (login is managed at
+   * the master) BEFORE resolving the secret, then returns STREAMHUB_JWT_SECRET
+   * (or 401 when login isn't configured). NOT used by validate/validateJwt —
+   * already-issued JWTs and `sk_` tokens keep working on an edge (see
+   * {@link resolveJwtSecret}).
+   */
   private requireSecret(): string {
+    if (this.nodeRole?.isEdge()) {
+      throw new ForbiddenException('cluster_edge_login_disabled');
+    }
+    return this.resolveJwtSecret();
+  }
+
+  /**
+   * Resolve STREAMHUB_JWT_SECRET for token VALIDATION (no edge check): a
+   * converted edge must keep honouring the sessions it already issued and any
+   * `sk_` API token. 401 when the secret is unset (login not configured).
+   */
+  private resolveJwtSecret(): string {
     const secret = this.config.jwtSecret;
     if (!secret) {
       this.logger.warn('auth attempted but STREAMHUB_JWT_SECRET not configured');
@@ -491,7 +525,9 @@ export class AuthService implements AuthValidatorContract {
    * UnauthorizedException on any failure.
    */
   private async validateJwt(req: Request, token: string): Promise<AuthContext> {
-    const secret = this.requireSecret();
+    // VALIDATION path — no edge lock: a converted edge keeps honouring the
+    // sessions it already issued (and `sk_` tokens are handled in validate()).
+    const secret = this.resolveJwtSecret();
     let payload: { sub?: string; sid?: string };
     try {
       payload = verifyJwt(token, secret);
@@ -646,15 +682,13 @@ export class AuthService implements AuthValidatorContract {
     return whitelist.some((entry) => this.ipMatches(clientIp, entry.trim()));
   }
 
-  /** Resolve the real client IP, honouring nginx's X-Forwarded-For. */
+  /**
+   * Proxy-validated client IP (fix P0-2): Express resolves `req.ip` from
+   * X-Forwarded-For according to `trust proxy` (1 hop — our Caddy/nginx), so a
+   * client-supplied XFF can no longer spoof an allowlisted address. Never
+   * read the raw header here.
+   */
   private clientIp(req: Request): string {
-    const fwd = req.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length > 0) {
-      return fwd.split(',')[0].trim();
-    }
-    if (Array.isArray(fwd) && fwd.length > 0) {
-      return fwd[0].trim();
-    }
     return req.ip || req.socket?.remoteAddress || '';
   }
 

@@ -68,7 +68,7 @@ export function RawConfigCard({ app }: { app: string }) {
         title={t('raw.title')}
         subtitle={t('raw.subtitle')}
         right={
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge tone="cyan">{t('raw.sourceOfTruthBadge')}</Badge>
             <Button
               variant="ghost"

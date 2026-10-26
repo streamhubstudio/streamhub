@@ -18,6 +18,8 @@ import { GpuStatusDto } from './dto/gpu-status.dto';
 import { GpuStatus } from './gpu.types';
 import { SettingsService } from './settings.service';
 import { ServerSettings } from './settings.types';
+import { OsTuningService } from './os-tuning.service';
+import { OsTuningReport } from './os-tuning.types';
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
 
 /** Standard StreamHub response envelope (SPEC §6). */
@@ -42,6 +44,7 @@ export class SystemController {
   constructor(
     private readonly gpu: GpuService,
     private readonly settings: SettingsService,
+    private readonly osTuning: OsTuningService,
   ) {}
 
   @Get('gpu')
@@ -78,6 +81,23 @@ export class SystemController {
   getSettings(@CurrentAuth() ctx?: AuthContext): Envelope<ServerSettings> {
     this.requireGlobal(ctx);
     return ok(this.settings.getSettings());
+  }
+
+  @Get('os-tuning')
+  @ApiOperation({
+    summary:
+      'READ-ONLY OS performance tuning posture: per kernel/limit knob that ' +
+      'matters for a LiveKit/WebRTC media server (UDP socket buffers, listen ' +
+      'backlog, udp_mem, ephemeral port range, file-descriptor limits, ' +
+      'swappiness, transparent hugepages) → current value, recommended value ' +
+      'and an applied/not-applied verdict. Reads /proc only; never writes ' +
+      '(install.sh applies these on the host). Global-scope (superadmin) ' +
+      'surface; degrades to all-unknown on a non-Linux host.',
+  })
+  @ApiOkResponse({ description: '{ data: OsTuningReport }' })
+  getOsTuning(@CurrentAuth() ctx?: AuthContext): Envelope<OsTuningReport> {
+    this.requireGlobal(ctx);
+    return ok(this.osTuning.report());
   }
 
   /** Reject app-scoped principals from the global surface (no-op in dev). */

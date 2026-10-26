@@ -28,11 +28,11 @@ scrape_configs:
       - targets: ["streamhub-core:3020"]
         labels:
           service: streamhub-core
-    # If streamhub-core sits behind nginx/TLS at streamhub.example.com,
+    # If streamhub-core sits behind nginx/TLS at skyline.digitalhub.com.ar,
     # instead use:
     #   scheme: https
     #   static_configs:
-    #     - targets: ["streamhub.example.com"]
+    #     - targets: ["skyline.digitalhub.com.ar"]
 
   # --------------------------------------------------------------------------
   # 2) LiveKit server — NATIVE Prometheus metrics.

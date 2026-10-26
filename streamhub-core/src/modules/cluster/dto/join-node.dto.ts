@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsIn,
   IsIP,
   IsOptional,
   IsString,
@@ -47,4 +48,15 @@ export class JoinNodeDto {
   @IsString()
   @MaxLength(255)
   url?: string;
+
+  @ApiPropertyOptional({
+    enum: ['common', 'edge'],
+    example: 'edge',
+    description:
+      "Node kind (Vision Edge): 'common' (full media node, default) or 'edge' " +
+      '(worker/compute node). Persisted to nodes.type on join; omitted → left as-is.',
+  })
+  @IsOptional()
+  @IsIn(['common', 'edge'])
+  type?: 'common' | 'edge';
 }

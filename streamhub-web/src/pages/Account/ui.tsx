@@ -14,6 +14,7 @@ import {
   Button as UiButton,
   Card as UiCard,
   Input,
+  Switcher,
   Tag,
 } from '@/ui'
 
@@ -142,6 +143,28 @@ export function Button({
       color={color}
       className={className}
       {...rest}
+    />
+  )
+}
+
+export function Toggle({
+  checked,
+  onChange,
+  disabled,
+  ariaLabel,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+  /** Accessible name for the underlying checkbox (a11y + test targeting). */
+  ariaLabel?: string
+}) {
+  return (
+    <Switcher
+      checked={checked}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      onChange={() => onChange(!checked)}
     />
   )
 }

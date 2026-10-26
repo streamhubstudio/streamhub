@@ -6,6 +6,7 @@ import {
   HttpCode,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -14,13 +15,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
+import { SendResult } from '../email/email.service';
+import { TestSmtpDto } from '../email/dto/test-smtp.dto';
 import {
   AccountService,
   AccountInfo,
+  MaskedAccountSmtp,
   TwoFaSetupResult,
 } from './account.service';
 import {
   ChangePasswordDto,
+  SetAccountSmtpDto,
   TwoFaCodeDto,
   UpdateAccountDto,
 } from './dto/account.dto';
@@ -131,6 +136,58 @@ export class AccountController {
   ): Envelope<{ enabled: boolean }> {
     this.account.disableTwoFa(this.requireHuman(ctx), dto.code);
     return { data: { enabled: false }, error: null };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-user SMTP override (owner item 29)
+  // ---------------------------------------------------------------------------
+
+  @Get('smtp')
+  @ApiOperation({
+    summary: 'My SMTP override (password masked).',
+    description:
+      'Mail I initiate (my own magic-link sign-in, an invite I send as ' +
+      'inviter) uses this when enabled, else the app SMTP, else the global ' +
+      'default. Test with POST /account/smtp/test.',
+  })
+  @ApiOkResponse({ description: '{ data: MaskedAccountSmtp }.' })
+  getSmtp(@CurrentAuth() ctx?: AuthContext): Envelope<MaskedAccountSmtp> {
+    return { data: this.account.getSmtp(this.requireHuman(ctx)), error: null };
+  }
+
+  @Put('smtp')
+  @ApiOperation({
+    summary: 'Update my SMTP override. Omit pass to keep the stored one.',
+    description:
+      'The password is stored ENCRYPTED (auth/secret-cipher.util), never plaintext.',
+  })
+  @ApiOkResponse({ description: '{ data: MaskedAccountSmtp } after the update.' })
+  setSmtp(
+    @Body() dto: SetAccountSmtpDto,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Envelope<MaskedAccountSmtp> {
+    return {
+      data: this.account.setSmtp(this.requireHuman(ctx), dto),
+      error: null,
+    };
+  }
+
+  @Post('smtp/test')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Send a probe email using MY configured SMTP.',
+    description:
+      'Bypasses the enabled gate so the settings can be verified BEFORE ' +
+      'flipping the switch live. Never throws on an SMTP failure — the result ' +
+      'body carries ok/error/skipped.',
+  })
+  @ApiOkResponse({ description: '{ data: SendResult }.' })
+  async testSmtp(
+    @Body() dto: TestSmtpDto,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Promise<Envelope<SendResult>> {
+    const result = await this.account.testSmtp(this.requireHuman(ctx), dto.to);
+    return { data: result, error: null };
   }
 
   /** Account routes are for signed-in HUMANS; machine tokens are rejected. */

@@ -9,8 +9,8 @@ export interface RotationOptions {
   baseName?: string;
   /**
    * Extra base names whose rotated files still count for retention/cleanup even
-   * though we no longer write them (e.g. archives from a previous base name after
-   * a rename). Never used for the active file.
+   * though we no longer write them (e.g. the historical `skyline-*` archives
+   * after the rename to `streamhub`). Never used for the active file.
    */
   legacyBaseNames?: string[];
   /** Rotate when the active file would exceed this many bytes. */
@@ -27,8 +27,8 @@ export interface RotationOptions {
  * active file is renamed to `<baseName>-<ISO-ts>.log` and a fresh one is opened.
  *
  * Archived files are pruned by BOTH a count cap (`maxFiles`) and an age cap
- * (`maxAgeDays`). The sweep also matches `legacyBaseNames` so archives from a
- * previous base name are cleaned up after a rename.
+ * (`maxAgeDays`). The sweep also matches `legacyBaseNames` so old `skyline-*`
+ * archives are cleaned up after the rename to `streamhub`.
  *
  * Robustness first: every operation is wrapped so a filesystem error can never
  * crash the process (SPEC §15 "errores nunca crashean").

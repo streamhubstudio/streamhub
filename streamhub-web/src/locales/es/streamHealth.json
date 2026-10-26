@@ -1,0 +1,66 @@
+{
+  "loading": "Cargando…",
+  "section": {
+    "monitor": "Monitor",
+    "events": "Eventos"
+  },
+  "status": {
+    "healthy": "saludable",
+    "degraded": "degradado",
+    "critical": "crítico",
+    "stale": "sin datos"
+  },
+  "reason": {
+    "stalled": "detenido",
+    "audio_silent": "audio en silencio",
+    "audio_missing": "sin pista de audio",
+    "av_desync": "desfase A/V",
+    "discontinuity": "discontinuidad",
+    "bitrate_low": "caída de bitrate"
+  },
+  "metric": {
+    "resolution": "Resolución",
+    "codecs": "Códecs",
+    "bitrate": "Bitrate",
+    "baseline": "Línea base",
+    "volume": "Volumen",
+    "desync": "Desfase A/V",
+    "ccErrors": "Errores CC",
+    "lastSegment": "Último segmento",
+    "noAudio": "sin audio"
+  },
+  "tiles": {
+    "today": "{{count}} eventos hoy",
+    "tracked": "{{count}} streams",
+    "stale": "feed del worker desactualizado"
+  },
+  "thresholds": {
+    "title": "Umbrales para este stream",
+    "hint": "Los campos vacíos heredan los valores de la app (se muestran como placeholder). Los cambios aplican en la próxima muestra — sin reinicio.",
+    "sample_interval_sec": "Intervalo de muestreo (s)",
+    "silence_db": "Silencio (dBFS)",
+    "silence_duration_sec": "Duración del silencio (s)",
+    "desync_ms": "Desfase A/V (ms)",
+    "stall_sec": "Detención (s)",
+    "bitrate_drop_pct": "Caída de bitrate (%)",
+    "recover_samples": "Muestras de recuperación"
+  },
+  "actions": {
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "back": "Volver"
+  },
+  "savedOk": "Guardado",
+  "savedErr": "Error al guardar",
+  "savedInvalid": "Hay valores fuera de rango",
+  "events": {
+    "empty": "Todavía no hay eventos de salud registrados.",
+    "time": "Hora",
+    "stream": "Stream",
+    "event": "Evento",
+    "detail": "Detalle",
+    "roomTitle": "Eventos recientes de este stream"
+  },
+  "noStreams": "No hay streams en vivo con salida HLS en este momento. Empezá a publicar para ver la salud acá.",
+  "noFeed": "Sin feed del worker. Instalá y activá la app (y revisá el estado del worker en el Marketplace) — el monitor necesita el worker de stream-health corriendo."
+}

@@ -8,12 +8,28 @@
  */
 import type { PluginModule, PluginPlacement, RegisteredPlugin } from './types.ts'
 
-const PLACEMENTS: PluginPlacement[] = ['app-tab', 'panel', 'player-overlay']
+const PLACEMENTS: PluginPlacement[] = [
+  'app-tab',
+  'panel',
+  'player-overlay',
+  'player',
+]
 
 /** Derive a fallback id from a discovery path like `./chat/index.ts` → `chat`. */
 export function idFromSource(source: string): string {
   const m = source.match(/\/?([^/]+)\/index\.[tj]sx?$/)
   return m ? m[1] : source
+}
+
+/**
+ * A VENDORED plugin lives under `src/plugins-vendor/` (composed in from a
+ * decoupled app package by scripts/apps-pull.mjs). Discovery globs it alongside
+ * the in-tree `src/plugins/`, but an in-tree plugin of the same id always WINS —
+ * so dropping a vendored package that collides with a shipped one never shadows
+ * the shipped UI (mirrors the core registry's in-tree-wins rule).
+ */
+function isVendorSource(source: string): boolean {
+  return source.includes('plugins-vendor')
 }
 
 /** Accepts either the raw module (`{ default }`) or a bare PluginModule. */
@@ -84,12 +100,20 @@ export function buildRegistry(
       if (reason) warnings.push(`[plugins] skipped ${path}: ${reason}`)
       continue
     }
-    if (registry.has(plugin.id)) {
-      warnings.push(
-        `[plugins] duplicate id "${plugin.id}" at ${path} — keeping ${
-          registry.get(plugin.id)?.source
-        }`,
-      )
+    const existing = registry.get(plugin.id)
+    if (existing) {
+      // In-tree beats vendored on an id collision, regardless of glob order; two
+      // sources of the SAME priority keep the first (existing behavior).
+      if (isVendorSource(existing.source) && !isVendorSource(path)) {
+        warnings.push(
+          `[plugins] vendored "${plugin.id}" at ${existing.source} shadowed by in-tree ${path}`,
+        )
+        registry.set(plugin.id, plugin)
+      } else {
+        warnings.push(
+          `[plugins] duplicate id "${plugin.id}" at ${path} — keeping ${existing.source}`,
+        )
+      }
       continue
     }
     registry.set(plugin.id, plugin)

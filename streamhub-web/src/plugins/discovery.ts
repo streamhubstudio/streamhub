@@ -16,7 +16,15 @@
 import { buildRegistry } from './registry.ts'
 import type { RegisteredPlugin } from './types.ts'
 
-const modules = import.meta.glob('./*/index.{ts,tsx}', { eager: true })
+// In-tree plugins (src/plugins/<id>/index.*) AND vendored, decoupled app
+// packages composed in by scripts/apps-pull.mjs (src/plugins-vendor/<id>/…).
+// Both globs are one level of sub-folder deep. The vendor glob matches nothing
+// on a clean checkout (the dir is gitignored + only created by apps-pull).
+// buildRegistry lets an in-tree plugin win an id collision with a vendored one.
+const modules = {
+  ...import.meta.glob('./*/index.{ts,tsx}', { eager: true }),
+  ...import.meta.glob('../plugins-vendor/*/index.{ts,tsx}', { eager: true }),
+}
 
 const { registry, warnings } = buildRegistry(modules)
 

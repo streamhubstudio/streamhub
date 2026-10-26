@@ -12,6 +12,7 @@ import { CockpitPanel } from './CockpitPanel.tsx'
 
 export default definePlugin({
   id: 'cockpit',
+  kind: 'app',
   name: 'Cockpit',
   description:
     'CCTV-style surveillance board: a paginated, drag-and-drop grid of every live stream in the app.',

@@ -1,0 +1,61 @@
+{
+  "title": "Backups de bases de datos",
+  "subtitle": "Snapshots versionados y comprimidos (gzip) de cada base SQLite — el registro global y el app.db de cada aplicación. Corre a diario y retiene los últimos días configurados.",
+  "runNow": "Hacer backup ahora",
+  "runError": "No se pudo ejecutar el backup.",
+  "runPartial": "El backup terminó con errores: {{errors}}",
+  "disabledHint": "Los backups programados están APAGADOS (STREAMHUB_BACKUPS_ENABLED=false). Podés seguir creando backups manuales con el botón, pero no habrá snapshots automáticos diarios.",
+  "envHint": "Configuración por variables de entorno: STREAMHUB_BACKUPS_ENABLED, STREAMHUB_BACKUP_RETENTION_DAYS, STREAMHUB_BACKUP_DIR y STREAMHUB_BACKUP_CRON — ver operations/BACKUPS.md.",
+  "status": {
+    "enabled": "programado",
+    "disabled": "apagado",
+    "retention": "retención: {{days}} días",
+    "schedule": "cron"
+  },
+  "db": {
+    "global": "Registro global",
+    "app": "App «{{app}}»",
+    "orphaned": "app eliminada",
+    "liveSize": "DB en vivo: {{size}}"
+  },
+  "snapshots": {
+    "file": "Snapshot",
+    "created": "Creado",
+    "age": "Antigüedad",
+    "size": "Tamaño",
+    "preRestore": "copia de seguridad pre-restore",
+    "empty": "Todavía no hay snapshots de esta base. Usá «Hacer backup ahora» o esperá la corrida diaria.",
+    "days_one": "{{count}} día",
+    "days_other": "{{count}} días",
+    "count_one": "{{count}} snapshot",
+    "count_other": "{{count}} snapshots"
+  },
+  "restore": {
+    "button": "Restaurar",
+    "title": "Restaurar backup",
+    "destructive": "destructivo",
+    "phrase": "RESTAURAR",
+    "summary": "Vas a restaurar {{db}} desde el snapshot {{file}}.",
+    "warnOverwrite": "SOBREESCRIBE la base de datos actual: todo cambio posterior al snapshot se pierde.",
+    "warnSafety": "Antes de tocar nada se crea automáticamente un backup de seguridad (.pre-restore) del estado actual — podés volver atrás restaurándolo.",
+    "warnIntegrity": "El snapshot se valida (gunzip + PRAGMA integrity_check) ANTES del reemplazo; si está corrupto, no se toca nada.",
+    "warnGlobal": "Es el registro GLOBAL: tras restaurar se recomienda reiniciar el core para refrescar los estados en memoria (permisos, cachés).",
+    "confirmLabel": "Escribí {{phrase}} para habilitar el botón",
+    "confirmButton": "Restaurar (sobrescribe la DB)",
+    "error": "No se pudo restaurar el snapshot.",
+    "done": "{{db}} restaurada correctamente.",
+    "safetyCreated": "Copia de seguridad pre-restore creada: {{file}}",
+    "restartRecommended": "Se restauró el registro global: reiniciá el core (docker compose restart core) para que los estados en memoria se reconstruyan."
+  },
+  "relative": {
+    "now": "recién",
+    "seconds_one": "hace {{count}}s",
+    "seconds_other": "hace {{count}}s",
+    "minutes_one": "hace {{count}} min",
+    "minutes_other": "hace {{count}} min",
+    "hours_one": "hace {{count}}h",
+    "hours_other": "hace {{count}}h",
+    "days_one": "hace {{count}} día",
+    "days_other": "hace {{count}} días"
+  }
+}

@@ -402,11 +402,36 @@ describe('auth/AuthService', () => {
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
-    it('honours X-Forwarded-For (nginx) over socket ip', async () => {
+    // =========================================================================
+    // Fix P0-2 — the whitelist consumes the PROXY-VALIDATED req.ip. A raw
+    // X-Forwarded-For header (fully attacker-controlled) must never satisfy it.
+    // The pre-fix behaviour ("honours X-Forwarded-For over socket ip") was the
+    // vulnerability: any client could send `X-Forwarded-For: <allowed-ip>`.
+    // =========================================================================
+    it('SECURITY: a spoofed XFF with an ALLOWED ip is rejected (req.ip wins)', async () => {
       const token = await tokenWithIps(['203.0.113.10']);
       await expect(
         h.auth.validate(
-          makeReq({ token, ip: '127.0.0.1', xff: '203.0.113.10, 10.0.0.1' }),
+          // Express resolved the attacker's real IP; the header is a spoof.
+          makeReq({ token, ip: '198.51.100.77', xff: '203.0.113.10, 10.0.0.1' }),
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('SECURITY: a spoofed "X-Forwarded-For: 127.0.0.1" does not bypass a loopback-only whitelist', async () => {
+      const token = await tokenWithIps(['127.0.0.1']);
+      await expect(
+        h.auth.validate(
+          makeReq({ token, ip: '198.51.100.77', xff: '127.0.0.1' }),
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('the proxy-validated req.ip still satisfies the whitelist (no false lock-out)', async () => {
+      const token = await tokenWithIps(['203.0.113.10']);
+      await expect(
+        h.auth.validate(
+          makeReq({ token, ip: '203.0.113.10', xff: '9.9.9.9' }),
         ),
       ).resolves.toBeDefined();
     });

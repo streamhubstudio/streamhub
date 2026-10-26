@@ -47,16 +47,20 @@
       "label": "Integraciones",
       "hint": "Callbacks (avisos del servidor) y funciones"
     },
+    "streamflow": {
+      "label": "Streamflow",
+      "hint": "Automatización visual de flujos de eventos para este app"
+    },
     "plugins": {
-      "label": "Plugins",
-      "hint": "Instalá, configurá y abrí los plugins de este app"
+      "label": "Studio",
+      "hint": "Instalá, configurá y abrí los apps de Studio de este app"
     },
     "logs": {
       "label": "Logs",
       "hint": "Eventos del app"
     },
     "sistema": {
-      "label": "Sistema",
+      "label": "Mantenimiento",
       "hint": "Base de datos y mantenimiento"
     },
     "config": {

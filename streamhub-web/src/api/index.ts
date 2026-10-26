@@ -7,6 +7,7 @@ export {
   setToken,
   clearToken,
   setUnauthorizedHandler,
+  saveBlob,
   API_BASE,
 } from './http'
 export * from './types'

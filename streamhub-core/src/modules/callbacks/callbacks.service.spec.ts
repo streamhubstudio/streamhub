@@ -46,6 +46,8 @@ describe('CallbacksService', () => {
     apps = mockAppsService();
     logs = mockLogsService();
     svc = new CallbacksService(apps as any, logs as any);
+    // Egress SSRF guard DNS seam: resolve every host to a public IP (no network).
+    svc.hostResolver = async () => ['93.184.216.34'];
     realFetch = global.fetch;
     global.fetch = jest.fn(async () => okResponse(200) as any);
   });

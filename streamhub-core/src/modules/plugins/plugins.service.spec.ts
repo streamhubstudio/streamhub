@@ -82,6 +82,7 @@ describe('PluginsService', () => {
   let dir: string;
   let registry: PluginRegistryService;
   let workers: PluginWorkerManager;
+  let repo: AppPluginsRepository;
   let svc: PluginsService;
 
   beforeEach(() => {
@@ -91,7 +92,7 @@ describe('PluginsService', () => {
     registry = new PluginRegistryService(dir);
     registry.discover();
     workers = new PluginWorkerManager(ctx.config, ctx.mocks.logs);
-    const repo = new AppPluginsRepository(ctx.db);
+    repo = new AppPluginsRepository(ctx.db);
     ctx.mocks.apps.get.mockResolvedValue(appRecord());
     svc = new PluginsService(
       registry,
@@ -223,6 +224,71 @@ describe('PluginsService', () => {
       expect(logs.pluginId).toBe('sleeper');
       expect(logs.worker?.status).toBe('running');
       expect(logs.workerLogs.some((l) => l.stream === 'system')).toBe(true);
+    });
+  });
+
+  describe('desired worker state (survives restart)', () => {
+    it('records the intent across the lifecycle (install→enable→stop→start)', async () => {
+      await svc.install(APP, 'sleeper'); // installed disabled
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('stopped');
+      await svc.patch(APP, 'sleeper', { enabled: true }); // reconcile → running
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('running');
+      await svc.stopWorker(APP, 'sleeper'); // explicit stop
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('stopped');
+      await svc.startWorker(APP, 'sleeper'); // explicit start
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('running');
+    });
+
+    it('flips intent to stopped when disabled', async () => {
+      await svc.install(APP, 'sleeper');
+      await svc.patch(APP, 'sleeper', { enabled: true });
+      await svc.patch(APP, 'sleeper', { enabled: false });
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('stopped');
+    });
+  });
+
+  describe('boot resume', () => {
+    it('restarts a worker whose intent is running (and skips stopped)', async () => {
+      await svc.install(APP, 'sleeper');
+      await svc.patch(APP, 'sleeper', { enabled: true });
+      // Simulate a core restart: the worker is dead but the intent persisted.
+      workers.stop(APP, 'sleeper');
+      expect(workers.isRunning(APP, 'sleeper')).toBe(false);
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('running');
+
+      const started = await svc.resumeDesiredWorkers(APP);
+      expect(started).toBe(1);
+      expect(workers.isRunning(APP, 'sleeper')).toBe(true);
+
+      // A second resume is a no-op (already running).
+      expect(await svc.resumeDesiredWorkers(APP)).toBe(0);
+    });
+
+    it('does NOT restart a worker the operator explicitly stopped', async () => {
+      await svc.install(APP, 'sleeper');
+      await svc.patch(APP, 'sleeper', { enabled: true });
+      await svc.stopWorker(APP, 'sleeper'); // intent → stopped
+      expect(await svc.resumeDesiredWorkers(APP)).toBe(0);
+      expect(workers.isRunning(APP, 'sleeper')).toBe(false);
+    });
+
+    it('backfills a NULL intent conservatively (enabled needsWorker → running) and starts it', async () => {
+      // A pre-existing install with NO recorded intent (legacy row).
+      repo.install(APP, 'sleeper', { interval: 1000 }, true);
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBeNull();
+
+      const started = await svc.resumeDesiredWorkers(APP);
+      expect(started).toBe(1);
+      // Intent persisted for next time.
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('running');
+      expect(workers.isRunning(APP, 'sleeper')).toBe(true);
+    });
+
+    it('backfills a disabled legacy install to stopped and leaves it down', async () => {
+      repo.install(APP, 'sleeper', { interval: 1000 }, false); // disabled, NULL intent
+      expect(await svc.resumeDesiredWorkers(APP)).toBe(0);
+      expect(repo.get(APP, 'sleeper')?.workerDesired).toBe('stopped');
+      expect(workers.isRunning(APP, 'sleeper')).toBe(false);
     });
   });
 });

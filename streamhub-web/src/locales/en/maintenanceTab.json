@@ -1,5 +1,10 @@
 {
   "confirmPhrase": "PURGE",
+  "danger": {
+    "title": "Danger zone",
+    "deleteDesc": "Permanently delete this app — its config, streams, tokens, ingress and all app-scoped data. This cannot be undone. You'll be asked to type the app name to confirm, and can optionally also delete its recordings/VODs.",
+    "deleteApp": "Delete this app"
+  },
   "scope": {
     "vods": {
       "label": "VODs",

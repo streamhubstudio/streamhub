@@ -21,6 +21,8 @@ import { api, ApiRequestError } from '@/api'
 import {
   cooldownSecondsFrom,
   DEFAULT_COOLDOWN_SECONDS,
+  edgeMasterUrl,
+  isClusterEdge,
   isTotpInvalid,
   isTotpRequired,
 } from '@/lib/authFlows'
@@ -61,6 +63,9 @@ export default function Login() {
     retry: false,
   })
   const allowSignup = authConfig.data?.allowSignup === true
+  // Cluster edge: login is managed at the master → hide the forms, show a notice.
+  const isEdge = isClusterEdge(authConfig.data)
+  const masterUrl = edgeMasterUrl(authConfig.data)
 
   // magic-link state
   const [email, setEmail] = useState('')
@@ -143,8 +148,35 @@ export default function Login() {
 
   return (
     <AuthShell>
-      {/* ---- Break-glass admin form (only via /login?admin=1) ---- */}
-      {adminMode ? (
+      {/* ---- Cluster edge: no login here — manage at the master ---- */}
+      {isEdge ? (
+        <>
+          <AuthHeading
+            title={t('login.edge.title')}
+            subtitle={t('login.edge.body')}
+          />
+          {masterUrl ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-center text-sm font-medium text-fg break-all">
+                {masterUrl}
+              </div>
+              <a
+                href={masterUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex w-full items-center justify-center rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600"
+              >
+                {t('login.edge.openMaster')}
+              </a>
+            </div>
+          ) : (
+            <Alert showIcon type="info">
+              {t('login.edge.noMaster')}
+            </Alert>
+          )}
+        </>
+      ) : /* ---- Break-glass admin form (only via /login?admin=1) ---- */
+      adminMode ? (
         <>
           <AuthHeading
             title={needsCode ? t('login.totp.title') : t('login.admin.title')}

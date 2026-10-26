@@ -1,8 +1,8 @@
 # Scrape config del stack de observabilidad (Fase 1).
-# Diseño: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md §4.4.
+# Diseño: https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP §4.4.
 # Distinto de streamhub-core/deploy/prometheus.yml (config de referencia para
 # despliegues en red docker-compose, con targets `streamhub-core:3020` /
-# `livekit:6789`). Este archivo asume el nodo de referencia (`your-server`):
+# `livekit:6789`). Este archivo asume el nodo de referencia (`stream01`):
 # streamhub-core y LiveKit corren nativos (systemd) → se scrapea todo por
 # `127.0.0.1` con `network_mode: host` (ver docker-compose.observability.yml).
 
@@ -12,7 +12,7 @@ global:
   evaluation_interval: 15s
   external_labels:
     stack: streamhub
-    node: your-server        # ajustar por nodo si esto se replica en un cluster
+    node: stream01        # ajustar por nodo si esto se replica en un cluster
 
 rule_files:
   - /etc/prometheus/alerts.yml
@@ -86,9 +86,11 @@ scrape_configs:
         labels: { service: host }
 
   # --------------------------------------------------------------------------
-  # 6) Prometheus self-monitoring.
+  # 6) Prometheus self-monitoring. Bound to 9091 (NOT 9090): on a media node the
+  #    LiveKit ingress already holds 127.0.0.1:9090 (its debug server) — verified
+  #    live. See docker-compose.observability.yml (--web.listen-address).
   # --------------------------------------------------------------------------
   - job_name: prometheus
     static_configs:
-      - targets: ["127.0.0.1:9090"]
+      - targets: ["127.0.0.1:9091"]
         labels: { service: prometheus }

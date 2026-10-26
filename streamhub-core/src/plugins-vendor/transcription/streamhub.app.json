@@ -1,0 +1,146 @@
+{
+  "manifestVersion": 1,
+  "id": "transcription",
+  "name": "VOD Transcription",
+  "description": "Transcribes recorded VODs to text + SRT subtitles (uploaded next to the recording in S3). Local open-source Whisper by default; OpenAI API optional.",
+  "category": "processor",
+  "ui": "panel",
+  "version": "1.0.0",
+  "kind": "app",
+  "icon": "subtitles",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "configSchema": [
+    {
+      "key": "provider",
+      "type": "select",
+      "label": "Transcription engine",
+      "default": "local",
+      "options": [
+        {
+          "value": "local",
+          "label": "Local Whisper (faster-whisper, open source)"
+        },
+        {
+          "value": "openai",
+          "label": "OpenAI API (whisper-1 / gpt-4o-transcribe)"
+        }
+      ],
+      "help": "local runs on this server via the plugin worker (no external calls, no API cost); openai sends the extracted audio to the OpenAI API."
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Whisper model (local)",
+      "default": "small",
+      "options": [
+        {
+          "value": "tiny",
+          "label": "tiny (fastest, lowest quality)"
+        },
+        {
+          "value": "base",
+          "label": "base"
+        },
+        {
+          "value": "small",
+          "label": "small (good default)"
+        },
+        {
+          "value": "medium",
+          "label": "medium"
+        },
+        {
+          "value": "large-v3",
+          "label": "large-v3 (best, needs GPU/RAM)"
+        }
+      ],
+      "help": "Only used by the local engine; auto-downloaded on first use."
+    },
+    {
+      "key": "openaiModel",
+      "type": "select",
+      "label": "OpenAI model",
+      "default": "whisper-1",
+      "options": [
+        {
+          "value": "whisper-1",
+          "label": "whisper-1 (timed segments — best for SRT)"
+        },
+        {
+          "value": "gpt-4o-transcribe",
+          "label": "gpt-4o-transcribe (text only)"
+        },
+        {
+          "value": "gpt-4o-mini-transcribe",
+          "label": "gpt-4o-mini-transcribe (text only, cheapest)"
+        }
+      ],
+      "help": "Only used when the engine is openai. Models without segment timestamps yield a single full-length SRT cue."
+    },
+    {
+      "key": "language",
+      "type": "string",
+      "label": "Language",
+      "default": "auto",
+      "placeholder": "auto | es | en | pt …",
+      "help": "ISO code of the spoken language; 'auto' detects it."
+    },
+    {
+      "key": "autoTranscribe",
+      "type": "boolean",
+      "label": "Transcribe new VODs automatically",
+      "default": true,
+      "help": "On: every recording is transcribed as soon as its VOD is ready. Off: transcribe on demand (POST /apps/:app/vods/:id/transcribe)."
+    },
+    {
+      "key": "apiKey",
+      "type": "secret",
+      "label": "OpenAI API key",
+      "default": "",
+      "placeholder": "sk-…",
+      "help": "Required only when the engine is openai."
+    },
+    {
+      "key": "device",
+      "type": "select",
+      "label": "Compute device (local)",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Auto (CUDA if available, else CPU)"
+        },
+        {
+          "value": "cpu",
+          "label": "CPU"
+        },
+        {
+          "value": "cuda",
+          "label": "CUDA (GPU)"
+        }
+      ]
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m transcription_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "TRANSCRIBE_APP": "{{app}}",
+      "TRANSCRIBE_JOBS_DIR": "{{appDir}}/transcripts/jobs",
+      "TRANSCRIBE_RESULTS_DIR": "{{appDir}}/transcripts/results",
+      "TRANSCRIBE_MODEL": "{{config.model}}",
+      "TRANSCRIBE_LANGUAGE": "{{config.language}}",
+      "TRANSCRIBE_DEVICE": "{{config.device}}",
+      "TRANSCRIBE_MODEL_DIR": "{{dataDir}}/models/transcription"
+    }
+  },
+  "standalone": {
+    "supported": false
+  }
+}

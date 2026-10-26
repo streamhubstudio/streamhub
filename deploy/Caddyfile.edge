@@ -1,0 +1,60 @@
+# StreamHub — HLS EDGE CACHE (Caddy reverse proxy)
+# =============================================================================
+# Caddy variant of deploy/nginx-hls-edge.conf. Drop this on an EDGE node near
+# your viewers to front a StreamHub ORIGIN's /hls with a caching reverse proxy,
+# offloading live-viewer fan-out bandwidth from the origin's egress.
+#
+#   viewer ──HTTPS──> [ this Caddy edge : /hls ] ──miss──> [ StreamHub origin ]
+#
+# Caddy's core has NO HTTP cache; this uses the Souin cache-handler module. Build
+# a Caddy with it (or use the Souin/Caddy Docker image):
+#
+#   xcaddy build --with github.com/caddyserver/cache-handler
+#
+# The cache HONORS the origin's Cache-Control (StreamHub sends them when
+# STREAMHUB_HLS_CDN=on — see https://streamhub.studio/docs/features/HLS-CDN):
+#   * .ts  segments  -> public, max-age=1y, immutable  (cached ~forever)
+#   * .m3u8 playlist -> public, max-age=1, stale-while-revalidate=2 (live edge)
+#   * .m3u8 finished -> public, max-age=3600            (ended stream / replay)
+# Souin supports request-coalescing + stale-while-revalidate, so concurrent
+# viewers of the same object collapse onto one origin fetch.
+#
+# CROSS-NODE CAVEAT: segments live on the node whose egress produced them; this
+# edge pulls through to ONE origin. True multi-region needs egress->S3 first
+# (CLUSTER-ROADMAP.md §4 #0). See features/HLS-CDN.md.
+#
+# Replace the two >>> markers before use.
+# =============================================================================
+
+{
+	# Enable the Souin cache handler globally. `default_cache_control` is only a
+	# fallback for upstream responses that lack Cache-Control — the origin's own
+	# headers (immutable segments / short-lived playlists) always take priority.
+	cache {
+		ttl 1s
+		stale 4s
+		default_cache_control "public, max-age=1"
+		# Coalesce concurrent identical requests into one origin fetch.
+		allowed_http_verbs GET HEAD
+	}
+}
+
+edge.example.com {                        # >>> your edge hostname (gets auto-TLS)
+	encode zstd gzip
+
+	# Cache + proxy ONLY the HLS surface; the API/SPA/control plane stays on the
+	# origin, uncached and reached directly (not through this edge).
+	handle /hls/* {
+		cache                              # engage the Souin cache for this route
+		reverse_proxy https://origin.example.com {   # >>> the StreamHub origin
+			header_up Host {upstream_hostport}         # match the origin vhost/cert
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+		header Access-Control-Allow-Origin "*"        # keep players cross-origin
+	}
+
+	handle {
+		respond "not found" 404
+	}
+}

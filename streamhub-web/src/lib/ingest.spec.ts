@@ -1,5 +1,6 @@
 /**
- * node:test — RTMP ingest credential helpers (URL join/split + masking).
+ * node:test — RTMP ingest credential helpers (URL join/split + masking) plus
+ * SRT-row detection (isSrtIngress).
  *
  * Locks the Ingress tab reveal flow: the backend's full `rtmp_url`
  * (rtmp://host:1935/live/<key>) splits into OBS "Server" + "Stream Key",
@@ -7,7 +8,13 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { joinIngestUrl, maskSecret, splitIngestUrl } from './ingest.ts'
+import {
+  isMpegtsIngress,
+  isSrtIngress,
+  joinIngestUrl,
+  maskSecret,
+  splitIngestUrl,
+} from './ingest.ts'
 
 test('joinIngestUrl: server + key → full push URL', () => {
   assert.equal(
@@ -61,6 +68,31 @@ test('splitIngestUrl and joinIngestUrl round-trip', () => {
   const parts = splitIngestUrl(url, 'stream-key-77')
   assert.ok(parts)
   assert.equal(joinIngestUrl(parts.server, parts.key), url)
+})
+
+test('isSrtIngress: inputType wins; pti_srt_ id prefix is the fallback', () => {
+  // Explicit inputType (current backend list/create shape).
+  assert.equal(isSrtIngress({ inputType: 'srt', ingressId: 'pti_srt_a1' }), true)
+  // Prefix-only rows (older shape without inputType) still detect as SRT.
+  assert.equal(isSrtIngress({ ingressId: 'pti_srt_a1' }), true)
+  // RTMP passthrough (pti_ without the srt marker) and LiveKit rows are NOT SRT.
+  assert.equal(isSrtIngress({ inputType: 'rtmp', ingressId: 'pti_abc' }), false)
+  assert.equal(isSrtIngress({ inputType: 'whip', ingressId: 'IN_x' }), false)
+  assert.equal(isSrtIngress({}), false)
+  assert.equal(isSrtIngress(undefined), false)
+  assert.equal(isSrtIngress(null), false)
+})
+
+test('isMpegtsIngress: inputType wins; pti_mpegts_ id prefix is the fallback', () => {
+  assert.equal(isMpegtsIngress({ inputType: 'mpegts', ingressId: 'pti_mpegts_a1' }), true)
+  assert.equal(isMpegtsIngress({ ingressId: 'pti_mpegts_a1' }), true)
+  assert.equal(isMpegtsIngress({ inputType: 'mpegts', ingressId: 'IN_x' }), true)
+  // Not mpegts: rtmp/srt/other passthrough ids and empties.
+  assert.equal(isMpegtsIngress({ inputType: 'srt', ingressId: 'pti_srt_a1' }), false)
+  assert.equal(isMpegtsIngress({ inputType: 'rtmp', ingressId: 'pti_abc' }), false)
+  assert.equal(isMpegtsIngress({}), false)
+  assert.equal(isMpegtsIngress(undefined), false)
+  assert.equal(isMpegtsIngress(null), false)
 })
 
 test('maskSecret: keeps a short prefix, hides the rest', () => {

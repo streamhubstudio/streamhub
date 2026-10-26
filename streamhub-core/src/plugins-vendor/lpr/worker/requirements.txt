@@ -1,0 +1,22 @@
+# StreamHub LPR worker runtime deps.
+#
+# fast-alpr (MIT, https://github.com/ankandrew/fast-alpr) bundles the whole
+# open-source ALPR stack:
+#   - open-image-models (MIT): YOLOv9-t license-plate DETECTION, ONNX
+#   - fast-plate-ocr    (MIT): CCT plate OCR, ONNX
+# and pulls onnxruntime + opencv transitively. Models auto-download to
+# LPR_MODEL_DIR on first run (~20 MB total).
+#
+# CPU (default): onnxruntime runs the default detector (yolo-v9-t-384) + OCR
+# comfortably at gate-camera FPS. For NVIDIA GPUs install the [gpu] extra and
+# enable the plugin's `cuda` toggle (LPR_DEVICE=cuda):
+#   pip install "fast-alpr[gpu]"
+#
+# opencv-python-headless: HLS/RTSP frame decode via the bundled ffmpeg
+# backend + JPEG snapshot/thumbnail encode. Event/callback POSTs use the
+# stdlib (no requests).
+fast-alpr[onnx]>=0.3
+opencv-python-headless>=4.9
+
+# Dev/test only (pure-logic tests need no fast-alpr/onnxruntime/opencv):
+#   pip install pytest

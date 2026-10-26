@@ -21,6 +21,7 @@ import {
 } from '@/api'
 import { Alert, Button, Card, Input, Skeleton, Table, Tag } from '@/ui'
 import { isValidCidr } from '@/lib/cidr'
+import { formatDateTime } from '@/lib/datetime'
 import { relativeTime } from '@/lib/relativeTime'
 
 const { THead, TBody, Tr, Th, Td } = Table
@@ -264,7 +265,7 @@ function BansTable({ bans }: { bans: SecurityBan[] }) {
                 <span className="text-xs tabular-nums">{b.offenseCount}</span>
               </Td>
               <Td>
-                <span className="text-xs">{new Date(b.bannedUntil).toLocaleString()}</span>
+                <span className="text-xs">{formatDateTime(b.bannedUntil)}</span>
               </Td>
               <Td>
                 <span className="text-xs tabular-nums">{b.escalationLevel}</span>

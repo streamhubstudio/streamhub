@@ -8,19 +8,24 @@
 import { useTranslation } from 'react-i18next'
 import { HealthBanner } from './Dashboard/HealthBanner'
 import { StatsGrid } from './Dashboard/StatsGrid'
+import { NetworkCard } from './Dashboard/NetworkCard'
 import { AppsTable } from './Dashboard/AppsTable'
+import { DocsHint } from '@/components/DocsHint'
 
 export default function Dashboard() {
   const { t } = useTranslation('dashboard')
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-2xl font-semibold text-fg">{t('page.title')}</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold text-fg">
+          {t('page.title')} <DocsHint section="observability" />
+        </h1>
         <p className="text-sm text-slate-400">{t('page.subtitle')}</p>
       </div>
 
       <HealthBanner />
       <StatsGrid />
+      <NetworkCard />
       <AppsTable />
     </div>
   )

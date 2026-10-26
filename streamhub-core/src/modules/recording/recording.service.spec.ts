@@ -24,6 +24,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -59,8 +60,10 @@ function makeAppConfig(over: {
   recording?: Partial<AppConfig['recording']>;
   s3?: Partial<AppConfig['s3']>;
   transcoding?: Partial<NonNullable<AppConfig['transcoding']>>;
+  variables?: Record<string, string>;
 } = {}): AppConfig {
   return {
+    ...(over.variables ? { variables: over.variables } : {}),
     name: APP,
     displayName: 'Live',
     roomPrefix: 'live-',
@@ -252,6 +255,25 @@ describe('RecordingService', () => {
       ).rejects.toBeInstanceOf(InternalServerErrorException);
       expect(repo.list(APP)).toHaveLength(0);
     });
+
+    it('BUCKET GUARD: 409 storage_not_configured when the app has no S3 bucket', async () => {
+      cfgMock().mockResolvedValue(makeAppConfig({ s3: { bucket: '' } }));
+      let caught: unknown;
+      try {
+        await svc.start({ appName: APP, roomName: 'room-1' });
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught).toBeInstanceOf(HttpException);
+      const err = caught as HttpException;
+      expect(err.getStatus()).toBe(409);
+      expect((err.getResponse() as { error: string }).error).toBe(
+        'storage_not_configured',
+      );
+      // No egress launched, no VOD row created.
+      expect(ctx.mocks.livekit.startEgress).not.toHaveBeenCalled();
+      expect(repo.list(APP)).toHaveLength(0);
+    });
   });
 
   // ---- split / snapshot config normalization ---------------------------
@@ -299,6 +321,52 @@ describe('RecordingService', () => {
       expect(eg.snapshotIntervalS).toBeUndefined();
       expect(eg.snapshotFilePrefix).toBeUndefined();
       expect(meta(h.vodId).snapshotSeconds).toBe(0);
+    });
+  });
+
+  // ---- filename templates (StoreHub-style ${} dialect) -----------------
+  describe('recording.filenameTemplate', () => {
+    it('names the MP4 (and its S3 key) from the template + app variables', async () => {
+      cfgMock().mockResolvedValue(
+        makeAppConfig({
+          recording: { filenameTemplate: '${app}_${room}_${var.site}' },
+          variables: { site: 'HQ' },
+        }),
+      );
+      const h = await svc.start({ appName: APP, roomName: 'room-1' });
+      const vod = repo.findById(APP, h.vodId)!;
+      // Local filename == templated stem + .mp4; the S3 key derives from it.
+      expect(vod.name).toBe('live_room-1_HQ.mp4');
+      expect(vod.localPath!.endsWith('/live_room-1_HQ.mp4')).toBe(true);
+    });
+
+    it('falls back to the built-in naming when the template is unset', async () => {
+      const h = await svc.start({ appName: APP, roomName: 'room-1', streamId: 'cam' });
+      expect(repo.findById(APP, h.vodId)!.name).toMatch(/^cam-\d+\.mp4$/);
+    });
+
+    it('is traversal-proof: a malicious variable can never escape the dir', async () => {
+      cfgMock().mockResolvedValue(
+        makeAppConfig({
+          recording: { filenameTemplate: '${var.evil}' },
+          variables: { evil: '../../etc/passwd' },
+        }),
+      );
+      const h = await svc.start({ appName: APP, roomName: 'room-1' });
+      const vod = repo.findById(APP, h.vodId)!;
+      expect(vod.name).not.toContain('/');
+      expect(vod.name).not.toContain('..');
+      expect(vod.name).toBe('etc-passwd.mp4');
+    });
+
+    it('appends the split part tag AFTER the templated stem', async () => {
+      cfgMock().mockResolvedValue(
+        makeAppConfig({
+          recording: { filenameTemplate: '${room}', splitMinutes: 30 },
+        }),
+      );
+      const h = await svc.start({ appName: APP, roomName: 'room-1' });
+      expect(repo.findById(APP, h.vodId)!.name).toBe('room-1-p000.mp4');
     });
   });
 

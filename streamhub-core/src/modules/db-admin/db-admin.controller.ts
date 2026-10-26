@@ -4,8 +4,10 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Optional,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -14,6 +16,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 
 import {
   DbHealth,
@@ -23,6 +26,11 @@ import {
 import { RecordingService } from '../recording/recording.service';
 import { RequirePermission } from '../authz/permission.decorator';
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
+import {
+  actorFromCtx,
+  AuditService,
+  requestIp,
+} from '../audit/audit.service';
 import { PurgeDbDto, PurgeScope } from './dto/purge-db.dto';
 
 /** Standard StreamHub response envelope (SPEC §6). */
@@ -67,6 +75,8 @@ export class DbAdminController {
   constructor(
     private readonly maintenance: DbMaintenanceService,
     private readonly recording: RecordingService,
+    /** Security audit trail (ISO 8.15) — optional for bare-ctor unit specs. */
+    @Optional() private readonly audit?: AuditService,
   ) {}
 
   // ---- per-app ---------------------------------------------------------
@@ -107,6 +117,8 @@ export class DbAdminController {
   async purge(
     @Param('app') app: string,
     @Body() body: PurgeDbDto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<PurgeResult>> {
     if (body.confirm !== true) {
       throw new BadRequestException('confirm:true is required to purge');
@@ -133,6 +145,16 @@ export class DbAdminController {
     if (scope === 'logs' || scope === 'all') {
       result.logsDeleted = this.maintenance.purgeAppLogs(app);
     }
+
+    // Destructive op → security audit trail (ISO 8.10/8.15).
+    this.audit?.record({
+      action: 'db.purge',
+      ...actorFromCtx(ctx),
+      targetType: 'app',
+      targetId: app,
+      ip: requestIp(req),
+      meta: { ...result },
+    });
 
     return ok(result);
   }

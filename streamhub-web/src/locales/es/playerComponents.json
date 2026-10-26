@@ -35,7 +35,8 @@
     "accessError": "No se pudo generar el acceso a la sala.",
     "openError": "No se pudo abrir el player",
     "retrying": "Reintentando…",
-    "connectionProblem": "Problema de conexión: {{error}}"
+    "connectionProblem": "Problema de conexión: {{error}}",
+    "poorConnection": "Conexión inestable — calidad de video reducida"
   },
   "mjpeg": {
     "live": "EN VIVO",
@@ -46,6 +47,7 @@
   "controls": {
     "unmute": "Activar sonido",
     "mute": "Silenciar",
+    "tapToPlay": "Tocá para reproducir",
     "enterFullscreen": "Pantalla completa",
     "exitFullscreen": "Salir de pantalla completa",
     "sendReaction": "Enviar reacción",

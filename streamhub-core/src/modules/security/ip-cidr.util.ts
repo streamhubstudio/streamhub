@@ -180,16 +180,19 @@ export function isPrivateOrLoopbackIp(raw: string): boolean {
 }
 
 /**
- * Real client IP for a request behind the reverse proxy: first hop of
- * X-Forwarded-For (Caddy/nginx append the peer address), falling back to the
- * socket. Same resolution the session/auth code uses.
+ * Real client IP for a request behind the reverse proxy.
+ *
+ * SECURITY (fix P0-2): uses Express's PROXY-VALIDATED `req.ip` — `trust proxy`
+ * is set to 1 hop in main.ts, so Express takes the X-Forwarded-For entry
+ * appended by OUR proxy (Caddy/nginx) and ignores anything the client sent —
+ * falling back to the socket peer. NEVER hand-parse the raw X-Forwarded-For
+ * header here: its first hop is attacker-controlled, and a spoofed
+ * `X-Forwarded-For: 127.0.0.1` used to ride the private-IP fast-path (skipping
+ * blocklists/auto-ban) and token IP allowlists. Same resolution the auth code
+ * uses.
  */
 export function clientIpOf(req: Request): string | null {
-  const fwd = req.headers['x-forwarded-for'];
-  let ip = '';
-  if (typeof fwd === 'string' && fwd.length > 0) ip = fwd.split(',')[0].trim();
-  else if (Array.isArray(fwd) && fwd.length > 0) ip = fwd[0].trim();
-  else ip = req.ip || req.socket?.remoteAddress || '';
+  const ip = req.ip || req.socket?.remoteAddress || '';
   const normalized = normalizeIp(ip);
   return normalized || null;
 }

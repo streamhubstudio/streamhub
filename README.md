@@ -8,8 +8,6 @@ and a React dashboard — all behind a **single domain** with automatic HTTPS.
 
 Everything runs from one `docker compose up`.
 
-**[Website](https://streamhub.studio) · [Documentation](http://docs.streamhub.studio) · [Dashboard demo](https://streamhub.studio/demo) · License: [AGPL-3.0](LICENSE)**
-
 ```
                     https://streamhub.example.com   (Caddy, auto-TLS, 1 cert)
    ┌──────────────────────────────────────────────────────────────────────────┐
@@ -39,18 +37,6 @@ Everything runs from one `docker compose up`.
 - **REST API** (global + per-app) with Swagger at `/api/v1/docs`, guarded by `sk_` bearer tokens.
 - **React dashboard** (Vite + Tailwind) with a break-glass admin login (JWT).
 - **RBAC + quotas** with a safe phased rollout (`off` → `log` → `on`).
-- **Network security** — in-app IP allow/blocklist (CIDR, IPv4 + IPv6) plus a fail2ban-style
-  **auto-ban** for abusive IPs (bad logins, replayed magic links, invalid tokens), managed from
-  the dashboard; loopback/private addresses can never be locked out.
-- **Plugins** (auto-discovered, no central registry to edit) — including a **face-blur (deface)**
-  plugin that obfuscates faces in real time as a player overlay, plus object detection (YOLO); a
-  plugin can own its own worker process, with lifecycle managed by the framework.
-- **Per-app MQTT events** — publish stream-lifecycle events and **high-latency alerts** to your
-  broker, with optional per-app log forwarding.
-- **Active sessions** — list and revoke dashboard login sessions from *My account*.
-- **Meet-style conference sample** — a turnkey multi-party WebRTC room with chat, generated per app.
-- **GPU / NVENC-ready image** — the core image ships `ffmpeg`; uncomment `gpus: all` (with
-  `nvidia-container-toolkit`) to enable NVENC transcode and CUDA CV inference.
 
 ## Quick start
 
@@ -63,7 +49,7 @@ networking is used for LiveKit media, so this targets Linux, not Docker Desktop 
 curl -fsSL https://www.streamhub.studio/install.sh | sudo bash
 ```
 
-Targets **Ubuntu Server 24.04/26.04 LTS x64** (validated; aborts elsewhere) and is
+Targets **Ubuntu Server 24.04/26.04 LTS or Debian 12/13, x64** (validated; aborts elsewhere) and is
 **idempotent** — re-run it to update. It installs Docker (+ nginx/certbot for TLS), clones the
 repo into `/opt/streamhub`, asks for your **domain** + **admin password** (auto-generates the
 rest), writes a `.env` with strong random secrets, builds + starts the whole stack, waits for
@@ -71,13 +57,13 @@ health, seeds the `sk_` API token and prints the dashboard URL, credentials, tok
 **cluster token** for joining edge nodes. Fully scriptable with
 `--non-interactive --domain … --email …` (every flag has a `STREAMHUB_*` env twin), and
 `--join --cluster-token … --origin-ip …` turns a fresh box into a **media edge node**.
-Full reference: **[streamhub-docs/operations/INSTALL-NODE.md](streamhub-docs/operations/INSTALL-NODE.md)**.
+Full reference: **[operations/INSTALL-NODE](https://streamhub.studio/docs/operations/INSTALL-NODE)**.
 
 ### Option B — docker compose by hand
 
 ```bash
 git clone https://github.com/streamhubstudio/streamhub.git
-cd streamhub
+cd vision-media-server
 cp .env.example .env          # edit: STREAMHUB_DOMAIN, ACME_EMAIL, secrets...
 docker compose up -d --build
 # seed the first global API token once core is healthy:
@@ -106,7 +92,7 @@ commented). Data (SQLite DB, per-app recordings/snapshots/HLS, logs, the served 
 and `egress` containers — egress writes MP4s exactly where core looks to upload them.
 
 Per-app S3 credentials are set in `data/secrets.json` (chmod 600) referenced from the app's
-`config.yaml`; see **[streamhub-docs/config-reference.md](streamhub-docs/config-reference.md)**.
+`config.yaml`; see **[config-reference](https://streamhub.studio/docs/config-reference)**.
 
 ## What's in the box
 
@@ -115,29 +101,35 @@ Per-app S3 credentials are set in `data/secrets.json` (chmod 600) referenced fro
 | `docker-compose.yml` | Compose | brings up core + LiveKit + ingress + egress + redis + Caddy |
 | `install.sh` | Bash | quick-install: secrets → build → up → seed token |
 | `deploy/` | Dockerfile, Caddyfile, entrypoint, seeder (+ bare-metal systemd/nginx units) |
-| `streamhub-core/` | Node 20 + **NestJS** | REST API + serves the React SPA + JWT login + S3 + jobs + SQLite |
+| `streamhub-core/` | Node 24 + **NestJS** | REST API + serves the React SPA + JWT login + S3 + jobs + SQLite |
 | `streamhub-web/` | **React + Vite + Tailwind** | dashboard SPA (built into the core image) |
 | `streamhub-adaptor/` | TypeScript | browser SDK (`WebRTCAdaptor` shim over `livekit-client`) |
-| `streamhub-docs/` | Markdown | full API reference |
+| `streamhub-core/src/plugins-vendor/`, `streamhub-web/src/plugins-vendor/` | Python + TS | the 12 worker-backed Studio Apps, pre-composed |
+| `mcp-server/` | TypeScript | MCP server exposing the REST API to AI clients |
 
 ## Documentation
 
-- **[streamhub-docs/](streamhub-docs/README.md)** — the full documentation map: architecture,
-  operations (deploy/runbook/env/observability), API reference (global + per-app + `api/` endpoint
-  reference + webhooks + `config.yaml`), per-feature deep-dives, testing strategy (unit tests +
-  functional simulations), and device/native integrations.
-- **[streamhub-docs/operations/self-hosting.md](streamhub-docs/operations/self-hosting.md)** —
-  this Docker quick-install, expanded, with troubleshooting.
-- **[INSTALL.md](INSTALL.md)** — the manual bare-metal runbook (systemd + nginx, no Docker),
-  useful if you'd rather not run containers.
-- **[streamhub-docs/SPEC.md](streamhub-docs/SPEC.md)** — product spec (architecture, data model, features).
+Everything lives on the website: **[streamhub.studio/docs](https://streamhub.studio/docs)**.
+
+- [Architecture](https://streamhub.studio/docs/architecture/README) — components, data model, request routing, cluster.
+- [Operations](https://streamhub.studio/docs/operations/README) — deploy, runbook, environment variables, observability, backups.
+- [Self-hosting](https://streamhub.studio/docs/operations/self-hosting) — this Docker quick-install, expanded, with troubleshooting.
+- [Installer & cluster nodes](https://streamhub.studio/docs/operations/INSTALL-NODE) — `install.sh` flags, join mode, edge nodes.
+- [API reference](https://streamhub.studio/docs/api/README) — every route and permission (Swagger also at `/api/v1/docs` on your instance).
+- [Features](https://streamhub.studio/docs/features/README) and [integrations](https://streamhub.studio/docs/integrations/README).
+- [INSTALL.md](INSTALL.md) — the manual bare-metal runbook (systemd + nginx, no Docker).
+- [CHANGELOG.md](CHANGELOG.md) — what changed in each version (also at [streamhub.studio/changelog](https://streamhub.studio/changelog)).
 
 ## License
 
 StreamHub follows an **open-core** model: the self-hosted core in this repository — everything
-under `streamhub-core/`, `streamhub-web/`, `yolo-worker/`, `deploy/` and this Compose stack — is
-open source under **AGPL-3.0-only** (see [`LICENSE`](LICENSE)). Copyright © 2026 StreamHub /
-Digital Hub. Commercial **Enterprise Edition (EE)** modules are distributed and licensed
+under `streamhub-core/`, `streamhub-web/`, `deploy/` and this Compose stack — is open source
+under **AGPL-3.0-only** (see [`LICENSE`](LICENSE)). Copyright © 2026 digitalhub / Cubiq Digital.
+The worker-backed Studio Apps (`yolo`, `deface`, `lpr`, `perimeter`, `presence`,
+`people-counter`, `safety-ppe`, `transcription`, `occupancy`, `counting`, `crowd`, `demography`)
+are developed in their own AGPL-3.0 repos and ship **pre-composed** in this repository
+(`*/src/plugins-vendor/`), so a clone builds the complete product.
+Commercial **Enterprise Edition (EE)** modules are distributed and licensed
 separately and are not part of this repo. The browser SDK
 [`streamhub-adaptor/`](streamhub-adaptor/) is intentionally **MIT** so it can be embedded
 drop-in in any client app.

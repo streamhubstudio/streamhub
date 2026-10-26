@@ -1,17 +1,23 @@
 import {
+  BadGatewayException,
   Injectable,
   Logger,
   NotFoundException,
   OnModuleInit,
+  Optional,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
 import * as os from 'os';
 
 import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
 import { JoinNodeDto } from './dto/join-node.dto';
+import { JoinMasterDto } from './dto/join-master.dto';
+import { LeaveDto } from './dto/leave.dto';
 import { NodeStatus } from './dto/patch-node.dto';
+import { NodeRoleService } from './node-role.service';
 
 /** Max serialized size of a heartbeat `stats` blob (bytes). Over → 413. */
 export const MAX_STATS_BYTES = 4096;
@@ -85,6 +91,56 @@ export interface JoinPayload {
   redisUrl: string | null;
   publicWsUrl: string | null;
   livekit: JoinLiveKit;
+  /**
+   * True when the LiveKit apiSecret + Redis URL were WITHHELD because the join
+   * did not arrive over TLS (see {@link JoinOptions}). The node still gets its
+   * id + apiKey + wsUrl; `hint` says how to fix it.
+   */
+  secretsWithheld?: boolean;
+  hint?: string;
+}
+
+/** Transport context for a join, used to decide whether to vend secrets. */
+export interface JoinOptions {
+  /**
+   * Whether the request reached us over TLS (checked by the controller via
+   * `X-Forwarded-Proto === 'https'`, `req.secure`, or a loopback client). When
+   * false AND TLS is required, the secret fields are withheld.
+   */
+  secure: boolean;
+}
+
+/** Heartbeat env this edge should persist (the installer writes heartbeat.env). */
+export interface HeartbeatEnv {
+  STREAMHUB_NODE_ROLE: 'edge';
+  STREAMHUB_MASTER_URL: string;
+  STREAMHUB_MASTER_NODE_ID: string;
+  /** The node id to send in each `POST /cluster/heartbeat { nodeId }`. */
+  STREAMHUB_NODE_ID: string;
+}
+
+/** Result of converting this node into an edge of a remote master. */
+export interface JoinMasterResult {
+  role: 'edge';
+  masterUrl: string;
+  nodeId: string;
+  /** True when the master withheld its secrets (we joined over plaintext). */
+  secretsWithheld: boolean;
+  /**
+   * Values the operator/installer applies to `/etc/streamhub/heartbeat.env`
+   * (rewriting that file is a host concern — see INSTALL-NODE.md). The media
+   * plane still needs a container recreate to actually attach to the master.
+   */
+  heartbeatEnv: HeartbeatEnv;
+}
+
+/** Result of leaving a cluster (reverting to standalone). */
+export interface LeaveResult {
+  role: 'standalone';
+  /** Whether the best-effort de-register call to the master succeeded. */
+  deregistered: boolean;
+  /** Set when de-register was skipped/failed (e.g. no master token supplied). */
+  detail?: string;
 }
 
 /** Result of a join: the payload plus whether a new row was created (201 vs 200). */
@@ -134,6 +190,12 @@ export class ClusterService implements OnModuleInit {
   constructor(
     private readonly db: DbService,
     private readonly config: ConfigService,
+    /**
+     * Cluster role state (optional so the registry-only unit specs that build
+     * ClusterService with just db+config keep working). Required at runtime for
+     * the conversion endpoints (joinMaster/leave) — they throw if it's absent.
+     */
+    @Optional() private readonly nodeRole?: NodeRoleService,
   ) {}
 
   /**
@@ -154,8 +216,13 @@ export class ClusterService implements OnModuleInit {
   /**
    * Register (or refresh) a node BY NAME. Existing → update url/region/status/
    * last_seen and keep the id; new → mint a UUID. `url` falls back to `ip`.
+   *
+   * SECURITY (P0): the LiveKit apiSecret + Redis URL are only vended when the
+   * join arrived over TLS (`opts.secure`) OR `STREAMHUB_CLUSTER_REQUIRE_TLS` is
+   * off. Over plaintext (the default installer's HTTP) they are WITHHELD so a
+   * MITM can't lift them; the node still gets its id + apiKey + wsUrl and a hint.
    */
-  join(dto: JoinNodeDto): JoinResult {
+  join(dto: JoinNodeDto, opts: JoinOptions = { secure: true }): JoinResult {
     const db = this.db.global();
     const url = dto.url ?? dto.ip;
     const region = dto.region ?? null;
@@ -164,45 +231,77 @@ export class ClusterService implements OnModuleInit {
       .prepare('SELECT id FROM nodes WHERE name = ?')
       .get(dto.name) as { id: string } | undefined;
 
+    // Vision Edge: the installer may declare the node KIND at join
+    // (`--node-type edge`). Persisted to nodes.type when provided; a join that
+    // omits it leaves the existing value (or the column DEFAULT 'common') alone.
+    const type = dto.type === 'edge' || dto.type === 'common' ? dto.type : null;
+
     let nodeId: string;
     let created: boolean;
     if (existing) {
       nodeId = existing.id;
       created = false;
-      db.prepare(
-        `UPDATE nodes
-           SET url = ?, region = ?, status = 'active',
-               last_seen_at = datetime('now')
-         WHERE id = ?`,
-      ).run(url, region, nodeId);
+      if (type) {
+        db.prepare(
+          `UPDATE nodes
+             SET url = ?, region = ?, type = ?, status = 'active',
+                 last_seen_at = datetime('now')
+           WHERE id = ?`,
+        ).run(url, region, type, nodeId);
+      } else {
+        db.prepare(
+          `UPDATE nodes
+             SET url = ?, region = ?, status = 'active',
+                 last_seen_at = datetime('now')
+           WHERE id = ?`,
+        ).run(url, region, nodeId);
+      }
     } else {
       nodeId = randomUUID();
       created = true;
-      db.prepare(
-        `INSERT INTO nodes (id, name, url, region, status, last_seen_at)
-         VALUES (?, ?, ?, ?, 'active', datetime('now'))`,
-      ).run(nodeId, dto.name, url, region);
+      if (type) {
+        db.prepare(
+          `INSERT INTO nodes (id, name, url, region, type, status, last_seen_at)
+           VALUES (?, ?, ?, ?, ?, 'active', datetime('now'))`,
+        ).run(nodeId, dto.name, url, region, type);
+      } else {
+        db.prepare(
+          `INSERT INTO nodes (id, name, url, region, status, last_seen_at)
+           VALUES (?, ?, ?, ?, 'active', datetime('now'))`,
+        ).run(nodeId, dto.name, url, region);
+      }
     }
+
+    // P0: only hand back secrets when the transport is trusted (TLS) or the
+    // operator explicitly opted out of the requirement.
+    const withhold = this.clusterRequireTls() && !opts.secure;
 
     // Log the join (name + ip only). NEVER log the cluster token or apiSecret.
     this.logger.log(
-      `cluster join: name=${dto.name} ip=${dto.ip} nodeId=${nodeId} (${created ? 'new' : 'refresh'})`,
+      `cluster join: name=${dto.name} ip=${dto.ip} nodeId=${nodeId} ` +
+        `(${created ? 'new' : 'refresh'}${withhold ? ', secrets withheld: not TLS' : ''})`,
     );
 
-    return {
-      created,
-      payload: {
-        nodeId,
-        name: dto.name,
-        redisUrl: this.config.clusterRedisUrl || null,
-        publicWsUrl: this.config.publicWsUrl || null,
-        livekit: {
-          apiKey: this.config.livekitApiKey,
-          apiSecret: this.config.livekitApiSecret,
-          wsUrl: this.config.livekitUrl || 'ws://127.0.0.1:7880',
-        },
+    const payload: JoinPayload = {
+      nodeId,
+      name: dto.name,
+      redisUrl: withhold ? null : this.config.clusterRedisUrl || null,
+      publicWsUrl: this.config.publicWsUrl || null,
+      livekit: {
+        apiKey: this.config.livekitApiKey,
+        apiSecret: withhold ? '' : this.config.livekitApiSecret,
+        wsUrl: this.config.livekitUrl || 'ws://127.0.0.1:7880',
       },
     };
+    if (withhold) {
+      payload.secretsWithheld = true;
+      payload.hint =
+        'LiveKit apiSecret + Redis URL withheld: join over TLS (https, so ' +
+        'X-Forwarded-Proto=https at the proxy) or set ' +
+        'STREAMHUB_CLUSTER_REQUIRE_TLS=off on the master to allow plaintext.';
+    }
+
+    return { created, payload };
   }
 
   /**
@@ -339,6 +438,118 @@ export class ClusterService implements OnModuleInit {
   }
 
   // ---------------------------------------------------------------------------
+  // standalone ↔ cluster conversion (CLUSTER-ROADMAP §5, step 5)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Convert THIS node into an edge of a remote master: server-side call the
+   * master's `POST /cluster/join` (X-Cluster-Token), store the returned node id
+   * and set the local role=edge + master_url. Returns the heartbeat env the
+   * operator/installer applies to `/etc/streamhub/heartbeat.env` (rewriting a
+   * host file is intentionally NOT done here — the media plane also needs a
+   * container recreate; see INSTALL-NODE.md).
+   */
+  async joinMaster(dto: JoinMasterDto): Promise<JoinMasterResult> {
+    const nodeRole = this.requireNodeRole();
+    const masterUrl = dto.masterUrl.trim().replace(/\/+$/, '');
+    const joinUrl = `${masterUrl}/api/v1/cluster/join`;
+    const body = {
+      name: dto.nodeName,
+      ip: (dto.nodeIp || '').trim() || this.localIp(),
+      ...(dto.region ? { region: dto.region } : {}),
+      ...(dto.nodeUrl ? { url: dto.nodeUrl } : {}),
+    };
+
+    const res = await this.httpJson('POST', joinUrl, {
+      headers: { 'x-cluster-token': dto.clusterToken },
+      body,
+    });
+    if (!res.ok) {
+      throw new BadGatewayException({
+        error: `master rejected join (HTTP ${res.status})`,
+      });
+    }
+    const envelope = (res.json ?? null) as {
+      data?: Partial<JoinPayload>;
+    } | null;
+    const payload = envelope?.data ?? {};
+    const nodeId = typeof payload.nodeId === 'string' ? payload.nodeId : '';
+    if (!nodeId) {
+      throw new BadGatewayException({
+        error: 'master join response missing nodeId',
+      });
+    }
+
+    // Flip local role → edge and remember our identity at the master.
+    nodeRole.setRole('edge');
+    nodeRole.setMasterUrl(masterUrl);
+    nodeRole.setMasterNodeId(nodeId);
+    this.logger.log(`joined master ${masterUrl} as edge nodeId=${nodeId}`);
+
+    return {
+      role: 'edge',
+      masterUrl,
+      nodeId,
+      secretsWithheld: payload.secretsWithheld === true,
+      heartbeatEnv: {
+        STREAMHUB_NODE_ROLE: 'edge',
+        STREAMHUB_MASTER_URL: masterUrl,
+        STREAMHUB_MASTER_NODE_ID: nodeId,
+        STREAMHUB_NODE_ID: nodeId,
+      },
+    };
+  }
+
+  /**
+   * Leave the cluster: flip role→standalone and clear the master linkage locally
+   * (this ALWAYS succeeds), then best-effort de-register at the master via
+   * `DELETE /cluster/nodes/:id`. That endpoint is Bearer/global-scoped, so the
+   * caller must pass the master's `masterToken` for the remote call to
+   * authenticate; without it (or on any error) we still leave locally and report
+   * `deregistered:false`.
+   */
+  async leave(dto: LeaveDto = {}): Promise<LeaveResult> {
+    const nodeRole = this.requireNodeRole();
+    const masterUrl = nodeRole.getMasterUrl();
+    const nodeId = nodeRole.getMasterNodeId();
+
+    // Local revert first — never leave the node stuck as an edge.
+    nodeRole.setRole('standalone');
+    nodeRole.setMasterUrl(null);
+    nodeRole.setMasterNodeId(null);
+    this.logger.log('left cluster: role reverted to standalone');
+
+    if (!masterUrl || !nodeId) {
+      return { role: 'standalone', deregistered: false, detail: 'no master linkage on record' };
+    }
+    if (!dto.masterToken) {
+      return {
+        role: 'standalone',
+        deregistered: false,
+        detail: 'no masterToken supplied — de-register at the master manually',
+      };
+    }
+
+    try {
+      const url = `${masterUrl}/api/v1/cluster/nodes/${encodeURIComponent(nodeId)}`;
+      const res = await this.httpJson('DELETE', url, {
+        headers: { authorization: `Bearer ${dto.masterToken}` },
+      });
+      return {
+        role: 'standalone',
+        deregistered: res.ok,
+        detail: res.ok ? undefined : `master returned HTTP ${res.status}`,
+      };
+    } catch (err) {
+      return {
+        role: 'standalone',
+        deregistered: false,
+        detail: `de-register failed: ${(err as Error).message}`,
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // internals
   // ---------------------------------------------------------------------------
 
@@ -393,7 +604,30 @@ export class ClusterService implements OnModuleInit {
       memFree,
       memUsedRatio:
         memTotal > 0 ? Number(((memTotal - memFree) / memTotal).toFixed(3)) : 0,
+      // Storage of the DATA_DIR filesystem so the cluster/edge nodes UI shows
+      // the master's disk (same shape as an edge's fleet telemetry disk block).
+      // Best-effort: statfs is unavailable on some platforms — omit on failure.
+      ...this.diskStats(),
     };
+  }
+
+  /** DATA_DIR filesystem usage ({disk:{total,free,usedRatio}}) — best-effort. */
+  private diskStats(): { disk?: { total: number; free: number; usedRatio: number } } {
+    try {
+      const st = fs.statfsSync(this.config.dataDir);
+      const total = st.blocks * st.bsize;
+      const free = st.bavail * st.bsize;
+      if (total <= 0) return {};
+      return {
+        disk: {
+          total,
+          free,
+          usedRatio: Number(((total - free) / total).toFixed(3)),
+        },
+      };
+    } catch {
+      return {};
+    }
   }
 
   /** Master API base for the join command (STREAMHUB_PUBLIC_URL, sane fallbacks). */
@@ -403,6 +637,87 @@ export class ClusterService implements OnModuleInit {
       this.config.publicBaseUrl ||
       '';
     return raw.replace(/\/+$/, '');
+  }
+
+  /**
+   * Whether a join MUST arrive over TLS to receive the LiveKit apiSecret + Redis
+   * URL. Flag `STREAMHUB_CLUSTER_REQUIRE_TLS` (default ON) — set to
+   * 0/false/off/no to allow vending secrets over plaintext (legacy behaviour).
+   */
+  private clusterRequireTls(): boolean {
+    const raw = (this.config.env('STREAMHUB_CLUSTER_REQUIRE_TLS') ?? '')
+      .trim()
+      .toLowerCase();
+    if (raw === '') return true; // default ON
+    return !(raw === '0' || raw === 'false' || raw === 'off' || raw === 'no');
+  }
+
+  /** NodeRoleService or a clear 500 (only the conversion endpoints need it). */
+  private requireNodeRole(): NodeRoleService {
+    if (!this.nodeRole) {
+      throw new Error('NodeRoleService unavailable (cluster conversion disabled)');
+    }
+    return this.nodeRole;
+  }
+
+  /** Best-effort local non-internal IPv4 for the join `ip` (installer sets it). */
+  private localIp(): string {
+    const ifaces = os.networkInterfaces();
+    for (const list of Object.values(ifaces)) {
+      for (const net of list ?? []) {
+        if (net.family === 'IPv4' && !net.internal) return net.address;
+      }
+    }
+    return '127.0.0.1';
+  }
+
+  /**
+   * Minimal JSON HTTP client for the master calls (join-master / leave). Uses
+   * the global `fetch` with a short timeout; parses a JSON body when present.
+   * Never throws on a non-2xx (returns `{ ok:false, status }`) — only a network
+   * error / timeout rejects.
+   */
+  private async httpJson(
+    method: 'POST' | 'DELETE',
+    url: string,
+    opts: { headers?: Record<string, string>; body?: unknown } = {},
+  ): Promise<{ ok: boolean; status: number; json: unknown }> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(opts.body !== undefined
+            ? { 'content-type': 'application/json' }
+            : {}),
+          ...(opts.headers ?? {}),
+        },
+        body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+        signal: controller.signal,
+      });
+      let json: unknown = null;
+      try {
+        json = await res.json();
+      } catch {
+        json = null; // empty/non-JSON body (e.g. a 204 DELETE)
+      }
+      return { ok: res.ok, status: res.status, json };
+    } catch (e) {
+      // The fetch itself failed (DNS, refused connection, TLS/cert error, or the
+      // 10s abort). Surface a clean 502 with the reason instead of letting it
+      // bubble up as an opaque 500 — the operator needs to know the master was
+      // unreachable (a self-signed/expired cert on the master shows up here).
+      const reason = controller.signal.aborted
+        ? 'timeout after 10s'
+        : e instanceof Error
+          ? e.message
+          : String(e);
+      throw new BadGatewayException({ error: `could not reach ${url}: ${reason}` });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /** Shape a raw DB row into the public NodeRow (parse stats, derive stale). */

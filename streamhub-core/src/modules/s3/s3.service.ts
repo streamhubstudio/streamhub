@@ -20,6 +20,14 @@ import {
   S3UploadResult,
 } from '../../shared/contracts';
 import { MetricsService } from '../metrics/metrics.service';
+import {
+  ALLOW_PRIVATE_S3_ENDPOINT_ENV,
+  assertSafeEgressUrl,
+  defaultHostResolver,
+  envFlag,
+  HTTP_SCHEMES,
+  type HostResolver,
+} from '../security/egress-url.guard';
 
 /** Default presigned-GET lifetime (seconds) when caller doesn't specify. */
 const DEFAULT_PRESIGN_TTL = 3600;
@@ -44,6 +52,9 @@ export class S3Service implements S3ServiceContract {
   /** Cache of S3Client instances keyed by a non-secret-leaking fingerprint. */
   private readonly clients = new Map<string, S3Client>();
 
+  /** DNS seam for the egress SSRF guard (specs inject a fake — never dial DNS). */
+  hostResolver: HostResolver = defaultHostResolver;
+
   constructor(@Optional() private readonly metrics?: MetricsService) {}
 
   /**
@@ -58,6 +69,7 @@ export class S3Service implements S3ServiceContract {
     contentType?: string,
   ): Promise<S3UploadResult> {
     this.assertConfig(config);
+    await this.assertSafeEndpoint(config);
     const objectKey = this.resolveKey(config, key);
 
     let sizeBytes: number;
@@ -102,6 +114,48 @@ export class S3Service implements S3ServiceContract {
   }
 
   /**
+   * Upload an IN-MEMORY buffer to `key` (prefixed with `config.prefix`). Same
+   * contract as {@link upload} but the body is a Buffer already in memory (no
+   * local file) — used by callers that produce a blob on the fly (e.g. the
+   * Streamflow `action.s3` box uploading a fetched image / a JSON result).
+   * Additive: does not touch the S3ServiceContract or the file-based `upload`.
+   */
+  async uploadBuffer(
+    config: S3Config,
+    body: Buffer,
+    key: string,
+    contentType?: string,
+  ): Promise<S3UploadResult> {
+    this.assertConfig(config);
+    await this.assertSafeEndpoint(config);
+    const objectKey = this.resolveKey(config, key);
+    const sizeBytes = body.length;
+    try {
+      const client = this.clientFor(config);
+      const out = await client.send(
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: objectKey,
+          Body: body,
+          ContentLength: sizeBytes,
+          ContentType: contentType ?? this.guessContentType(objectKey),
+        }),
+      );
+      this.metrics?.s3Upload(config.provider, true, sizeBytes);
+      return {
+        key: objectKey,
+        bucket: config.bucket,
+        url: this.publicUrlFor(config, key),
+        sizeBytes,
+        etag: out.ETag ? out.ETag.replace(/"/g, '') : undefined,
+      };
+    } catch (err) {
+      this.metrics?.s3Upload(config.provider, false);
+      throw this.wrap(err, `S3 uploadBuffer failed for key ${objectKey}`);
+    }
+  }
+
+  /**
    * Presigned GET URL valid for `expiresInSeconds` (default 1h, max 7d).
    * `options` may set the `response-content-disposition` / `response-content-type`
    * S3 params so the object downloads as an attachment with a friendly filename.
@@ -113,6 +167,7 @@ export class S3Service implements S3ServiceContract {
     options?: S3PresignOptions,
   ): Promise<string> {
     this.assertConfig(config);
+    await this.assertSafeEndpoint(config);
     const objectKey = this.resolveKey(config, key);
     const ttl = this.clampTtl(expiresInSeconds);
     try {
@@ -135,6 +190,7 @@ export class S3Service implements S3ServiceContract {
   /** Delete an object. No-op if it doesn't exist (S3 delete is idempotent). */
   async delete(config: S3Config, key: string): Promise<void> {
     this.assertConfig(config);
+    await this.assertSafeEndpoint(config);
     const objectKey = this.resolveKey(config, key);
     try {
       const client = this.clientFor(config);
@@ -150,6 +206,7 @@ export class S3Service implements S3ServiceContract {
   /** Whether the object exists. */
   async exists(config: S3Config, key: string): Promise<boolean> {
     this.assertConfig(config);
+    await this.assertSafeEndpoint(config);
     const objectKey = this.resolveKey(config, key);
     try {
       const client = this.clientFor(config);
@@ -308,6 +365,24 @@ export class S3Service implements S3ServiceContract {
       '.json': 'application/json',
     };
     return map[ext] ?? 'application/octet-stream';
+  }
+
+  /**
+   * SSRF guard (P0-1) on a tenant-supplied CUSTOM S3 endpoint: reject
+   * private/loopback/link-local/metadata hosts before any SDK dial. No-op when
+   * the app uses plain AWS (no endpoint). `STREAMHUB_ALLOW_PRIVATE_S3_ENDPOINT=1`
+   * (default off) is the operator escape for self-hosted MinIO — it skips only
+   * the private-address check, never the http(s) scheme allowlist.
+   */
+  private async assertSafeEndpoint(config: S3Config): Promise<void> {
+    const endpoint = config.endpoint?.trim();
+    if (!endpoint) return;
+    await assertSafeEgressUrl(endpoint, {
+      allowedSchemes: HTTP_SCHEMES,
+      label: 'S3 endpoint',
+      allowPrivate: envFlag(process.env[ALLOW_PRIVATE_S3_ENDPOINT_ENV]),
+      resolveHost: this.hostResolver,
+    });
   }
 
   /** Validate the resolved config has the essentials before hitting the SDK. */

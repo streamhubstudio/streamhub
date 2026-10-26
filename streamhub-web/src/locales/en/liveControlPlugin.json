@@ -1,0 +1,58 @@
+{
+  "overlayHint": "Viewers only see the cover when the \"Live Control Overlay\" plugin is also installed and enabled on this app.",
+  "loadError": "Could not load Live Control data.",
+  "actionError": "The action failed. Please try again.",
+  "streamsError": "Could not load the live streams.",
+  "streams": {
+    "title": "Live streams",
+    "refresh": "Refresh",
+    "empty": "No live streams right now."
+  },
+  "state": {
+    "live": "Live",
+    "paused": "Paused",
+    "finished": "Finished"
+  },
+  "row": {
+    "viewers": "{{count}} viewers",
+    "showing": "showing {{summary}}"
+  },
+  "actions": {
+    "resume": "Resume",
+    "pause": "Pause",
+    "finish": "Finish",
+    "confirmPause": "Pause now",
+    "confirmFinish": "Finish now",
+    "cancel": "Cancel"
+  },
+  "mode": {
+    "text": "Text card",
+    "image": "Image",
+    "video": "Looping video"
+  },
+  "editor": {
+    "mode": "Cover",
+    "cardTitle": "Headline",
+    "cardText": "Message",
+    "cardColor": "Background colour",
+    "asset": "Asset",
+    "pickAsset": "Select an asset…",
+    "noAssets": "No matching assets uploaded yet."
+  },
+  "assets": {
+    "title": "Cover assets",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Intro slate",
+    "upload": "Upload asset",
+    "uploading": "Uploading…",
+    "empty": "No cover assets yet. Upload an image or a short looping video.",
+    "delete": "Delete",
+    "confirmDelete": "Delete asset \"{{name}}\"?",
+    "defaultPause": "Default (pause)",
+    "defaultFinish": "Default (finish)",
+    "uploadError": "Upload failed.",
+    "deleteError": "Delete failed.",
+    "settingsError": "Could not save the default.",
+    "noStorage": "This app has no S3 storage configured — set it up in the app storage settings before uploading covers."
+  }
+}

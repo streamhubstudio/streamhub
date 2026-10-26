@@ -19,7 +19,7 @@ export default defineConfig({
     proxy: {
       // Dev convenience: proxy API calls to the live core so localhost can talk to it.
       '/api': {
-        target: 'https://streamhub.example.com',
+        target: 'https://streamhub.digitalhub.com.ar',
         changeOrigin: true,
         secure: true,
       },

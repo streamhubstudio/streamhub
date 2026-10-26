@@ -20,6 +20,7 @@ import { authenticator } from 'otplib';
 import { makeUnitContext, type UnitContext } from '../../../test/helpers';
 import { AuthContext } from '../../shared/auth-context';
 import { TenancyService } from '../tenancy/tenancy.service';
+import { EmailService, type SendResult } from '../email/email.service';
 import { AccountService } from './account.service';
 import { AuthService } from './auth.service';
 import { hashPassword } from './password.util';
@@ -34,6 +35,7 @@ interface Harness {
   totp: TotpService;
   auth: AuthService;
   account: AccountService;
+  testUserSmtp: jest.Mock<Promise<SendResult>, [string, string]>;
   /** Create an active user + owner team; returns its id + a user_jwt ctx. */
   seedUser: (email: string, password?: string) => { id: string; ctx: AuthContext };
 }
@@ -59,7 +61,11 @@ function makeAccount(overrides: Record<string, string> = {}): Harness {
     totp,
     sessions,
   );
-  const account = ctx.newService(AccountService, ctx.config, tenancy, totp);
+  const testUserSmtp = jest
+    .fn<Promise<SendResult>, [string, string]>()
+    .mockResolvedValue({ ok: true, messageId: '<id>' });
+  const email = { testUserSmtp } as unknown as EmailService;
+  const account = ctx.newService(AccountService, ctx.config, tenancy, totp, email);
 
   const seedUser = (email: string, password?: string) => {
     const id = tenancy.createUser({
@@ -81,7 +87,7 @@ function makeAccount(overrides: Record<string, string> = {}): Harness {
     return { id, ctx: authCtx };
   };
 
-  return { ctx, tenancy, totp, auth, account, seedUser };
+  return { ctx, tenancy, totp, auth, account, testUserSmtp, seedUser };
 }
 
 const TOKEN_CTX: AuthContext = {
@@ -291,6 +297,79 @@ describe('auth/AccountService', () => {
       await expect(h.account.setupTwoFa(ctx)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('per-user SMTP override (owner item 29)', () => {
+    it('defaults to disabled/unconfigured for a fresh account', () => {
+      const { ctx } = h.seedUser('smtp1@x.com');
+      expect(h.account.getSmtp(ctx)).toEqual({
+        enabled: false,
+        host: '',
+        port: 587,
+        user: '',
+        from: '',
+        pass: '',
+        hasPass: false,
+        configured: false,
+      });
+    });
+
+    it('setSmtp persists the block and masks the password on read', () => {
+      const { ctx } = h.seedUser('smtp2@x.com');
+      const view = h.account.setSmtp(ctx, {
+        enabled: true,
+        host: 'smtp.example.com',
+        port: 465,
+        user: 'me@example.com',
+        from: 'Me <me@example.com>',
+        pass: 'super-secret-password',
+      });
+      expect(view.pass).toBe('su***rd');
+      expect(view.hasPass).toBe(true);
+      expect(view.configured).toBe(true);
+      expect(view.host).toBe('smtp.example.com');
+      expect(view.port).toBe(465);
+
+      // The password is never stored (or returned) in clear.
+      const row = h.tenancy.getUserSmtp(
+        h.tenancy.getUserByEmail('smtp2@x.com')!.id,
+      )!;
+      expect(row.passEnc).not.toBeNull();
+      expect(row.passEnc).not.toContain('super-secret-password');
+    });
+
+    it('setSmtp without a pass keeps the stored one', () => {
+      const { ctx } = h.seedUser('smtp3@x.com');
+      h.account.setSmtp(ctx, { pass: 'keep-me-around' });
+      const before = h.account.getSmtp(ctx);
+      h.account.setSmtp(ctx, { host: 'other.example.com' });
+      const after = h.account.getSmtp(ctx);
+      expect(after.hasPass).toBe(true);
+      expect(after.pass).toBe(before.pass);
+      expect(after.host).toBe('other.example.com');
+    });
+
+    it('rejects api_token principals (machines have no account)', () => {
+      const machineCtx: AuthContext = {
+        userId: 'ignored',
+        tenantId: null,
+        role: null,
+        isSuperadmin: false,
+        scope: 'global',
+        via: 'api_token',
+      };
+      expect(() => h.account.getSmtp(machineCtx)).toThrow(ForbiddenException);
+      expect(() => h.account.setSmtp(machineCtx, {})).toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('testSmtp delegates to EmailService.testUserSmtp(userId, to)', async () => {
+      const { ctx, id } = h.seedUser('smtp4@x.com');
+      const res = await h.account.testSmtp(ctx, 'ops@example.com');
+      expect(h.testUserSmtp).toHaveBeenCalledWith(id, 'ops@example.com');
+      expect(res).toEqual({ ok: true, messageId: '<id>' });
     });
   });
 });

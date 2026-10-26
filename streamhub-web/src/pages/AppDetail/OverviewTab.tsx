@@ -3,10 +3,12 @@
  *
  * Polls GET /apps/:app/stats every 10s (react-query refetchInterval) and, while
  * the page stays open, accumulates the viewers/streams samples in memory to feed
- * two hand-rolled SVG sparklines (last 30 points). Below the cards: the live
- * rooms table (with a jump to the public player) and a compact recent-events
- * feed backed by GET /apps/:app/logs (limit 15) with a level + quick-range
- * filter and a "see all" jump to the Logs tab.
+ * two hand-rolled SVG sparklines (last 30 points). Below the cards: the
+ * "Pipeline" card (GET /apps/:app/pipeline → the animated <AppFlowDiagram> of
+ * how this app is configured), the live rooms table (with a jump to the public
+ * player) and a compact recent-events feed backed by GET /apps/:app/logs
+ * (limit 15) with a level + quick-range filter and a "see all" jump to the
+ * Logs tab.
  *
  * Degrades gracefully: if the stats endpoint isn't live yet the cards render
  * placeholders (—) instead of throwing.
@@ -18,10 +20,23 @@ import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import type { AppLiveRoom, LogEntry, LogLevel } from '@/api'
 import { formatBytes } from '@/lib/bytes'
+import { formatDateTime as fmtTime } from '@/lib/datetime'
 import { pushCapped } from '@/lib/sparkline'
 import { reduceVodStatus } from '@/lib/appStats'
+import {
+  clampPage,
+  nextSort,
+  pageSlice,
+  roomStatus,
+  sortRooms,
+  type RoomSort,
+  type RoomSortKey,
+} from '@/lib/liveRooms'
 import { Sparkline } from '@/components/Sparkline'
-import { Card as UICard } from '@/ui'
+import { AppFlowDiagram } from '@/components/AppFlowDiagram'
+import { SetupWizardBanner } from '@/components/onboarding/SetupWizardBanner'
+import { Card as UICard, Pagination } from '@/ui'
+import { useAppTimezone } from '@/lib/appTimezone'
 import {
   Badge,
   Empty,
@@ -41,12 +56,6 @@ const MAX_POINTS = 30
 const FEED_LIMIT = 15
 
 // --- small helpers ----------------------------------------------------------
-
-function fmtTime(iso?: string): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
-}
 
 function levelTone(level: string): 'red' | 'amber' | 'cyan' | 'slate' {
   const l = level.toLowerCase()
@@ -89,6 +98,38 @@ function MetricCard({
   )
 }
 
+// --- pipeline flow card -------------------------------------------------------
+
+/**
+ * "Pipeline" — the animated flow diagram of how this app is configured
+ * (GET /apps/:app/pipeline → <AppFlowDiagram>). Same 10s poll as the stats so
+ * the live/active accents track reality. Degrades gracefully: while the
+ * endpoint isn't live yet (404) the card shows a quiet placeholder.
+ */
+function PipelineCard({ app }: { app: string }) {
+  const { t } = useTranslation('appFlow')
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['app-pipeline', app],
+    queryFn: ({ signal }) => api.apps.pipeline(app, signal),
+    refetchInterval: POLL_MS,
+    placeholderData: keepPreviousData,
+  })
+
+  return (
+    <UICard bordered bodyClass="p-5">
+      <SectionTitle title={t('title')} subtitle={t('subtitle')} />
+      {isLoading ? (
+        <Loading label={t('loading')} />
+      ) : isError || !data ? (
+        <Empty label={t('unavailable')} />
+      ) : (
+        <AppFlowDiagram pipeline={data} />
+      )}
+    </UICard>
+  )
+}
+
 // --- recent events feed -----------------------------------------------------
 
 type QuickRange = 'today' | '24h' | '7d'
@@ -108,8 +149,18 @@ const FEED_RANGES: QuickRange[] = ['today', '24h', '7d']
 
 function EventsFeed({ app }: { app: string }) {
   const { t } = useTranslation(['overviewTab', 'common'])
+  const tz = useAppTimezone()
   const [level, setLevel] = useState<LogLevel | ''>('')
   const [range, setRange] = useState<QuickRange>('24h')
+  // Rows the operator expanded to read the full (otherwise truncated) message.
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const toggleRow = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
 
   const params = useMemo(
     () => ({ level: level || undefined, since: rangeSince(range), limit: FEED_LIMIT }),
@@ -157,7 +208,7 @@ function EventsFeed({ app }: { app: string }) {
                 ))}
               </Select>
               <Link
-                to="?tab=logs"
+                to="?tab=config&section=system&sub=logs"
                 className="text-xs font-medium text-primary-500 transition hover:text-fg"
               >
                 {t('events.seeAll')} →
@@ -178,22 +229,33 @@ function EventsFeed({ app }: { app: string }) {
         <div className="max-h-[42vh] divide-y divide-gray-200 overflow-auto font-mono text-xs dark:divide-gray-700">
           {items.map((entry, i) => {
             const lvl = field(entry, 'level') || 'info'
+            const message = field(entry, 'message', 'msg')
+            const isOpen = expanded.has(i)
             return (
-              <div
+              <button
                 key={i}
-                className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-700/40"
+                type="button"
+                onClick={() => toggleRow(i)}
+                aria-expanded={isOpen}
+                aria-label={t('events.toggleRow')}
+                className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-gray-100/50 dark:hover:bg-gray-700/40"
               >
                 <span className="w-40 shrink-0 text-slate-500">
-                  {field(entry, 'ts', 'time')}
+                  {fmtTime(field(entry, 'ts', 'time') || undefined, tz)}
                 </span>
                 <Badge tone={levelTone(lvl)}>{lvl.toUpperCase()}</Badge>
-                <span className="w-24 shrink-0 text-slate-500">
+                <span className="w-24 shrink-0 truncate text-slate-500">
                   {field(entry, 'source')}
                 </span>
-                <span className="min-w-0 flex-1 break-all text-slate-600 dark:text-slate-300">
-                  {field(entry, 'message', 'msg')}
+                <span
+                  title={message}
+                  className={`min-w-0 flex-1 text-slate-600 dark:text-slate-300 ${
+                    isOpen ? 'whitespace-pre-wrap break-words' : 'truncate'
+                  }`}
+                >
+                  {message}
                 </span>
-              </div>
+              </button>
             )
           })}
         </div>
@@ -204,8 +266,60 @@ function EventsFeed({ app }: { app: string }) {
 
 // --- live rooms table -------------------------------------------------------
 
+const ROOMS_PAGE_SIZE = 20
+
+/** A column header that toggles the table sort when clicked. */
+function SortTh({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  className = '',
+}: {
+  label: string
+  sortKey: RoomSortKey
+  sort: RoomSort
+  onSort: (key: RoomSortKey) => void
+  className?: string
+}) {
+  const { t } = useTranslation('overviewTab')
+  const active = sort.key === sortKey
+  return (
+    <RTh className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        aria-label={t('rooms.sortBy', { col: label })}
+        aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        className={`inline-flex items-center gap-1 font-semibold uppercase tracking-wider transition hover:text-fg ${
+          active ? 'text-fg' : ''
+        }`}
+      >
+        {label}
+        <span aria-hidden className="text-[9px] leading-none">
+          {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+        </span>
+      </button>
+    </RTh>
+  )
+}
+
 function LiveRooms({ app, rooms }: { app: string; rooms: AppLiveRoom[] }) {
   const { t } = useTranslation('overviewTab')
+  const tz = useAppTimezone()
+  const [sort, setSort] = useState<RoomSort>({ key: 'since', dir: 'desc' })
+  const [page, setPage] = useState(1)
+
+  const sorted = useMemo(() => sortRooms(rooms, sort), [rooms, sort])
+  // Keep the current page valid as the polled list grows/shrinks.
+  const safePage = clampPage(page, sorted.length, ROOMS_PAGE_SIZE)
+  const pageRows = pageSlice(sorted, safePage, ROOMS_PAGE_SIZE)
+
+  function onSort(key: RoomSortKey) {
+    setSort((prev) => nextSort(prev, key))
+    setPage(1)
+  }
+
   return (
     <UICard bordered bodyClass="p-0">
       <div className="p-5">
@@ -214,42 +328,74 @@ function LiveRooms({ app, rooms }: { app: string; rooms: AppLiveRoom[] }) {
       {rooms.length === 0 ? (
         <Empty label={t('rooms.empty')} />
       ) : (
-        <RTable
-          head={
-            <tr>
-              <RTh>{t('rooms.room')}</RTh>
-              <RTh>{t('rooms.viewers')}</RTh>
-              <RTh>{t('rooms.publishers')}</RTh>
-              <RTh>{t('rooms.since')}</RTh>
-              <RTh className="text-right">{t('rooms.actions')}</RTh>
-            </tr>
-          }
-        >
-          {rooms.map((r) => (
-            <RTr key={r.room}>
-              <RTd label={t('rooms.room')} className="font-mono text-xs text-fg">
-                {r.room}
-              </RTd>
-              <RTd label={t('rooms.viewers')} className="tabular-nums text-slate-600 dark:text-slate-300">
-                {r.viewers ?? '—'}
-              </RTd>
-              <RTd label={t('rooms.publishers')} className="tabular-nums text-slate-600 dark:text-slate-300">
-                {r.publishers}
-              </RTd>
-              <RTd label={t('rooms.since')} className="text-xs text-slate-500">
-                {fmtTime(r.startedAt)}
-              </RTd>
-              <RTd actions className="text-right">
-                <Link
-                  to={`/play/${encodeURIComponent(app)}/${encodeURIComponent(r.room)}`}
-                  className="text-xs font-medium text-primary-500 transition hover:text-fg"
-                >
-                  {t('rooms.watch')} →
-                </Link>
-              </RTd>
-            </RTr>
-          ))}
-        </RTable>
+        <>
+          <RTable
+            head={
+              <tr>
+                <SortTh label={t('rooms.room')} sortKey="room" sort={sort} onSort={onSort} />
+                <SortTh label={t('rooms.viewers')} sortKey="viewers" sort={sort} onSort={onSort} />
+                <SortTh
+                  label={t('rooms.publishers')}
+                  sortKey="publishers"
+                  sort={sort}
+                  onSort={onSort}
+                />
+                <SortTh label={t('rooms.since')} sortKey="since" sort={sort} onSort={onSort} />
+                <SortTh label={t('rooms.status')} sortKey="status" sort={sort} onSort={onSort} />
+                <RTh className="text-right">{t('rooms.actions')}</RTh>
+              </tr>
+            }
+          >
+            {pageRows.map((r) => {
+              const status = roomStatus(r)
+              return (
+                <RTr key={r.room}>
+                  <RTd label={t('rooms.room')} className="font-mono text-xs text-fg">
+                    {r.room}
+                  </RTd>
+                  <RTd
+                    label={t('rooms.viewers')}
+                    className="tabular-nums text-slate-600 dark:text-slate-300"
+                  >
+                    {r.viewers ?? '—'}
+                  </RTd>
+                  <RTd
+                    label={t('rooms.publishers')}
+                    className="tabular-nums text-slate-600 dark:text-slate-300"
+                  >
+                    {r.publishers}
+                  </RTd>
+                  <RTd label={t('rooms.since')} className="text-xs text-slate-500">
+                    {fmtTime(r.startedAt, tz)}
+                  </RTd>
+                  <RTd label={t('rooms.status')}>
+                    <Badge tone={status === 'live' ? 'green' : 'slate'}>
+                      {status === 'live' ? t('rooms.statusLive') : t('rooms.statusOffline')}
+                    </Badge>
+                  </RTd>
+                  <RTd actions className="text-right">
+                    <Link
+                      to={`/play/${encodeURIComponent(app)}/${encodeURIComponent(r.room)}`}
+                      className="text-xs font-medium text-primary-500 transition hover:text-fg"
+                    >
+                      {t('rooms.watch')} →
+                    </Link>
+                  </RTd>
+                </RTr>
+              )
+            })}
+          </RTable>
+          {sorted.length > ROOMS_PAGE_SIZE && (
+            <div className="flex justify-end border-t border-gray-200 p-4 dark:border-gray-700">
+              <Pagination
+                currentPage={safePage}
+                pageSize={ROOMS_PAGE_SIZE}
+                total={sorted.length}
+                onChange={setPage}
+              />
+            </div>
+          )}
+        </>
       )}
     </UICard>
   )
@@ -300,6 +446,9 @@ export function OverviewTab({ app }: { app: string }) {
       {isError && !stats && (
         <ErrorBanner message={errMessage(error, t('loadError'))} />
       )}
+
+      {/* Setup wizard re-entry — only while onboarding is unresolved. */}
+      <SetupWizardBanner app={app} />
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -367,6 +516,9 @@ export function OverviewTab({ app }: { app: string }) {
           </div>
         </MetricCard>
       </div>
+
+      {/* How this app is configured — the animated pipeline flow */}
+      <PipelineCard app={app} />
 
       {/* Live rooms */}
       <LiveRooms app={app} rooms={rooms} />

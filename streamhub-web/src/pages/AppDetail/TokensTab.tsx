@@ -9,6 +9,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import type { MintTokenRequest, MintedToken, TokenSummary } from '@/api'
+import { formatDateTime } from '@/lib/datetime'
+import { useAppTimezone } from '@/lib/appTimezone'
 import {
   Badge,
   Button,
@@ -30,6 +32,7 @@ import {
 
 export function TokensTab({ app }: { app: string }) {
   const { t } = useTranslation(['tokensTab', 'common', 'appDetail'])
+  const tz = useAppTimezone()
   const qc = useQueryClient()
 
   const [room, setRoom] = useState('demo')
@@ -174,7 +177,7 @@ export function TokensTab({ app }: { app: string }) {
                   <Badge tone="cyan">{tok.scope}</Badge>
                 </RTd>
                 <RTd label={t('globals.table.lastUsed')} className="text-xs text-slate-400">
-                  {tok.lastUsedAt ?? '—'}
+                  {formatDateTime(tok.lastUsedAt, tz)}
                 </RTd>
                 <RTd label={t('globals.table.status')}>
                   <Badge tone={tok.revoked ? 'red' : 'green'}>

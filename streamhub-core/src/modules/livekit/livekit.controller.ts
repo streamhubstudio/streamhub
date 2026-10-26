@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  Header,
   NotFoundException,
   Param,
   Post,
   Query,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,18 +32,51 @@ import {
   AppsServiceContract,
   CALLBACKS_SERVICE,
   CallbacksServiceContract,
+  PassthroughIngressInfo,
   STREAMS_SERVICE,
   StreamsServiceContract,
 } from '../../shared/contracts';
 import { LiveKitService, IngressListItem } from './livekit.service';
 import { IngressAuthService } from './ingress-auth.service';
-import { CreateIngressDto } from './dto/create-ingress.dto';
+import {
+  IngressBackupService,
+  type IngressRoleInfo,
+} from './ingress-backup.service';
+import {
+  clampPlaybackTtl,
+  signPlayback,
+  verifyPlayback,
+} from './playback-url.util';
+import {
+  buildRtmpUrl,
+  buildRtmpsUrl,
+  type RtmpUrlConfig,
+} from './ingress-rtmp-url.util';
+import {
+  CreateIngressDto,
+  IngressInputTypeDto,
+  IngressModeDto,
+} from './dto/create-ingress.dto';
 import { ListIngressDto } from './dto/list-ingress.dto';
+import { PassthroughService } from '../passthrough/passthrough.service';
+import {
+  MpegtsSourceError,
+  parseMpegtsSource,
+} from '../passthrough/mpegts-source.util';
 import { MintTokenDto } from './dto/mint-token.dto';
+import { SignPlaybackUrlDto } from './dto/sign-playback-url.dto';
 import {
   SendDataDto,
   ValidateIngressPasswordDto,
 } from './dto/send-data.dto';
+
+/**
+ * Fallback `emptyTimeout` (seconds) for a pre-created persistent/always-on room
+ * (QW-1) when the app config does not carry an explicit value: 24h. Long enough
+ * that a source outage never recycles the room (which would change its SID and
+ * drop every viewer).
+ */
+const LONG_EMPTY_TIMEOUT_S = 86400;
 
 /**
  * Per-app LiveKit endpoints: join tokens (+ public/iframe URLs) and ingress
@@ -61,6 +98,7 @@ export class LiveKitController {
     private readonly ingressAuth: IngressAuthService,
     private readonly moduleRef: ModuleRef,
     private readonly quotas: QuotasService,
+    private readonly ingressBackup: IngressBackupService,
   ) {}
 
   /** Resolve the app's full config; null on any error (app missing, etc). */
@@ -137,9 +175,15 @@ export class LiveKitController {
       dto.canPublish ?? (recorder || hidden ? false : undefined);
 
     // Quota: a publisher token opens a new live stream slot — count it against
-    // max_concurrent_streams. Subscribe-only tokens (canPublish===false) don't.
+    // the tenant's max_concurrent_streams AND the per-app quota (config.yaml
+    // `quotas:` block; default unlimited). Subscribe-only tokens don't.
     if (canPublish !== false) {
       await this.quotas.enforceConcurrentStreams(ctx);
+      await this.quotas.enforceAppConcurrentStreams(
+        app,
+        cfg?.quotas?.maxConcurrentStreams ?? -1,
+        ctx,
+      );
     }
 
     // Adaptive player (SPEC §16): advertise the simulcast ladder via metadata
@@ -181,6 +225,11 @@ export class LiveKitController {
 
   @Get('radio/:room/listen-token')
   @Public()
+  // CORS: this public token powers embeddable/downloadable listener bundles that
+  // may be hosted on a DIFFERENT origin (S3, Netlify, …). A simple GET needs the
+  // response to allow cross-origin reads. Safe: subscribe-only, gated by the
+  // app's publicPlayback feature (or a signed URL for private-playback apps).
+  @Header('Access-Control-Allow-Origin', '*')
   @ApiOperation({
     summary:
       'Mint a subscribe-only audio token for a radio room (wave-4 §6). Public, for the listener embed.',
@@ -189,8 +238,13 @@ export class LiveKitController {
   async listenToken(
     @Param('app') app: string,
     @Param('room') roomParam: string,
+    @Query('exp') exp?: string,
+    @Query('sig') sig?: string,
   ) {
     const cfg = await this.appConfig(app);
+    // P0-3: private-playback apps require a signed URL on the radio listener
+    // path too (same capability signature as play-token).
+    this.assertPlaybackAllowed(cfg, app, roomParam, exp, sig);
     const room = cfg
       ? this.namespaceRoom(cfg.roomPrefix || app, roomParam)
       : await this.resolveRoom(app, roomParam);
@@ -219,27 +273,38 @@ export class LiveKitController {
   }
 
   // ---------------------------------------------------------------------------
-  // Public player token (bug fix): /play and /embed pages need a LiveKit token
-  // with no login. Mints a subscribe-only VIDEO+AUDIO token for a room. Mirrors
-  // the (already public) radio listen-token, but full video and not audio-only.
+  // Public player token: /play and /embed pages need a LiveKit token with no
+  // login. Mints a subscribe-only VIDEO+AUDIO token for a room. Mirrors the
+  // (already public) radio listen-token, but full video and not audio-only.
+  //
+  // Security fix P0-3: when the app opts OUT of public playback
+  // (features.public_playback: false) this endpoint no longer refuses outright
+  // NOR trusts room-name secrecy — it requires a signed short-TTL capability
+  // URL (?exp=&sig=, HMAC per app+room, minted by POST play-token/:room/sign).
+  // Fully-public apps (default) keep anonymous playback with no signature.
   // ---------------------------------------------------------------------------
 
   @Get('play-token/:room')
   @Public()
+  // CORS: this public token powers embeddable/downloadable viewer bundles that
+  // may be hosted on a DIFFERENT origin (S3, Netlify, …). A simple GET needs the
+  // response to allow cross-origin reads. Safe: subscribe-only, gated by the
+  // app's publicPlayback feature (or a signed URL for private-playback apps).
+  @Header('Access-Control-Allow-Origin', '*')
   @ApiOperation({
     summary:
-      'Mint a subscribe-only (video+audio) token for a room. Public — powers the /play and /embed players with no auth.',
+      'Mint a subscribe-only (video+audio) token for a room. Public — powers the /play and /embed players. ' +
+      'Apps with public_playback:false require a signed URL (?exp=&sig=) from POST play-token/:room/sign.',
   })
   @ApiParam({ name: 'room', description: 'Room name within the app.' })
   async playToken(
     @Param('app') app: string,
     @Param('room') roomParam: string,
+    @Query('exp') exp?: string,
+    @Query('sig') sig?: string,
   ) {
     const cfg = await this.appConfig(app);
-    // Feature gate (default ON): an app may disable anonymous public playback.
-    if (cfg && cfg.features.publicPlayback === false) {
-      throw new NotFoundException('public playback is disabled for this app');
-    }
+    this.assertPlaybackAllowed(cfg, app, roomParam, exp, sig);
     const room = cfg
       ? this.namespaceRoom(cfg.roomPrefix || app, roomParam)
       : await this.resolveRoom(app, roomParam);
@@ -265,6 +330,106 @@ export class LiveKitController {
         mode: 'viewer',
       },
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Signed playback URLs (P0-3) — authenticated mint for private-playback apps
+  // ---------------------------------------------------------------------------
+
+  @Post('play-token/:room/sign')
+  @RequirePermission('stream', 'read')
+  @ApiOperation({
+    summary:
+      'Mint a signed short-TTL playback capability for a room (P0-3). Returns a ' +
+      'tokenized /play + /embed URL and an <iframe> snippet — the SAFE way to ' +
+      'embed a private-playback app (public_playback:false). The capability is ' +
+      'app+room-scoped and expiring (exp is inside the HMAC), and is NEITHER an ' +
+      'sk_ API token NOR a JWT session — so embed snippets never leak a bearer. ' +
+      'Default TTL 300s (clamped 30s–24h).',
+  })
+  @ApiParam({ name: 'room', description: 'Room name within the app.' })
+  signPlaybackUrl(
+    @Param('app') app: string,
+    @Param('room') roomParam: string,
+    @Body() dto: SignPlaybackUrlDto,
+  ) {
+    const master = this.config.jwtSecret;
+    if (!master) {
+      throw new ServiceUnavailableException(
+        'STREAMHUB_JWT_SECRET is required to mint signed playback URLs',
+      );
+    }
+    // The embed token IS the P0-3 signed capability: an HMAC over app+room+exp
+    // (per-app derived key), carried on the URL as ?exp=&sig=. The embed page
+    // forwards it to GET play-token/:room, which validates it SERVER-SIDE
+    // (assertPlaybackAllowed → verifyPlayback) before minting a subscribe-only
+    // LiveKit token. So the iframe below is a full player widget gated by a
+    // scoped, expiring token — no privileged credential ever appears in it.
+    const ttl = clampPlaybackTtl(dto?.ttlSeconds);
+    const exp = Math.floor(Date.now() / 1000) + ttl;
+    const sig = signPlayback(master, app, roomParam, exp);
+    const query = `exp=${exp}&sig=${sig}`;
+    const base = this.publicBase();
+    const abs = (p: string) => (base ? `${base}${p}` : p);
+    // The raw API capability URL (back-compat) …
+    const tokenUrl = abs(
+      `/api/v1/apps/${encodeURIComponent(app)}` +
+        `/play-token/${encodeURIComponent(roomParam)}?${query}`,
+    );
+    // … and the operator-facing player/embed surfaces (SPA routes) that carry
+    // the SAME capability so a private app can be shared/embedded without login.
+    const playUrl = abs(
+      `/play/${encodeURIComponent(app)}/${encodeURIComponent(roomParam)}?${query}`,
+    );
+    const embedUrl = abs(
+      `/embed/${encodeURIComponent(app)}/${encodeURIComponent(roomParam)}?${query}`,
+    );
+    const iframe =
+      `<iframe src="${embedUrl}" width="640" height="360" frameborder="0" ` +
+      `allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+    return {
+      data: {
+        app,
+        room: roomParam,
+        exp,
+        ttlSeconds: ttl,
+        sig,
+        tokenUrl,
+        playUrl,
+        embedUrl,
+        iframe,
+      },
+    };
+  }
+
+  /**
+   * P0-3 gate shared by the public playback endpoints. PUBLIC apps (flag
+   * unset/true — the default) pass with no signature (back-compat: anonymous
+   * playback keeps working). PRIVATE apps (public_playback:false) require a
+   * valid, unexpired capability signature over app+room+exp; anything else is
+   * 403 (never leaks whether the room exists).
+   */
+  private assertPlaybackAllowed(
+    cfg: AppConfig | null,
+    app: string,
+    roomParam: string,
+    exp?: string,
+    sig?: string,
+  ): void {
+    if (!cfg || cfg.features.publicPlayback !== false) return;
+    const verdict = verifyPlayback({
+      masterSecret: this.config.jwtSecret,
+      app,
+      room: roomParam,
+      exp,
+      sig,
+    });
+    if (verdict === 'ok') return;
+    throw new ForbiddenException(
+      verdict === 'expired'
+        ? 'signed playback URL expired'
+        : 'playback for this app requires a valid signed URL',
+    );
   }
 
   /** Namespace a room under a known prefix (no async lookup). */
@@ -323,20 +488,76 @@ export class LiveKitController {
       ? this.namespaceRoom(cfg.roomPrefix || app, dto.room)
       : await this.resolveRoom(app, dto.room);
 
+    // RTMP/SRT→HLS passthrough (remux, no transcode): bypasses LiveKit entirely.
+    // Mode comes from the request, defaulting to the app's `rtmp.passthrough`.
+    // The whole LiveKit branch below is left byte-for-byte untouched for the
+    // (default) transcode mode.
+    const mode: 'transcode' | 'passthrough' =
+      dto.mode ?? (cfg?.rtmp?.passthrough ? 'passthrough' : 'transcode');
+    if (mode === 'passthrough') {
+      return this.createPassthroughIngress(app, room, dto);
+    }
+    // SRT push is passthrough-only: LiveKit's ingress API has no SRT input type
+    // (rtmp|whip|url). The DTO already enforces this (SrtRequiresPassthroughMode);
+    // this is defence in depth for direct callers. To PULL a remote SRT source
+    // via LiveKit use inputType 'url' with an srt:// url instead.
+    if (dto.inputType === IngressInputTypeDto.srt) {
+      throw new BadRequestException(
+        "inputType 'srt' requires mode 'passthrough' — the LiveKit transcode path has no SRT input type",
+      );
+    }
+    // MPEG-TS/UDP multicast is a remux-only PULL ingest (defence in depth for
+    // direct callers; the DTO enforces MpegtsRequiresPassthroughMode too).
+    if (dto.inputType === IngressInputTypeDto.mpegts) {
+      throw new BadRequestException(
+        "inputType 'mpegts' requires mode 'passthrough' — MPEG-TS/UDP is a remux-only PULL ingest",
+      );
+    }
+
     // Adaptive player (SPEC §16): ensure multi-layer transcoding on the ingress.
     const adaptive = !!cfg?.features.adaptivePlayer;
     const enableTranscoding =
       dto.enableTranscoding ??
       (adaptive || !!cfg?.rtmp.transcode || dto.inputType !== 'whip');
 
+    // QW-1 (24/7 linear channels): pre-create the room with a LONG emptyTimeout
+    // BEFORE the ingress so a brief source outage never recycles the room (which
+    // would change its SID and drop viewers). Ingress-auto-created rooms use
+    // LiveKit's ~300s server default and the ingress SDK can't carry a room
+    // config, so this is the only seam. Gated by the app's `features.linear`
+    // flag → conference/normal apps keep the 300s default. Best-effort: a
+    // createRoom hiccup must never block ingress creation.
+    // CAVEAT: LiveKit createRoom only sets emptyTimeout for a room that does not
+    // yet EXIST — it will not lower/raise an already-live room's timeout.
+    const linear = cfg?.features.linear;
+    if (linear?.persistentRoom) {
+      try {
+        await this.livekit.createRoom(
+          room,
+          linear.roomEmptyTimeoutSeconds || LONG_EMPTY_TIMEOUT_S,
+        );
+      } catch {
+        /* best-effort — never fail ingress create on a room pre-create hiccup */
+      }
+    }
+
+    const primaryIdentity = dto.participantIdentity?.trim() || `ingress-${app}`;
     const info = await this.livekit.createIngress({
       appName: app,
       roomName: room,
       inputType: dto.inputType,
-      participantIdentity: dto.participantIdentity || `ingress-${app}`,
+      participantIdentity: primaryIdentity,
       participantName: dto.participantName,
       url: dto.url,
       enableTranscoding,
+      // Efficient transcode profile: a capped ladder ONLY when the app explicitly
+      // turns adaptive on; otherwise a SINGLE capped layer (the safe default that
+      // skips LiveKit's CPU-heavy 3-layer simulcast). Both are capped at
+      // webrtc.transcode_max_height (default 720).
+      simulcast: cfg?.webrtc?.adaptive === true,
+      maxHeight: cfg?.webrtc?.transcodeMaxHeight,
+      // Audio-only (radio): drop video ⇒ near-idle CPU, no GPU.
+      audioOnly: dto.audioOnly === true,
     });
 
     const isRtmp = dto.inputType === 'rtmp';
@@ -355,17 +576,74 @@ export class LiveKitController {
       streamPassword = reg.password;
     }
 
+    // Primary + backup (failover) stream keys — RTMP only. Create a SECOND
+    // ingress bound to the SAME room, with a DISTINCT participant identity so
+    // LiveKit never evicts one when both push. Both keys therefore publish into
+    // one room ⇒ the player/playback URL is identical whichever key is live.
+    // The backup is standby: primary is preferred; the operator points a
+    // failover encoder at the backup key and only pushes it if the primary
+    // drops. (Simultaneous dual-push yields two publishers — see the ingress
+    // feature doc; StreamHub does not force-switch, keeping this simple/correct.)
+    const wantBackup = isRtmp && dto.backup === true;
+    let backupInfo: Awaited<ReturnType<LiveKitService['createIngress']>> | undefined;
+    let backupPassword: string | undefined;
+    if (wantBackup) {
+      backupInfo = await this.livekit.createIngress({
+        appName: app,
+        roomName: room,
+        inputType: dto.inputType,
+        participantIdentity: `${primaryIdentity}-backup`,
+        participantName: dto.participantName
+          ? `${dto.participantName} (backup)`
+          : undefined,
+        enableTranscoding,
+        simulcast: cfg?.webrtc?.adaptive === true,
+        maxHeight: cfg?.webrtc?.transcodeMaxHeight,
+      });
+      const backupReg = this.ingressAuth.register({
+        ingressId: backupInfo.ingressId,
+        app,
+        room,
+        streamKey: backupInfo.streamKey,
+        withPassword: wantPassword,
+      });
+      backupPassword = backupReg.password;
+      this.ingressBackup.link(app, {
+        primaryIngressId: info.ingressId,
+        backupIngressId: backupInfo.ingressId,
+        room,
+      });
+    }
+
     const player = this.playerUrls(app, room);
     return {
       data: {
         ...info,
-        // Spec-shaped RTMP fields (SPEC §16). rtmp_url uses RTMP_PUBLIC_HOST.
-        rtmp_url: isRtmp
-          ? this.rtmpUrl(info.streamKey)
-          : undefined,
+        // Spec-shaped RTMP fields (SPEC §16). rtmp_url uses RTMP_PUBLIC_HOST;
+        // rtmps_url is present only when STREAMHUB_RTMPS_ENABLE is on.
+        rtmp_url: isRtmp ? this.rtmpUrl(info.streamKey) : undefined,
+        rtmps_url: isRtmp ? this.rtmpsUrl(info.streamKey) : undefined,
         stream_key: info.streamKey,
         stream_password: streamPassword,
         requires_password: wantPassword,
+        // Primary + backup (failover) key surface. `primaryStreamKey` mirrors
+        // `stream_key`; the backup fields are present only when a backup was
+        // minted. Both keys share the same room ⇒ the same player_url below.
+        role: isRtmp ? 'primary' : undefined,
+        hasBackup: wantBackup,
+        primaryStreamKey: isRtmp ? info.streamKey : undefined,
+        primary_rtmp_url: isRtmp ? this.rtmpUrl(info.streamKey) : undefined,
+        primary_rtmps_url: isRtmp ? this.rtmpsUrl(info.streamKey) : undefined,
+        ...(backupInfo
+          ? {
+              backupIngressId: backupInfo.ingressId,
+              backupStreamKey: backupInfo.streamKey,
+              backup_stream_key: backupInfo.streamKey,
+              backup_rtmp_url: this.rtmpUrl(backupInfo.streamKey),
+              backup_rtmps_url: this.rtmpsUrl(backupInfo.streamKey),
+              backup_stream_password: backupPassword,
+            }
+          : {}),
         adaptive,
         player_url: player.playUrl,
         embed_iframe: player.iframe,
@@ -373,11 +651,142 @@ export class LiveKitController {
     };
   }
 
+  /**
+   * PASSTHROUGH branch of createIngress (mode=passthrough). Never calls
+   * `livekit.createIngress`: mints a passthrough key, arms the remux (RTMP
+   * `-listen 1` or SRT `mode=listener` push acceptor, or an MPEG-TS/UDP PULL
+   * `-f mpegts -i udp://@GROUP:PORT`) and returns the push/pull + playback
+   * surface + the capabilities-lost block. Passthrough is rtmp/srt/mpegts-only
+   * and mutually exclusive with adaptive/transcode/backup — mixing them is a 400
+   * (the mixing is prevented, not silently ignored).
+   */
+  private createPassthroughIngress(
+    app: string,
+    room: string,
+    dto: CreateIngressDto,
+  ) {
+    if (
+      dto.inputType !== IngressInputTypeDto.rtmp &&
+      dto.inputType !== IngressInputTypeDto.srt &&
+      dto.inputType !== IngressInputTypeDto.mpegts
+    ) {
+      throw new BadRequestException(
+        'passthrough ingress requires inputType=rtmp, inputType=srt or inputType=mpegts',
+      );
+    }
+    if (dto.enableTranscoding === true) {
+      throw new BadRequestException(
+        'passthrough (remux) cannot be combined with transcoding — pick one mode',
+      );
+    }
+    if (dto.backup === true) {
+      throw new BadRequestException(
+        'passthrough does not support a backup/failover key',
+      );
+    }
+    if (dto.audioOnly === true) {
+      throw new BadRequestException(
+        'passthrough does not support audio-only (there is no transcode to drop video)',
+      );
+    }
+    const passthrough = this.resolvePassthrough();
+    if (!passthrough) {
+      throw new ServiceUnavailableException(
+        'RTMP/SRT/MPEG-TS passthrough plane is unavailable',
+      );
+    }
+    const inputType =
+      dto.inputType === IngressInputTypeDto.mpegts
+        ? ('mpegts' as const)
+        : dto.inputType === IngressInputTypeDto.srt
+          ? ('srt' as const)
+          : ('rtmp' as const);
+
+    // MPEG-TS is a PULL source: validate + canonicalize the udp:// input (a bad
+    // group/port/SSM list is a 400) and pass it to the remux. RTMP keeps the
+    // pre-SRT call shape byte-for-byte; SRT passes its transport.
+    let info;
+    if (inputType === 'mpegts') {
+      if (!dto.url || !dto.url.trim()) {
+        throw new BadRequestException(
+          "inputType 'mpegts' requires `url` — a udp://@GROUP:PORT source",
+        );
+      }
+      let sourceUrl: string;
+      try {
+        sourceUrl = parseMpegtsSource({
+          url: dto.url.trim(),
+          sources: dto.sources,
+          localaddr: dto.localaddr,
+          fifoSize: dto.fifoSize,
+          overrunNonfatal: dto.overrunNonfatal,
+        }).sourceUrl;
+      } catch (err) {
+        if (err instanceof MpegtsSourceError) {
+          throw new BadRequestException(err.message);
+        }
+        throw err;
+      }
+      info = passthrough.create(app, room, undefined, 'mpegts', sourceUrl);
+    } else if (inputType === 'srt') {
+      info = passthrough.create(app, room, undefined, 'srt');
+    } else {
+      info = passthrough.create(app, room);
+    }
+
+    const player = this.playerUrls(app, room);
+    return {
+      data: {
+        mode: 'passthrough' as const,
+        ingressId: info.ingressId,
+        app: info.app,
+        room: info.room,
+        inputType: info.inputType ?? inputType,
+        streamKey: info.streamKey,
+        stream_key: info.streamKey,
+        // Push/pull surface per transport (exactly one): rtmp://…/<app>/<key>
+        // XOR srt://…?streamid=<key> XOR the udp://@GROUP:PORT source_url.
+        rtmp_url: info.rtmpUrl || undefined,
+        srt_url: info.srtUrl,
+        source_url: info.sourceUrl,
+        hls_url: info.hlsUrl,
+        player_url: info.playerUrl ?? player.playUrl,
+        embed_iframe: player.iframe,
+        capabilities: info.capabilities,
+      },
+    };
+  }
+
+  /** Resolve PassthroughService lazily (avoids a LiveKit↔Passthrough DI cycle). */
+  private resolvePassthrough(): PassthroughService | null {
+    try {
+      return this.moduleRef.get(PassthroughService, { strict: false });
+    } catch {
+      return null;
+    }
+  }
+
+  /** Snapshot of the RTMP/RTMPS URL config for the pure URL builders. */
+  private rtmpCfg(): RtmpUrlConfig {
+    return {
+      rtmpPublicHost: this.config.rtmpPublicHost,
+      rtmpsEnable: this.config.rtmpsEnable,
+      rtmpsPublicHost: this.config.rtmpsPublicHost,
+      rtmpsPort: this.config.rtmpsPort,
+    };
+  }
+
   /** Build the public RTMP push URL: rtmp://<RTMP_PUBLIC_HOST>:1935/live/<key>. */
   private rtmpUrl(streamKey?: string): string | undefined {
-    if (!streamKey) return undefined;
-    const host = this.config.rtmpPublicHost || 'media.example.com';
-    return `rtmp://${host}:1935/live/${streamKey}`;
+    return buildRtmpUrl(streamKey, this.rtmpCfg());
+  }
+
+  /**
+   * Build the public RTMPS push URL: rtmps://<host>:<port>/live/<key>. Returns
+   * undefined unless STREAMHUB_RTMPS_ENABLE is on (TLS front, see deploy/rtmps/).
+   */
+  private rtmpsUrl(streamKey?: string): string | undefined {
+    return buildRtmpsUrl(streamKey, this.rtmpCfg());
   }
 
   @Post('ingress/:id/validate')
@@ -457,18 +866,130 @@ export class LiveKitController {
       }
     }
 
+    // Full id→row map so a primary row can carry its paired backup's key
+    // without an extra round-trip (the backup ingress is elsewhere in `all`).
+    const byId = new Map(all.map((i) => [i.ingressId, i]));
+
     const data = page.map((i: IngressListItem) => ({
       ...i,
       room: i.roomName,
       // Persisten los campos que la UI necesita para OBS (no solo al crear).
       stream_key: i.streamKey,
       rtmp_url: this.rtmpUrl(i.streamKey),
+      rtmps_url: this.rtmpsUrl(i.streamKey),
       viewers: viewersByRoom.has(i.roomName)
         ? viewersByRoom.get(i.roomName)
         : null,
       requires_password: !!this.safeAuth(app, i.ingressId)?.requiresPassword,
+      // Primary + backup (failover) role annotation.
+      ...this.backupFields(app, i.ingressId, byId),
     }));
-    return { data, total, limit, offset };
+
+    // Merge the passthrough (remux) ingresses — they have no LiveKit ingress, so
+    // they are sourced from the passthrough plane and appended on the first page.
+    // Non-passthrough apps get an empty list ⇒ the response is byte-for-byte
+    // unchanged from before this feature.
+    const ptRows = this.passthroughRows(app, room, q);
+    return {
+      data: offset === 0 ? [...data, ...ptRows] : data,
+      total: total + ptRows.length,
+      limit,
+      offset,
+    };
+  }
+
+  /**
+   * Passthrough ingress rows for the listing, filtered by the same room/q as the
+   * LiveKit rows and mapped to the shared list shape (rtmp_url + hls_url + live
+   * status). Empty when the passthrough plane is unavailable or has no rows.
+   */
+  private passthroughRows(
+    app: string,
+    room: string | undefined,
+    q: string | undefined,
+  ): Record<string, unknown>[] {
+    const passthrough = this.resolvePassthrough();
+    if (!passthrough) return [];
+    let rows: PassthroughIngressInfo[];
+    try {
+      rows = passthrough.list(app);
+    } catch {
+      return [];
+    }
+    if (room) {
+      rows = rows.filter(
+        (r) => r.room === room || r.room.endsWith(`-${room}`),
+      );
+    }
+    if (q) {
+      rows = rows.filter((r) =>
+        [r.ingressId, r.room, r.streamKey].some((v) =>
+          v.toLowerCase().includes(q),
+        ),
+      );
+    }
+    return rows.map((r) => ({
+      ingressId: r.ingressId,
+      mode: 'passthrough',
+      room: r.room,
+      roomName: r.room,
+      stream_key: r.streamKey,
+      streamKey: r.streamKey,
+      // Push/pull surface per transport (exactly one): rtmp_url XOR srt_url XOR
+      // source_url (mpegts PULL). RTMP rows keep the pre-SRT shape (the srt/mpegts
+      // fields absent) so nothing about the existing listing changed.
+      ...(r.inputType === 'mpegts'
+        ? { inputType: 'mpegts', source_url: r.sourceUrl }
+        : r.inputType === 'srt'
+          ? { inputType: 'srt', srt_url: r.srtUrl }
+          : { rtmp_url: r.rtmpUrl }),
+      hls_url: r.hlsUrl,
+      player_url: r.playerUrl,
+      status: r.status,
+      playlistFresh: r.playlistFresh,
+      requires_password: false,
+      viewers: null,
+      capabilities: r.capabilities,
+    }));
+  }
+
+  /**
+   * Role + paired-key fields for one ingress row (primary/backup failover). A
+   * PRIMARY row also carries its backup's stream key + push URLs (resolved from
+   * `byId`) so the dashboard can show both keys from a single row. Never throws:
+   * a missing link/row simply yields `{}`.
+   */
+  private backupFields(
+    app: string,
+    ingressId: string,
+    byId: Map<string, IngressListItem>,
+  ): Record<string, unknown> {
+    const roleInfo = this.safeRoleInfo(app, ingressId);
+    if (!roleInfo || !roleInfo.role) return {};
+    const out: Record<string, unknown> = {
+      role: roleInfo.role,
+      pairedIngressId: roleInfo.pairedIngressId ?? undefined,
+    };
+    if (roleInfo.role === 'primary' && roleInfo.backupIngressId) {
+      const b = byId.get(roleInfo.backupIngressId);
+      if (b?.streamKey) {
+        out.backupIngressId = b.ingressId;
+        out.backupStreamKey = b.streamKey;
+        out.backup_stream_key = b.streamKey;
+        out.backup_rtmp_url = this.rtmpUrl(b.streamKey);
+        out.backup_rtmps_url = this.rtmpsUrl(b.streamKey);
+      }
+    }
+    return out;
+  }
+
+  /** ingress_backup role lookup that never throws (link/db may be absent). */
+  private safeRoleInfo(app: string, ingressId: string): IngressRoleInfo | null {
+    try {
+      return this.ingressBackup.getRoleInfo(app, ingressId);
+    } catch {
+      return null;
+    }
   }
 
   /** ingress_auth lookup that never throws (row/db may be absent). */
@@ -494,20 +1015,86 @@ export class LiveKitController {
   @Get('ingress/:id')
   @RequirePermission('ingress', 'read')
   @ApiOperation({ summary: 'Get a single ingress by id.' })
-  async getIngress(@Param('app') _app: string, @Param('id') id: string) {
+  async getIngress(@Param('app') app: string, @Param('id') id: string) {
     const all = await this.livekit.listIngress();
     const info = all.find((i) => i.ingressId === id);
     if (!info) throw new NotFoundException(`ingress ${id} not found`);
-    return { data: info };
+    const byId = new Map(all.map((i) => [i.ingressId, i]));
+    return { data: { ...info, ...this.backupFields(app, id, byId) } };
   }
 
   @Delete('ingress/:id')
   @RequirePermission('ingress', 'delete')
-  @ApiOperation({ summary: 'Delete an ingress by id.' })
+  @ApiOperation({
+    summary:
+      'Delete an ingress by id. Deleting a PRIMARY also tears down its paired ' +
+      'BACKUP (failover) ingress; deleting a backup just unlinks the pair.',
+  })
   async deleteIngress(@Param('app') app: string, @Param('id') id: string) {
+    // Passthrough (remux) ingress: no LiveKit ingress behind it — tear it down
+    // via the passthrough plane (stop remux + drop key + clean HLS) and return.
+    // Never calls livekit.deleteIngress.
+    if (PassthroughService.isPassthroughId(id)) {
+      const removed = this.resolvePassthrough()?.remove(app, id) ?? false;
+      return { data: { ingressId: id, deleted: removed, mode: 'passthrough' } };
+    }
+
+    const link = this.safeLink(app, id);
     await this.livekit.deleteIngress(id);
     this.ingressAuth.remove(app, id);
-    return { data: { ingressId: id, deleted: true } };
+
+    // Failover cascade: a primary + its backup are one logical endpoint, so
+    // removing the primary removes the standby backup too (leaving it would let
+    // an orphan key silently accept a push into the same room). Removing a
+    // backup only drops the pairing. Best-effort — the primary delete already
+    // succeeded, so a backup cleanup hiccup never fails the request.
+    let cascadedBackupId: string | undefined;
+    if (link) {
+      if (link.primaryIngressId === id) {
+        cascadedBackupId = link.backupIngressId;
+        try {
+          await this.livekit.deleteIngress(link.backupIngressId);
+        } catch {
+          /* backup may already be gone */
+        }
+        this.safeAuthRemove(app, link.backupIngressId);
+      }
+      this.safeBackupUnlink(app, id);
+    }
+    return {
+      data: {
+        ingressId: id,
+        deleted: true,
+        ...(cascadedBackupId ? { backupIngressId: cascadedBackupId } : {}),
+      },
+    };
+  }
+
+  /** ingress_backup pairing lookup that never throws (link/db may be absent). */
+  private safeLink(app: string, ingressId: string) {
+    try {
+      return this.ingressBackup.getLinkFor(app, ingressId);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Drop the pairing referencing an ingress id, swallowing any error. */
+  private safeBackupUnlink(app: string, ingressId: string): void {
+    try {
+      this.ingressBackup.remove(app, ingressId);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  /** Remove an ingress_auth row, swallowing any error (cascade cleanup). */
+  private safeAuthRemove(app: string, ingressId: string): void {
+    try {
+      this.ingressAuth.remove(app, ingressId);
+    } catch {
+      /* best-effort */
+    }
   }
 
   // ---------------------------------------------------------------------------

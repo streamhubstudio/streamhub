@@ -1,0 +1,41 @@
+{
+  "title": "Registro de auditoría",
+  "subtitle": "Registro a prueba de manipulaciones de cada acción relevante para la seguridad de este despliegue.",
+  "filterAction": "Prefijo de acción (ej. auth.)",
+  "filterActor": "Id del actor",
+  "filterFrom": "Desde",
+  "filterTo": "Hasta",
+  "allResults": "Todos los resultados",
+  "updating": "Actualizando…",
+  "empty": "Ninguna entrada de auditoría coincide con estos filtros.",
+  "loadError": "No se pudo cargar el registro de auditoría.",
+  "forbidden": "El registro de auditoría es una vista solo para superadmin. Ingresá con una cuenta de alcance global para verlo.",
+  "unsupported": "El registro de auditoría requiere una versión más nueva del core de StreamHub. Actualizá el servidor para habilitarlo.",
+  "totalCount": "{{count}} entradas",
+  "chain": {
+    "checking": "Verificando cadena…",
+    "verified_one": "Cadena verificada · {{count}} entrada",
+    "verified_other": "Cadena verificada · {{count}} entradas",
+    "broken": "Cadena rota en #{{id}}"
+  },
+  "col": {
+    "timestamp": "Fecha y hora",
+    "actor": "Actor",
+    "action": "Acción",
+    "target": "Objetivo",
+    "ip": "IP",
+    "result": "Resultado"
+  },
+  "result": {
+    "success": "éxito",
+    "failure": "fallo",
+    "deny": "denegado"
+  },
+  "actorType": {
+    "user": "usuario",
+    "token": "token",
+    "admin": "admin",
+    "system": "sistema",
+    "anonymous": "anónimo"
+  }
+}

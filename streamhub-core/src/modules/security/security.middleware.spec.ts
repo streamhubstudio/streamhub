@@ -54,12 +54,18 @@ function make(env: Record<string, string> = {}): Harness {
   return { ctx, rules, rep, mw };
 }
 
-function fakeReq(ip: string, path = '/api/v1/apps'): Request {
+/**
+ * Post-fix P0-2 request model: `ip` is what Express resolved via `trust proxy`
+ * (the trustworthy value); the raw X-Forwarded-For header is client noise and
+ * must be IGNORED by the middleware.
+ */
+function fakeReq(ip: string, path = '/api/v1/apps', spoofXff?: string): Request {
   return {
-    headers: { 'x-forwarded-for': ip },
+    headers: spoofXff ? { 'x-forwarded-for': spoofXff } : {},
+    ip,
     method: 'GET',
     path,
-    socket: { remoteAddress: '127.0.0.1' },
+    socket: { remoteAddress: ip },
   } as unknown as Request;
 }
 
@@ -251,6 +257,45 @@ describe('security/SecurityMiddleware', () => {
       h.mw.use(req, fakeRes().res, next);
       expect(next).toHaveBeenCalled();
       expect((req as RequestWithIpAccess).ipAccess).toBeUndefined();
+    });
+  });
+
+  // ===========================================================================
+  // Fix P0-2 — spoofed X-Forwarded-For must NOT bypass the middleware
+  // ===========================================================================
+  describe('SECURITY: X-Forwarded-For spoofing (fix P0-2)', () => {
+    it('a spoofed "X-Forwarded-For: 127.0.0.1" does NOT ride the private fast-path (block still applies)', () => {
+      h = make();
+      h.rules.add({ cidr: '203.0.113.0/24', action: 'block' });
+      const { res, statusCode } = fakeRes();
+      const next = jest.fn();
+      // Express resolved the real client (req.ip = public); the raw header
+      // carries the attacker's spoof. Before the fix, the middleware read the
+      // header's first hop → treated the client as loopback → skipped ALL rules.
+      h.mw.use(fakeReq(PUBLIC_IP, '/api/v1/apps', '127.0.0.1'), res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(statusCode()).toBe(403);
+    });
+
+    it('a spoofed private XFF does not evade an active auto-ban either', () => {
+      h = make();
+      ban(h, PUBLIC_IP);
+      const { res, statusCode } = fakeRes();
+      const next = jest.fn();
+      h.mw.use(fakeReq(PUBLIC_IP, '/api/v1/apps', '10.0.0.1'), res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(statusCode()).toBe(429);
+    });
+
+    it('a spoofed PUBLIC allowlisted XFF does not evade allowlist-only mode', () => {
+      h = make({ STREAMHUB_IP_ALLOWLIST_ONLY: 'true' });
+      h.rules.add({ cidr: '198.51.100.0/24', action: 'allow' });
+      const { res, statusCode } = fakeRes();
+      const next = jest.fn();
+      // Attacker claims to be an allowlisted IP via the raw header.
+      h.mw.use(fakeReq(PUBLIC_IP, '/api/v1/apps', '198.51.100.10'), res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(statusCode()).toBe(403);
     });
   });
 

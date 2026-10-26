@@ -36,7 +36,8 @@
     "s3": "S3 storage",
     "features": "Features",
     "qc": "QC token",
-    "mqtt": "MQTT"
+    "mqtt": "MQTT",
+    "smtp": "SMTP"
   },
   "saveStatus": {
     "saving": "Saving…",
@@ -93,6 +94,33 @@
     "saveError": "Could not save.",
     "saving": "Saving…",
     "save": "Save MQTT"
+  },
+  "smtp": {
+    "loading": "Loading SMTP config…",
+    "loadError": "Could not load the SMTP configuration.",
+    "title": "SMTP (email override)",
+    "subtitle": "When enabled, this app's notifications (the email notify channel) are sent through this SMTP server instead of the global default — unless the recipient user has their own SMTP override configured (Account → SMTP), which takes priority.",
+    "enabledLabel": "Use this app's SMTP",
+    "enabledHint": "Master switch. Off = this app's notifications use the global SMTP default.",
+    "hostLabel": "Host",
+    "portLabel": "Port",
+    "portHint": "587 = STARTTLS; 465 = implicit TLS.",
+    "userLabel": "Username",
+    "passLabel": "Password",
+    "storedHint": "A password is stored. Leave empty to keep it.",
+    "fromLabel": "From",
+    "fromHint": "From header on outgoing mail, e.g. \"My App <no-reply@example.com>\".",
+    "saveError": "Could not save.",
+    "saving": "Saving…",
+    "save": "Save SMTP",
+    "testLabel": "Send a test email",
+    "testHint": "Sends a probe email using the SAVED configuration above (save first if you just changed it), regardless of the switch above.",
+    "testDirtyHint": "You have unsaved changes — save first so the test uses them.",
+    "testing": "Sending…",
+    "testSend": "Send test",
+    "testSent": "Test email sent ✓",
+    "testFailed": "Could not send the test email.",
+    "testNotConfigured": "SMTP is not fully configured (host + password required)."
   },
   "featuresCard": {
     "loading": "Loading features…",

@@ -1,0 +1,158 @@
+# Scrape config del stack de observabilidad — MODO CLUSTER (3 nodos).
+# Diseño: https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY.
+#
+# NO reemplaza a prometheus.yml (single-node, Fase 1). Este archivo lo usa SOLO
+# el master (stream01) cuando corre en modo cluster — lo monta el overlay
+# cluster/docker-compose.cluster.yml en lugar de prometheus.yml.
+#
+# Topología (IPs reales):
+#   stream01 / 203.0.113.10  = MASTER. core + livekit NATIVOS (systemd),
+#                               ingress/egress/redis en docker. Corre este
+#                               Prometheus. Se scrapea TODO por 127.0.0.1.
+#   stream02 / 203.0.113.11  = nodo. core+livekit+ingress+egress+redis en
+#                               docker, nginx delante. /metrics de core es
+#                               loopback-only en el nodo -> se expone vía nginx
+#                               (TLS, allow-master) — ver cluster/nginx-metrics-export.conf.
+#   stream03 / 203.0.113.12  = idem stream02.
+#
+# Cómo se scrapea cada nodo remoto:
+#   - core / livekit / ingress / egress  -> nginx del nodo, HTTPS :443, con
+#     `location` por servicio (allow 203.0.113.10; deny all). El Bearer del
+#     core viaja cifrado por TLS. Ver cluster/nginx-metrics-export.conf.
+#   - node_exporter                      -> directo al :9100 del nodo (http),
+#     protegido por ufw (allow from 203.0.113.10). Ver cluster/node-agent-compose.yml.
+#
+# Convención de labels: cada target lleva `node` (stream01|stream02|stream03) y
+# `service`. Los jobs se mantienen por-servicio (job constante) para que las
+# queries `up{job="streamhub-core"}` funcionen agregando por `node`. El master
+# scrapea localhost sobre http; los nodos remotos sobre https — el override
+# per-target va con las etiquetas especiales `__scheme__` / `__metrics_path__`
+# en cada static_config (Prometheus las honra antes de descartarlas).
+#
+# TLS de los nodos: se scrapean por IP, así que el CN/SAN del cert no matchea la
+# IP -> `insecure_skip_verify: true` (la conexión SIGUE cifrada; sólo no se
+# valida el nombre del cert). Para validación estricta, cambiá los targets por
+# el FQDN de cada nodo y poné `insecure_skip_verify: false`.
+#
+# METRICS_TOKEN: se asume el MISMO token en los 3 nodos (recomendado en una
+# flota). Si difieren, partí el job `streamhub-core` en uno por nodo, cada uno
+# con su propio `credentials_file` (secrets/metrics_token_stream0X, gitignoreado).
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: streamhub
+    role: cluster-master
+    node: stream01        # nodo donde corre este Prometheus
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+  - /etc/prometheus/alerts.cluster.yml
+
+scrape_configs:
+  # ==========================================================================
+  # streamhub-core — un job, tres nodos. Bearer vía credentials_file (mismo
+  # token en la flota). Master local http; nodos remotos https vía nginx.
+  # ==========================================================================
+  - job_name: streamhub-core
+    scheme: https                       # default para los nodos remotos
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics_token
+    tls_config:
+      insecure_skip_verify: true        # scrape por IP -> CN no matchea (sigue cifrado)
+    static_configs:
+      - targets: ["127.0.0.1:3020"]
+        labels: { node: stream01, service: streamhub-core, __scheme__: "http" }
+      - targets: ["203.0.113.11:443"]
+        labels: { node: stream02, service: streamhub-core }
+      - targets: ["203.0.113.12:443"]
+        labels: { node: stream03, service: streamhub-core }
+
+  # ==========================================================================
+  # LiveKit — SFU. Master local :6789; nodos vía nginx path /metrics/livekit.
+  # ==========================================================================
+  - job_name: livekit
+    scheme: https
+    metrics_path: /metrics/livekit
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ["127.0.0.1:6789"]
+        labels: { node: stream01, service: livekit, __scheme__: "http", __metrics_path__: "/metrics" }
+      - targets: ["203.0.113.11:443"]
+        labels: { node: stream02, service: livekit }
+      - targets: ["203.0.113.12:443"]
+        labels: { node: stream03, service: livekit }
+
+  # ==========================================================================
+  # LiveKit ingress. Master local :6790; nodos vía nginx path /metrics/ingress.
+  # ==========================================================================
+  - job_name: livekit-ingress
+    scheme: https
+    metrics_path: /metrics/ingress
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ["127.0.0.1:6790"]
+        labels: { node: stream01, service: ingress, __scheme__: "http", __metrics_path__: "/metrics" }
+      - targets: ["203.0.113.11:443"]
+        labels: { node: stream02, service: ingress }
+      - targets: ["203.0.113.12:443"]
+        labels: { node: stream03, service: ingress }
+
+  # ==========================================================================
+  # LiveKit egress. Master local :6791; nodos vía nginx path /metrics/egress.
+  # ==========================================================================
+  - job_name: livekit-egress
+    scheme: https
+    metrics_path: /metrics/egress
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ["127.0.0.1:6791"]
+        labels: { node: stream01, service: egress, __scheme__: "http", __metrics_path__: "/metrics" }
+      - targets: ["203.0.113.11:443"]
+        labels: { node: stream02, service: egress }
+      - targets: ["203.0.113.12:443"]
+        labels: { node: stream03, service: egress }
+
+  # ==========================================================================
+  # node_exporter — CPU/RAM/swap/disco/red del HOST de cada nodo. Directo al
+  # :9100 (http), protegido por ufw (allow from 203.0.113.10). El master lo
+  # tiene local (127.0.0.1:9100).
+  # ==========================================================================
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+        labels: { node: stream01, service: host }
+      - targets: ["203.0.113.11:9100"]
+        labels: { node: stream02, service: host }
+      - targets: ["203.0.113.12:9100"]
+        labels: { node: stream03, service: host }
+
+  # ==========================================================================
+  # Self-monitoring del stack del master. Bound a 9091 (NO 9090: en un nodo con
+  # media stack el ingress de LiveKit ya toma 127.0.0.1:9090).
+  # ==========================================================================
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9091"]
+        labels: { node: stream01, service: prometheus }
+
+  # Loki (master) self-metrics — health del almacén de logs.
+  - job_name: loki
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:3100"]
+        labels: { node: stream01, service: loki }
+
+  # Promtail del master — health del agente de logs local.
+  - job_name: promtail
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:9080"]
+        labels: { node: stream01, service: promtail }

@@ -25,6 +25,10 @@
     "viewers": "Viewers",
     "publishers": "Publishers",
     "since": "Since",
+    "status": "Status",
+    "statusLive": "Live",
+    "statusOffline": "Offline",
+    "sortBy": "Sort by {{col}}",
     "actions": "Actions",
     "watch": "Watch"
   },
@@ -40,6 +44,7 @@
     "seeAll": "See all",
     "loading": "Loading events…",
     "loadError": "Could not load the events.",
-    "empty": "No events in this range."
+    "empty": "No events in this range.",
+    "toggleRow": "Show or hide the full message"
   }
 }

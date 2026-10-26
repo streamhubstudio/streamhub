@@ -10,8 +10,14 @@ import { static as expressStatic } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module';
+import { makeHlsByteCounter } from './modules/net-metrics/hls-byte-counter.middleware';
+import { NET_METRICS_SERVICE } from './modules/net-metrics/net-metrics.contract';
 import { ConfigService } from './shared/config/config.service';
 import { mountLiveHttp } from './modules/ws-ingest/live-http';
+import {
+  hlsCacheHeaders,
+  playlistIsFinished,
+} from './modules/streams/hls-cache';
 import { AUTH_VALIDATOR } from './shared/auth';
 import {
   AUTH_RATE_LIMIT_PATHS,
@@ -33,21 +39,32 @@ const GLOBAL_PREFIX = 'api/v1';
  * Nest router / SPA ServeStatic fallback (which also excludes `/hls/*`). The
  * handler is terminal: a missing file returns 404 rather than falling through
  * to index.html.
+ *
+ * Cache headers come from the tested `hls-cache` policy (streams module): `.ts`
+ * segments are always immutable + long-cached; `.m3u8` playlists are `no-cache`
+ * by default and become CDN-cacheable (short live TTL + stale-while-revalidate,
+ * longer once finished) when `STREAMHUB_HLS_CDN` is on — see features/HLS-CDN.md.
  */
 function mountHlsStatic(
   app: NestExpressApplication,
   config: ConfigService,
 ): void {
   const appsRoot = join(config.dataDir, 'apps');
+  // STREAMHUB_HLS_CDN (default off): enable CDN-friendly playlist caching. Same
+  // truthy grammar as ConfigService.bool (1/true/on/yes, case-insensitive).
+  const cdn = /^(1|true|on|yes)$/i.test(
+    (config.env('STREAMHUB_HLS_CDN') ?? '').trim(),
+  );
   const serve = expressStatic(appsRoot, {
     index: false,
     fallthrough: true,
     setHeaders: (res, filePath) => {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      if (filePath.endsWith('.m3u8')) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      } else if (filePath.endsWith('.ts')) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      const finished =
+        filePath.endsWith('.m3u8') && playlistIsFinished(filePath);
+      for (const [name, value] of Object.entries(
+        hlsCacheHeaders(filePath, { cdn, finished }),
+      )) {
+        res.setHeader(name, value);
       }
     },
   });
@@ -264,6 +281,11 @@ async function bootstrap(): Promise<void> {
   const authLimiter = createAuthRateLimiter();
   for (const path of AUTH_RATE_LIMIT_PATHS) app.use(path, authLimiter);
 
+  // Wave 1C (net-metrics): count HLS egress bytes per app. Registered BEFORE
+  // mountHlsStatic so its write/end wrappers see every served byte; resolves
+  // lazily so a build without the module boots unchanged.
+  const netMetrics = app.get(NET_METRICS_SERVICE, { strict: false });
+  if (netMetrics) app.use('/hls', makeHlsByteCounter(netMetrics));
   // Live-HLS static server (wave-3 §1b). Registered before listen() so it runs
   // ahead of the SPA ServeStatic fallback. Not under the API global prefix.
   mountHlsStatic(app, config);

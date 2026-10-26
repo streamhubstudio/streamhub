@@ -1,7 +1,7 @@
 /**
  * Type definitions for the streamhub-core API (base /api/v1).
  * Derived from the authoritative OpenAPI doc
- * (https://streamhub.example.com/api/v1/openapi.json) plus verified notes.
+ * (https://streamhub.digitalhub.com.ar/api/v1/openapi.json) plus verified notes.
  *
  * IMPORTANT envelope rules:
  *  - Most endpoints return { data, error }.
@@ -37,10 +37,28 @@ export interface LoginRequest {
   code?: string
 }
 
+/** This node's role in a StreamHub cluster (CLUSTER-ROADMAP §5). */
+export type NodeRole = 'standalone' | 'master' | 'edge'
+
 /** GET /auth/config — public auth capabilities of this deployment. */
 export interface AuthConfig {
   /** True when public self-signup (STREAMHUB_ALLOW_SIGNUP) is enabled. */
   allowSignup: boolean
+  /**
+   * Cluster role of this node. `edge` nodes disable login (managed at the
+   * master). Older backends omit these fields — treat a missing value as a
+   * `standalone` node with login enabled.
+   */
+  nodeRole?: NodeRole
+  /** Master API base URL to link to from the edge screen (when nodeRole=edge). */
+  masterUrl?: string | null
+  /** False on a cluster edge — the SPA shows the "manage at the master" screen. */
+  loginEnabled?: boolean
+  /**
+   * Real product version (repo-root VERSION file, e.g. "2.7.0") — shown in the
+   * dashboard footer. Optional: older backends omit it (footer hides then).
+   */
+  appVersion?: string
 }
 
 export interface LoginResponse {
@@ -416,10 +434,33 @@ export interface CreateAppRequest {
 export interface UpdateAppConfigRequest {
   displayName?: string
   roomPrefix?: string
+  /**
+   * Per-app IANA timezone (owner item 11), e.g. `America/Argentina/Buenos_Aires`.
+   * Empty string = server default (local time). Validated server-side against
+   * the runtime's IANA zone list.
+   */
+  timezone?: string
   recordingEnabled?: boolean
   callbackUrl?: string
   callbackSecret?: string
   features?: AppFeatures
+  /**
+   * RTMP→HLS passthrough (remux, no transcode). Turning it ON forces
+   * transcode/adaptive OFF and vice-versa — the backend enforces the invariant.
+   */
+  rtmpPassthrough?: boolean
+  /** Split recordings into N-minute parts. 0|15|30|60|90|120. */
+  splitMinutes?: number
+  /** Snapshot every N seconds during recording. 0|1|30|60|120|360. */
+  snapshotSeconds?: number
+  /** Recording filename/S3-key template (`${}` dialect). '' = built-in naming. */
+  filenameTemplate?: string
+  /** Snapshot filename/S3-key template. '' = built-in naming. */
+  snapshotTemplate?: string
+  /** VOD retention window in days. 0=off | 7 | 30 | 90 | 180 | 360. */
+  retentionDays?: number
+  /** Per-app plain-config variables (`${var.NAME}`) — whole-map replace. */
+  variables?: Record<string, string>
 }
 
 /** Transcoding / adaptive config (GET/PATCH /apps/:app/config). */
@@ -452,12 +493,43 @@ export interface TranscodingConfig {
   adaptive?: boolean
   layers?: WebrtcLayer[]
   rtmpTranscode?: boolean
+  /**
+   * RTMP block as returned by GET /apps/:app/config. `passthrough` is the
+   * RTMP→HLS remux switch (mutually exclusive with transcode/adaptive).
+   */
+  rtmp?: { enabled?: boolean; transcode?: boolean; passthrough?: boolean }
+  /** Server-side transcoding block. `enabled` is the master transcode switch. */
+  transcoding?: { enabled?: boolean; [k: string]: unknown }
   /** Hardware acceleration preference for FFmpeg transcode (config.yaml). */
   hwaccel?: HwAccelMode
+  /**
+   * Per-app IANA timezone (owner item 11), e.g. `America/Argentina/Buenos_Aires`.
+   * Empty/absent = server default (local time). Edited via `PATCH /apps/:name`
+   * (`UpdateAppConfigRequest.timezone`), not this endpoint — read-only here.
+   */
+  timezone?: string
   features?: AppFeatures
-  recording?: RecordingConfig
+  /**
+   * Recording naming + retention (camelCase) as returned by
+   * GET /apps/:app/config for the config screen.
+   */
+  recording?: RecordingViewConfig
   callbacks?: CallbacksConfig
+  /** Per-app plain-config variables (`${var.NAME}` in filename templates). */
+  variables?: Record<string, string>
   [k: string]: unknown
+}
+
+/**
+ * Recording naming/retention as returned (camelCase) by GET /apps/:app/config.
+ */
+export interface RecordingViewConfig {
+  enabled: boolean
+  splitMinutes: number
+  snapshotSeconds: number
+  filenameTemplate: string
+  snapshotTemplate: string
+  retentionDays: number
 }
 
 export type UpdateTranscodingConfigRequest = Partial<TranscodingConfig>
@@ -511,15 +583,22 @@ export interface ConfigPreset {
   useCase: string
   /** Human summary of what the preset sets. */
   sets: string[]
+  /**
+   * G4 fold-2: true iff every key this preset sets currently matches, at the
+   * same value, the app's config.yaml. Drives the "Applied ✓ / Deactivate" vs
+   * "Apply" toggle in the Config tab.
+   */
+  applied: boolean
 }
 
-/** G4 — result of POST /apps/:app/presets/:name/apply. */
+/** G4 — result of POST /apps/:app/presets/:name/apply (or .../deactivate). */
 export interface ApplyPresetResult {
   preset: string
+  /** true after an apply, false after a deactivate — mirrors the resulting state. */
   applied: boolean
   reloaded: boolean
   changed: boolean
-  /** Unified diff current → preset-applied config. */
+  /** Unified diff current → resulting config. */
   diff: string
   warnings?: string[]
 }
@@ -617,6 +696,51 @@ export interface UpdateMqttRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Owner item 29 — per-app + per-user SMTP
+// ---------------------------------------------------------------------------
+
+/** GET /apps/:app/smtp and GET/PUT /account/smtp — password masked. */
+export interface SmtpConfig {
+  enabled?: boolean
+  host?: string
+  port?: number
+  user?: string
+  from?: string
+  /** Masked password (display only). */
+  pass?: string
+  hasPass?: boolean
+  configured?: boolean
+  [k: string]: unknown
+}
+
+/**
+ * PUT /apps/:app/smtp and PUT /account/smtp — writes the smtp block; the
+ * password goes to secrets.json (app) / an encrypted user column (account).
+ * Omit `pass` to keep the stored one.
+ */
+export interface UpdateSmtpRequest {
+  enabled?: boolean
+  host?: string
+  port?: number
+  user?: string
+  from?: string
+  pass?: string
+}
+
+/** Body of POST .../smtp/test. */
+export interface TestSmtpRequest {
+  to: string
+}
+
+/** Result of POST .../smtp/test — never an HTTP error, always this shape. */
+export interface SendResult {
+  ok: boolean
+  messageId?: string
+  error?: string
+  skipped?: boolean
+}
+
+// ---------------------------------------------------------------------------
 // Wave 4 — per-app HTML samples
 // ---------------------------------------------------------------------------
 
@@ -637,6 +761,23 @@ export interface RegenerateSamplesResult {
   /** Backend returns the list of regenerated filenames. */
   regenerated?: string[]
   [k: string]: unknown
+}
+
+/**
+ * One downloadable, self-contained example bundle (GET /apps/:app/examples).
+ * The zip (index.html + config.js + README.md) is pre-configured for the app
+ * and can be hosted on any static host.
+ */
+export interface ExampleInfo {
+  id: string
+  file: string
+  title: string
+  description: string
+  authModel: string
+  requiredConfig: string[]
+  optionalConfig: string[]
+  /** Absolute URL of the per-app zip (management endpoint, bearer). */
+  downloadUrl: string
 }
 
 // ---------------------------------------------------------------------------
@@ -667,19 +808,141 @@ export interface PlayToken {
   [k: string]: unknown
 }
 
+/**
+ * POST /apps/:app/play-token/:room/sign — a signed, expiring playback
+ * capability (P0-3) plus ready-to-paste tokenized surfaces. `sig`+`exp` are an
+ * app+room-scoped HMAC (NOT an sk_ token or JWT); `embedUrl`/`iframe` carry them
+ * so a private-playback app can be embedded without leaking a bearer.
+ */
+export interface SignedPlayback {
+  app: string
+  room: string
+  exp: number
+  ttlSeconds: number
+  sig: string
+  /** Raw API capability URL (GET play-token with ?exp=&sig=). */
+  tokenUrl: string
+  /** Public player page carrying the capability. */
+  playUrl: string
+  /** Bare embeddable player page carrying the capability. */
+  embedUrl: string
+  /** `<iframe>` snippet over embedUrl — the full player widget. */
+  iframe: string
+}
+
 // ---------------------------------------------------------------------------
 // Ingress
 // ---------------------------------------------------------------------------
 
-export type IngressInputType = 'rtmp' | 'whip' | 'url'
+/**
+ * Ingest input type for POST /apps/:app/ingress.
+ *  - `rtmp` / `whip` / `url` — the LiveKit ingress kinds (`url` also PULLS a
+ *    remote `srt://` source when the LiveKit server version supports it).
+ *  - `srt` — SRT PUSH listener. Passthrough (remux) plane ONLY: LiveKit's
+ *    ingress API has no SRT input, so the backend rejects `inputType:'srt'`
+ *    without `mode:'passthrough'` (400).
+ *  - `mpegts` — MPEG-TS over UDP (unicast + multicast) PULL. Passthrough (remux)
+ *    plane ONLY: `url` carries a `udp://@GROUP:PORT` source; the backend rejects
+ *    `inputType:'mpegts'` without `mode:'passthrough'` (400).
+ */
+export type IngressInputType = 'rtmp' | 'whip' | 'url' | 'srt' | 'mpegts'
+
+/**
+ * Ingest plane for a new RTMP/SRT ingress:
+ *  - `transcode` (default) — the normal LiveKit path (WebRTC + HLS + optional
+ *    adaptive/recording/room features);
+ *  - `passthrough` — REMUX the RTMP/SRT push straight to HLS (`ffmpeg -c copy`),
+ *    bypassing LiveKit. Near-zero CPU, no GPU; gives up everything that needs the
+ *    media to enter the SFU (see `PassthroughCapabilities`). Server-gated (503
+ *    when off). SRT pushes are passthrough-ONLY.
+ */
+export type IngressMode = 'transcode' | 'passthrough'
+
+/**
+ * What an RTMP→HLS passthrough (remux) ingress GIVES UP versus the normal
+ * LiveKit path, returned on a passthrough create so the dashboard can warn the
+ * operator. Every boolean is a capability that is OFF because the media never
+ * enters LiveKit. `lost` is the human-readable "what you lose" list to render.
+ */
+export interface PassthroughCapabilities {
+  mode: 'passthrough'
+  remux?: boolean
+  webrtc?: boolean
+  subSecondLatency?: boolean
+  adaptiveBitrate?: boolean
+  transcode?: boolean
+  requiresH264Aac?: boolean
+  recording?: boolean
+  roomFeatures?: boolean
+  backupKey?: boolean
+  gpu?: boolean
+  /**
+   * SRT only: the SRT receive-latency budget (libsrt retransmission window,
+   * default ~120 ms) added on top of the HLS latency. Not a lost capability —
+   * a heads-up the UI surfaces next to the warning.
+   */
+  latencyMs?: number
+  /** Human-readable "what you lose" lines for the UI warning. */
+  lost: string[]
+}
 
 export interface CreateIngressRequest {
   inputType: IngressInputType
   room?: string
   participantIdentity?: string
   participantName?: string
+  /**
+   * Pull source. Required for `inputType:'url'` (rtsp/http/srt via LiveKit) and
+   * for `inputType:'mpegts'` (a udp://@GROUP:PORT multicast/unicast source).
+   */
   url?: string
+  /**
+   * MPEG-TS multicast only: source-specific multicast (SSM/IGMPv3) include list —
+   * a comma-separated list of source IPv4s to receive from (ffmpeg `sources=`).
+   */
+  sources?: string
+  /** MPEG-TS only: local interface (NIC) IPv4 to bind/join the group on. */
+  localaddr?: string
+  /** MPEG-TS only: ffmpeg `fifo_size` (UDP receive buffer, in 188-byte packets). */
+  fifoSize?: number
+  /** MPEG-TS only: ffmpeg `overrun_nonfatal` (survive a buffer overrun). Default on. */
+  overrunNonfatal?: boolean
   enableTranscoding?: boolean
+  /**
+   * RTMP only: also mint a BACKUP (failover) stream key bound to the SAME room.
+   * Both keys publish into one room, so the player URL is unchanged whichever
+   * key is live. Ignored for whip/url.
+   */
+  backup?: boolean
+  /**
+   * RTMP/SRT only: ingest plane. Defaults server-side to the app's
+   * `rtmp.passthrough` config. `passthrough` cannot be combined with
+   * `enableTranscoding`/`backup` (the backend rejects the mix with a 400).
+   * `inputType:'srt'` REQUIRES `mode:'passthrough'` (LiveKit has no SRT input).
+   */
+  mode?: IngressMode
+}
+
+/**
+ * A per-app dynamic tag (Vision-Edge §E) — an operator-created label applied to
+ * streams by slug, with an optional per-consumer settings blob. CRUD lives under
+ * /apps/:app/tags.
+ */
+export interface Tag {
+  slug: string
+  label: string
+  kind?: string
+  config_json?: Record<string, unknown> | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Body of POST /apps/:app/tags — create a tag. `slug` must be kebab-case. */
+export interface CreateTagRequest {
+  slug: string
+  label: string
+  kind?: string
+  config_json?: Record<string, unknown>
 }
 
 export interface Ingress {
@@ -692,6 +955,48 @@ export interface Ingress {
   adaptive?: boolean
   player_url?: string
   embed_iframe?: string
+  /**
+   * Ingest plane. `passthrough` rows (id `pti_…`, key `ptk_…`) are remuxed
+   * straight to HLS and carry `hls_url` + `capabilities`; `transcode` (or absent)
+   * is the normal LiveKit ingress.
+   */
+  mode?: IngressMode
+  /** Passthrough only: `/hls/<app>/<room>/index.m3u8` (the only playback). */
+  hls_url?: string
+  /**
+   * SRT passthrough only (id `pti_srt_…`): the SRT push URL —
+   * `srt://<host>:<port>?streamid=<key>`. SRT URLs have no path, so the stream
+   * key rides as `streamid`; the key IS the credential (no user/password).
+   * Mutually exclusive with `rtmp_url` (one push transport per ingress).
+   */
+  srt_url?: string
+  /**
+   * MPEG-TS passthrough only (id `pti_mpegts_…`): the canonical udp://@GROUP:PORT
+   * source the remux PULLS from (a multicast group / unicast port — there is no
+   * push URL for this transport). Mutually exclusive with rtmp_url / srt_url.
+   */
+  source_url?: string
+  /** Passthrough only: what this ingress gives up vs the LiveKit path. */
+  capabilities?: PassthroughCapabilities
+  /** Role inside a primary+backup (failover) pair, when annotated. */
+  role?: 'primary' | 'backup'
+  /** The sibling ingress id of a failover pair (the other key). */
+  pairedIngressId?: string
+  /** True on a create response when a backup key was also minted. */
+  hasBackup?: boolean
+  /** Primary stream key (mirrors `stream_key`) — present on RTMP responses. */
+  primaryStreamKey?: string
+  primary_rtmp_url?: string
+  primary_rtmps_url?: string
+  /** Backup (failover) key + push URLs, present when a backup exists. */
+  backupIngressId?: string
+  backupStreamKey?: string
+  backup_stream_key?: string
+  backup_rtmp_url?: string
+  backup_rtmps_url?: string
+  backup_stream_password?: string
+  /** RTMPS push URL for the primary key (only when RTMPS is enabled). */
+  rtmps_url?: string
   /** Ingest server URL as reported by LiveKit (public host rewritten). */
   url?: string
   /** Ingress display name (LiveKit `name`, e.g. `<app>-<room>`). */
@@ -863,6 +1168,35 @@ export interface VodDownload {
   expiresInSeconds: number
 }
 
+/** One timed transcript segment (seconds), speaker-labelled when attributable. */
+export interface VodTranscriptSegment {
+  start: number
+  end: number
+  text: string
+  speaker?: string | null
+}
+
+/**
+ * GET /apps/:app/vods/:id/transcript — output of the `transcription` plugin
+ * for a VOD (404 until a transcription was triggered). `srtUrl` is a fresh
+ * presigned URL of the SRT uploaded next to the VOD in the app's S3.
+ */
+export interface VodTranscript {
+  vodId: number
+  status: 'queued' | 'processing' | 'ready' | 'failed'
+  provider: string | null
+  model: string | null
+  language: string | null
+  text: string | null
+  segments: VodTranscriptSegment[]
+  speakers: string[]
+  srtKey: string | null
+  srtUrl: string | null
+  error: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 // ---------------------------------------------------------------------------
 // Database maintenance (per-app app.db — SQLite)
 // ---------------------------------------------------------------------------
@@ -965,6 +1299,25 @@ export interface Stream {
 }
 
 /**
+ * Per-stream plugin opt-out state. Returned by GET/PATCH
+ * /apps/:app/streams/:id/plugins. `disabled` lists the plugin ids this stream
+ * is opted OUT of — a stream is affected by every app-enabled plugin NOT here.
+ */
+export interface StreamPluginsState {
+  streamId: string
+  disabled: string[]
+}
+
+/**
+ * Per-stream applied tags. Returned by GET/PATCH /apps/:app/streams/:id/tags.
+ * `tags` are the slugs applied to this stream (each references an app tag).
+ */
+export interface StreamTagsState {
+  streamId: string
+  tags: string[]
+}
+
+/**
  * Live HLS egress session (SegmentedFileOutput). Returned by
  * POST /apps/:app/streams/:id/hls/start and GET /apps/:app/streams/:id/hls.
  * `playlistUrl` is the public `.m3u8` to feed <HlsPlayer src> / embeds.
@@ -1004,6 +1357,53 @@ export interface SendDataRequest {
   from?: string
   destinationIdentities?: string[]
   reliable?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Rooms (metadata + moderation — /apps/:app/rooms/*)
+// ---------------------------------------------------------------------------
+
+/** One published track of a room participant (with its sid, for moderation). */
+export interface RoomParticipantTrack {
+  sid: string
+  /** 'audio' | 'video' | 'data'. */
+  type: string
+  source: string
+  muted: boolean
+}
+
+/** Room participant as returned by GET /apps/:app/rooms/:room/participants. */
+export interface RoomParticipant {
+  identity: string
+  name: string
+  sid: string
+  hidden: boolean
+  isPublisher: boolean
+  metadata?: string
+  joinedAt: string | null
+  tracks: RoomParticipantTrack[]
+  permission: {
+    canPublish: boolean
+    canSubscribe: boolean
+    canPublishData: boolean
+    hidden: boolean
+  }
+}
+
+/** Body of POST /apps/:app/rooms/:room/participants/:identity/mute. */
+export interface MuteParticipantRequest {
+  trackSid?: string
+  kind?: 'audio' | 'video' | 'all'
+  /** true = mute (default), false = unmute. */
+  muted?: boolean
+}
+
+/** Result of the mute action (per-track outcomes). */
+export interface MuteParticipantResult {
+  room: string
+  identity: string
+  muted: boolean
+  tracks: { trackSid: string; muted: boolean }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -1240,6 +1640,175 @@ export interface AppStats {
 }
 
 // ---------------------------------------------------------------------------
+// Network I/O counters — GET /apps/:app/net (+ /net/history) (Wave 1C)
+// ---------------------------------------------------------------------------
+
+/** Byte totals for a rolling window. */
+export interface NetWindow {
+  in: number
+  out: number
+  total: number
+}
+
+/** Threshold posture for the app's rolling-24h ingress+egress bytes. */
+export interface NetThresholdState {
+  /** Configured rolling-24h cap in GB (GiB); 0 = unset. */
+  gbPerDay: number
+  /** Cap in bytes (0 = unset). */
+  thresholdBytes: number
+  /** Rolling-24h metered bytes (ingress+egress). */
+  usage24hBytes: number
+  /** usage / threshold as a percent; null when no threshold configured. */
+  percent: number | null
+  /** Instantaneous breach (usage >= threshold). */
+  exceeded: boolean
+}
+
+/** GET /apps/:app/net response body. */
+export interface NetSummary {
+  today: NetWindow
+  last24h: NetWindow
+  last7d: NetWindow
+  bySource: { source: string; in: number; out: number }[]
+  threshold: NetThresholdState
+}
+
+/** One hourly history bucket. */
+export interface NetHistoryBucket {
+  bucket: string
+  in: number
+  out: number
+}
+
+/** GET /apps/:app/net/history response body. */
+export interface NetHistory {
+  hours: number
+  buckets: NetHistoryBucket[]
+}
+
+// ---------------------------------------------------------------------------
+// App pipeline — GET /apps/:app/pipeline (the Tablero flow-diagram source)
+// ---------------------------------------------------------------------------
+
+export type PipelineIngestType =
+  | 'rtmp'
+  | 'rtmps'
+  | 'whip'
+  | 'webrtc'
+  | 'rtsp'
+  | 'url'
+  | 'ws-mjpeg'
+  | 'srt'
+
+/** One ingest entry point. `enabled` = configured; `active` = receiving now. */
+export interface PipelineIngest {
+  type: PipelineIngestType
+  enabled: boolean
+  active: boolean
+  label: string
+  detail?: string
+}
+
+/** Transports the remux / `-c copy` passthrough plane can accept. */
+export type PassthroughTransport = 'rtmp' | 'srt'
+
+export interface PipelineTranscoding {
+  enabled: boolean
+  encoder: 'gpu' | 'cpu'
+  hwaccel: 'auto' | 'gpu' | 'cpu'
+}
+
+export interface PipelineAdaptive {
+  enabled: boolean
+  layers: Array<{ name: string; height: number }>
+}
+
+export interface PipelinePassthrough {
+  enabled: boolean
+  transports: PassthroughTransport[]
+}
+
+export interface PipelineProcessing {
+  transcoding: PipelineTranscoding
+  adaptive: PipelineAdaptive
+  /** Remux / `-c copy` plane (no transcode), parallel to transcoding+adaptive. */
+  passthrough: PipelinePassthrough
+}
+
+/** Distributed inference fleet + the app's enabled vision models. */
+export interface PipelineCompute {
+  edge: { total: number; online: number }
+  vision: {
+    enabled: boolean
+    models: string[]
+    assignments: { running: number; pending: number }
+  }
+}
+
+export type PipelineDeliveryType = 'webrtc' | 'hls' | 'cdn' | 'restream'
+
+/** One delivery endpoint. `enabled` = configured; `active` = serving now. */
+export interface PipelineDelivery {
+  type: PipelineDeliveryType
+  enabled: boolean
+  active: boolean
+  label: string
+  detail?: string
+}
+
+export interface PipelineStorage {
+  recording: { enabled: boolean; splitMinutes?: number; snapshotSeconds?: number }
+  s3: { configured: boolean; bucket?: string }
+}
+
+/** Plugin kind (Studio App vs in-process extension) and grouping category. */
+export type PipelinePluginKind = 'plugin' | 'app'
+export type PipelinePluginCategory = 'tool' | 'processor' | 'panel'
+
+export interface PipelinePlugin {
+  id: string
+  enabled: boolean
+  kind: PipelinePluginKind
+  category: PipelinePluginCategory
+}
+
+/** Event fan-out taps — booleans/presence only, never a url/secret/token. */
+export interface PipelineEvents {
+  callbacks: { configured: boolean }
+  mqtt: { enabled: boolean }
+  log: { enabled: boolean }
+}
+
+/** Resolved notification channels (booleans only — never tokens/webhooks). */
+export interface PipelineNotifications {
+  email: boolean
+  discord: boolean
+  telegram: boolean
+}
+
+/**
+ * GET /apps/:app/pipeline — the app's ACTUAL configured media pipeline
+ * (ingest → core → processing → delivery + storage + compute + events), consumed
+ * by <AppFlowDiagram> on the Tablero. Every section is always present; new
+ * sections are optional-safe on the client so an older core still renders.
+ */
+export interface AppPipeline {
+  ingest: PipelineIngest[]
+  /** MediaMTX single-port :1935 front-door router. */
+  ingestFront?: { mediamtx: boolean; port: number }
+  processing: PipelineProcessing
+  compute?: PipelineCompute
+  delivery: PipelineDelivery[]
+  storage: PipelineStorage
+  plugins: PipelinePlugin[]
+  live: { activeStreams: number; viewers?: number; tags?: string[] }
+  events?: PipelineEvents
+  notifications?: PipelineNotifications
+  /** Rolling network I/O over `windowSec` seconds (bytes). */
+  net?: { inBytes: number; outBytes: number; windowSec: number }
+}
+
+// ---------------------------------------------------------------------------
 // Cluster — node registry (GET/PATCH/DELETE /cluster/nodes, /cluster/info)
 // ---------------------------------------------------------------------------
 
@@ -1271,6 +1840,75 @@ export interface UpdateNodeRequest {
   name?: string
   region?: string
   status?: string
+}
+
+// ---------------------------------------------------------------------------
+// Edge — the cluster's distributed processing surface (GET /edge/nodes,
+// /edge/assignments; POST /edge/nodes/:id/command). Global-scope (superadmin).
+// ---------------------------------------------------------------------------
+
+/** GPU capability block a node advertises inside its telemetry `stats.grid`. */
+export interface EdgeGridCaps {
+  gpu?: boolean
+  vramGb?: number | null
+  vramFreeMb?: number | null
+  gpuName?: string | null
+  capabilities?: string[]
+}
+
+/** A node dressed for the edge manager UI: registry row + live liveness + stats. */
+export interface EdgeNodeView {
+  id: string
+  name: string
+  url: string | null
+  region: string | null
+  type: 'common' | 'edge'
+  weight: number
+  status: string
+  /** Live WS connection right now. */
+  connected: boolean
+  /** Not connected AND not heartbeated within the stale window. */
+  stale: boolean
+  createdAt: string
+  lastSeenAt: string | null
+  /** Last telemetry blob (cpu/mem/disk numbers + a `grid` GPU block), or null. */
+  stats: Record<string, unknown> | null
+}
+
+/**
+ * PATCH /edge/nodes/:id — retype a node (`common`↔`edge`) and/or set its
+ * scheduling `weight` (share ∝ weight/Σweights, used by the weighted policy).
+ * Weight is an integer 0–100000; an empty body is a no-op.
+ */
+export interface PatchEdgeNodeRequest {
+  type?: EdgeNodeView['type']
+  weight?: number
+}
+
+/** Node commands the master relays over the WS channel. */
+export type EdgeNodeCommand = 'restart' | 'reboot' | 'ping'
+
+/** Lifecycle of one edge assignment (a worker workload placed on one node). */
+export type EdgeAssignmentStatus =
+  | 'pending'
+  | 'offered'
+  | 'running'
+  | 'stopped'
+  | 'failed'
+  | 'revoked'
+
+/** One row of the global `edge_assignments` table (app × plugin [× stream] → node). */
+export interface EdgeAssignment {
+  id: string
+  nodeId: string
+  app: string
+  pluginId: string
+  streamId: string | null
+  config: Record<string, unknown>
+  status: EdgeAssignmentStatus
+  detail: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 // ---------------------------------------------------------------------------
@@ -1408,6 +2046,190 @@ export interface SecurityStatus {
   }
 }
 
+// --- backups (/system/backups — superadmin) -----------------------------------
+
+/** One snapshot file of a database (GET /system/backups). */
+export interface BackupSnapshot {
+  /** Target id (`streamhub` | `app-<name>`). */
+  db: string
+  /** Filename inside the target's snapshot dir, e.g. `2026-07-06T03-30-00-000Z.db.gz`. */
+  file: string
+  sizeBytes: number
+  createdAt: string
+  /** True for the automatic safety copy taken right before a restore. */
+  preRestore: boolean
+}
+
+/** One database (global registry or an app.db) with its snapshots. */
+export interface BackupDatabase {
+  db: string
+  kind: 'global' | 'app'
+  app?: string
+  dbPath: string
+  liveSizeBytes: number | null
+  /** Snapshots exist but the target (e.g. a deleted app) no longer does. */
+  orphaned: boolean
+  snapshots: BackupSnapshot[]
+}
+
+/** GET /system/backups — settings + per-DB snapshot inventory. */
+export interface BackupsOverview {
+  enabled: boolean
+  retentionDays: number
+  backupDir: string
+  schedule: string
+  databases: BackupDatabase[]
+}
+
+/** POST /system/backups — on-demand run summary. */
+export interface BackupRunResult {
+  ranAt: string
+  reason: string
+  snapshots: BackupSnapshot[]
+  errors: { db: string; error: string }[]
+  prunedCount: number
+}
+
+/** POST /system/backups/restore — result of a guarded restore. */
+export interface BackupRestoreResult {
+  db: string
+  snapshot: string
+  /** The safety copy taken from the live DB right before the swap. */
+  preRestoreSnapshot: string
+  integrity: 'ok'
+  restored: true
+  /** True when restoring the global registry — restart the core to refresh caches. */
+  restartRecommended: boolean
+}
+
+// --- resource-usage history (/system/metrics/history — superadmin) -----------
+
+/** Time window accepted by the history endpoint. */
+export type MetricsHistoryRange = '24h' | '7d' | '30d' | '90d'
+
+/** Which series to fetch (omit for all). */
+export type MetricsHistoryMetric = 'cpu' | 'mem' | 'disk' | 'net'
+
+/** A CPU / disk dot: percentage over the bucket (null = no data). */
+export interface HistoryPoint {
+  /** Bucket start, epoch ms. */
+  ts: number
+  value: number | null
+}
+
+/** A memory dot: absolute bytes + derived percentage. */
+export interface MemHistoryPoint {
+  ts: number
+  used: number | null
+  total: number | null
+  pct: number | null
+}
+
+/** A network dot: bytes moved during the bucket (delta of the counters). */
+export interface NetHistoryPoint {
+  ts: number
+  rx: number | null
+  tx: number | null
+}
+
+/**
+ * GET /system/metrics/history — bucketed host resource-usage history for the
+ * dot charts. Only the requested metric(s) are present in `series`.
+ */
+export interface MetricsHistoryResponse {
+  range: MetricsHistoryRange
+  retentionDays: number
+  /** Query time, epoch ms. */
+  now: number
+  /** Bucket width in ms (3_600_000 = 1h). */
+  bucketMs: number
+  series: {
+    cpu?: HistoryPoint[]
+    mem?: MemHistoryPoint[]
+    disk?: HistoryPoint[]
+    net?: NetHistoryPoint[]
+  }
+}
+
+// --- audit log (/system/audit — superadmin) ----------------------------------
+
+/** Who performed an audited action. */
+export type AuditActorType = 'user' | 'token' | 'admin' | 'system' | 'anonymous'
+
+/** Outcome of an audited action. */
+export type AuditResult = 'success' | 'failure' | 'deny'
+
+/**
+ * One tamper-evident audit entry (GET /system/audit). `action` is dotted, e.g.
+ * `auth.login`, `token.create`, `authz.deny`, `config.update`. Entries are
+ * chained by hash; integrity is checked via GET /system/audit/verify.
+ */
+export interface AuditEntry {
+  id: number
+  /** ISO timestamp. */
+  ts: string
+  actorType: AuditActorType
+  actorId: string | null
+  tenantId: string | null
+  action: string
+  targetType: string | null
+  targetId: string | null
+  ip: string | null
+  result: AuditResult
+  meta: Record<string, unknown> | null
+}
+
+/** GET /system/audit — a page of entries (newest first) + paging siblings. */
+export interface AuditPage {
+  entries: AuditEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+/** GET /system/audit/verify — hash-chain integrity check of the log. */
+export interface AuditVerifyResult {
+  /** True when the whole chain verifies. */
+  ok: boolean
+  /** Number of entries checked. */
+  checked: number
+  /** Id of the first broken link, or null when the chain is intact. */
+  brokenAt: number | null
+}
+
+// --- security posture / compliance (/system/compliance — superadmin) ---------
+
+/** State of a single compliance control. */
+export type ComplianceState = 'active' | 'partial' | 'off' | 'unknown'
+
+/**
+ * One ISO 27002 §8 technological control mapped to its live state on this
+ * deployment (GET /system/compliance). `iso` is the clause number, e.g. '8.15'.
+ */
+export interface ComplianceControl {
+  id: string
+  name: string
+  iso: string
+  state: ComplianceState
+  detail: string
+}
+
+/** Per-state control counts. */
+export interface ComplianceSummary {
+  active: number
+  partial: number
+  off: number
+  unknown: number
+}
+
+/** GET /system/compliance — live evidence of active security controls. */
+export interface ComplianceReport {
+  /** ISO timestamp the evidence was gathered. */
+  checkedAt: string
+  summary: ComplianceSummary
+  controls: ComplianceControl[]
+}
+
 /** GET /system/settings — effective config with every secret redacted. */
 export interface ServerSettings {
   core: ServerSettingsCore
@@ -1420,4 +2242,55 @@ export interface ServerSettings {
   runtime: ServerSettingsRuntime
   ports: ServerSettingsPorts
   guidance: SettingsGuidance
+}
+
+// --- OS performance tuning (/system/os-tuning — superadmin) ------------------
+
+/** Verdict for one OS tuning knob. */
+export type TuningStatus = 'applied' | 'not-applied' | 'unknown'
+
+/**
+ * One kernel/limit knob that matters for a LiveKit/WebRTC media server: its
+ * live value vs the recommended value vs an applied/not-applied verdict, with a
+ * copy-paste remedy line. Read-only — the core never applies these (install.sh
+ * does, on the real host).
+ */
+export interface OsTuningKnob {
+  id: string
+  label: string
+  /** Where it is read from: sysctl file / process limits / /sys. */
+  source: 'sysctl' | 'limits' | 'sys'
+  /** The sysctl key, /proc/self/limits row name, or /sys path. */
+  key: string
+  /** Raw current value (null = unknown / unavailable / non-Linux). */
+  current: string | null
+  recommended: string
+  status: TuningStatus
+  /** Why it matters for a media server. */
+  why: string
+  /** The remedy line (sysctl/ulimit) to apply on the host. */
+  remedy: string
+  /** Non-essential knobs (e.g. transparent hugepages) are flagged optional. */
+  optional: boolean
+}
+
+/** Per-status knob counts. */
+export interface OsTuningSummary {
+  applied: number
+  notApplied: number
+  unknown: number
+}
+
+/** GET /system/os-tuning — live OS tuning posture of this node. */
+export interface OsTuningReport {
+  /** ISO timestamp the values were read. */
+  checkedAt: string
+  /** process.platform of the node the core runs on. */
+  platform: string
+  /** True on Linux (where /proc tuning can actually be inspected). */
+  supported: boolean
+  summary: OsTuningSummary
+  knobs: OsTuningKnob[]
+  /** Operator note (install.sh applies these on a real host). */
+  note: string
 }

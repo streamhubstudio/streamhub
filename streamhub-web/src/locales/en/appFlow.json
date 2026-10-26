@@ -1,0 +1,56 @@
+{
+  "title": "Pipeline",
+  "subtitle": "How this app is configured, end to end.",
+  "loading": "Loading pipeline…",
+  "unavailable": "The pipeline view is not available on this server yet.",
+  "sr": "Three-band flow diagram. Media band: the enabled ingest sources feed the StreamHub core (through the MediaMTX router when enabled), pass through the enabled processing stages (transcoding, adaptive) and fan out to the delivery endpoints, while a passthrough/remux lane bypasses the core. Compute band: Studio Apps and processor plugins analyse the stream, and a distributed edge-compute cluster runs the enabled vision models. Events band: recordings flow to storage and S3, and detections fan out to callbacks, MQTT, the log and the enabled notification channels.",
+  "svg": {
+    "title": "Media pipeline",
+    "desc": "Animated three-band diagram of this app's configured media pipeline: compute (apps, processors, edge models), media (ingest, router, processing, delivery, passthrough) and events (storage, callbacks, notifications)."
+  },
+  "groups": {
+    "ingest": "Ingest",
+    "delivery": "Delivery",
+    "plugins": "AI plugins",
+    "apps": "Studio apps",
+    "processors": "Processors",
+    "edge": "Edge compute",
+    "storage": "Storage",
+    "events": "Events"
+  },
+  "nodes": {
+    "core": "StreamHub Core",
+    "mediamtx": "MediaMTX router",
+    "transcoding": "Transcoding",
+    "adaptive": "Adaptive (ABR)",
+    "remux": "Passthrough",
+    "edge": "Edge cluster",
+    "events": "Event bus",
+    "streamflow": "Streamflow",
+    "recording": "Recording",
+    "s3": "S3 bucket",
+    "notify-email": "Email",
+    "notify-discord": "Discord",
+    "notify-telegram": "Telegram",
+    "soon": "Soon",
+    "noIngest": "No ingest enabled",
+    "noDelivery": "No delivery enabled"
+  },
+  "detail": {
+    "encoder": {
+      "gpu": "GPU encoder",
+      "cpu": "CPU encoder"
+    },
+    "split": "{{n}} min segments"
+  },
+  "live": {
+    "streams": "{{n}} live",
+    "viewers": "{{n}} viewers"
+  },
+  "legend": {
+    "active": "Live now",
+    "configured": "Configured",
+    "dormant": "Not connected",
+    "soon": "Coming soon"
+  }
+}

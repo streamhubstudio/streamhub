@@ -63,7 +63,9 @@ function appRecord(): AppRecord {
   };
 }
 
-/** Fixture registry: one worker overlay plugin (facer), one plain panel. */
+/** Fixture registry: one worker overlay plugin (facer), one worker APP-TAB
+ * plugin (tabber — the perimeter shape: live data readable only through the
+ * authenticated dashboard endpoint), one plain panel. */
 function writeFixtures(dir: string): void {
   const facer = path.join(dir, 'facer');
   fs.mkdirSync(facer, { recursive: true });
@@ -72,6 +74,15 @@ function writeFixtures(dir: string): void {
     `module.exports.default = {
        id:'facer', name:'Facer', description:'', category:'processor',
        ui:'player-overlay', needsWorker:true, configSchema:[],
+       worker:{ spawn(ctx){ return { command:'node', args:['-e','0'] }; } } };`,
+  );
+  const tabber = path.join(dir, 'tabber');
+  fs.mkdirSync(tabber, { recursive: true });
+  fs.writeFileSync(
+    path.join(tabber, 'plugin.meta.js'),
+    `module.exports.default = {
+       id:'tabber', name:'Tabber', description:'', category:'processor',
+       ui:'app-tab', needsWorker:true, configSchema:[],
        worker:{ spawn(ctx){ return { command:'node', args:['-e','0'] }; } } };`,
   );
   const panel = path.join(dir, 'panel');
@@ -256,6 +267,52 @@ describe('live-data channel (manager + service)', () => {
     await expect(svc.liveOverlayData(APP, 'ghost', 'main')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('liveWorkerData (auth read) serves an ENABLED app-tab worker plugin', async () => {
+    await svc.install(APP, 'tabber');
+    await svc.patch(APP, 'tabber', { enabled: true });
+    const token = workers.ingestToken(APP, 'tabber')!;
+    const payload = {
+      room: 'cam-1',
+      armed: true,
+      alerts: [{ id: 1, zone: 'gate', acked: false }],
+    };
+    await svc.ingestLive(APP, 'tabber', token, payload);
+
+    const view = await svc.liveWorkerData(APP, 'tabber', 'cam-1');
+    expect(view.payload).toEqual(payload);
+    expect(typeof view.ts).toBe('number');
+
+    // The PUBLIC overlay read must keep 404ing — an app-tab worker's live
+    // feed (e.g. perimeter armed state) is never anonymous.
+    await expect(
+      svc.liveOverlayData(APP, 'tabber', 'cam-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    // No data yet for another room → nulls, not a 404 (plugin IS enabled).
+    expect(await svc.liveWorkerData(APP, 'tabber', 'other')).toEqual({
+      ts: null,
+      ageMs: null,
+      payload: null,
+    });
+  });
+
+  it('liveWorkerData 404s for worker-less, disabled and unknown plugins', async () => {
+    await svc.install(APP, 'panel'); // worker-less
+    await expect(svc.liveWorkerData(APP, 'panel', 'main')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await svc.install(APP, 'tabber'); // installed but DISABLED
+    await expect(
+      svc.liveWorkerData(APP, 'tabber', 'main'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(svc.liveWorkerData(APP, 'ghost', 'main')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    // the overlay plugin answers on BOTH reads (it is public by design)
+    const view = await svc.liveWorkerData(APP, 'facer', 'main');
+    expect(view.payload).toBeNull();
   });
 
   it('uninstall clears the live feed', async () => {

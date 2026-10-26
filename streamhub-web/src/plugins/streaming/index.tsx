@@ -24,6 +24,7 @@ import {
 } from '@/pages/Broadcast/ui'
 import { usePublisher } from '@/pages/Broadcast/usePublisher'
 import { Button, Spinner, Switcher } from '@/ui'
+import { LEGACY_INLINE_VIDEO_ATTRS } from '@/lib/browserCompat'
 import { definePlugin } from '../types.ts'
 import type { PluginComponentProps } from '../types.ts'
 import {
@@ -105,7 +106,7 @@ function StreamingTab({ ctx }: PluginComponentProps) {
         </div>
 
         <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-black">
-          <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-contain" />
+          <video ref={videoRef} autoPlay playsInline muted {...LEGACY_INLINE_VIDEO_ATTRS} className="h-full w-full object-contain" />
           <div className="pointer-events-none absolute left-3 top-3">
             {(isLive || state.phase === 'connecting') && <PhaseBadge phase={state.phase} />}
           </div>

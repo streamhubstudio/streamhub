@@ -2,7 +2,7 @@
  * Unit specs for RotatingFileStream retention (module logs).
  *
  * Exercises the archive sweep over a real temp dir: age-based cleanup (matching
- * BOTH the current `streamhub-*` and any configured legacy prefix) and the
+ * BOTH the current `streamhub-*` and the legacy `skyline-*` prefixes) and the
  * count cap. The active `streamhub.log` is never a sweep target.
  */
 import * as fs from 'fs';
@@ -38,14 +38,14 @@ describe('RotatingFileStream retention', () => {
 
   it('sweeps archives older than maxAgeDays across both prefixes, keeps the rest', () => {
     makeFile(dir, 'streamhub-2020-01-01T00-00-00-000Z.log', 40); // aged, current
-    makeFile(dir, 'legacy-2020-02-01T00-00-00-000Z.log', 40); // aged, legacy
+    makeFile(dir, 'skyline-2020-02-01T00-00-00-000Z.log', 40); // aged, legacy
     makeFile(dir, 'streamhub-2026-06-30T00-00-00-000Z.log', 1); // recent
     makeFile(dir, 'streamhub.log', 0); // active — never swept
 
     const rfs = new RotatingFileStream({
       dir,
       baseName: 'streamhub',
-      legacyBaseNames: ['legacy'],
+      legacyBaseNames: ['skyline'],
       maxFiles: 100, // count cap out of the way
       maxAgeDays: 30,
     });

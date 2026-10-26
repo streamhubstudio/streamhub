@@ -1,0 +1,30 @@
+{
+  "title": "OS performance tuning",
+  "subtitle": "Kernel and resource-limit knobs that matter for a LiveKit/WebRTC media server, and whether they are applied on this host.",
+  "explain": "Read-only: the core inspects /proc — it never changes kernel params. install.sh applies these on the real host.",
+  "refreshing": "Refreshing…",
+  "loadError": "Couldn't load the OS tuning report.",
+  "forbidden": "OS tuning is a superadmin-only surface. Sign in with a global-scope account to view it.",
+  "unsupported": "OS tuning requires a newer StreamHub core. Update the server to enable it.",
+  "unsupportedPlatform": "This node runs on {{platform}}, where /proc tuning is not inspectable. These knobs apply on the production Linux host.",
+  "checkedAt": "Read {{at}}",
+  "optionalTag": "optional",
+  "status": {
+    "applied": "applied",
+    "not-applied": "not applied",
+    "unknown": "n/a"
+  },
+  "summary": {
+    "applied": "Applied",
+    "notApplied": "Not applied",
+    "unknown": "N/A"
+  },
+  "col": {
+    "knob": "Knob",
+    "current": "Current",
+    "recommended": "Recommended",
+    "status": "Status",
+    "howToApply": "How to apply"
+  },
+  "empty": "—"
+}

@@ -17,6 +17,7 @@ import { ConfigService } from '../../shared/config/config.service';
 import { DbService } from '../../shared/db/db.service';
 import {
   AppConfig,
+  AppQuotasConfig,
   AppRecord,
   AppsServiceContract,
   CreateAppInput,
@@ -30,14 +31,41 @@ import {
   S3Config,
   SAMPLES_SERVICE,
   SamplesServiceContract,
+  SmtpConfig,
   TranscodingEncoding,
   VodRendition,
   WebrtcLayer,
 } from '../../shared/contracts';
+import {
+  drmFeaturesToDisk,
+  resolveDrmFeatures,
+  type DiskDrmFeatures,
+} from '../recording/drm/drm-config';
+import {
+  DEFAULT_TRANSCODE_MAX_HEIGHT,
+  sanitizeTranscodeMaxHeight,
+} from '../livekit/ingress-encoding.util';
 import { S3Service } from '../s3/s3.service';
 import { SecretsStore } from '../s3/secrets.store';
+import { isValidTimezone } from '../../shared/timezone.util';
+import {
+  assertSafeEgressUrl,
+  CALLBACK_ALLOW_HOSTS_ENV,
+  defaultHostResolver,
+  HTTP_SCHEMES,
+  parseAllowlistEnv,
+  type HostResolver,
+} from '../security/egress-url.guard';
 import { renderSamplePages } from './sample-pages';
-import { CONFIG_PRESETS, applyPresetPatch, findPreset } from './config-presets';
+import {
+  applyPresetPatch,
+  buildDeactivatePatch,
+  CONFIG_PRESETS,
+  deleteAtPath,
+  findPreset,
+  isPresetApplied,
+  PRESET_DEFAULT_CONFIG,
+} from './config-presets';
 
 /** Input for the S3 config setter (wave-4 §2). */
 export interface SetS3Input {
@@ -72,6 +100,12 @@ export interface ConfigPresetInfo {
   description: string;
   useCase: string;
   sets: string[];
+  /**
+   * G4 fold-2: true iff every key this preset sets currently matches, at the
+   * same value, in the app's config.yaml (see `isPresetApplied`). Drives the
+   * "Applied ✓ / Deactivate" vs "Apply" toggle in the Config tab.
+   */
+  applied: boolean;
 }
 
 /** Result of applying a config preset (G4). */
@@ -186,6 +220,33 @@ const MQTT_LOG_LEVELS: ReadonlySet<string> = new Set([
   'fatal',
 ]);
 
+/** Masked SMTP view (owner item 29) — the password is never returned in clear. */
+export interface MaskedSmtp {
+  enabled: boolean;
+  host: string;
+  port: number;
+  user: string;
+  from: string;
+  /** Ref (env var name / secrets.json key) holding the password. */
+  passEnv: string;
+  /** Masked password (display only). */
+  pass: string;
+  hasPass: boolean;
+  /** Whether the block is usable (enabled + host + password). */
+  configured: boolean;
+}
+
+/** Input for the SMTP config setter (PUT /apps/:app/smtp). */
+export interface SetSmtpInput {
+  enabled?: boolean;
+  host?: string;
+  port?: number;
+  user?: string;
+  from?: string;
+  /** SMTP password — persisted to secrets.json, never the yaml. */
+  pass?: string;
+}
+
 /** Fold-3 warning text shown whenever public_url is enabled. */
 const PUBLIC_VODS_WARNING =
   'VODs públicos: con public_url activo las grabaciones quedan accesibles ' +
@@ -211,6 +272,11 @@ interface DiskConfig {
   name: string;
   display_name: string;
   room_prefix: string;
+  /**
+   * Per-app IANA timezone (owner item 11). Empty (the default) = server/host
+   * local time. Sanitized on every resolve (see `AppsService.resolveTimezone`).
+   */
+  timezone?: string;
   recording: {
     enabled: boolean;
     mode: AppConfig['recording']['mode'];
@@ -221,15 +287,29 @@ interface DiskConfig {
     split_minutes: number;
     /** Wave-3 §3: snapshot every N seconds (0 = off). */
     snapshot_seconds: number;
+    /** Recording filename/S3-key template (our `${}` dialect). Empty = default. */
+    filename_template?: string;
+    /** Snapshot filename/S3-key template. Empty = default. */
+    snapshot_template?: string;
+    /** VOD retention window (days): 0=off | 7 | 30 | 90 | 180 | 360. */
+    retention_days?: number;
   };
   s3: DiskS3Config;
   webrtc: {
     adaptive: boolean;
     layers: WebrtcLayer[];
+    /**
+     * Resolution cap (px height) for the transcoded RTMP/URL ingress
+     * (360|480|720|1080). Optional on disk for back-compat: configs that
+     * predate it resolve to the 720p default.
+     */
+    transcode_max_height?: number;
   };
   rtmp: {
     enabled: boolean;
     transcode: boolean;
+    /** RTMP→HLS passthrough (remux, no transcode). Absent → false. */
+    passthrough?: boolean;
   };
   /**
    * Server-side transcoding (master switch + recording/VOD outputs). Optional
@@ -274,8 +354,36 @@ interface DiskConfig {
     cooldown_seconds: number;
     interval_seconds: number;
   };
+  /**
+   * Per-app SMTP override (owner item 29). `pass_env` is a REF (like the s3/
+   * mqtt `*_env` fields) — the real password lives in env / data/secrets.json,
+   * never the yaml. `enabled: false` (the default on a new app) ⇒ the app uses
+   * the global SMTP env for its notifications.
+   */
+  smtp: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    user: string;
+    from: string;
+    /** Env var / secrets.json key holding the SMTP password. */
+    pass_env: string;
+  };
+  /**
+   * Per-app + per-stream quotas (snake_case on disk). Optional: absent ⇒
+   * unlimited (the default). Values <= 0 / -1 also mean unlimited.
+   */
+  quotas?: {
+    max_concurrent_streams?: number;
+    max_viewers_per_stream?: number;
+  };
   /** Wave-2 feature flags (SPEC §16), snake_case on disk. */
   features: DiskFeatures;
+  /**
+   * Per-app plain-config VARIABLES referenced from filename/S3-key templates as
+   * `${var.NAME}`. Plain key→value strings (NOT secrets). Absent → {}.
+   */
+  variables?: Record<string, string>;
 }
 
 /** On-disk (YAML) shape of the per-app `features:` block (SPEC §16). */
@@ -293,6 +401,20 @@ interface DiskFeatures {
     max_cameras?: number;
     max_fps?: number;
     max_frame_kb?: number;
+    /** Max structured data-frame size in bytes (IoT data plane). Default 16384. */
+    max_data_bytes?: number;
+    /** Per-socket data-frame rate cap (messages/second). Default 5. */
+    max_data_per_sec?: number;
+  };
+  /** DRM for the packaged VOD/HLS output. Absent → defaults (DISABLED). */
+  drm?: DiskDrmFeatures;
+  /** 24/7 linear-channel knobs (endless-radio Tier 1). Absent → defaults (all off). */
+  linear?: {
+    persistent_room?: boolean;
+    room_empty_timeout_seconds?: number;
+    always_on_hls?: boolean;
+    dvr?: boolean;
+    dvr_window_seconds?: number;
   };
 }
 
@@ -325,6 +447,9 @@ interface AppRow {
 export class AppsService implements AppsServiceContract, OnModuleInit {
   private readonly logger = new Logger(AppsService.name);
   private static readonly DEFAULT_APP = 'live';
+
+  /** DNS seam for the egress SSRF guard (specs inject a fake — never dial DNS). */
+  hostResolver: HostResolver = defaultHostResolver;
 
   constructor(
     private readonly config: ConfigService,
@@ -522,6 +647,12 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     const record = await this.get(name);
     if (!record) throw new NotFoundException(`app "${name}" not found`);
 
+    // Save-time SSRF guard (P0-1): reject private/metadata callback targets at
+    // configuration time too, so the bad URL never lands on disk.
+    if (patch.callbacks?.url !== undefined) {
+      await this.assertCallbackUrlSafe(patch.callbacks.url);
+    }
+
     const disk = this.readDiskConfig(name);
     this.applyResolvedPatch(disk, patch);
     this.writeDiskConfig(name, disk);
@@ -578,6 +709,8 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       throw new NotFoundException(`app "${name}" not found`);
     }
     const { warnings } = this.validateRawConfig(name, rawYaml);
+    // Save-time SSRF guard (P0-1) on the raw-editor path too.
+    await this.assertCallbackUrlSafe(this.callbackUrlFromRaw(rawYaml));
 
     // Fold-2: timestamped backup of the CURRENT config before overwriting.
     const backupWarnings = this.backupCurrentConfig(name);
@@ -614,6 +747,8 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     let warnings: string[] = [];
     try {
       warnings = this.validateRawConfig(name, rawYaml).warnings;
+      // Surface an SSRF-guard rejection inline like any other validation error.
+      await this.assertCallbackUrlSafe(this.callbackUrlFromRaw(rawYaml));
     } catch (err) {
       valid = false;
       error = (err as Error).message;
@@ -841,10 +976,26 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
   // G4 — config presets (declarative delivery/quality profiles)
   // ---------------------------------------------------------------------------
 
-  /** List the built-in config presets (metadata only). */
+  /**
+   * List the built-in config presets, each annotated with whether it is
+   * CURRENTLY applied (`isPresetApplied` against the app's parsed config.yaml)
+   * so the Config tab can render "Applied ✓ / Deactivate" vs "Apply" without a
+   * second round-trip. An unparseable config.yaml degrades to `applied: false`
+   * for every preset rather than 500ing — listing is read-only.
+   */
   async listConfigPresets(name: string): Promise<ConfigPresetInfo[]> {
     if (!(await this.get(name))) {
       throw new NotFoundException(`app "${name}" not found`);
+    }
+    let parsed: Record<string, unknown> = {};
+    try {
+      const raw = await this.getRawConfig(name);
+      const loaded = yaml.load(raw);
+      if (loaded && typeof loaded === 'object' && !Array.isArray(loaded)) {
+        parsed = loaded as Record<string, unknown>;
+      }
+    } catch {
+      /* unparseable/missing config.yaml → every preset reads as not-applied */
     }
     return CONFIG_PRESETS.map((p) => ({
       name: p.name,
@@ -852,6 +1003,7 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       description: p.description,
       useCase: p.useCase,
       sets: p.sets,
+      applied: isPresetApplied(parsed, p.patch),
     }));
   }
 
@@ -902,6 +1054,70 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     return {
       preset: preset.name,
       applied: true,
+      reloaded: reload.reloaded,
+      changed: diff.length > 0,
+      diff,
+      warnings: reload.warnings,
+    };
+  }
+
+  /**
+   * Deactivate a config preset — the inverse of `applyConfigPreset`. Every
+   * leaf key the preset's patch sets is reverted to the app's FACTORY default
+   * for that path (`PRESET_DEFAULT_CONFIG`); leaves with no factory default
+   * (the forward-looking `distribution`/`hls` blocks) are deleted outright.
+   * Reuses the same raw-config machinery as apply (validate + backup + atomic
+   * write + hot-reload), so it never touches S3 credentials / the callbacks
+   * secret / app identity either.
+   *
+   * HONESTY NOTE (see config-presets.ts doc comment): the backend doesn't
+   * track the PRE-APPLY value of each key, only a generic timestamped backup —
+   * so this restores factory defaults, not necessarily whatever a key held a
+   * moment before the preset was applied. Documented simplification.
+   */
+  async deactivateConfigPreset(
+    name: string,
+    presetName: string,
+  ): Promise<ApplyPresetResult> {
+    if (!(await this.get(name))) {
+      throw new NotFoundException(`app "${name}" not found`);
+    }
+    const preset = findPreset(presetName);
+    if (!preset) {
+      throw new NotFoundException(`preset "${presetName}" not found`);
+    }
+
+    const currentRaw = await this.getRawConfig(name);
+    let parsed: unknown;
+    try {
+      parsed = yaml.load(currentRaw);
+    } catch (err) {
+      throw new BadRequestException(
+        `current config.yaml is not parseable; fix it before deactivating a preset: ${(err as Error).message}`,
+      );
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new BadRequestException('current config.yaml is not a YAML mapping');
+    }
+
+    const { patch: revertPatch, unset } = buildDeactivatePatch(
+      preset.patch,
+      PRESET_DEFAULT_CONFIG,
+    );
+    const merged = applyPresetPatch(parsed as Record<string, unknown>, revertPatch);
+    for (const path of unset) deleteAtPath(merged, path);
+
+    const mergedYaml = yaml.dump(merged, { lineWidth: 120 });
+    const diff = this.unifiedDiff(currentRaw, mergedYaml);
+
+    // Reuse the safe editor path: validates (parse+shape), backs up the
+    // current config, atomic-writes the new one, and hot-reloads in place.
+    const reload = await this.putRawConfig(name, mergedYaml);
+
+    this.logger.log(`deactivated preset "${preset.name}" on app "${name}"`);
+    return {
+      preset: preset.name,
+      applied: false,
       reloaded: reload.reloaded,
       changed: diff.length > 0,
       diff,
@@ -1121,6 +1337,65 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // SMTP config setter / masked getter (owner item 29 — same pattern as MQTT/S3)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Write the `smtp:` block to config.yaml and the password to
+   * data/secrets.json (never the yaml). Omit `pass` to keep the stored one.
+   */
+  async setSmtp(name: string, input: SetSmtpInput): Promise<MaskedSmtp> {
+    if (!(await this.get(name))) {
+      throw new NotFoundException(`app "${name}" not found`);
+    }
+    const disk = this.readDiskConfig(name);
+
+    if (input.enabled !== undefined) disk.smtp.enabled = input.enabled;
+    if (input.host !== undefined) disk.smtp.host = input.host.trim();
+    if (input.port !== undefined) {
+      disk.smtp.port =
+        Number.isInteger(input.port) && input.port > 0 && input.port < 65536
+          ? input.port
+          : 587;
+    }
+    if (input.user !== undefined) disk.smtp.user = input.user;
+    if (input.from !== undefined) disk.smtp.from = input.from.trim();
+
+    // Persist the block (no secrets), then the password (async store + legacy
+    // sync writer, mirroring setMqtt/setS3).
+    this.writeDiskConfig(name, disk);
+    if (input.pass) {
+      this.writeSecret(disk.smtp.pass_env, input.pass);
+      await this.secrets.set(disk.smtp.pass_env, input.pass);
+    }
+    this.secrets.invalidate();
+    return this.maskedSmtp(disk);
+  }
+
+  /** SMTP config with the password masked (never returned in clear). */
+  async getSmtp(name: string): Promise<MaskedSmtp> {
+    if (!(await this.get(name))) {
+      throw new NotFoundException(`app "${name}" not found`);
+    }
+    return this.maskedSmtp(this.readDiskConfig(name));
+  }
+
+  private maskedSmtp(disk: DiskConfig): MaskedSmtp {
+    const resolved = this.resolveSmtp(disk);
+    return {
+      enabled: resolved.enabled,
+      host: resolved.host,
+      port: resolved.port,
+      user: resolved.user,
+      from: resolved.from,
+      passEnv: disk.smtp.pass_env,
+      pass: this.mask(resolved.pass),
+      hasPass: !!resolved.pass,
+      configured: resolved.enabled && !!resolved.host && !!resolved.pass,
+    };
+  }
+
   /**
    * Validate a raw YAML config (wave-4 §1): must parse and carry the minimal
    * shape. Returns soft warnings for missing-but-tolerated blocks. Throws
@@ -1173,10 +1448,52 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         'mqtt.password in the yaml is ignored; use PUT /apps/:app/mqtt to set the broker password',
       );
     }
+    const smtp = (obj.smtp as Record<string, unknown>) || {};
+    if (smtp.pass !== undefined) {
+      warnings.push(
+        'smtp.pass in the yaml is ignored; use PUT /apps/:app/smtp to set the SMTP password',
+      );
+    }
     if (obj.room_prefix === undefined) {
       warnings.push('room_prefix missing; defaulting to the app name on reload');
     }
+    if (typeof obj.timezone === 'string' && obj.timezone.trim()) {
+      const tz = obj.timezone.trim();
+      if (!isValidTimezone(tz)) {
+        warnings.push(
+          `timezone "${tz}" is not a recognized IANA zone; it will be ignored (falls back to the server default) on reload`,
+        );
+      }
+    }
     return { warnings };
+  }
+
+  /**
+   * Save-time half of the callbacks SSRF guard (P0-1). Empty/absent URLs pass
+   * (callbacks off). Deny-private by default; STREAMHUB_CALLBACK_ALLOW_HOSTS
+   * (comma-separated hostnames / IPs / CIDRs, default empty) is the operator
+   * escape for legitimately-internal callback targets. Throws 400.
+   */
+  private async assertCallbackUrlSafe(url: string | undefined): Promise<void> {
+    const target = (url || '').trim();
+    if (!target) return;
+    await assertSafeEgressUrl(target, {
+      allowedSchemes: HTTP_SCHEMES,
+      label: 'callback URL',
+      allowlist: parseAllowlistEnv(process.env[CALLBACK_ALLOW_HOSTS_ENV]),
+      resolveHost: this.hostResolver,
+    });
+  }
+
+  /** callbacks.url out of a raw yaml (already shape-validated); undefined when absent. */
+  private callbackUrlFromRaw(rawYaml: string): string | undefined {
+    try {
+      const parsed = yaml.load(rawYaml) as Record<string, unknown> | null;
+      const cb = (parsed?.callbacks ?? {}) as Record<string, unknown>;
+      return typeof cb.url === 'string' ? cb.url : undefined;
+    } catch {
+      return undefined; // parse errors are reported by validateRawConfig
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1244,6 +1561,8 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       name,
       display_name: displayName,
       room_prefix: roomPrefix,
+      // Empty = server/host local time (pre-existing behaviour unchanged).
+      timezone: '',
       recording: {
         enabled: true,
         mode: 'room-composite',
@@ -1252,6 +1571,9 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         delete_local_after_upload: true,
         split_minutes: 0,
         snapshot_seconds: 0,
+        filename_template: '',
+        snapshot_template: '',
+        retention_days: 0,
       },
       s3: {
         provider: 'wasabi',
@@ -1271,8 +1593,10 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
           { name: 'med', height: 480 },
           { name: 'low', height: 240 },
         ],
+        // Efficient transcode profile: cap the ingress transcode at 720p.
+        transcode_max_height: DEFAULT_TRANSCODE_MAX_HEIGHT,
       },
-      rtmp: { enabled: true, transcode: true },
+      rtmp: { enabled: true, transcode: true, passthrough: false },
       // NEW apps ship with server-side transcoding OFF (pure passthrough):
       // RTMP ingress is not re-encoded and recordings stay single-file H.264.
       // Opt-in via PATCH /apps/:app/config (transcodingEnabled) or the yaml.
@@ -1300,6 +1624,16 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         cooldown_seconds: 60,
         interval_seconds: 10,
       },
+      // Owner item 29: per-app SMTP override — off by default (app uses the
+      // global STREAMHUB_SMTP_* env for its notifications).
+      smtp: {
+        enabled: false,
+        host: '',
+        port: 587,
+        user: '',
+        from: '',
+        pass_env: `APP_${envSlug}_SMTP_PASS`,
+      },
       features: {
         rtmp_password: false,
         viewer_counter: true,
@@ -1308,7 +1642,16 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         hidden_qc: true,
         adaptive_player: true,
         public_playback: true,
+        // 24/7 linear-channel knobs — all off by default (normal app behaviour).
+        linear: {
+          persistent_room: false,
+          room_empty_timeout_seconds: 86400,
+          always_on_hls: false,
+          dvr: false,
+          dvr_window_seconds: 3600,
+        },
       },
+      variables: {},
     };
   }
 
@@ -1339,20 +1682,31 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
   }
 
   private mergeDisk(base: DiskConfig, over: Partial<DiskConfig>): DiskConfig {
-    return {
+    const merged: DiskConfig = {
       name: over.name ?? base.name,
       display_name: over.display_name ?? base.display_name,
       room_prefix: over.room_prefix ?? base.room_prefix,
+      timezone: over.timezone ?? base.timezone,
       recording: { ...base.recording, ...(over.recording ?? {}) },
       s3: { ...base.s3, ...(over.s3 ?? {}) },
       webrtc: {
         adaptive: over.webrtc?.adaptive ?? base.webrtc.adaptive,
-        layers:
-          Array.isArray(over.webrtc?.layers) && over.webrtc!.layers.length
-            ? over.webrtc!.layers
-            : base.webrtc.layers,
+        // An explicit ladder (INCLUDING an empty one) is honoured — a cleared
+        // ladder stays cleared. Only a MISSING `layers` key (legacy / never-set)
+        // falls back to the default ladder.
+        layers: Array.isArray(over.webrtc?.layers)
+          ? over.webrtc!.layers
+          : base.webrtc.layers,
+        // Resolution cap — sanitized to a tier (garbage/out-of-set ⇒ nearest /
+        // 720p default). Absent on disk ⇒ base default.
+        transcode_max_height: sanitizeTranscodeMaxHeight(
+          over.webrtc?.transcode_max_height ?? base.webrtc.transcode_max_height,
+        ),
       },
       rtmp: { ...base.rtmp, ...(over.rtmp ?? {}) },
+      // Per-app quotas: preserve the operator's `quotas:` block verbatim (absent
+      // ⇒ undefined ⇒ unlimited). No base default → nothing is imposed.
+      quotas: over.quotas ?? base.quotas,
       transcoding: over.transcoding
         ? { ...base.transcoding, ...over.transcoding }
         : {
@@ -1373,8 +1727,32 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         logs: { ...base.mqtt.logs, ...(over.mqtt?.logs ?? {}) },
       },
       latency_alert: { ...base.latency_alert, ...(over.latency_alert ?? {}) },
-      features: { ...base.features, ...(over.features ?? {}) },
+      smtp: { ...base.smtp, ...(over.smtp ?? {}) },
+      features: {
+        ...base.features,
+        ...(over.features ?? {}),
+        // Deep-merge the nested linear block so a partial `features.linear:` on
+        // disk keeps the sibling defaults (the resolver also fills gaps).
+        linear: { ...base.features.linear, ...(over.features?.linear ?? {}) },
+      },
+      // Free-form variables map: a present on-disk map wins wholesale (the
+      // resolver drops unusable keys); absent keeps the default {}.
+      variables:
+        over.variables && typeof over.variables === 'object'
+          ? (over.variables as Record<string, string>)
+          : base.variables,
     };
+    // PRESERVE operator-authored blocks this builder doesn't model
+    // (`notifications:`, `network:`, `cluster:`, future plugin/app blocks…).
+    // mergeDisk historically rebuilt the yaml field-by-field, so a STRUCTURED
+    // save (PATCH config / setMqtt / applyPreset) silently DROPPED anything the
+    // raw editor had added — raw-editor parity requires carrying unknown
+    // top-level keys through verbatim. Known keys always win (spread order).
+    const extras: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(over as Record<string, unknown>)) {
+      if (!(k in merged)) extras[k] = v;
+    }
+    return { ...extras, ...merged } as DiskConfig;
   }
 
   private writeDiskConfig(name: string, disk: DiskConfig): void {
@@ -1397,6 +1775,14 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     if (patch.roomPrefix !== undefined) {
       disk.room_prefix = patch.roomPrefix.toLowerCase();
     }
+    if (patch.timezone !== undefined) {
+      disk.timezone = AppsService.resolveTimezone(patch.timezone);
+    }
+    if (patch.variables !== undefined) {
+      // Whole-map REPLACE (the key/value editor sends the full desired set, so
+      // removing a key deletes it). Sanitized on the next resolve.
+      disk.variables = AppsService.resolveVariables(patch.variables);
+    }
     if (patch.recording) {
       const r = patch.recording;
       if (r.enabled !== undefined) disk.recording.enabled = r.enabled;
@@ -1411,6 +1797,17 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       }
       if (r.snapshotSeconds !== undefined) {
         disk.recording.snapshot_seconds = r.snapshotSeconds;
+      }
+      if (r.filenameTemplate !== undefined) {
+        disk.recording.filename_template = r.filenameTemplate;
+      }
+      if (r.snapshotTemplate !== undefined) {
+        disk.recording.snapshot_template = r.snapshotTemplate;
+      }
+      if (r.retentionDays !== undefined) {
+        disk.recording.retention_days = AppsService.resolveRetentionDays(
+          r.retentionDays,
+        );
       }
     }
     if (patch.s3) {
@@ -1434,14 +1831,31 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       if (patch.webrtc.adaptive !== undefined) {
         disk.webrtc.adaptive = patch.webrtc.adaptive;
       }
-      if (Array.isArray(patch.webrtc.layers) && patch.webrtc.layers.length) {
+      // An explicit array (even empty) replaces the ladder — clearing it means
+      // "no explicit rendition ladder" (delivery falls back to LiveKit/derived
+      // defaults). Omitting `layers` (undefined) leaves the ladder untouched.
+      if (Array.isArray(patch.webrtc.layers)) {
         disk.webrtc.layers = patch.webrtc.layers;
+      }
+      // Invariant: adaptive delivery needs ≥1 rendition — an empty ladder means
+      // adaptive is off (deleting all resolutions disables transcoding).
+      if (disk.webrtc.layers.length === 0) {
+        disk.webrtc.adaptive = false;
+      }
+      // Resolution cap — sanitized to a tier before it is persisted.
+      if (patch.webrtc.transcodeMaxHeight !== undefined) {
+        disk.webrtc.transcode_max_height = sanitizeTranscodeMaxHeight(
+          patch.webrtc.transcodeMaxHeight,
+        );
       }
     }
     if (patch.rtmp) {
       if (patch.rtmp.enabled !== undefined) disk.rtmp.enabled = patch.rtmp.enabled;
       if (patch.rtmp.transcode !== undefined) {
         disk.rtmp.transcode = patch.rtmp.transcode;
+      }
+      if (patch.rtmp.passthrough !== undefined) {
+        disk.rtmp.passthrough = patch.rtmp.passthrough;
       }
     }
     if (patch.transcoding) {
@@ -1520,8 +1934,40 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
           max_cameras: f.wsIngest.maxCameras,
           max_fps: f.wsIngest.maxFps,
           max_frame_kb: f.wsIngest.maxFrameKb,
+          ...(f.wsIngest.maxDataBytes !== undefined
+            ? { max_data_bytes: f.wsIngest.maxDataBytes }
+            : {}),
+          ...(f.wsIngest.maxDataPerSec !== undefined
+            ? { max_data_per_sec: f.wsIngest.maxDataPerSec }
+            : {}),
         };
       }
+      if (f.drm !== undefined) {
+        // Sanitize through the resolver so garbage never reaches the yaml.
+        disk.features.drm = drmFeaturesToDisk(
+          resolveDrmFeatures(drmFeaturesToDisk(f.drm)),
+        );
+      }
+    }
+
+    // Mutual-exclusion invariant (BOTH directions): RTMP→HLS passthrough (remux,
+    // no re-encode) cannot coexist with any transcode/adaptive path. Mirrors the
+    // "empty ladder ⇒ adaptive=false" invariant above — enforced on the FINAL
+    // merged disk state so it holds no matter the field order in the patch:
+    //   - passthrough:=true  ⇒ force rtmp.transcode / transcoding.enabled /
+    //     webrtc.adaptive OFF (passthrough wins when explicitly requested);
+    //   - any of those:=true ⇒ force rtmp.passthrough OFF.
+    const wantsPassthrough = patch.rtmp?.passthrough === true;
+    const wantsTranscodeLike =
+      patch.rtmp?.transcode === true ||
+      patch.transcoding?.enabled === true ||
+      patch.webrtc?.adaptive === true;
+    if (wantsPassthrough) {
+      disk.rtmp.transcode = false;
+      disk.transcoding.enabled = false;
+      disk.webrtc.adaptive = false;
+    } else if (wantsTranscodeLike && disk.rtmp.passthrough) {
+      disk.rtmp.passthrough = false;
     }
   }
 
@@ -1542,6 +1988,7 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       name: disk.name,
       displayName: disk.display_name,
       roomPrefix: disk.room_prefix,
+      timezone: AppsService.resolveTimezone(disk.timezone),
       recording: {
         enabled: disk.recording.enabled,
         mode: disk.recording.mode,
@@ -1550,14 +1997,31 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         deleteLocalAfterUpload: disk.recording.delete_local_after_upload,
         splitMinutes: Number(disk.recording.split_minutes ?? 0) || 0,
         snapshotSeconds: Number(disk.recording.snapshot_seconds ?? 0) || 0,
+        filenameTemplate: String(disk.recording.filename_template ?? ''),
+        snapshotTemplate: String(disk.recording.snapshot_template ?? ''),
+        retentionDays: AppsService.resolveRetentionDays(
+          disk.recording.retention_days,
+        ),
       },
       s3,
-      webrtc: { adaptive: disk.webrtc.adaptive, layers: disk.webrtc.layers },
-      rtmp: { enabled: disk.rtmp.enabled, transcode: disk.rtmp.transcode },
+      webrtc: {
+        adaptive: disk.webrtc.adaptive,
+        layers: disk.webrtc.layers,
+        transcodeMaxHeight: sanitizeTranscodeMaxHeight(
+          disk.webrtc.transcode_max_height,
+        ),
+      },
+      rtmp: {
+        enabled: disk.rtmp.enabled,
+        transcode: disk.rtmp.transcode,
+        passthrough: disk.rtmp.passthrough === true,
+      },
       transcoding: this.resolveTranscoding(disk),
       callbacks: { url: disk.callbacks.url, secret: disk.callbacks.secret },
       mqtt: this.resolveMqtt(disk),
+      smtp: this.resolveSmtp(disk),
       latencyAlert: AppsService.resolveLatencyAlert(disk.latency_alert),
+      quotas: AppsService.resolveQuotas(disk.quotas),
       features: {
         rtmpPassword: !!disk.features.rtmp_password,
         viewerCounter: !!disk.features.viewer_counter,
@@ -1568,13 +2032,82 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
         // Default ON: only an explicit `public_playback: false` disables it.
         publicPlayback: disk.features.public_playback !== false,
         wsIngest: AppsService.resolveWsIngest(disk.features.ws_ingest),
+        // DRM of the packaged VOD/HLS output — default OFF (clear packaging).
+        drm: resolveDrmFeatures(disk.features.drm),
+        // 24/7 linear-channel knobs — default all off (normal app behaviour).
+        linear: AppsService.resolveLinear(disk.features.linear),
       },
+      variables: AppsService.resolveVariables(disk.variables),
+    };
+  }
+
+  /**
+   * Resolve/sanitize the `variables:` map (plain config referenced from filename
+   * templates as `${var.NAME}`). Keys must be `[A-Za-z0-9_]{1,64}` to be usable
+   * in a template — anything else is dropped; values are coerced to strings and
+   * length-capped. Never throws (a garbage block resolves to {}).
+   */
+  /** Allowed VOD retention windows (days). 0 = off. */
+  private static readonly RETENTION_DAYS_ALLOWED = new Set([
+    0, 7, 30, 90, 180, 360,
+  ]);
+
+  /** Clamp the on-disk retention_days to an allowed window (garbage → 0/off). */
+  private static resolveRetentionDays(v: unknown): number {
+    const n = Number(v ?? 0) || 0;
+    return AppsService.RETENTION_DAYS_ALLOWED.has(n) ? n : 0;
+  }
+
+  /**
+   * Sanitize the on-disk `timezone` (owner item 11). Trimmed; a garbage/
+   * invalid IANA name never reaches the resolved config (or a hand-edited
+   * config.yaml) — it silently falls back to `''` (server/host local time),
+   * same fail-safe posture as `sanitizeTranscodeMaxHeight`. The DTO already
+   * rejects an invalid value at the HTTP boundary; this is defense-in-depth
+   * for the raw-yaml editor / presets / directly-edited files.
+   */
+  private static resolveTimezone(v: unknown): string {
+    const tz = typeof v === 'string' ? v.trim() : '';
+    return isValidTimezone(tz) ? tz : '';
+  }
+
+  private static resolveVariables(v: unknown): Record<string, string> {
+    const out: Record<string, string> = {};
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+        if (!/^[A-Za-z0-9_]{1,64}$/.test(k)) continue;
+        if (val === null || val === undefined) continue;
+        out[k] = String(val).slice(0, 512);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Resolve the `features.linear` block (endless-radio Tier 1). Defaults: all
+   * off (persistentRoom/alwaysOnHls/dvr false), 24h room emptyTimeout, 1h DVR
+   * window. Only explicit `true`/positive values enable the behaviour, so a
+   * missing or partial block never changes a normal app's behaviour.
+   */
+  private static resolveLinear(
+    disk: DiskFeatures['linear'],
+  ): NonNullable<AppConfig['features']['linear']> {
+    const posInt = (v: unknown, fallback: number): number => {
+      const n = Math.floor(Number(v));
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+    return {
+      persistentRoom: disk?.persistent_room === true,
+      roomEmptyTimeoutSeconds: posInt(disk?.room_empty_timeout_seconds, 86400),
+      alwaysOnHls: disk?.always_on_hls === true,
+      dvr: disk?.dvr === true,
+      dvrWindowSeconds: posInt(disk?.dvr_window_seconds, 3600),
     };
   }
 
   /**
    * Resolve the `features.ws_ingest` block (ESP32 direct WS ingest — see
-   * streamhub-docs/integrations/ESP32-WS-INGEST.md). Defaults: enabled, no
+   * https://streamhub.studio/docs/integrations/ESP32-WS-INGEST). Defaults: enabled, no
    * camera cap, 15 fps, 256 KB/frame. Only an explicit `enabled: false`
    * turns the gateway off for the app.
    */
@@ -1590,6 +2123,10 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       maxCameras: num(disk?.max_cameras, 0),
       maxFps: num(disk?.max_fps, 15) || 15,
       maxFrameKb: num(disk?.max_frame_kb, 256) || 256,
+      // IoT structured data channel (internal design notes): 16 KB / frame,
+      // 5 frames/s per socket by default.
+      maxDataBytes: num(disk?.max_data_bytes, 16 * 1024) || 16 * 1024,
+      maxDataPerSec: num(disk?.max_data_per_sec, 5) || 5,
     };
   }
 
@@ -1660,6 +2197,24 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     };
   }
 
+  /**
+   * Resolve + sanitize the on-disk `smtp:` block (owner item 29). The password
+   * is resolved from env/data/secrets.json exactly like the MQTT broker
+   * password — never stored in the yaml.
+   */
+  private resolveSmtp(disk: DiskConfig): SmtpConfig {
+    const s = disk.smtp;
+    const port = Number(s?.port);
+    return {
+      enabled: !!s?.enabled,
+      host: (s?.host || '').trim(),
+      port: Number.isInteger(port) && port > 0 && port < 65536 ? port : 587,
+      user: s?.user || '',
+      from: s?.from || '',
+      pass: this.resolveSecret(s?.pass_env || ''),
+    };
+  }
+
   /** Resolve + sanitize the on-disk `latency_alert:` block (defaults applied). */
   private static resolveLatencyAlert(
     disk: DiskConfig['latency_alert'],
@@ -1673,6 +2228,25 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       thresholdMs: num(disk?.threshold_ms, 1000, 1),
       cooldownSeconds: num(disk?.cooldown_seconds, 60, 0),
       intervalSeconds: num(disk?.interval_seconds, 10, 2),
+    };
+  }
+
+  /**
+   * Resolve the per-app `quotas:` block. Absent block ⇒ undefined (unlimited);
+   * a present block resolves each value to a positive int, or -1 (unlimited)
+   * when absent / <= 0 / garbage — so "default unlimited" holds at every layer.
+   */
+  private static resolveQuotas(
+    disk: DiskConfig['quotas'],
+  ): AppQuotasConfig | undefined {
+    if (!disk || typeof disk !== 'object') return undefined;
+    const lim = (v: unknown): number => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : -1;
+    };
+    return {
+      maxConcurrentStreams: lim(disk.max_concurrent_streams),
+      maxViewersPerStream: lim(disk.max_viewers_per_stream),
     };
   }
 
@@ -1725,7 +2299,7 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
     const fromEnv =
       this.config.env('PUBLIC_BASE_URL') || this.config.env('STREAMHUB_PUBLIC_URL');
     if (fromEnv) return fromEnv.replace(/\/+$/, '');
-    return 'https://streamhub.example.com';
+    return 'https://streamhub.digitalhub.com.ar';
   }
 
   private writeSamplePages(name: string, roomName: string): void {
@@ -1734,7 +2308,7 @@ export class AppsService implements AppsServiceContract, OnModuleInit {
       appName: name,
       roomName,
       publicBaseUrl: base,
-      publicWsUrl: this.config.publicWsUrl || 'wss://media.example.com',
+      publicWsUrl: this.config.publicWsUrl || 'wss://media.digitalhub.com.ar',
       apiBase: `${base}/api/v1`,
     });
     const dir = path.join(this.appDir(name), 'samples');

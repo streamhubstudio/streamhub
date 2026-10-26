@@ -1,0 +1,106 @@
+{
+  "loading": "Cargando…",
+  "section": {
+    "workflows": "Flujos",
+    "editor": "Editor",
+    "runs": "Ejecuciones",
+    "secrets": "Secretos"
+  },
+  "secrets": {
+    "help": "Los secretos se cifran en reposo y no se vuelven a mostrar. Referencialos desde cualquier campo con un token secret.NOMBRE entre llaves dobles — se resuelve solo al ejecutar, en el servidor.",
+    "name": "Nombre",
+    "value": "Valor",
+    "save": "Guardar secreto",
+    "empty": "Todavía no hay secretos.",
+    "badName": "El nombre debe ser MAYUS_SNAKE (A–Z, 0–9, _).",
+    "needValue": "Ingresá un valor.",
+    "saveFailed": "No se pudo guardar el secreto.",
+    "confirmDelete": "¿Eliminar el secreto “{{name}}”?",
+    "delete": "Eliminar secreto",
+    "refPrefix": "Usar como"
+  },
+  "wf": {
+    "untitled": "Flujo sin título",
+    "namePlaceholder": "Nombre del nuevo flujo…",
+    "create": "Crear",
+    "enabled": "activo",
+    "disabled": "inactivo",
+    "open": "Abrir",
+    "enable": "Activar",
+    "disable": "Desactivar",
+    "delete": "Eliminar",
+    "empty": "Todavía no hay flujos. Creá uno en blanco o arrancá desde la plantilla de intrusión.",
+    "confirmDelete": "¿Eliminar el flujo “{{name}}” y su historial de ejecuciones?"
+  },
+  "template": {
+    "name": "Intrusión → IA → avisar",
+    "start": "Arrancar desde plantilla",
+    "insert": "Insertar plantilla inicial"
+  },
+  "io": {
+    "import": "Importar",
+    "export": "Exportar",
+    "exportFailed": "Falló la exportación",
+    "importInvalid": "No es un archivo de flujo válido",
+    "importFailed": "Falló la importación — revisá los tipos de caja"
+  },
+  "editor": {
+    "back": "Volver a los flujos",
+    "run": "Ejecutar ahora",
+    "replay": "Reproducir última ejecución",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "savedOk": "Guardado",
+    "savedErr": "Falló al guardar",
+    "runQueued": "Ejecución encolada",
+    "runFailed": "No se pudo encolar la ejecución",
+    "replaceConfirm": "¿Reemplazar el lienzo actual por la plantilla inicial?",
+    "none": "No hay ningún flujo abierto.",
+    "goWorkflows": "Elegí uno en Flujos."
+  },
+  "palette": {
+    "title": "Cajas",
+    "dangerous": "Nodo de ejecución — corre código/comandos en el servidor (activá en Ajustes)"
+  },
+  "group": {
+    "trigger": "Disparadores",
+    "action": "Acciones",
+    "logic": "Lógica"
+  },
+  "canvas": {
+    "deleteEdge": "Hacé clic para borrar esta conexión",
+    "smallScreenHint": "Sugerencia: el editor de flujos se usa mejor en una pantalla más grande — arrastrá para desplazar."
+  },
+  "panel": {
+    "close": "Cerrar",
+    "noFields": "Esta caja no tiene ajustes.",
+    "deleteBox": "Eliminar caja",
+    "invalidJson": "JSON inválido",
+    "noRules": "Todavía no hay reglas — agregá una.",
+    "ruleField": "campo",
+    "ruleOp": "operador",
+    "ruleValue": "valor",
+    "ruleRemove": "Quitar regla",
+    "addRule": "Agregar regla"
+  },
+  "runs": {
+    "empty": "Todavía no hay ejecuciones. Activá un flujo y disparalo, o usá Ejecutar ahora en el editor.",
+    "manual": "manual",
+    "pickOne": "Elegí una ejecución para ver sus pasos.",
+    "steps": "Pasos",
+    "noSteps": "No se registraron pasos.",
+    "in": "Entrada",
+    "out": "Salida",
+    "status": {
+      "queued": "en cola",
+      "running": "ejecutando",
+      "ok": "ok",
+      "failed": "falló"
+    },
+    "step": {
+      "ok": "ok",
+      "failed": "falló",
+      "skipped": "omitido"
+    }
+  }
+}

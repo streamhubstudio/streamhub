@@ -8,7 +8,7 @@ export class HlsStartDataDto {
   @ApiProperty({
     description: 'Public URL of the live HLS playlist (.m3u8).',
     example:
-      'https://streamhub.example.com/hls/live/live-room1/index.m3u8',
+      'https://streamhub.digitalhub.com.ar/hls/live/live-room1/index.m3u8',
   })
   playlistUrl!: string;
 

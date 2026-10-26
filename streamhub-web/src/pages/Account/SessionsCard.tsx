@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { api, type SessionInfo } from '@/api'
 import { Alert, Button as UiButton, Dialog } from '@/ui'
 import { useAuth } from '@/auth/useAuth'
+import { formatDateTime } from '@/lib/datetime'
 import {
   Button,
   Card,
@@ -24,25 +25,13 @@ import {
   errMessage,
 } from './ui'
 
-/** Localized "medium date + short time" (falls back to a dash). */
-function formatDate(iso: string | null, lng: string): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  try {
-    return d.toLocaleString(lng, { dateStyle: 'medium', timeStyle: 'short' })
-  } catch {
-    return d.toLocaleString()
-  }
-}
-
 type Confirm =
   | { kind: 'one'; session: SessionInfo }
   | { kind: 'others' }
   | null
 
 export function SessionsCard() {
-  const { t, i18n } = useTranslation('account')
+  const { t } = useTranslation('account')
   const qc = useQueryClient()
   const { logout } = useAuth()
 
@@ -123,7 +112,7 @@ export function SessionsCard() {
                   )}
                 </div>
                 <div className="mt-0.5 text-xs text-slate-400">
-                  {t('sessions.signedIn')} {formatDate(s.createdAt, i18n.language)}
+                  {t('sessions.signedIn')} {formatDateTime(s.createdAt)}
                 </div>
                 {s.userAgent && (
                   <div className="mt-0.5 max-w-[36rem] truncate text-[11px] text-slate-500">

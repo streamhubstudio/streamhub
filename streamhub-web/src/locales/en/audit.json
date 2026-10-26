@@ -1,0 +1,41 @@
+{
+  "title": "Audit log",
+  "subtitle": "Tamper-evident record of every security-relevant action on this deployment.",
+  "filterAction": "Action prefix (e.g. auth.)",
+  "filterActor": "Actor id",
+  "filterFrom": "From date",
+  "filterTo": "To date",
+  "allResults": "All results",
+  "updating": "Updating…",
+  "empty": "No audit entries match these filters.",
+  "loadError": "Couldn't load the audit log.",
+  "forbidden": "The audit log is a superadmin-only surface. Sign in with a global-scope account to view it.",
+  "unsupported": "The audit log requires a newer StreamHub core. Update the server to enable it.",
+  "totalCount": "{{count}} entries",
+  "chain": {
+    "checking": "Checking chain…",
+    "verified_one": "Chain verified · {{count}} entry",
+    "verified_other": "Chain verified · {{count}} entries",
+    "broken": "Chain broken at #{{id}}"
+  },
+  "col": {
+    "timestamp": "Timestamp",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "ip": "IP",
+    "result": "Result"
+  },
+  "result": {
+    "success": "success",
+    "failure": "failure",
+    "deny": "deny"
+  },
+  "actorType": {
+    "user": "user",
+    "token": "token",
+    "admin": "admin",
+    "system": "system",
+    "anonymous": "anonymous"
+  }
+}

@@ -35,7 +35,8 @@
     "accessError": "Couldn't generate room access.",
     "openError": "Couldn't open the player",
     "retrying": "Retrying…",
-    "connectionProblem": "Connection problem: {{error}}"
+    "connectionProblem": "Connection problem: {{error}}",
+    "poorConnection": "Poor connection — video quality reduced"
   },
   "mjpeg": {
     "live": "LIVE",
@@ -46,6 +47,7 @@
   "controls": {
     "unmute": "Unmute",
     "mute": "Mute",
+    "tapToPlay": "Tap to play",
     "enterFullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "sendReaction": "Send reaction",

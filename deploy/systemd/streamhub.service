@@ -1,0 +1,23 @@
+[Unit]
+# StreamHub as ONE managed service. `systemctl status streamhub` reflects the
+# whole stack (redis + livekit + ingress + egress + core [+ caddy]); the operator
+# never runs raw `docker compose`. Type=oneshot + RemainAfterExit keeps the unit
+# "active (exited)" while the containers (which have restart: unless-stopped) run.
+Description=StreamHub media server (whole stack, via docker compose)
+Documentation=https://www.streamhub.studio
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# /opt/streamhub/bin/streamhub resolves its own INSTALL_DIR; override at install
+# time by templating this file if the operator chose a non-default --dir.
+ExecStart=/opt/streamhub/bin/streamhub start
+ExecStop=/opt/streamhub/bin/streamhub stop
+ExecReload=/opt/streamhub/bin/streamhub restart
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

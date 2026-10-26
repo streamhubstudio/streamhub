@@ -129,13 +129,22 @@ export class TenantInvitesController {
     // Invite email: a 72h single-use magic link (verify promotes the pending
     // user to active). SMTP failures don't roll back the membership — the
     // caller sees emailSent:false and can revoke or re-invite.
+    // Owner item 29: inviting a teammate is an action the INVITER initiates —
+    // when they have their own SMTP override configured, it delivers the
+    // invite instead of the app/global default (invites aren't app-scoped, so
+    // there's no per-app tier here; falls straight through to global).
     const url = this.magic.issueInviteLink(email);
     const team = this.tenancy.getTenant(tenantId);
-    const sent = await this.email.sendInvite(email, url, {
-      teamName: team?.name,
-      role,
-      invitedBy: ctx?.email,
-    });
+    const sent = await this.email.sendInvite(
+      email,
+      url,
+      {
+        teamName: team?.name,
+        role,
+        invitedBy: ctx?.email,
+      },
+      { userId: ctx?.userId },
+    );
 
     const member = this.tenancy
       .listMembers(tenantId)

@@ -1,0 +1,66 @@
+{
+  "loading": "Loading…",
+  "section": {
+    "monitor": "Monitor",
+    "events": "Events"
+  },
+  "status": {
+    "healthy": "healthy",
+    "degraded": "degraded",
+    "critical": "critical",
+    "stale": "no data"
+  },
+  "reason": {
+    "stalled": "stalled",
+    "audio_silent": "audio silent",
+    "audio_missing": "no audio track",
+    "av_desync": "A/V desync",
+    "discontinuity": "discontinuity",
+    "bitrate_low": "bitrate drop"
+  },
+  "metric": {
+    "resolution": "Resolution",
+    "codecs": "Codecs",
+    "bitrate": "Bitrate",
+    "baseline": "Baseline",
+    "volume": "Volume",
+    "desync": "A/V drift",
+    "ccErrors": "CC errors",
+    "lastSegment": "Last segment",
+    "noAudio": "none"
+  },
+  "tiles": {
+    "today": "{{count}} events today",
+    "tracked": "{{count}} streams",
+    "stale": "worker feed stale"
+  },
+  "thresholds": {
+    "title": "Thresholds for this stream",
+    "hint": "Blank fields inherit the app defaults (shown as placeholder). Changes apply live on the next probe — no restart.",
+    "sample_interval_sec": "Sample interval (s)",
+    "silence_db": "Silence (dBFS)",
+    "silence_duration_sec": "Silence duration (s)",
+    "desync_ms": "A/V desync (ms)",
+    "stall_sec": "Stall (s)",
+    "bitrate_drop_pct": "Bitrate drop (%)",
+    "recover_samples": "Recovery samples"
+  },
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "back": "Back"
+  },
+  "savedOk": "Saved",
+  "savedErr": "Save failed",
+  "savedInvalid": "Some values are out of range",
+  "events": {
+    "empty": "No health events recorded yet.",
+    "time": "Time",
+    "stream": "Stream",
+    "event": "Event",
+    "detail": "Detail",
+    "roomTitle": "Recent events for this stream"
+  },
+  "noStreams": "No live streams with HLS output right now. Start publishing to see health here.",
+  "noFeed": "No worker feed. Install and enable the app (and check the worker status in the Marketplace) — the monitor needs the stream-health worker running."
+}

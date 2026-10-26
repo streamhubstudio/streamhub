@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AppsModule } from '../apps/apps.module';
 import { LiveKitModule } from '../livekit/livekit.module';
+import { SecurityModule } from '../security/security.module';
 import { StreamsModule } from '../streams/streams.module';
 import { FrameHub } from './frame-hub';
 import { LiveHttpService } from './live-http';
@@ -12,7 +13,7 @@ import { WsKeysController } from './ws-keys.controller';
 
 /**
  * Direct WebSocket MJPEG ingest for ESP32-CAM class devices
- * (streamhub-docs/integrations/ESP32-WS-INGEST.md — F1).
+ * (https://streamhub.studio/docs/integrations/ESP32-WS-INGEST — F1).
  *
  * Pieces:
  *  - {@link WsIngestGateway}   `wss://…/ingest/ws` (cameras) + `/live/ws`
@@ -25,11 +26,12 @@ import { WsKeysController } from './ws-keys.controller';
  *  - {@link WsKeysController}  provisioning REST under /apps/:app/ws-ingest.
  *
  * Imports: LiveKitModule (IngressAuthService key store), StreamsModule
- * (STREAMS_SERVICE registration), AppsModule (APPS_SERVICE config). Quotas /
- * Callbacks / Metrics are global modules.
+ * (STREAMS_SERVICE registration), AppsModule (APPS_SERVICE config),
+ * SecurityModule (NetworkGuardService — the IP-ban/blocklist gate on the WS
+ * upgrade, Flag B). Quotas / Callbacks / Metrics are global modules.
  */
 @Module({
-  imports: [LiveKitModule, StreamsModule, AppsModule],
+  imports: [LiveKitModule, StreamsModule, AppsModule, SecurityModule],
   controllers: [WsKeysController],
   providers: [FrameHub, WsIngestMetrics, WsIngestService, WsIngestGateway, LiveHttpService],
   exports: [WsIngestService, LiveHttpService, FrameHub],

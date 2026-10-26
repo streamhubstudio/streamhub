@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { IpRulesService } from './ip-rules.service';
 import { IpReputationService } from './ip-reputation.service';
+import { NetworkGuardService } from './network-guard.service';
 import { SecurityController } from './security.controller';
 import { SecurityMiddleware } from './security.middleware';
 
@@ -15,12 +16,17 @@ import { SecurityMiddleware } from './security.middleware';
  * The middleware is registered here via MiddlewareConsumer (forRoutes '*') so
  * it runs ahead of every guard/handler WITHOUT touching main.ts. It is a
  * complement to — not a replacement for — the reverse proxy / OS firewall.
- * Docs: streamhub-docs/features/network-security.md.
+ * Docs: https://streamhub.studio/docs/features/network-security.
  */
 @Module({
   controllers: [SecurityController],
-  providers: [IpRulesService, IpReputationService, SecurityMiddleware],
-  exports: [IpReputationService, IpRulesService],
+  providers: [
+    IpRulesService,
+    IpReputationService,
+    NetworkGuardService,
+    SecurityMiddleware,
+  ],
+  exports: [IpReputationService, IpRulesService, NetworkGuardService],
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

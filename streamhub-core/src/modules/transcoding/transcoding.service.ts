@@ -31,9 +31,37 @@ export interface TranscodingConfigView {
     enabled: boolean;
     /** Transcode RTMP ingress to a multi-layer ladder. */
     transcode: boolean;
+    /**
+     * RTMP→HLS passthrough (remux, no transcode) — bypasses LiveKit. Mutually
+     * exclusive with `transcode` / `transcoding.enabled` / `adaptive`
+     * (AppsService enforces the invariant on every config patch).
+     */
+    passthrough: boolean;
   };
+  /**
+   * Per-app IANA timezone (owner item 11), e.g. `America/Argentina/Buenos_Aires`.
+   * Empty = server/host local time. Also the DEFAULT for any plugin/schedule
+   * config that leaves its own timezone empty. Editable via `PATCH /apps/:name`
+   * (`UpdateAppConfigDto.timezone`), not this endpoint.
+   */
+  timezone: string;
   /** Wave-2 feature flags (SPEC §16). */
   features: AppFeatures;
+  /**
+   * Recording naming + retention (config.yaml `recording:`) surfaced for the
+   * dashboard config screen. Templates default to '' (built-in naming),
+   * retentionDays to 0 (off).
+   */
+  recording: {
+    enabled: boolean;
+    splitMinutes: number;
+    snapshotSeconds: number;
+    filenameTemplate: string;
+    snapshotTemplate: string;
+    retentionDays: number;
+  };
+  /** Per-app plain-config variables (`${var.NAME}` in filename templates). */
+  variables: Record<string, string>;
   /**
    * Server-side transcoding block (config.yaml `transcoding:`). `enabled` is
    * the master switch (false on new apps = passthrough). `hwaccel` is the
@@ -140,6 +168,8 @@ export class TranscodingService {
           dto.layers !== undefined
             ? dto.layers.map((l) => ({ name: l.name, height: l.height }))
             : current.webrtc.layers,
+        // Preserve the resolution cap (this endpoint doesn't edit it).
+        transcodeMaxHeight: current.webrtc.transcodeMaxHeight,
       };
     }
 
@@ -292,8 +322,20 @@ export class TranscodingService {
       rtmp: {
         enabled: Boolean(cfg.rtmp?.enabled),
         transcode: Boolean(cfg.rtmp?.transcode),
+        passthrough: Boolean(cfg.rtmp?.passthrough),
       },
+      // Owner item 11: per-app IANA timezone (empty = server/host local).
+      timezone: cfg.timezone ?? '',
       features: cfg.features,
+      recording: {
+        enabled: Boolean(cfg.recording?.enabled),
+        splitMinutes: Number(cfg.recording?.splitMinutes ?? 0) || 0,
+        snapshotSeconds: Number(cfg.recording?.snapshotSeconds ?? 0) || 0,
+        filenameTemplate: cfg.recording?.filenameTemplate ?? '',
+        snapshotTemplate: cfg.recording?.snapshotTemplate ?? '',
+        retentionDays: Number(cfg.recording?.retentionDays ?? 0) || 0,
+      },
+      variables: cfg.variables ?? {},
       transcoding: {
         enabled: Boolean(cfg.transcoding?.enabled),
         encoding: cfg.transcoding?.encoding ?? 'h264',

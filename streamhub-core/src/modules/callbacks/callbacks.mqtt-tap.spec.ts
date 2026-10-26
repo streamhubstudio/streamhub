@@ -31,6 +31,8 @@ describe('CallbacksService — MQTT tap', () => {
     logs = mockLogsService();
     mqtt = mockMqttService();
     svc = new CallbacksService(apps as never, logs as never, undefined, mqtt);
+    // Egress SSRF guard DNS seam: resolve every host to a public IP (no network).
+    svc.hostResolver = async () => ['93.184.216.34'];
     realFetch = global.fetch;
     global.fetch = jest.fn(async () => ({ ok: true, status: 200 }) as never);
   });
@@ -90,6 +92,7 @@ describe('CallbacksService — MQTT tap', () => {
 
   it('works without an MQTT sink at all (optional dependency)', async () => {
     const bare = new CallbacksService(apps as never, logs as never);
+    bare.hostResolver = async () => ['93.184.216.34'];
     apps.getConfig.mockResolvedValue({
       callbacks: { url: 'https://hook.test/cb' },
     } as never);

@@ -3,11 +3,21 @@
     "title": "Ruta inválida",
     "desc": "Falta la app o la sala en la URL."
   },
+  "embed": {
+    "unavailable": "Este enlace de embed es inválido o expiró."
+  },
   "header": {
     "appLabel": "app · {{app}}",
     "audioOnly": "Solo audio",
     "audioOnlyTitle": "Reproducir solo el audio de la sala",
     "exit": "Salir"
+  },
+  "mode": {
+    "label": "Modo de reproducción",
+    "webrtc": "WebRTC",
+    "hls": "HLS",
+    "webrtcTitle": "Latencia sub-segundo (WebRTC)",
+    "hlsTitle": "HLS (~6-15s de latencia, más compatible)"
   },
   "share": {
     "title": "Compartir",

@@ -4,13 +4,16 @@ import {
   Delete,
   Get,
   NotFoundException,
+  Optional,
   Param,
   ParseBoolPipe,
   Patch,
   Post,
   Put,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -31,6 +34,11 @@ import {
   CurrentAuth,
   PLATFORM_TENANT_ID,
 } from '../../shared/auth-context';
+import {
+  actorFromCtx,
+  AuditService,
+  requestIp,
+} from '../audit/audit.service';
 import { RequirePermission } from '../authz/permission.decorator';
 import { QuotasService } from '../quotas/quotas.service';
 import {
@@ -41,12 +49,14 @@ import {
   ConfigPresetInfo,
   MaskedMqtt,
   MaskedS3,
+  MaskedSmtp,
   ReloadResult,
 } from './apps.service';
 import { CreateAppDto } from './dto/create-app.dto';
 import { PutRawConfigDto } from './dto/raw-config.dto';
 import { SetMqttDto } from './dto/set-mqtt.dto';
 import { SetS3Dto } from './dto/set-s3.dto';
+import { SetSmtpDto } from './dto/set-smtp.dto';
 import { UpdateAppConfigDto } from './dto/update-app-config.dto';
 
 /** Standard StreamHub response envelope (SPEC §6). */
@@ -75,7 +85,27 @@ export class AppsController {
     private readonly apps: AppsService,
     private readonly quotas: QuotasService,
     private readonly sizes: DbSizesService,
+    /** Security audit trail (ISO 8.15) — optional for bare-ctor unit specs. */
+    @Optional() private readonly audit?: AuditService,
   ) {}
+
+  /** Append a config/lifecycle change to the security audit trail. */
+  private auditChange(
+    action: string,
+    app: string,
+    req: Request | undefined,
+    ctx: AuthContext | undefined,
+    meta?: Record<string, unknown>,
+  ): void {
+    this.audit?.record({
+      action,
+      ...actorFromCtx(ctx),
+      targetType: 'app',
+      targetId: app,
+      ip: requestIp(req),
+      meta: meta ?? null,
+    });
+  }
 
   @Get()
   @RequirePermission('app', 'read')
@@ -96,6 +126,7 @@ export class AppsController {
   @ApiCreatedResponse({ description: 'The created app record.' })
   async create(
     @Body() dto: CreateAppDto,
+    @Req() req?: Request,
     @CurrentAuth() ctx?: AuthContext,
   ): Promise<AppRecord> {
     // Quota: tenant must be under max_apps (phased; bypass for superadmin/token).
@@ -106,12 +137,14 @@ export class AppsController {
       !ctx || ctx.isSuperadmin || ctx.scope === 'global'
         ? PLATFORM_TENANT_ID
         : ctx.tenantId ?? PLATFORM_TENANT_ID;
-    return this.apps.create({
+    const created = await this.apps.create({
       name: dto.name,
       displayName: dto.displayName,
       roomPrefix: dto.roomPrefix,
       tenantId,
     });
+    this.auditChange('app.create', dto.name, req, ctx, { tenantId });
+    return created;
   }
 
   @Get(':name')
@@ -151,8 +184,15 @@ export class AppsController {
   async patch(
     @Param('name') name: string,
     @Body() dto: UpdateAppConfigDto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<AppConfig> {
     const merged = await this.apps.updateConfig(name, this.toConfigPatch(dto));
+    // Field NAMES only — values may carry secrets (e.g. callbackSecret).
+    this.auditChange('config.update', name, req, ctx, {
+      via: 'PATCH /apps/:name',
+      fields: Object.keys(this.toConfigPatch(dto)),
+    });
     // Never return the resolved MQTT broker password in clear (masked-on-read
     // like the S3 credentials; the full value stays in data/secrets.json).
     return merged.mqtt
@@ -181,8 +221,13 @@ export class AppsController {
     @Param('name') name: string,
     @Query('deleteVods', new ParseBoolPipe({ optional: true }))
     deleteVods?: boolean,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<{ deleted: true; name: string }> {
     await this.apps.delete(name, { deleteVods: deleteVods === true });
+    this.auditChange('app.delete', name, req, ctx, {
+      deleteVods: deleteVods === true,
+    });
     return { deleted: true, name };
   }
 
@@ -215,8 +260,16 @@ export class AppsController {
   async putRawConfig(
     @Param('name') name: string,
     @Body() dto: PutRawConfigDto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<ReloadResult>> {
-    return ok(await this.apps.putRawConfig(name, dto.yaml));
+    const result = await this.apps.putRawConfig(name, dto.yaml);
+    // Size only — raw YAML may embed secrets, so it never enters the trail.
+    this.auditChange('config.update', name, req, ctx, {
+      via: 'PUT /apps/:name/config/raw',
+      bytes: dto.yaml.length,
+    });
+    return ok(result);
   }
 
   // --- Fold-2: dry-run validate + backups + revert -------------------------
@@ -280,8 +333,12 @@ export class AppsController {
   async revertConfigBackup(
     @Param('name') name: string,
     @Param('ts') ts: string,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<ReloadResult>> {
-    return ok(await this.apps.revertConfigBackup(name, ts));
+    const result = await this.apps.revertConfigBackup(name, ts);
+    this.auditChange('config.revert', name, req, ctx, { backup: ts });
+    return ok(result);
   }
 
   @Post(':name/reload')
@@ -305,7 +362,7 @@ export class AppsController {
   @RequirePermission('config', 'read')
   @ApiOperation({
     summary:
-      'List the built-in config presets (low-latency / high-quality-recording / mass-audience-HLS) with a description of what each sets.',
+      'List the built-in config presets (low-latency / high-quality-recording / mass-audience-HLS / rtmp-passthrough), each flagged `applied` when its keys currently match the app config.',
   })
   @ApiParam({ name: 'name', example: 'live' })
   @ApiOkResponse({ description: '{ data: ConfigPresetInfo[] }.' })
@@ -326,7 +383,7 @@ export class AppsController {
   @ApiParam({
     name: 'preset',
     example: 'low-latency',
-    description: 'low-latency | high-quality-recording | mass-audience-HLS',
+    description: 'low-latency | high-quality-recording | mass-audience-HLS | rtmp-passthrough',
   })
   @ApiOkResponse({
     description: '{ data: { preset, applied, reloaded, changed, diff, warnings } }.',
@@ -335,8 +392,39 @@ export class AppsController {
   async applyPreset(
     @Param('name') name: string,
     @Param('preset') preset: string,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<ApplyPresetResult>> {
-    return ok(await this.apps.applyConfigPreset(name, preset));
+    const result = await this.apps.applyConfigPreset(name, preset);
+    this.auditChange('config.preset_apply', name, req, ctx, { preset });
+    return ok(result);
+  }
+
+  @Post(':name/presets/:preset/deactivate')
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary:
+      "Deactivate a config preset: reverts every key it sets to the app's factory default (backup + hot-reload). Keys with no factory default (distribution/hls) are removed. Never touches S3 credentials/secrets.",
+  })
+  @ApiParam({ name: 'name', example: 'live' })
+  @ApiParam({
+    name: 'preset',
+    example: 'low-latency',
+    description: 'low-latency | high-quality-recording | mass-audience-HLS | rtmp-passthrough',
+  })
+  @ApiOkResponse({
+    description: '{ data: { preset, applied: false, reloaded, changed, diff, warnings } }.',
+  })
+  @ApiNotFoundResponse({ description: 'App or preset not found.' })
+  async deactivatePreset(
+    @Param('name') name: string,
+    @Param('preset') preset: string,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Promise<Envelope<ApplyPresetResult>> {
+    const result = await this.apps.deactivateConfigPreset(name, preset);
+    this.auditChange('config.preset_deactivate', name, req, ctx, { preset });
+    return ok(result);
   }
 
   // ---------------------------------------------------------------------------
@@ -365,8 +453,16 @@ export class AppsController {
   async setS3(
     @Param('name') name: string,
     @Body() dto: SetS3Dto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<MaskedS3>> {
-    return ok(await this.apps.setS3(name, dto));
+    const masked = await this.apps.setS3(name, dto);
+    // Secret change (ISO 8.15) — never the credentials themselves.
+    this.auditChange('s3.update', name, req, ctx, {
+      bucket: dto.bucket,
+      endpoint: dto.endpoint ?? null,
+    });
+    return ok(masked);
   }
 
   // ---------------------------------------------------------------------------
@@ -397,8 +493,59 @@ export class AppsController {
   async setMqtt(
     @Param('name') name: string,
     @Body() dto: SetMqttDto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
   ): Promise<Envelope<MaskedMqtt>> {
-    return ok(await this.apps.setMqtt(name, dto));
+    const masked = await this.apps.setMqtt(name, dto);
+    // Secret change (ISO 8.15) — never the broker password itself.
+    this.auditChange('mqtt.update', name, req, ctx, {
+      url: dto.url ?? null,
+    });
+    return ok(masked);
+  }
+
+  // ---------------------------------------------------------------------------
+  // SMTP config setter / masked getter (owner item 29 — per-app SMTP override)
+  // ---------------------------------------------------------------------------
+
+  @Get(':name/smtp')
+  @RequirePermission('config', 'read')
+  @ApiOperation({
+    summary: 'Get the app SMTP config (password masked).',
+    description:
+      "App-scoped notifications use this SMTP when enabled, falling back to " +
+      "the global STREAMHUB_SMTP_* env — unless a per-user override applies " +
+      "(precedence: user > app > global). Test with POST :name/smtp/test.",
+  })
+  @ApiParam({ name: 'name', example: 'live' })
+  @ApiOkResponse({ description: 'Masked SMTP config.' })
+  @ApiNotFoundResponse({ description: 'App not found.' })
+  async getSmtp(@Param('name') name: string): Promise<Envelope<MaskedSmtp>> {
+    return ok(await this.apps.getSmtp(name));
+  }
+
+  @Put(':name/smtp')
+  @RequirePermission('config', 'write')
+  @ApiOperation({
+    summary:
+      'Set the app SMTP block in config.yaml + password in secrets.json. Omit pass to keep the stored one.',
+  })
+  @ApiParam({ name: 'name', example: 'live' })
+  @ApiOkResponse({ description: 'Masked SMTP config after the update.' })
+  @ApiNotFoundResponse({ description: 'App not found.' })
+  async setSmtp(
+    @Param('name') name: string,
+    @Body() dto: SetSmtpDto,
+    @Req() req?: Request,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Promise<Envelope<MaskedSmtp>> {
+    const masked = await this.apps.setSmtp(name, dto);
+    // Secret change (ISO 8.15) — never the password itself.
+    this.auditChange('smtp.update', name, req, ctx, {
+      host: dto.host ?? null,
+      enabled: dto.enabled ?? null,
+    });
+    return ok(masked);
   }
 
   /** Map the flat UpdateAppConfigDto into a structured Partial<AppConfig>. */
@@ -406,10 +553,14 @@ export class AppsController {
     const patch: Partial<AppConfig> = {};
     if (dto.displayName !== undefined) patch.displayName = dto.displayName;
     if (dto.roomPrefix !== undefined) patch.roomPrefix = dto.roomPrefix;
+    if (dto.timezone !== undefined) patch.timezone = dto.timezone.trim();
     if (
       dto.recordingEnabled !== undefined ||
       dto.splitMinutes !== undefined ||
-      dto.snapshotSeconds !== undefined
+      dto.snapshotSeconds !== undefined ||
+      dto.filenameTemplate !== undefined ||
+      dto.snapshotTemplate !== undefined ||
+      dto.retentionDays !== undefined
     ) {
       patch.recording = {
         ...(dto.recordingEnabled !== undefined
@@ -421,7 +572,25 @@ export class AppsController {
         ...(dto.snapshotSeconds !== undefined
           ? { snapshotSeconds: dto.snapshotSeconds }
           : {}),
+        ...(dto.filenameTemplate !== undefined
+          ? { filenameTemplate: dto.filenameTemplate }
+          : {}),
+        ...(dto.snapshotTemplate !== undefined
+          ? { snapshotTemplate: dto.snapshotTemplate }
+          : {}),
+        ...(dto.retentionDays !== undefined
+          ? { retentionDays: dto.retentionDays }
+          : {}),
       } as AppConfig['recording'];
+    }
+    if (dto.rtmpPassthrough !== undefined) {
+      patch.rtmp = { passthrough: dto.rtmpPassthrough } as AppConfig['rtmp'];
+    }
+    if (dto.transcodeMaxHeight !== undefined) {
+      // Only the cap; AppsService merges the rest of the webrtc block.
+      patch.webrtc = {
+        transcodeMaxHeight: dto.transcodeMaxHeight,
+      } as AppConfig['webrtc'];
     }
     if (dto.callbackUrl !== undefined || dto.callbackSecret !== undefined) {
       patch.callbacks = {
@@ -434,6 +603,9 @@ export class AppsController {
     if (dto.features !== undefined) {
       // Pass through only the provided flags; AppsService merges the rest.
       patch.features = { ...dto.features } as AppConfig['features'];
+    }
+    if (dto.variables !== undefined) {
+      patch.variables = { ...dto.variables };
     }
     return patch;
   }

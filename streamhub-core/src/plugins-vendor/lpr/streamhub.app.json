@@ -1,0 +1,186 @@
+{
+  "manifestVersion": 1,
+  "id": "lpr",
+  "name": "LPR — License Plate Recognition",
+  "description": "Reads license plates from the app's live stream (fast-alpr: YOLOv9 detector + ONNX OCR, open-source), matches them against a whitelist/blacklist and emits plate.detected/allowed/denied events.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.0",
+  "kind": "app",
+  "icon": "car",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "storage": {
+    "db": "lpr.db"
+  },
+  "export": {
+    "workerDir": "lpr-worker"
+  },
+  "events": [
+    "plate.detected",
+    "plate.allowed",
+    "plate.denied"
+  ],
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "gate-cam",
+      "help": "HLS room to analyze — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "detector",
+      "type": "select",
+      "label": "Plate detector model",
+      "default": "yolo-v9-t-384-license-plate-end2end",
+      "options": [
+        {
+          "value": "yolo-v9-t-256-license-plate-end2end",
+          "label": "YOLOv9-t 256 (fastest)"
+        },
+        {
+          "value": "yolo-v9-t-384-license-plate-end2end",
+          "label": "YOLOv9-t 384 (balanced, default)"
+        },
+        {
+          "value": "yolo-v9-t-512-license-plate-end2end",
+          "label": "YOLOv9-t 512 (most accurate)"
+        }
+      ],
+      "help": "fast-alpr ONNX plate detectors (MIT). Bigger input = more accurate, slower on CPU."
+    },
+    {
+      "key": "ocrModel",
+      "type": "select",
+      "label": "OCR model",
+      "default": "cct-xs-v1-global-model",
+      "options": [
+        {
+          "value": "cct-xs-v1-global-model",
+          "label": "CCT-XS global (fast, default)"
+        },
+        {
+          "value": "cct-s-v1-global-model",
+          "label": "CCT-S global (more accurate)"
+        }
+      ],
+      "help": "fast-plate-ocr ONNX models (MIT), trained on global plate formats."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Min OCR confidence",
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "help": "Reads below this average character confidence are dropped (0–1)."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 2,
+      "min": 0.1,
+      "max": 30,
+      "help": "Frames per second to sample (2–4 is plenty for a gate camera)."
+    },
+    {
+      "key": "dedupeWindowSec",
+      "type": "number",
+      "label": "Dedupe window (seconds)",
+      "default": 10,
+      "min": 0,
+      "max": 300,
+      "help": "The same plate seen again within this window is ONE event (a car idling at the gate does not spam the webhook). 0 = every read emits."
+    },
+    {
+      "key": "whitelist",
+      "type": "string",
+      "label": "Whitelist plates",
+      "default": "",
+      "placeholder": "AB123CD, AA000AA",
+      "help": "Comma/newline-separated plates that fire plate.allowed (normalized: case/separator-insensitive). Empty = no whitelist events."
+    },
+    {
+      "key": "blacklist",
+      "type": "string",
+      "label": "Blacklist plates",
+      "default": "",
+      "placeholder": "XX999XX",
+      "help": "Comma/newline-separated plates that fire plate.denied. A plate on both lists is treated as DENIED (blacklist wins)."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "Direct callback URL",
+      "default": "",
+      "placeholder": "https://example.com/hooks/gate",
+      "help": "Optional extra POST target for every event (e.g. a barrier opener). Events ALWAYS also flow through the app's signed callbacks."
+    },
+    {
+      "key": "snapshots",
+      "type": "boolean",
+      "label": "Save snapshots",
+      "default": true,
+      "help": "Save a JPEG frame per event under <appDir>/lpr/snapshots/."
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU — fast-alpr is CPU-friendly at gate-camera FPS."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m lpr_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "capabilities": [
+        "lpr"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "LPR_APP": "{{app}}",
+      "LPR_ROOM": "{{config.room}}",
+      "LPR_DETECTOR": "{{config.detector}}",
+      "LPR_OCR_MODEL": "{{config.ocrModel}}",
+      "LPR_CONFIDENCE": "{{config.confidence}}",
+      "LPR_FPS": "{{config.fps}}",
+      "LPR_DEDUPE_SEC": "{{config.dedupeWindowSec}}",
+      "LPR_WHITELIST": "{{config.whitelist}}",
+      "LPR_BLACKLIST": "{{config.blacklist}}",
+      "LPR_CALLBACK_URL": "{{config.callbackUrl}}",
+      "LPR_SNAPSHOTS": "{{ config.snapshots | ternary:true:false }}",
+      "LPR_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "LPR_DATA_DIR": "{{appDir}}/lpr",
+      "LPR_MODEL_DIR": "{{dataDir}}/models/lpr",
+      "LPR_HLS_DIR": "{{appDir}}/hls",
+      "LPR_PUBLIC_BASE": "{{publicBase}}",
+      "LPR_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "migrations": {
+    "dir": "lpr_worker/migrations",
+    "db": "lpr.db"
+  },
+  "standalone": {
+    "supported": true,
+    "docs": "STANDALONE.md"
+  }
+}

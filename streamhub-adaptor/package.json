@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-test-module-mocks --import ./test/setup.mjs --disable-warning=ExperimentalWarning \"test/*.spec.ts\"",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -34,6 +35,9 @@
     "drop-in"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "peerDependencies": {
     "livekit-client": "^2.0.0"
   },
@@ -41,5 +45,8 @@
     "livekit-client": "2.15.7",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }

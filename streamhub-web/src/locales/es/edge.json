@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "title": "Nodos edge",
+    "subtitle": "Nodos del cluster con telemetría en vivo — reiniciá el worker o el host.",
+    "loading": "Cargando nodos…",
+    "loadError": "No se pudieron cargar los nodos edge.",
+    "empty": "Todavía no hay nodos registrados. Uní un nodo para distribuir el procesamiento.",
+    "online": "en línea",
+    "offline": "desconectado",
+    "stale": "sin señal",
+    "type": {
+      "common": "Nodo común",
+      "edge": "Nodo edge"
+    },
+    "cpu": "CPU",
+    "mem": "Memoria",
+    "disk": "Disco",
+    "gpu": "GPU",
+    "gpuGeneric": "GPU presente",
+    "noGpu": "Sin GPU reportada",
+    "vram": "VRAM libre / total",
+    "typeLabel": "Tipo de nodo",
+    "weight": "Peso",
+    "weightHint": "Cuota de scheduling — se usa con STREAMHUB_EDGE_SCHEDULER_POLICY=weighted.",
+    "restart": "Reiniciar",
+    "reboot": "Reiniciar host",
+    "commandError": "No se pudo entregar el comando.",
+    "patchError": "No se pudo actualizar el nodo."
+  },
+  "assignments": {
+    "title": "Asignaciones",
+    "subtitle": "Qué app · plugin · stream corre en qué nodo.",
+    "loading": "Cargando asignaciones…",
+    "loadError": "No se pudieron cargar las asignaciones.",
+    "empty": "Todavía no hay asignaciones edge. Aparecen a medida que se agendan apps edge en los nodos.",
+    "app": "App",
+    "plugin": "Plugin",
+    "stream": "Stream",
+    "node": "Nodo",
+    "status": "Estado",
+    "allStreams": "todos los streams",
+    "unassigned": "sin asignar"
+  }
+}

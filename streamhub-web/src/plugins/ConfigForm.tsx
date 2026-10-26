@@ -133,7 +133,12 @@ export function ConfigForm({
   return (
     <div className="space-y-4">
       {CustomEditor ? (
-        <CustomEditor values={values} onChange={setValues} pluginId={view.id} />
+        <CustomEditor
+          values={values}
+          onChange={setValues}
+          pluginId={view.id}
+          app={app}
+        />
       ) : hasSchema ? (
         <div className="space-y-4">
           {schema!.fields.map((field) => (

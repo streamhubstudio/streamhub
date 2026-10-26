@@ -18,6 +18,9 @@
  */
 import { UnauthorizedException } from '@nestjs/common';
 import { ParticipantInfo_Kind, IngressInput, EgressStatus } from '@livekit/protocol';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 import { WebhooksController } from './webhooks.controller';
 import {
@@ -440,7 +443,95 @@ describe('WebhooksController — resilience (always ack 200)', () => {
 });
 
 // -----------------------------------------------------------------------------
-// 7) e2e — real signature-rejection path through the booted AppModule
+// 7) Auto-record on room_started (LIVEKIT-UNUSED-FEATURES) — the app opts in
+// via `features.auto_record: true` in its config.yaml; RecordingService.start
+// is fired for the room. Best-effort: failures never break the 200 ack.
+// -----------------------------------------------------------------------------
+
+describe('WebhooksController — auto-record on room_started', () => {
+  let tmpDir: string;
+
+  /** Point the app's appDir at a temp dir holding the given config.yaml body. */
+  function withConfig(h: ReturnType<typeof makeController>, yamlBody: string | null) {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sh-autorec-'));
+    if (yamlBody !== null) {
+      fs.writeFileSync(path.join(tmpDir, 'config.yaml'), yamlBody, 'utf8');
+    }
+    h.apps.appDir.mockReturnValue(tmpDir);
+  }
+
+  afterEach(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('starts a recording when features.auto_record is true', async () => {
+    const h = makeController();
+    withConfig(h, 'features:\n  auto_record: true\n');
+
+    await receive(h, { event: 'room_started', room: { name: 'live-1' } });
+
+    expect(h.recording.start).toHaveBeenCalledTimes(1);
+    expect(h.recording.start).toHaveBeenCalledWith({
+      appName: 'live',
+      roomName: 'live-1',
+    });
+    // The raw room_started forward still happens.
+    expect(dispatchedEvents(h)).toContain('room_started');
+  });
+
+  it('does NOT record when the flag is false, absent, or non-boolean', async () => {
+    for (const body of [
+      'features:\n  auto_record: false\n',
+      'features: {}\n',
+      'features:\n  auto_record: "yes"\n',
+      null, // no config.yaml at all
+    ]) {
+      const h = makeController();
+      withConfig(h, body);
+      await receive(h, { event: 'room_started', room: { name: 'live-1' } });
+      expect(h.recording.start).not.toHaveBeenCalled();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('never records for a room that resolves to no app', async () => {
+    const h = makeController();
+    withConfig(h, 'features:\n  auto_record: true\n');
+    await receive(h, { event: 'room_started', room: { name: 'foreign-9' } });
+    expect(h.recording.start).not.toHaveBeenCalled();
+  });
+
+  it('still acks 200 when RecordingService.start rejects (recording disabled)', async () => {
+    const h = makeController();
+    withConfig(h, 'features:\n  auto_record: true\n');
+    h.recording.start.mockRejectedValue(new Error("recording is disabled for app 'live'"));
+
+    const res = await receive(h, { event: 'room_started', room: { name: 'live-1' } });
+
+    expect(res).toEqual({ data: { received: true } });
+    expect(h.logs.write).toHaveBeenCalledWith(
+      'warn',
+      'livekit-webhook',
+      expect.stringContaining('auto-record failed'),
+      expect.objectContaining({ app: 'live', room: 'live-1' }),
+    );
+  });
+
+  it('other webhook events never trigger auto-record', async () => {
+    const h = makeController();
+    withConfig(h, 'features:\n  auto_record: true\n');
+    await receive(h, { event: 'room_finished', room: { name: 'live-1' } });
+    await receive(h, {
+      event: 'participant_joined',
+      room: { name: 'live-1' },
+      participant: { identity: 'v1', permission: {} },
+    });
+    expect(h.recording.start).not.toHaveBeenCalled();
+  });
+});
+
+// -----------------------------------------------------------------------------
+// 8) e2e — real signature-rejection path through the booted AppModule
 // -----------------------------------------------------------------------------
 
 describe('WebhooksController (e2e) — POST /api/v1/webhooks/livekit', () => {

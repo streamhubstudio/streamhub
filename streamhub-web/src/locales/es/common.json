@@ -24,6 +24,9 @@
     "yes": "Sí",
     "no": "No"
   },
+  "docsHint": {
+    "learnMore": "Más información"
+  },
   "error": {
     "generic": "Algo salió mal. Intentá de nuevo.",
     "network": "Error de conexión. Verificá tu red.",

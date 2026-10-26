@@ -48,6 +48,33 @@ export function splitIngestUrl(
 }
 
 /**
+ * Whether an ingress row is an SRT push (passthrough plane). Detected by the
+ * explicit `inputType` when the backend sends it, with the ingress-id prefix
+ * (`pti_srt_…` — the transport is persisted in the id) as fallback for rows
+ * that predate the field.
+ */
+export function isSrtIngress(ing?: {
+  inputType?: string
+  ingressId?: string
+} | null): boolean {
+  if (!ing) return false
+  return ing.inputType === 'srt' || !!ing.ingressId?.startsWith('pti_srt_')
+}
+
+/**
+ * Whether an ingress row is an MPEG-TS-over-UDP PULL (passthrough plane).
+ * Detected by the explicit `inputType`, with the ingress-id prefix
+ * (`pti_mpegts_…`) as the fallback for rows that predate the field.
+ */
+export function isMpegtsIngress(ing?: {
+  inputType?: string
+  ingressId?: string
+} | null): boolean {
+  if (!ing) return false
+  return ing.inputType === 'mpegts' || !!ing.ingressId?.startsWith('pti_mpegts_')
+}
+
+/**
  * Mask a secret for at-a-glance display: keeps the first `visible` chars and
  * pads with bullets to the original length (capped so huge keys stay short).
  */

@@ -3,11 +3,13 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { DbService } from '../../shared/db/db.service';
 import { AuthContext } from '../../shared/auth-context';
 import { enforcementMode } from '../authz/authz.constants';
+import { PLAN_QUOTAS } from '../tenancy/tenancy.types';
 
 /** Per-tenant quota limits. `-1` / `null` = unlimited. */
 export interface TenantQuotas {
@@ -34,6 +36,29 @@ export interface UsageReport {
   usage: TenantUsage;
   /** Per-metric over-limit flags (informational; mirrors enforcement). */
   exceeded: Partial<Record<keyof TenantUsage, boolean>>;
+}
+
+/**
+ * A tenant + its effective quota, shaped for the Superadmin Tenants screen
+ * (matches the SPA `Tenant` type). `appCount` is a cheap convenience rollup.
+ */
+export interface TenantSummary {
+  id: string;
+  name: string;
+  plan: string;
+  createdAt: string;
+  quotas: TenantQuotas;
+  appCount: number;
+}
+
+/** Patch accepted by `setQuotas` (superadmin). Any subset; `-1` = unlimited. */
+export interface UpdateQuotasInput {
+  plan?: string;
+  maxApps?: number;
+  maxConcurrentStreams?: number;
+  maxRecordingMinutesMonth?: number;
+  maxEgressGbMonth?: number;
+  maxStorageGb?: number;
 }
 
 /** Conservative free-plan defaults (wave-5 §quotas). */
@@ -111,6 +136,55 @@ export class QuotasService {
   }
 
   // ---------------------------------------------------------------------------
+  // Per-APP and per-STREAM quotas (owner: "cuotas por app y por streams, por
+  // defecto ilimitadas"). Complements the per-tenant quotas above. `limit < 0`
+  // (or 0) means UNLIMITED, so an unconfigured app is never blocked. Same
+  // enforcement-mode + bypass invariants as the tenant path.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Before opening a new live stream for `app`: under the app's
+   * `quotas.maxConcurrentStreams`. `limit <= 0` ⇒ unlimited ⇒ no-op.
+   */
+  async enforceAppConcurrentStreams(
+    app: string,
+    limit: number,
+    ctx?: AuthContext,
+  ): Promise<void> {
+    await this.enforceScoped(ctx, 'app', 'maxConcurrentStreams', limit, () =>
+      Promise.resolve(this.countAppConcurrentStreams(app)),
+    );
+  }
+
+  /**
+   * Per-stream cap (e.g. max viewers on one stream). The caller supplies the
+   * current count. `limit <= 0` ⇒ unlimited ⇒ no-op.
+   */
+  async enforceStreamViewers(
+    limit: number,
+    current: number,
+    ctx?: AuthContext,
+  ): Promise<void> {
+    await this.enforceScoped(ctx, 'stream', 'maxViewersPerStream', limit, () =>
+      Promise.resolve(current),
+    );
+  }
+
+  /** Active live streams for a single app (from its per-app `streams` table). */
+  countAppConcurrentStreams(app: string): number {
+    try {
+      const row = this.db
+        .appDb(app)
+        .prepare("SELECT COUNT(*) AS n FROM streams WHERE status = 'active'")
+        .get() as { n: number } | undefined;
+      return row?.n ?? 0;
+    } catch {
+      // App db missing/locked → treat as 0 (never block on a counting failure).
+      return 0;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Reporting (GET /tenants/:id/usage)
   // ---------------------------------------------------------------------------
 
@@ -143,6 +217,136 @@ export class QuotasService {
       quotas,
       usage,
       exceeded,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tenant administration (GET /tenants, PATCH /tenants/:id/quotas — superadmin)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Every tenant + its effective quota, oldest first. Superadmin surface (the
+   * caller gates). Degrades to `[]` when the tenancy schema is absent — same
+   * defensive posture as the rest of this service.
+   */
+  listTenants(): TenantSummary[] {
+    if (!this.tableExists('tenants')) return [];
+    let rows: Array<{
+      id: string;
+      name: string;
+      plan: string | null;
+      created_at: string;
+    }>;
+    try {
+      rows = this.db
+        .global()
+        .prepare(
+          'SELECT id, name, plan, created_at FROM tenants ORDER BY created_at ASC, id ASC',
+        )
+        .all() as typeof rows;
+    } catch {
+      return [];
+    }
+    return rows.map((r) => this.summaryFromRow(r));
+  }
+
+  /** One tenant summary, or null when the id is unknown. */
+  getTenantSummary(tenantId: string): TenantSummary | null {
+    if (!this.tableExists('tenants')) return null;
+    const row = this.db
+      .global()
+      .prepare('SELECT id, name, plan, created_at FROM tenants WHERE id = ?')
+      .get(tenantId) as
+      | { id: string; name: string; plan: string | null; created_at: string }
+      | undefined;
+    return row ? this.summaryFromRow(row) : null;
+  }
+
+  /**
+   * Raise/lower a tenant's plan label and/or per-metric limits (superadmin).
+   * Merges the patch onto the tenant's current effective quota and upserts the
+   * dedicated `quotas` row, so a partial body only changes the fields it names.
+   * Throws `NotFoundException` when the tenant does not exist.
+   */
+  setQuotas(tenantId: string, patch: UpdateQuotasInput): TenantSummary {
+    const existing = this.getTenantSummary(tenantId);
+    if (!existing) {
+      throw new NotFoundException(`tenant '${tenantId}' not found`);
+    }
+
+    if (patch.plan !== undefined) {
+      this.db
+        .global()
+        .prepare('UPDATE tenants SET plan = ? WHERE id = ?')
+        .run(patch.plan, tenantId);
+    }
+
+    if (this.tableExists('quotas')) {
+      // When the patch names a KNOWN plan preset (e.g. "broadcaster"/"linear")
+      // use its limits as the baseline, so assigning the plan actually applies
+      // its quotas (QW-3). An explicit per-metric override in the same patch
+      // still wins; an unknown plan label keeps the tenant's current limits.
+      const preset =
+        patch.plan !== undefined ? PLAN_QUOTAS[patch.plan] : undefined;
+      const baseline: TenantQuotas = preset
+        ? {
+            maxApps: preset.max_apps,
+            maxConcurrentStreams: preset.max_concurrent_streams,
+            maxRecordingMinutesMonth: preset.max_recording_minutes_month,
+            maxEgressGbMonth: preset.max_egress_gb_month,
+            maxStorageGb: preset.max_storage_gb,
+          }
+        : existing.quotas;
+      const merged: TenantQuotas = {
+        maxApps: patch.maxApps ?? baseline.maxApps,
+        maxConcurrentStreams:
+          patch.maxConcurrentStreams ?? baseline.maxConcurrentStreams,
+        maxRecordingMinutesMonth:
+          patch.maxRecordingMinutesMonth ?? baseline.maxRecordingMinutesMonth,
+        maxEgressGbMonth: patch.maxEgressGbMonth ?? baseline.maxEgressGbMonth,
+        maxStorageGb: patch.maxStorageGb ?? baseline.maxStorageGb,
+      };
+      this.db
+        .global()
+        .prepare(
+          `INSERT INTO quotas
+             (tenant_id, max_apps, max_concurrent_streams,
+              max_recording_minutes_month, max_egress_gb_month, max_storage_gb)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(tenant_id) DO UPDATE SET
+             max_apps = excluded.max_apps,
+             max_concurrent_streams = excluded.max_concurrent_streams,
+             max_recording_minutes_month = excluded.max_recording_minutes_month,
+             max_egress_gb_month = excluded.max_egress_gb_month,
+             max_storage_gb = excluded.max_storage_gb`,
+        )
+        .run(
+          tenantId,
+          merged.maxApps,
+          merged.maxConcurrentStreams,
+          merged.maxRecordingMinutesMonth,
+          merged.maxEgressGbMonth,
+          merged.maxStorageGb,
+        );
+    }
+
+    // Re-read so the response reflects exactly what was persisted.
+    return this.getTenantSummary(tenantId)!;
+  }
+
+  private summaryFromRow(row: {
+    id: string;
+    name: string;
+    plan: string | null;
+    created_at: string;
+  }): TenantSummary {
+    return {
+      id: row.id,
+      name: row.name,
+      plan: row.plan ?? 'free',
+      createdAt: row.created_at,
+      quotas: this.quotasFor(row.id),
+      appCount: this.countApps(row.id),
     };
   }
 
@@ -183,6 +387,45 @@ export class QuotasService {
       this.logger.warn(`QUOTA-DENY ${msg}`);
       throw new HttpException(
         { error: 'quota_exceeded', metric, limit, used },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    this.logger.warn(`QUOTA-WOULD-DENY ${msg}`);
+  }
+
+  /**
+   * Enforce a per-app / per-stream numeric cap with the SAME bypass invariants
+   * as the tenant path (mode off / no ctx / superadmin / api_token). The limit is
+   * supplied by the caller (resolved from the app's config.yaml `quotas:` block);
+   * `limit <= 0` means unlimited → no-op. On breach in mode 'on' throws 429.
+   */
+  private async enforceScoped(
+    ctx: AuthContext | undefined,
+    scope: 'app' | 'stream',
+    metric: string,
+    limit: number,
+    current: () => Promise<number>,
+  ): Promise<void> {
+    if (!Number.isFinite(limit) || limit <= 0) return; // unlimited (default)
+    const mode = enforcementMode();
+    if (mode === 'off') return;
+    if (!ctx) return;
+    if (ctx.isSuperadmin || ctx.via === 'api_token') return;
+
+    let used: number;
+    try {
+      used = await current();
+    } catch (err) {
+      this.logger.debug(`${scope} quota count for ${metric} failed: ${(err as Error).message}`);
+      return;
+    }
+    if (used < limit) return;
+
+    const msg = `${scope} over quota ${metric}: ${used}/${limit}`;
+    if (mode === 'on') {
+      this.logger.warn(`QUOTA-DENY ${msg}`);
+      throw new HttpException(
+        { error: `${scope}_quota_exceeded`, scope, metric, limit, used },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }

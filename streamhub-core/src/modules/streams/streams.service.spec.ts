@@ -16,7 +16,13 @@
  *  - list() is deduplicated and returns only live/active streams.
  */
 import { ParticipantInfo_Kind } from '@livekit/protocol';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { StreamsService } from './streams.service';
 import { makeUnitContext, type UnitContext } from '../../../test/helpers';
@@ -147,6 +153,8 @@ describe('StreamsService (streams tracking)', () => {
       ctx.db,
       ctx.mocks.apps,
       ctx.mocks.s3,
+      undefined,
+      ctx.mocks.callbacks,
     );
     appId = seedApp();
   });
@@ -711,6 +719,80 @@ describe('StreamsService (streams tracking)', () => {
       await expect(
         svc.snapshot({ appName: 'ghost', roomName: 'live-room' }),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // snapshotByStream() — on-demand snapshot by stream id (ffmpeg mocked)
+  // -------------------------------------------------------------------------
+  describe('snapshotByStream()', () => {
+    /** Stub the ffmpeg frame grab; write the output so callers see a file. */
+    function stubCapture(): jest.SpyInstance {
+      return jest
+        .spyOn(svc as unknown as { captureFrame: (s: string, o: string) => Promise<void> }, 'captureFrame')
+        .mockImplementation(async (_src: string, out: string) => {
+          fs.writeFileSync(out, 'jpeg');
+        });
+    }
+
+    const s3cfg = {
+      s3: { prefix: 'streamhub/live', provider: 'aws', bucket: 'b', region: 'us-east-1', forcePathStyle: false, accessKey: 'AK', secretKey: 'SK' },
+    } as never;
+
+    it('404s for an unknown stream', async () => {
+      await expect(svc.snapshotByStream(APP, 'nope')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('LiveKit-backed stream → snapshots the room RTMP source + emits stream.snapshot', async () => {
+      insertActive('live-room/cam1', { type: 'webrtc', room: 'live-room', participant: 'cam1' });
+      ctx.mocks.apps.getConfig.mockResolvedValue(s3cfg);
+      const spy = stubCapture();
+
+      const res = await svc.snapshotByStream(APP, 'live-room/cam1');
+
+      // ffmpeg sourced the room's RTMP namespace (not an HLS file).
+      expect(spy.mock.calls[0][0]).toContain('rtmp://');
+      expect(res.key).toMatch(/^streamhub\/live\/snapshots\/live-room-.*\.jpg$/);
+      // stream.snapshot fired through the funnel with source=on_demand.
+      const ev = ctx.mocks.callbacks.dispatch.mock.calls.find(
+        (c: unknown[]) => c[1] === 'stream.snapshot',
+      );
+      expect(ev).toBeDefined();
+      expect(ev![2]).toMatchObject({ app: APP, streamId: 'live-room/cam1', source: 'on_demand' });
+    });
+
+    it('passthrough stream → snapshots the latest on-disk HLS segment', async () => {
+      insertActive('live-room/passthrough', {
+        type: 'rtmp',
+        room: 'live-room',
+        participant: 'passthrough',
+      });
+      // Two segments; the newer one must be chosen.
+      const hlsDir = path.join(ctx.dataDir, 'apps', APP, 'hls', 'live-room');
+      fs.mkdirSync(hlsDir, { recursive: true });
+      fs.writeFileSync(path.join(hlsDir, 'seg_00001.ts'), 'a');
+      const newer = path.join(hlsDir, 'seg_00002.ts');
+      fs.writeFileSync(newer, 'bb');
+      fs.utimesSync(newer, new Date(Date.now() + 5000), new Date(Date.now() + 5000));
+      ctx.mocks.apps.getConfig.mockResolvedValue(s3cfg);
+      const spy = stubCapture();
+
+      await svc.snapshotByStream(APP, 'live-room/passthrough');
+
+      expect(spy.mock.calls[0][0]).toBe(newer);
+    });
+
+    it('passthrough stream with NO HLS segment → 503', async () => {
+      insertActive('live-room/passthrough', {
+        type: 'rtmp',
+        room: 'live-room',
+        participant: 'passthrough',
+      });
+      await expect(
+        svc.snapshotByStream(APP, 'live-room/passthrough'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 });

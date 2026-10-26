@@ -20,12 +20,29 @@
  * combines it with the auto-discovered frontend registry) stays unchanged.
  */
 import { request } from '@/api/http'
-import type { ConfigValues, InstalledPlugin, PluginLogEntry } from './types.ts'
+import type {
+  ConfigValues,
+  InstalledPlugin,
+  PluginKind,
+  PluginLogEntry,
+  PluginStorageDescriptor,
+} from './types.ts'
 
 export interface PluginLogQuery {
   level?: string
   limit?: number
   offset?: number
+}
+
+/**
+ * Optional per-stream scope for the overlay list endpoints. When a player
+ * passes its `room` (or an exact `stream` id), the backend subtracts that
+ * stream's opted-OUT plugins so overlays honor the per-stream opt-out. Omitted
+ * → the unmodified app-level list.
+ */
+export interface PluginScope {
+  room?: string
+  stream?: string
 }
 
 /** Serializable plugin manifest as returned inside a backend marketplace entry. */
@@ -38,6 +55,14 @@ interface BackendManifest {
   icon?: string
   ui?: string
   needsWorker?: boolean
+  /** Studio taxonomy — 'app' | 'plugin' (the manifest projects a default). */
+  kind?: PluginKind
+  /** Edge-capable — the worker declares `worker.edge`. */
+  edge?: boolean
+  /** Persistent state the app owns (informational). */
+  storage?: PluginStorageDescriptor | null
+  /** Whether a standalone export bundle can be produced for this extension. */
+  exportable?: boolean
 }
 
 /** Backend marketplace entry (catalog manifest + this app's install state). */
@@ -63,6 +88,11 @@ function toInstalled(e: BackendPluginView): InstalledPlugin {
     name: m.name,
     description: m.description,
     category: m.category,
+    kind: m.kind,
+    edge: m.edge,
+    storage: m.storage ?? null,
+    exportable: m.exportable,
+    needsWorker: m.needsWorker,
   }
 }
 
@@ -102,9 +132,20 @@ function base(app: string): string {
 }
 
 export const pluginsApi = {
-  /** GET /apps/:app/plugins — the app's marketplace + install state. */
-  async list(app: string, signal?: AbortSignal): Promise<InstalledPlugin[]> {
-    const rows = await request<BackendPluginView[]>(base(app), { signal })
+  /**
+   * GET /apps/:app/plugins — the app's marketplace + install state. With a
+   * `scope` (a player's room/stream) the list is STREAM-AWARE: a plugin the
+   * stream opted out of comes back inactive so the overlay host drops it.
+   */
+  async list(
+    app: string,
+    signal?: AbortSignal,
+    scope?: PluginScope,
+  ): Promise<InstalledPlugin[]> {
+    const rows = await request<BackendPluginView[]>(base(app), {
+      signal,
+      query: { stream: scope?.stream, room: scope?.room },
+    })
     return (rows ?? []).map(toInstalled)
   },
 
@@ -113,14 +154,17 @@ export const pluginsApi = {
    * player-overlay plugins with sanitized config, for anonymous /play + /embed
    * viewers. Returned as InstalledPlugin[] so it merges with the frontend
    * registry exactly like the authenticated list (no 401 for logged-out users).
+   * A `scope` (room/stream) subtracts that stream's opted-out overlays.
    */
   async listPublicOverlays(
     app: string,
     signal?: AbortSignal,
+    scope?: PluginScope,
   ): Promise<InstalledPlugin[]> {
     const rows = await request<BackendPublicOverlay[]>(`${base(app)}/public`, {
       auth: false,
       signal,
+      query: { stream: scope?.stream, room: scope?.room },
     })
     return (rows ?? []).map(publicToInstalled)
   },

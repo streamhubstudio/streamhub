@@ -17,6 +17,9 @@ export type { VodPlayerProps } from './VodPlayer'
 export { HlsPlayer } from './HlsPlayer'
 export type { HlsPlayerProps } from './HlsPlayer'
 
+export { ProviderPlayer } from './ProviderPlayer'
+export type { ProviderPlayerProps } from './ProviderPlayer'
+
 export { MjpegPlayer } from './MjpegPlayer'
 export type { MjpegPlayerProps } from './MjpegPlayer'
 

@@ -7,9 +7,11 @@
  *                                  + type the confirmation phrase).
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
+import { DeleteAppDialog } from '../Apps/DeleteAppDialog'
 import { Dialog } from '@/ui'
 import type { DbOptimizeResult, DbPurgeScope } from '@/api'
 import {
@@ -59,7 +61,43 @@ export function MaintenanceTab({ app }: { app: string }) {
   return (
     <div className="space-y-5">
       <DbHealthCard app={app} />
+      <DeleteAppCard app={app} />
     </div>
+  )
+}
+
+/**
+ * Danger zone — permanently delete this app. Reuses the same typed-name
+ * confirmation dialog as the Apps list; on success navigates back to /apps.
+ */
+function DeleteAppCard({ app }: { app: string }) {
+  const { t } = useTranslation(['maintenanceTab'])
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+
+  const appQuery = useQuery({
+    queryKey: ['app', app],
+    queryFn: ({ signal }) => api.apps.get(app, signal),
+  })
+
+  return (
+    <>
+      <Card className="border-danger/40 p-5">
+        <SectionTitle title={t('danger.title')} />
+        <p className="mb-4 max-w-2xl text-sm text-slate-400">{t('danger.deleteDesc')}</p>
+        <Button variant="danger" disabled={!appQuery.data} onClick={() => setOpen(true)}>
+          {t('danger.deleteApp')}
+        </Button>
+      </Card>
+
+      {open && appQuery.data && (
+        <DeleteAppDialog
+          app={appQuery.data}
+          onClose={() => setOpen(false)}
+          onDeleted={() => navigate('/apps')}
+        />
+      )}
+    </>
   )
 }
 

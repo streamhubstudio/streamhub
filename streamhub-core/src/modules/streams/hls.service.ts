@@ -25,6 +25,13 @@ import {
 import { StreamsService } from './streams.service';
 
 const PLAYLIST_NAME = 'index.m3u8';
+/**
+ * DVR (QW-4): the rolling live-window playlist. For always-on/DVR channels the
+ * egress writes BOTH `index.m3u8` (full timeline) and this bounded live playlist;
+ * StreamHub serves `live.m3u8` as the public manifest so the live edge never
+ * grows unbounded (the full playlist stays on disk for the DVR window).
+ */
+const LIVE_PLAYLIST_NAME = 'live.m3u8';
 const SEGMENT_DURATION_S = 4;
 
 /** Result of starting (or reusing) a live HLS egress. */
@@ -83,7 +90,12 @@ export class HlsService {
   ): Promise<HlsStartResult> {
     const room = await this.resolveRoom(appName, streamId);
     const roomSlug = HlsService.safe(room);
-    const playlistUrl = this.playlistUrl(baseUrl, appName, roomSlug);
+    // DVR (QW-4): always-on/DVR channels serve the bounded rolling `live.m3u8`
+    // as the public manifest; every other app serves the full `index.m3u8`
+    // (default behaviour unchanged). Gated by the per-app `features.linear.dvr`.
+    const dvr = await this.dvrEnabled(appName);
+    const manifest = dvr ? LIVE_PLAYLIST_NAME : PLAYLIST_NAME;
+    const playlistUrl = this.playlistUrl(baseUrl, appName, roomSlug, manifest);
 
     // Reuse an already-running HLS egress for this room (idempotent start).
     const existing = await this.activeForRoom(appName, room);
@@ -111,6 +123,8 @@ export class HlsService {
         roomName: room,
         outputDir,
         playlistName: PLAYLIST_NAME,
+        // Only DVR channels get the bounded rolling live playlist.
+        ...(dvr ? { livePlaylistName: LIVE_PLAYLIST_NAME } : {}),
         segmentDurationS: SEGMENT_DURATION_S,
       });
     } catch (e) {
@@ -206,7 +220,9 @@ export class HlsService {
   ): Promise<HlsStatusResult> {
     const room = await this.resolveRoom(appName, streamId);
     const roomSlug = HlsService.safe(room);
-    const playlistUrl = this.playlistUrl(baseUrl, appName, roomSlug);
+    const dvr = await this.dvrEnabled(appName);
+    const manifest = dvr ? LIVE_PLAYLIST_NAME : PLAYLIST_NAME;
+    const playlistUrl = this.playlistUrl(baseUrl, appName, roomSlug, manifest);
 
     let active = false;
     try {
@@ -215,7 +231,8 @@ export class HlsService {
       this.logger.debug(`hls status egress check failed: ${(e as Error).message}`);
     }
     // Fall back to the on-disk playlist (egress just ended but file lingers, or
-    // LiveKit listing unreachable).
+    // LiveKit listing unreachable). The full `index.m3u8` is always written, so
+    // it is the reliable liveness marker even for DVR channels.
     if (!active) {
       const playlistPath = path.join(
         this.apps.appDir(appName),
@@ -227,6 +244,19 @@ export class HlsService {
     }
 
     return { active, playlistUrl };
+  }
+
+  /**
+   * Whether the app is a DVR/always-on channel (`features.linear.dvr`). Never
+   * throws: an unresolvable config degrades to `false` (default behaviour).
+   */
+  private async dvrEnabled(appName: string): Promise<boolean> {
+    try {
+      const cfg = await this.apps.getConfig(appName);
+      return cfg.features.linear?.dvr === true;
+    } catch {
+      return false;
+    }
   }
 
   // ---- helpers ---------------------------------------------------------
@@ -253,10 +283,15 @@ export class HlsService {
     return list.find((e) => e.roomName === room);
   }
 
-  private playlistUrl(baseUrl: string, app: string, roomSlug: string): string {
+  private playlistUrl(
+    baseUrl: string,
+    app: string,
+    roomSlug: string,
+    manifest: string = PLAYLIST_NAME,
+  ): string {
     return `${baseUrl}/hls/${encodeURIComponent(app)}/${encodeURIComponent(
       roomSlug,
-    )}/${PLAYLIST_NAME}`;
+    )}/${manifest}`;
   }
 
   private async dispatch(

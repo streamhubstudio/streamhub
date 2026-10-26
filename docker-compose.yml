@@ -16,8 +16,19 @@
 # Ports used on the host:
 #   80, 443   Caddy (dashboard + API + LiveKit signaling `/rtc`, all TLS)
 #   7880      LiveKit signaling/API (ws)          7881  LiveKit TCP fallback
-#   7882/udp  LiveKit media (single mux port)     1935  Ingress RTMP
+#   7882/udp  LiveKit media (single mux port)     1935  RTMP ingest
 #   8080      Ingress WHIP        3020  core (local)   6379  redis (local)
+#   1936      RTMPS (TLS ingest) — OPTIONAL, only when the `rtmps` profile is up
+#
+# :1935 RTMP ingest — TWO shapes:
+#   DEFAULT (mediamtx profile OFF): the LiveKit `ingress` binds :1935 directly and
+#     the RTMP→HLS passthrough runs on its own :1937+ pool (multi-port model).
+#   SINGLE-PORT (mediamtx profile ON, STREAMHUB_MEDIAMTX_ENABLE=true): the
+#     `mediamtx` service owns the public :1935 and fires loopback hooks to the
+#     core, which classifies by stream key — `ptk_` → passthrough remux, else →
+#     forward to the LiveKit ingress (moved to the INTERNAL :11935 via
+#     STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT). MediaMTX API is loopback :9997.
+#     See https://streamhub.studio/docs/features/rtmp-single-port.
 # =============================================================================
 
 services:
@@ -63,14 +74,36 @@ services:
           api_key: ${LIVEKIT_API_KEY}
           urls:
             - ${LIVEKIT_WEBHOOK_URL:-http://127.0.0.1:3020/api/v1/webhooks/livekit}
+        # TURN relay — OFF by default (STREAMHUB_TURN_ENABLE unset → enabled:false,
+        # zero behavior change). Without it, clients behind symmetric NAT / VPNs /
+        # corporate firewalls cannot connect (Safari/iOS is the strictest). The
+        # installer's `--turn` (nginx shape only) sets STREAMHUB_TURN_ENABLE=true +
+        # STREAMHUB_TURN_DOMAIN=turn.<domain>, obtains the cert and opens 5349/tcp +
+        # 3478/udp. LiveKit terminates the TURN TLS itself, reading the certbot PEMs
+        # from the read-only /etc/letsencrypt mount below (the cert_file path derives
+        # from the domain). The client needs nothing — ICE servers arrive in the
+        # JoinResponse. See https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT, TURN.
         turn:
-          enabled: false
+          enabled: ${STREAMHUB_TURN_ENABLE:-false}
+          domain: ${STREAMHUB_TURN_DOMAIN:-turn.localhost}
+          tls_port: 5349
+          udp_port: 3478
+          cert_file: /etc/letsencrypt/live/${STREAMHUB_TURN_DOMAIN:-turn.localhost}/fullchain.pem
+          key_file: /etc/letsencrypt/live/${STREAMHUB_TURN_DOMAIN:-turn.localhost}/privkey.pem
         logging:
           level: info
         # Native Prometheus metrics on the HOST (network_mode: host). Scrape
         # 127.0.0.1:6789 locally — do NOT open 6789 on the firewall. Each LiveKit
         # service needs its own port since they share the host network.
         prometheus_port: 6789
+    # TURN/TLS cert store (read-only) — only used when TURN is enabled. LiveKit
+    # terminates the TURN cert itself, so it needs the certbot PEMs on-disk.
+    # Mounting the WHOLE /etc/letsencrypt at the SAME path keeps the live/ symlinks
+    # resolvable (archive/ is under the same mount) and lets cert_file use the
+    # natural absolute path. Default source is a harmless empty dir when TURN is
+    # off; the installer sets STREAMHUB_TURN_CERT_DIR=/etc/letsencrypt with --turn.
+    volumes:
+      - ${STREAMHUB_TURN_CERT_DIR:-./data/certs/turn}:/etc/letsencrypt:ro
 
   ingress:
     image: livekit/ingress:latest
@@ -90,13 +123,74 @@ services:
         ws_url: ws://127.0.0.1:7880
         api_key: ${LIVEKIT_API_KEY}
         api_secret: ${LIVEKIT_API_SECRET}
-        rtmp_port: 1935
+        # RTMP listen port. DEFAULT :1935 (LiveKit owns the public port, legacy
+        # multi-port model). When the single-port MediaMTX front is enabled, set
+        # STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT=11935 in .env so MediaMTX takes the
+        # public :1935 and the core forwards the `live/` plane here on :11935.
+        # (Same var the core reads as its forward target, so they can't drift.)
+        rtmp_port: ${STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT:-1935}
         whip_port: 8080
         http_relay_port: 9090
         logging:
           level: info
         # Prometheus metrics on the host — separate port from livekit-server.
         prometheus_port: 6790
+
+  # MediaMTX — single public RTMP port (:1935) front. OFF by default: only starts
+  # under the `mediamtx` compose profile (docker compose --profile mediamtx up -d)
+  # AND with STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT=11935 so the LiveKit ingress
+  # vacates :1935 first. MediaMTX terminates every publish on :1935 and fires
+  # loopback hooks to the core, which classifies by stream key and owns every
+  # ffmpeg (passthrough remux for `ptk_` keys; forward to the LiveKit ingress on
+  # :11935 otherwise). Host networking (like the other media services) so its
+  # hooks reach the loopback-bound core (:3020) and ingress (:11935) — a bridge
+  # network could NOT (the core binds 127.0.0.1). API stays on 127.0.0.1:9997
+  # (never exposed). Pinned to the -ffmpeg image because the plain image is FROM
+  # scratch (no shell/wget → the runOn hooks can't run); we use its busybox wget,
+  # not its ffmpeg. See deploy/mediamtx.yml + features/rtmp-single-port.md.
+  mediamtx:
+    profiles: ["mediamtx"]
+    image: bluenviron/mediamtx:1.19.2-ffmpeg
+    container_name: streamhub-mediamtx
+    network_mode: host
+    restart: unless-stopped
+    depends_on: [ingress]
+    environment:
+      # ready/notready hooks: MediaMTX expands ${...} into the X-MediaMTX-Secret
+      # header. auth: authHTTPAddress can't send a header, so the secret rides in
+      # its query via the MTX_AUTHHTTPADDRESS env OVERRIDE (compose interpolates
+      # the secret from .env here). Both must match the core's hook secret.
+      STREAMHUB_MEDIAMTX_HOOK_SECRET: ${STREAMHUB_MEDIAMTX_HOOK_SECRET:-}
+      MTX_AUTHHTTPADDRESS: http://127.0.0.1:3020/api/v1/internal/mediamtx/auth?secret=${STREAMHUB_MEDIAMTX_HOOK_SECRET:-}
+    volumes:
+      - ./deploy/mediamtx.yml:/mediamtx.yml:ro
+
+  # RTMPS ingest — TLS front for RTMP-in. OFF by default: only starts under the
+  # `rtmps` compose profile (docker compose --profile rtmps up -d). stunnel
+  # TLS-terminates :STREAMHUB_RTMPS_PORT (1936) and forwards the decrypted RTMP
+  # to whoever owns 127.0.0.1:1935 — the LiveKit ingress by default, or MediaMTX
+  # when the single-port `mediamtx` profile is up (in which case rtmps then works
+  # for BOTH planes, since MediaMTX routes by path). Transparent either way, so
+  # the rtmps:// URL is the rtmp:// URL with scheme+port swapped. Reuses the cert
+  # (bind-mounted read-only): nginx+certbot → STREAMHUB_RTMPS_CERT_DIR=
+  # /etc/letsencrypt/live/<domain>; else drop fullchain.pem+privkey.pem into
+  # data/certs/rtmps. Also set STREAMHUB_RTMPS_ENABLE=true so core surfaces
+  # rtmps_url. See deploy/rtmps/ and https://streamhub.studio/docs/operations/ENV.
+  rtmps:
+    profiles: ["rtmps"]
+    build:
+      context: .
+      dockerfile: deploy/rtmps/Dockerfile
+    image: streamhub-rtmps:local
+    container_name: streamhub-rtmps
+    network_mode: host
+    restart: unless-stopped
+    depends_on: [ingress]
+    environment:
+      STREAMHUB_RTMPS_PORT: ${STREAMHUB_RTMPS_PORT:-1936}
+      STREAMHUB_RTMP_BACKEND: ${STREAMHUB_RTMP_BACKEND:-127.0.0.1:1935}
+    volumes:
+      - ${STREAMHUB_RTMPS_CERT_DIR:-./data/certs/rtmps}:/certs:ro
 
   egress:
     image: livekit/egress:latest
@@ -142,6 +236,11 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile
+      args:
+        # Bare media server (install.sh --no-plugins) sets this to 0 in .env to
+        # skip baking the deface worker deps. Default 1 = current behaviour.
+        INSTALL_DEFACE_WORKER: ${INSTALL_DEFACE_WORKER:-1}
+        INSTALL_VENDORED_WORKER_DEPS: ${INSTALL_VENDORED_WORKER_DEPS:-deface}
     image: streamhub-core:local
     container_name: streamhub-core
     network_mode: host
@@ -152,6 +251,10 @@ services:
     # 1080p->720p sessions).
     # gpus: all
     depends_on: [redis, livekit]
+    # All config comes from .env — including the MediaMTX single-port switch
+    # (STREAMHUB_MEDIAMTX_ENABLE, STREAMHUB_MEDIAMTX_HOOK_SECRET,
+    # STREAMHUB_MEDIAMTX_RTMP_PORT), which the core reads to build passthrough
+    # push URLs on :1935 and to validate the /internal/mediamtx/* hooks.
     env_file: .env
     volumes:
       - ${STREAMHUB_HOST_DATA_DIR:-./data}:${DATA_DIR:-/data}

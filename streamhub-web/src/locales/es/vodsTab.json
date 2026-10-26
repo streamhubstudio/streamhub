@@ -6,6 +6,12 @@
     "subtitle": "Aplica a las grabaciones que inicies en En vivo. Cada cambio se guarda automáticamente.",
     "saved": "Guardado",
     "saveError": "No se pudo guardar la configuración.",
+    "noBucket": "No hay bucket de almacenamiento configurado — las grabaciones no se pueden subir e iniciar una grabación fallará con un error de almacenamiento.",
+    "noBucketLink": "Configurar almacenamiento →",
+    "enabledLabel": "Grabación",
+    "enabledHint": "Interruptor maestro — cuando está apagado, esta app nunca graba (no se producen VODs), sin importar los ajustes de abajo ni una solicitud de grabar.",
+    "on": "Activada",
+    "off": "Desactivada",
     "splitLabel": "Cortar grabación (split)",
     "splitHint": "Parte el MP4 cada N minutos; cada parte queda como un VOD separado. Sin cortes = un único archivo continuo.",
     "snapshotLabel": "Snapshots (capturas)",
@@ -72,6 +78,29 @@
     "duration": "Duración",
     "size": "Tamaño",
     "created": "Creado"
+  },
+  "transcript": {
+    "title": "Transcripción",
+    "status": {
+      "queued": "en cola",
+      "processing": "procesando",
+      "ready": "lista",
+      "failed": "falló"
+    },
+    "language": "idioma: {{lang}}",
+    "downloadSrt": "Descargar SRT",
+    "start": "Transcribir",
+    "restart": "Re-transcribir",
+    "starting": "Iniciando…",
+    "loading": "Cargando transcripción…",
+    "empty": "Sin transcripción todavía. Instalá y activá el plugin VOD Transcription y transcribí esta grabación.",
+    "loadError": "No se pudo cargar la transcripción.",
+    "pending": "Transcribiendo… puede tardar unos minutos según la duración de la grabación.",
+    "failed": "La transcripción falló.",
+    "speakers": "Hablantes: {{speakers}}",
+    "noText": "La transcripción no produjo texto.",
+    "errorTitle": "Transcripción",
+    "triggerError": "No se pudo iniciar la transcripción. ¿Está activado el plugin VOD Transcription?"
   },
   "delete": {
     "title": "Borrar VOD #{{id}}",

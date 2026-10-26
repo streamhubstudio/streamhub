@@ -14,7 +14,8 @@ import {
   SamplesServiceContract,
 } from '../../shared/contracts';
 import { AppsService } from '../apps/apps.service';
-import { SAMPLE_FILES, TEMPLATES } from './sample-templates';
+import { SAMPLE_FILES, TEMPLATES, renderPlaceholders } from './sample-templates';
+import type { ExampleContext } from './example-bundle';
 
 /**
  * Per-app sample pages (wave-4 §3).
@@ -169,18 +170,44 @@ export class SamplesService implements SamplesServiceContract, OnModuleInit {
     return {
       APP: appName,
       ROOM: roomPrefix,
-      WS_URL: this.config.publicWsUrl || 'wss://media.example.com',
+      WS_URL: this.config.publicWsUrl || 'wss://media.digitalhub.com.ar',
       API_URL: `${base}/api/v1`,
       ADAPTOR_URL: `${base}/sdk/streamhub-adaptor.global.js`,
       HLS_URL: `${base}/hls/${appName}`,
     };
   }
 
-  /** Resolve all `{{KEY}}` placeholders. Unknown keys are left as-is. */
+  /**
+   * Resolve all `{{KEY}}` placeholders. Delegates to the shared renderer so the
+   * served page and the downloadable bundle stay byte-for-byte in sync.
+   */
   private render(template: string, ctx: Record<string, string>): string {
-    return template.replace(/\{\{([A-Z_]+)\}\}/g, (m, key: string) =>
-      Object.prototype.hasOwnProperty.call(ctx, key) ? ctx[key] : m,
-    );
+    return renderPlaceholders(template, ctx);
+  }
+
+  /**
+   * Configuration context for the downloadable EXAMPLE bundles of an app —
+   * the same public URLs/room the server-rendered samples are wired to, in the
+   * shape the bundle builder's `config.js` consumes. No secrets: baseUrl/wsUrl
+   * are public and `app`/`room` are non-sensitive slugs.
+   */
+  async exampleContext(appName: string): Promise<ExampleContext> {
+    if (!(await this.apps.get(appName))) {
+      throw new NotFoundException(`app "${appName}" not found`);
+    }
+    let roomPrefix = appName;
+    try {
+      const cfg = await this.apps.getConfig(appName);
+      roomPrefix = cfg.roomPrefix || appName;
+    } catch {
+      /* fall back to the app name */
+    }
+    return {
+      app: appName,
+      room: roomPrefix,
+      baseUrl: this.publicBaseUrl(),
+      wsUrl: this.config.publicWsUrl || 'wss://media.digitalhub.com.ar',
+    };
   }
 
   /** Public base URL of the deployment (env override, sane default). */
@@ -189,6 +216,6 @@ export class SamplesService implements SamplesServiceContract, OnModuleInit {
       this.config.publicBaseUrl ||
       this.config.env('PUBLIC_BASE_URL') ||
       this.config.env('STREAMHUB_PUBLIC_URL');
-    return (fromEnv || 'https://streamhub.example.com').replace(/\/+$/, '');
+    return (fromEnv || 'https://streamhub.digitalhub.com.ar').replace(/\/+$/, '');
   }
 }

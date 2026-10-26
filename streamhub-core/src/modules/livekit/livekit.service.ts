@@ -29,14 +29,17 @@ import {
   StreamOutput,
   StreamProtocol,
   TrackSource,
+  TrackType,
   type EgressInfo as SdkEgressInfo,
   type IngressInfo as SdkIngressInfo,
+  type ParticipantInfo,
 } from '@livekit/protocol';
 import type { EncodedOutputs } from 'livekit-server-sdk';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
 
 import { ConfigService } from '../../shared/config/config.service';
+import { assertSafePullUrl } from './ingress-url.guard';
 import {
   CreateIngressInput,
   EgressInfo,
@@ -53,6 +56,7 @@ import {
   StreamEgressInfo,
 } from '../../shared/contracts';
 import { HwAccelService } from '../system/hwaccel.service';
+import { buildIngressVideoOptions } from './ingress-encoding.util';
 
 /**
  * IngressInfo enriched with live endpoint state for the per-app listing
@@ -101,6 +105,43 @@ function tsToIso(raw: bigint | number | undefined): string | null {
   else if (n < 1e17) ms = n / 1e3; // microseconds
   else ms = n / 1e6; // nanoseconds
   return new Date(ms).toISOString();
+}
+
+/** One published track of a participant (moderation/detail views). */
+export interface ParticipantTrackView {
+  sid: string;
+  /** 'audio' | 'video' | 'data' (lowercase TrackType name). */
+  type: string;
+  /** 'camera' | 'microphone' | 'screen_share' | ... (lowercase TrackSource). */
+  source: string;
+  muted: boolean;
+}
+
+/**
+ * Detailed participant view for the rooms/moderation API: identity + state +
+ * published tracks (with sids, so callers can mute / update subscriptions).
+ */
+export interface ParticipantDetail {
+  identity: string;
+  name: string;
+  sid: string;
+  hidden: boolean;
+  isPublisher: boolean;
+  metadata?: string;
+  joinedAt: string | null;
+  tracks: ParticipantTrackView[];
+  /** Current permission grant (merge base for atomic permission updates). */
+  permission: {
+    canPublish: boolean;
+    canSubscribe: boolean;
+    canPublishData: boolean;
+    hidden: boolean;
+  };
+}
+
+/** Room info enriched with its live metadata (rooms API detail view). */
+export interface RoomDetail extends LiveKitRoomInfo {
+  metadata?: string;
 }
 
 /** Extra grant flags supported by the per-app token endpoint (SPEC §16). */
@@ -336,6 +377,141 @@ export class LiveKitService implements LiveKitServiceContract {
   }
 
   // ---------------------------------------------------------------------------
+  // Moderation & metadata (LiveKit v1.8 native — rooms API)
+  // ---------------------------------------------------------------------------
+
+  /** Map a protocol ParticipantInfo onto the API-facing detail view. */
+  private toParticipantDetail(p: ParticipantInfo): ParticipantDetail {
+    return {
+      identity: p.identity,
+      name: p.name,
+      sid: p.sid,
+      hidden: Boolean(p.permission?.hidden),
+      isPublisher: (p.tracks?.length ?? 0) > 0,
+      metadata: p.metadata || undefined,
+      joinedAt: tsToIso(p.joinedAt),
+      tracks: (p.tracks ?? []).map((t) => ({
+        sid: t.sid,
+        type: (TrackType[t.type] ?? String(t.type)).toLowerCase(),
+        source: (TrackSource[t.source] ?? String(t.source)).toLowerCase(),
+        muted: Boolean(t.muted),
+      })),
+      permission: {
+        canPublish: Boolean(p.permission?.canPublish),
+        canSubscribe: Boolean(p.permission?.canSubscribe),
+        canPublishData: Boolean(p.permission?.canPublishData),
+        hidden: Boolean(p.permission?.hidden),
+      },
+    };
+  }
+
+  /** Detailed participant listing (identity + metadata + track sids). */
+  async listParticipantsDetailed(room: string): Promise<ParticipantDetail[]> {
+    const parts = await this.guard('listParticipants', () =>
+      this.roomClient.listParticipants(room),
+    );
+    return parts.map((p) => this.toParticipantDetail(p));
+  }
+
+  /** One participant of a room (detail view). Throws 503 when LiveKit errors. */
+  async getParticipant(
+    room: string,
+    identity: string,
+  ): Promise<ParticipantDetail> {
+    const p = await this.guard('getParticipant', () =>
+      this.roomClient.getParticipant(room, identity),
+    );
+    return this.toParticipantDetail(p);
+  }
+
+  /** Server-side mute/unmute of one published track (moderation). */
+  async mutePublishedTrack(
+    room: string,
+    identity: string,
+    trackSid: string,
+    muted: boolean,
+  ): Promise<{ trackSid: string; muted: boolean }> {
+    const info = await this.guard('mutePublishedTrack', () =>
+      this.roomClient.mutePublishedTrack(room, identity, trackSid, muted),
+    );
+    return { trackSid: info?.sid || trackSid, muted: Boolean(info?.muted ?? muted) };
+  }
+
+  /**
+   * Update a participant's metadata / display name / permissions. Permissions
+   * are applied atomically by LiveKit, so when any permission override is given
+   * the caller must pass the FULL desired set (the rooms controller merges the
+   * current permission first).
+   */
+  async updateParticipant(
+    room: string,
+    identity: string,
+    opts: {
+      metadata?: string;
+      name?: string;
+      permission?: {
+        canPublish?: boolean;
+        canSubscribe?: boolean;
+        canPublishData?: boolean;
+        hidden?: boolean;
+      };
+    },
+  ): Promise<ParticipantDetail> {
+    const p = await this.guard('updateParticipant', () =>
+      this.roomClient.updateParticipant(room, identity, {
+        ...(opts.metadata !== undefined ? { metadata: opts.metadata } : {}),
+        ...(opts.name !== undefined ? { name: opts.name } : {}),
+        ...(opts.permission ? { permission: opts.permission } : {}),
+      }),
+    );
+    return this.toParticipantDetail(p);
+  }
+
+  /** Force-subscribe / force-unsubscribe a participant to specific tracks. */
+  async updateSubscriptions(
+    room: string,
+    identity: string,
+    trackSids: string[],
+    subscribe: boolean,
+  ): Promise<void> {
+    await this.guard('updateSubscriptions', () =>
+      this.roomClient.updateSubscriptions(room, identity, trackSids, subscribe),
+    );
+  }
+
+  /** Set a room's live metadata (clients receive `roomMetadataChanged`). */
+  async updateRoomMetadata(
+    room: string,
+    metadata: string,
+  ): Promise<RoomDetail> {
+    const r = await this.guard('updateRoomMetadata', () =>
+      this.roomClient.updateRoomMetadata(room, metadata),
+    );
+    return { ...this.toRoomInfo(r), metadata: r.metadata || undefined };
+  }
+
+  /** One room (with metadata), or null when it is not live. */
+  async getRoom(name: string): Promise<RoomDetail | null> {
+    const rooms = await this.guard('listRooms', () =>
+      this.roomClient.listRooms([name]),
+    );
+    const r = rooms.find((x) => x.name === name);
+    if (!r) return null;
+    return { ...this.toRoomInfo(r), metadata: r.metadata || undefined };
+  }
+
+  /** List rooms with their metadata (rooms API listing). */
+  async listRoomsDetailed(names?: string[]): Promise<RoomDetail[]> {
+    const rooms = await this.guard('listRooms', () =>
+      this.roomClient.listRooms(names),
+    );
+    return rooms.map((r) => ({
+      ...this.toRoomInfo(r),
+      metadata: r.metadata || undefined,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
   // Tokens
   // ---------------------------------------------------------------------------
 
@@ -420,30 +596,103 @@ export class LiveKitService implements LiveKitServiceContract {
   }
 
   async createIngress(input: CreateIngressInput): Promise<IngressInfo> {
-    if (input.inputType === 'url' && !input.url) {
-      throw new ServiceUnavailableException(
-        'createIngress: url is required for inputType "url"',
+    if (input.inputType === 'url') {
+      if (!input.url) {
+        throw new ServiceUnavailableException(
+          'createIngress: url is required for inputType "url"',
+        );
+      }
+      // SSRF guard: the ingress service FETCHES this URL. Reject forbidden
+      // schemes and hosts that are / resolve to private, loopback, link-local
+      // or metadata addresses (400). See ingress-url.guard.ts.
+      await assertSafePullUrl(input.url);
+    }
+    // Transcoding bypass (`enableTranscoding: false`) is ONLY valid for WHIP,
+    // whose input is already WebRTC. RTMP/URL inputs MUST be transcoded — LiveKit
+    // rejects a bypass on them with "invalid transcoding bypass configuration:
+    // bypassing transcoding impossible with selected input type". So we only
+    // honour the caller's bypass flag for WHIP; for RTMP/URL we leave it unset
+    // (LiveKit defaults to transcoding on).
+    const enableTranscoding =
+      input.inputType === 'whip' ? input.enableTranscoding : undefined;
+    // Video encoding for a TRANSCODED ingress (never for a WHIP passthrough) —
+    // gated by the GLOBAL ingest profile (STREAMHUB_INGEST_PROFILE):
+    //
+    //  - 'livekit' (DEFAULT — stable/legacy): attach NOTHING. LiveKit decides
+    //    everything (its default is a 3-layer 720p simulcast). Only the
+    //    long-standing GPU hw-accel options are attached when a GPU node opts
+    //    in (pre-2.7.1 behaviour, unchanged). This is the instant rollback.
+    //
+    //  - 'efficient' (opt-in, experimental): attach an explicit PRESET so the
+    //    CPU-heavy 3-layer default can never leak through — a SINGLE layer by
+    //    default (measured: 3×1080p ≈ 100% → ~24% of 8 cores), the matching
+    //    3-layer preset only when the app explicitly enables adaptive. Presets
+    //    only — custom encoding options proved LiveKit-version-coupled.
+    //
+    // audioOnly (radio) note: LiveKit servers up to at least 1.8.4 IGNORE the
+    // `audioOnly` flag, and an ingress with no video options falls back to the
+    // 3-layer default — the exact footgun this profile exists to prevent. So in
+    // 'efficient' mode an audioOnly request STILL attaches the single-layer
+    // preset (worst case: one layer, never three). Radio → use passthrough.
+    const efficient = this.config.ingestProfile === 'efficient';
+    // audioOnly is part of the efficient profile's opinions — in 'livekit'
+    // (legacy) mode we forward NOTHING non-legacy, so rollback is exact.
+    const audioOnly = efficient && input.audioOnly === true;
+    let video: IngressVideoOptions | undefined;
+    if (enableTranscoding !== false) {
+      if (efficient) {
+        const adaptive = input.simulcast === true;
+        // Adaptive ON: prefer opt-in GPU hw-accel (undefined on CPU-only boxes /
+        // cpu mode / any failure), else the capped 3-layer preset.
+        video = adaptive
+          ? ((await this.ingressHw(input.appName)).video ??
+            buildIngressVideoOptions({ maxHeight: input.maxHeight, adaptive: true }))
+          : buildIngressVideoOptions({
+              maxHeight: input.maxHeight,
+              adaptive: false,
+            });
+      } else {
+        // Legacy: only the pre-existing GPU path may attach options.
+        video = (await this.ingressHw(input.appName)).video;
+      }
+    }
+    const requestBase = {
+      name: `${input.appName}-${input.roomName}`,
+      roomName: input.roomName,
+      participantIdentity:
+        input.participantIdentity || `ingress-${randomUUID()}`,
+      participantName: input.participantName,
+      url: input.url,
+      ...(enableTranscoding === undefined ? {} : { enableTranscoding }),
+    };
+    let info: SdkIngressInfo;
+    try {
+      info = await this.guard('createIngress', () =>
+        this.ingressClient.createIngress(this.ingressInputEnum(input.inputType), {
+          ...requestBase,
+          ...(audioOnly ? { audioOnly: true } : {}),
+          ...(video ? { video } : {}),
+        }),
+      );
+    } catch (err) {
+      // FALLBACK-ON-REJECT (stability invariant): if LiveKit rejects OUR
+      // encoding opinions (e.g. a preset/flag a given server version does not
+      // support), retry once with NO opinions — LiveKit's own default. An
+      // encoding option must only ever DEGRADE the profile, never break
+      // ingress creation.
+      if (!video && !audioOnly) throw err;
+      this.logs.write('warn', 'livekit', 'ingress options rejected — retrying with LiveKit defaults', {
+        app: input.appName,
+        room: input.roomName,
+        error: (err as Error)?.message,
+      });
+      info = await this.guard('createIngress', () =>
+        this.ingressClient.createIngress(
+          this.ingressInputEnum(input.inputType),
+          requestBase,
+        ),
       );
     }
-    // GPU hw-accel (SPEC §5): attach hardware H.264 video options only when the
-    // ingress is transcoded (video options are meaningless for WHIP passthrough).
-    // Any resolution failure returns {} ⇒ current default behaviour preserved.
-    const hw =
-      input.enableTranscoding === false
-        ? {}
-        : await this.ingressHw(input.appName);
-    const info: SdkIngressInfo = await this.guard('createIngress', () =>
-      this.ingressClient.createIngress(this.ingressInputEnum(input.inputType), {
-        name: `${input.appName}-${input.roomName}`,
-        roomName: input.roomName,
-        participantIdentity:
-          input.participantIdentity || `ingress-${randomUUID()}`,
-        participantName: input.participantName,
-        url: input.url,
-        enableTranscoding: input.enableTranscoding,
-        ...(hw.video ? { video: hw.video } : {}),
-      }),
-    );
     const url =
       input.inputType === 'rtmp' ? this.publicizeRtmpUrl(info.url) : info.url;
     return {
@@ -550,6 +799,77 @@ export class LiveKitService implements LiveKitServiceContract {
         ...(encodingOptions ? { encodingOptions } : {}),
       });
     });
+
+    return {
+      egressId: info.egressId,
+      status: this.egressStatusToString(info.status),
+    };
+  }
+
+  /**
+   * Start a Track-Composite egress: record ONE participant's audio+video (or
+   * audio only) muxed server-side with ffmpeg — NO headless Chrome, unlike
+   * room-composite (LIVEKIT-UNUSED-FEATURES "track egress"). A large RAM win
+   * for 1-publisher rooms and audio/radio apps.
+   *
+   * The participant's published track sids are resolved via getParticipant:
+   *  - audioOnly: attach only the first audio track (throws when none);
+   *  - default:   attach the first video + first audio track (throws when the
+   *    participant publishes nothing).
+   */
+  async startTrackCompositeEgress(input: {
+    appName: string;
+    roomName: string;
+    participantIdentity: string;
+    outputFilepath: string;
+    /** Record audio only (no video track attached). */
+    audioOnly?: boolean;
+  }): Promise<EgressInfo> {
+    const fileOutput = new EncodedFileOutput({
+      fileType: EncodedFileType.MP4,
+      filepath: input.outputFilepath,
+    });
+
+    // GPU hw-accel (SPEC §5): `{}` on no-GPU/cpu/failure ⇒ CPU/default.
+    const { encodingOptions } = await this.egressHw(input.appName);
+
+    const info: SdkEgressInfo = await this.guard(
+      'startTrackCompositeEgress',
+      async () => {
+        const p = await this.roomClient.getParticipant(
+          input.roomName,
+          input.participantIdentity,
+        );
+        const tracks = p.tracks ?? [];
+        const audioTrackId = tracks.find(
+          (t) => t.type === TrackType.AUDIO,
+        )?.sid;
+        const videoTrackId = input.audioOnly
+          ? undefined
+          : tracks.find((t) => t.type === TrackType.VIDEO)?.sid;
+
+        if (input.audioOnly && !audioTrackId) {
+          throw new Error(
+            `participant '${input.participantIdentity}' publishes no audio track`,
+          );
+        }
+        if (!audioTrackId && !videoTrackId) {
+          throw new Error(
+            `participant '${input.participantIdentity}' publishes no tracks`,
+          );
+        }
+
+        return this.egressClient.startTrackCompositeEgress(
+          input.roomName,
+          { file: fileOutput },
+          {
+            ...(audioTrackId ? { audioTrackId } : {}),
+            ...(videoTrackId ? { videoTrackId } : {}),
+            ...(encodingOptions ? { encodingOptions } : {}),
+          },
+        );
+      },
+    );
 
     return {
       egressId: info.egressId,
@@ -672,6 +992,14 @@ export class LiveKitService implements LiveKitServiceContract {
       protocol: SegmentedFileProtocol.HLS_PROTOCOL,
       filenamePrefix: path.join(input.outputDir, 'segment_'),
       playlistName: playlistPath,
+      // DVR (QW-4): when a live-window playlist name is provided, LiveKit ALSO
+      // writes a bounded rolling playlist (`livePlaylistName`) next to the full
+      // `playlistName`. StreamHub serves that rolling playlist as the public
+      // manifest for always-on/DVR channels so the live edge never grows
+      // unbounded. Omitted ⇒ single full playlist (default behaviour unchanged).
+      ...(input.livePlaylistName
+        ? { livePlaylistName: path.join(input.outputDir, input.livePlaylistName) }
+        : {}),
       segmentDuration:
         input.segmentDurationS && input.segmentDurationS > 0
           ? Math.floor(input.segmentDurationS)

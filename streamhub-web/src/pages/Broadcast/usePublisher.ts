@@ -186,8 +186,30 @@ export function usePublisher(app: string) {
   useEffect(() => {
     mountedRef.current = true
     void openPreview()
+
+    // Safari/iOS: `unload` is unreliable and bfcache keeps the page alive, so
+    // release the camera/mic on `pagehide`. livekit-client already disconnects
+    // a CONNECTED Room on pagehide (disconnectOnPageLeave), but the standalone
+    // preview/audio tracks acquired before publishing are ours to stop —
+    // otherwise iOS keeps the camera locked (green indicator stays on).
+    const onPageHide = () => {
+      audioRef.current?.stop()
+      audioRef.current = null
+      previewRef.current?.stop()
+      previewRef.current = null
+    }
+    // Device hot-plug (or Safari granting labels post-permission): refresh the
+    // camera/mic pickers. Guarded — older WebKit lacks addEventListener here.
+    const md = navigator.mediaDevices as MediaDevices | undefined
+    const canWatchDevices = typeof md?.addEventListener === 'function'
+    const onDeviceChange = () => void refreshDevices()
+    window.addEventListener('pagehide', onPageHide)
+    if (canWatchDevices) md.addEventListener('devicechange', onDeviceChange)
+
     return () => {
       mountedRef.current = false
+      window.removeEventListener('pagehide', onPageHide)
+      if (canWatchDevices) md.removeEventListener('devicechange', onDeviceChange)
       stopPolling()
       void roomRef.current?.disconnect()
       audioRef.current?.stop()
@@ -298,8 +320,15 @@ export function usePublisher(app: string) {
           throw new Error(t('noToken'))
         }
 
-        // 2) connect + publish over WebRTC
-        const lkRoom = new Room({ adaptiveStream: false, dynacast: false })
+        // 2) connect + publish over WebRTC.
+        // videoCodec h264: hardware-encoded on Safari/iOS (VP8 there is
+        // software → battery drain) and decodable by every browser; also the
+        // codec HLS/MP4 egress wants (see WEBRTC-BROWSER-COMPAT.md).
+        const lkRoom = new Room({
+          adaptiveStream: false,
+          dynacast: false,
+          publishDefaults: { videoCodec: 'h264' },
+        })
         roomRef.current = lkRoom
         lkRoom.on(RoomEvent.Disconnected, () => {
           if (phaseRef.current === 'live' || phaseRef.current === 'connecting') {

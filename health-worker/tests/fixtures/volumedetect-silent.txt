@@ -1,0 +1,6 @@
+Input #0, mpegts, from 'seg-00099.ts':
+  Duration: 00:00:06.01, start: 600.000000, bitrate: 2100 kb/s
+Output #0, null, to 'pipe:':
+[Parsed_volumedetect_0 @ 0x7fd1e0004a00] n_samples: 576512
+[Parsed_volumedetect_0 @ 0x7fd1e0004a00] mean_volume: -91.0 dB
+[Parsed_volumedetect_0 @ 0x7fd1e0004a00] max_volume: -91.0 dB

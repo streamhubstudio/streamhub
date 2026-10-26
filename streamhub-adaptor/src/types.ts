@@ -40,6 +40,24 @@ export interface StreamHubAdaptorConfig {
   bandwidth?: number;
   /** Enable the data channel (chat/notifications). Default true. */
   dataChannelEnabled?: boolean;
+  /**
+   * LiveKit adaptive streaming: automatically drops simulcast layers the
+   * viewer's element can't display (bandwidth/CPU saver for many-viewer
+   * rooms). Default TRUE — pass false only to debug layer selection.
+   */
+  adaptiveStream?: boolean;
+  /**
+   * LiveKit dynacast: pauses publishing simulcast layers no subscriber is
+   * consuming. Default TRUE.
+   */
+  dynacast?: boolean;
+  /**
+   * Video codec published to the room. Default **'h264'** (AntMedia parity +
+   * Safari interop): H.264 is hardware-encoded/decoded on every Apple device
+   * (VP8 there is software-only → battery drain) and is what the HLS/MP4
+   * egress pipeline wants. Pass 'vp8'/'vp9'/'av1' to override.
+   */
+  videoCodec?: "h264" | "vp8" | "vp9" | "av1";
   /** Subscribe-only mode (no camera/mic publish). */
   isPlayMode?: boolean;
   /** Alias for isPlayMode used by some apps. */

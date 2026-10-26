@@ -12,7 +12,9 @@
     "recordStop": "Could not stop the recording.",
     "hlsStart": "Could not start HLS.",
     "hlsStop": "Could not stop HLS.",
-    "load": "Could not load the streams."
+    "load": "Could not load the streams.",
+    "kick": "Could not kick the publisher.",
+    "mute": "Could not mute/unmute the publisher."
   },
   "table": {
     "stream": "Stream",
@@ -37,17 +39,72 @@
     "stopRecording": "Stop recording",
     "starting": "Starting…",
     "record": "Record",
-    "stopStream": "Stop stream"
+    "stopStream": "Stop stream",
+    "kick": "Kick",
+    "mute": "Mute mic",
+    "unmute": "Unmute mic",
+    "muting": "Muting…",
+    "kicking": "Kicking…",
+    "plugins": "Studio",
+    "tags": "Tags",
+    "more": "More actions"
   },
   "confirmStopStream": "Stop stream {{id}}?",
+  "share": {
+    "button": "Share",
+    "title": "Share this stream",
+    "playerUrl": "Player URL",
+    "iframe": "Embed (iframe)",
+    "hlsUrl": "HLS URL (.m3u8)",
+    "videojs": "video.js snippet",
+    "signedEmbed": "Signed embed (expiring)",
+    "signedEmbedHelp": "Tokenized iframe — required for private-playback apps.",
+    "signing": "Signing…",
+    "signError": "Failed"
+  },
   "modal": {
     "room": "Room"
+  },
+  "plugins": {
+    "modalTitle": "Stream Studio apps",
+    "title": "Studio apps for this stream",
+    "help": "By default this stream is affected by every Studio app enabled on the app. Turn one off to opt THIS stream out of it — other streams keep it.",
+    "affected": "Affected",
+    "optedOut": "Opted out",
+    "empty": "No stream-affecting Studio apps are enabled on this app.",
+    "loading": "Loading Studio apps…",
+    "loadError": "Could not load this stream's Studio apps.",
+    "saveError": "Could not save the Studio app settings.",
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "tags": {
+    "modalTitle": "Stream tags",
+    "title": "Tags for this stream",
+    "help": "Apply or remove the app's tags on this stream. Save to apply the changes.",
+    "empty": "This app has no tags yet. Create one below to apply it.",
+    "loading": "Loading tags…",
+    "loadError": "Could not load the stream's tags.",
+    "saveError": "Could not save the tags.",
+    "save": "Save",
+    "saving": "Saving…",
+    "createTitle": "Create a new tag",
+    "slug": "Slug",
+    "label": "Label",
+    "create": "Create",
+    "creating": "Creating…",
+    "createError": "Could not create the tag."
   },
   "hls": {
     "liveTitle": "Live HLS",
     "latency": "~6-15s latency",
     "playlistUrl": "Playlist URL (.m3u8)",
     "embed": "Embed (HTML)",
-    "embedHelp": "Paste it into any website (video.js via CDN). On Safari/iOS the `.m3u8` also plays natively."
-  }
+    "embedHelp": "Paste it into any website (video.js via CDN). On Safari/iOS the `.m3u8` also plays natively.",
+    "embedHelpProvider": "Full-player iframe — embeds the public player page (uses the app's active player). Copy anywhere.",
+    "playerLabel": "Player",
+    "providerPlayer": "Advanced player",
+    "builtinPlayer": "Video.js"
+  },
+  "confirmKick": "Kick publisher {{id}} out of the room? They can rejoin with a valid token."
 }

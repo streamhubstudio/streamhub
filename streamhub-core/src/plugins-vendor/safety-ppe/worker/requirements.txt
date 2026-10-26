@@ -1,0 +1,18 @@
+# StreamHub safety-ppe worker runtime deps.
+#
+# Deliberately onnxruntime, NOT ultralytics: the shipped model is used via its
+# ONNX export, so the AGPL-3.0 ultralytics runtime never enters the product
+# (see README "Model & license"). CPU (default): YOLOv8m at 640² costs roughly
+# a second of one core per frame — keep the plugin's fps at 1/stream. For
+# NVIDIA GPUs swap in the GPU build and enable the plugin's `cuda` toggle
+# (SAFETY_PPE_EXECUTION_PROVIDER=cuda):
+#   pip uninstall onnxruntime && pip install onnxruntime-gpu
+#
+# opencv-python-headless: HLS frame decode via the bundled ffmpeg backend +
+# letterbox preprocessing + evidence JPEG writes. numpy comes with opencv.
+# Callback POSTs and the SQLite store use the stdlib (no requests, no ORM).
+onnxruntime>=1.17
+opencv-python-headless>=4.9
+
+# Dev/test only (pure-logic tests need no onnxruntime/opencv):
+#   pip install pytest

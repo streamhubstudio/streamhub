@@ -104,15 +104,12 @@ export class MagicController {
     return { data: { token } };
   }
 
-  /** Real client IP, honouring nginx's X-Forwarded-For. */
+  /**
+   * Proxy-validated client IP (fix P0-2): Express resolves `req.ip` honouring
+   * `trust proxy` (1 hop), so a spoofed X-Forwarded-For cannot evade the
+   * magic-link per-IP throttling. Never hand-parse the raw header.
+   */
   private clientIp(req: Request): string | null {
-    const fwd = req.headers['x-forwarded-for'];
-    if (typeof fwd === 'string' && fwd.length > 0) {
-      return this.normalizeIp(fwd.split(',')[0].trim());
-    }
-    if (Array.isArray(fwd) && fwd.length > 0) {
-      return this.normalizeIp(fwd[0].trim());
-    }
     const ip = req.ip || req.socket?.remoteAddress || '';
     return ip ? this.normalizeIp(ip) : null;
   }

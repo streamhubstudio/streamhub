@@ -1,0 +1,58 @@
+# Agente de observabilidad de NODO — corre en stream02 y stream03 (NO en el
+# master). Expone las señales del nodo al master:
+#   - node_exporter : métricas de host en :9100 (protegido por ufw allow-master).
+#   - promtail      : logs de docker (core/livekit/ingress/egress/redis) + nginx
+#                     empujados al Loki del master.
+#
+# core /metrics y livekit/ingress/egress /metrics NO se exponen acá: van por el
+# nginx del nodo (cluster/nginx-metrics-export.conf), no por este compose.
+#
+# Levantar en el nodo (ver cluster/install-node-agent.sh):
+#   cp .env.node.example .env.node   # setear NODE_NAME + MASTER_LOKI_PUSH_URL
+#   docker compose -f node-agent-compose.yml --env-file .env.node up -d
+#
+# network_mode: host -> node_exporter ve el host real y promtail habla con el
+# socket de docker y el journald/archivos por localhost.
+name: streamhub-node-agent
+
+services:
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: streamhub-node-exporter
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    mem_limit: 64m
+    command:
+      - --path.rootfs=/host
+      # Bind a todas las interfaces: el master (203.0.113.10) scrapea :9100.
+      # NO es sensible, pero igual restringilo con ufw allow-from-master.
+      - --web.listen-address=:9100
+      - --collector.systemd
+      - --collector.textfile.directory=/var/lib/node_exporter/textfile
+    volumes:
+      - /:/host:ro,rslave
+      - ./textfile:/var/lib/node_exporter/textfile:ro
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: streamhub-promtail
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    mem_limit: 128m
+    # -config.expand-env=true resuelve ${NODE_NAME} / ${MASTER_LOKI_PUSH_URL}.
+    command:
+      - -config.file=/etc/promtail/promtail-node.yml
+      - -config.expand-env=true
+    environment:
+      NODE_NAME: "${NODE_NAME:?Definí NODE_NAME (stream02|stream03) en .env.node}"
+      MASTER_LOKI_PUSH_URL: "${MASTER_LOKI_PUSH_URL:?Definí MASTER_LOKI_PUSH_URL en .env.node}"
+    volumes:
+      - ./promtail-node.yml:/etc/promtail/promtail-node.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - promtail_positions:/promtail
+
+volumes:
+  promtail_positions:

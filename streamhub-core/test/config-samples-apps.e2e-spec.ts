@@ -264,7 +264,9 @@ describe('config-samples-apps (e2e)', () => {
         .get(`${P}/apps/live/samples/webrtc-publish.html`)
         .expect(200);
       expect(res.body.data.file).toBe('webrtc-publish.html');
-      expect(res.body.data.content).toContain("const APP = 'live';");
+      // Config-aware block: `CFG.app` (a bundle's config.js) wins; the baked
+      // literal is the served-page fallback.
+      expect(res.body.data.content).toContain("const APP = CFG.app || 'live';");
     });
 
     it('GET /apps/live/samples/:file is 400 for an unsafe (non-.html) name', async () => {
@@ -295,7 +297,7 @@ describe('config-samples-apps (e2e)', () => {
       const back = await api()
         .get(`${P}/apps/live/samples/webrtc-publish.html`)
         .expect(200);
-      expect(back.body.data.content).toContain("const APP = 'live';");
+      expect(back.body.data.content).toContain("const APP = CFG.app || 'live';");
     });
 
     it('INVARIANT: editing one app\'s sample does not affect another app\'s copy', async () => {
@@ -313,7 +315,51 @@ describe('config-samples-apps (e2e)', () => {
         .get(`${P}/apps/e2e-iso-b/samples/hls-player.html`)
         .expect(200);
       expect(b.body.data.content).not.toContain('ISO-A-ONLY');
-      expect(b.body.data.content).toContain("const APP = 'e2e-iso-b';");
+      expect(b.body.data.content).toContain("const APP = CFG.app || 'e2e-iso-b';");
+    });
+  });
+
+  // ===========================================================================
+  // examples — downloadable, self-contained bundles
+  // ===========================================================================
+  describe('examples', () => {
+    it('GET /apps/live/examples lists the bundle catalogue + download URLs', async () => {
+      const res = await api().get(`${P}/apps/live/examples`).expect(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      const ids = res.body.data.map((e: { id: string }) => e.id);
+      expect(ids).toContain('webrtc-play');
+      expect(ids).toContain('conference');
+      const one = res.body.data.find(
+        (e: { id: string }) => e.id === 'webrtc-play',
+      );
+      expect(one.downloadUrl).toContain('/api/v1/apps/live/examples/webrtc-play.zip');
+      expect(one.requiredConfig).toEqual(
+        expect.arrayContaining(['baseUrl', 'wsUrl', 'app', 'room']),
+      );
+    });
+
+    it('GET /apps/live/examples/:name.zip streams a zip attachment', async () => {
+      const res = await api()
+        .get(`${P}/apps/live/examples/webrtc-play.zip`)
+        .buffer(true)
+        .expect(200);
+      expect(res.headers['content-type']).toContain('application/zip');
+      expect(res.headers['content-disposition']).toContain('webrtc-play.zip');
+      expect(Number(res.headers['content-length'])).toBeGreaterThan(0);
+    });
+
+    it('GET /apps/live/examples/all.zip streams the combined archive', async () => {
+      const res = await api()
+        .get(`${P}/apps/live/examples/all.zip`)
+        .buffer(true)
+        .expect(200);
+      expect(res.headers['content-disposition']).toContain(
+        'streamhub-examples.zip',
+      );
+    });
+
+    it('GET an unknown example id → 404', async () => {
+      await api().get(`${P}/apps/live/examples/nope.zip`).expect(404);
     });
   });
 });

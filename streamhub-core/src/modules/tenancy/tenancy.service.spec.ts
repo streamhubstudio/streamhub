@@ -124,6 +124,62 @@ describe('tenancy/TenancyService', () => {
     });
   });
 
+  describe('per-user SMTP override (owner item 29)', () => {
+    let ctx: UnitContext;
+    let tenancy: TenancyService;
+    beforeEach(() => {
+      ({ ctx, tenancy } = make());
+      tenancy.onModuleInit();
+    });
+    afterEach(() => ctx.cleanup());
+
+    it('defaults to disabled/empty for a fresh user', () => {
+      const id = tenancy.createUser({ email: 'smtp@x.com' });
+      expect(tenancy.getUserSmtp(id)).toEqual({
+        enabled: false,
+        host: '',
+        port: null,
+        user: '',
+        from: '',
+        passEnc: null,
+      });
+    });
+
+    it('setUserSmtp persists a partial patch; the pass stays whatever ENCRYPTED value was given', () => {
+      const id = tenancy.createUser({ email: 'smtp2@x.com' });
+      tenancy.setUserSmtp(id, {
+        enabled: true,
+        host: 'smtp.example.com',
+        port: 587,
+        user: 'me@example.com',
+        from: 'Me <me@example.com>',
+        passEnc: 'aesgcm$iv$tag$ct',
+      });
+      expect(tenancy.getUserSmtp(id)).toEqual({
+        enabled: true,
+        host: 'smtp.example.com',
+        port: 587,
+        user: 'me@example.com',
+        from: 'Me <me@example.com>',
+        passEnc: 'aesgcm$iv$tag$ct',
+      });
+    });
+
+    it('a field left undefined in the patch is untouched', () => {
+      const id = tenancy.createUser({ email: 'smtp3@x.com' });
+      tenancy.setUserSmtp(id, { host: 'smtp.example.com', passEnc: 'aesgcm$a$b$c' });
+      tenancy.setUserSmtp(id, { enabled: true });
+      const state = tenancy.getUserSmtp(id)!;
+      expect(state.enabled).toBe(true);
+      expect(state.host).toBe('smtp.example.com');
+      expect(state.passEnc).toBe('aesgcm$a$b$c');
+    });
+
+    it('returns null for an unknown user', () => {
+      expect(tenancy.getUserSmtp('usr_nope')).toBeNull();
+    });
+  });
+
   // ===========================================================================
   // Teams / tenants / quotas
   // ===========================================================================

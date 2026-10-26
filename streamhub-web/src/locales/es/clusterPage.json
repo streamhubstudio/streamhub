@@ -1,6 +1,10 @@
 {
   "title": "Cluster",
   "subtitle": "Nodos de StreamHub registrados en este cluster.",
+  "tab": {
+    "registry": "Registro",
+    "edge": "Edge"
+  },
   "info": {
     "title": "Estado del cluster",
     "subtitle": "Token compartido y el comando que ejecutan los nodos nuevos para unirse.",

@@ -16,13 +16,14 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Track } from 'livekit-client'
+import { Track, type RoomOptions } from 'livekit-client'
 import {
   DisconnectButton,
   GridLayout,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
+  StartMediaButton,
   TrackToggle,
   useLocalParticipant,
   useTracks,
@@ -30,7 +31,17 @@ import {
 import '@livekit/components-styles'
 import { api, ApiRequestError } from '@/api'
 import { PlayerAddons, ViewerBadge } from '@/components/player'
+import { supportsScreenShare } from '@/lib/browserCompat'
 import PreJoin, { type JoinChoices } from './Meeting/PreJoin'
+
+/**
+ * Stable RoomOptions (must not change identity across renders).
+ * videoCodec h264: hardware-encoded on Safari/iOS (VP8 there is software →
+ * battery drain), decodable everywhere — see WEBRTC-BROWSER-COMPAT.md.
+ */
+const ROOM_OPTIONS: RoomOptions = {
+  publishDefaults: { videoCodec: 'h264' },
+}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
@@ -114,6 +125,15 @@ function MeetingStage({
           onError={onError}
           controlsAnchor="bottom-right"
         />
+
+        {/* Autoplay unlock — only rendered while the browser blocks audio/video
+            playback (Safari/iOS after backgrounding or an audio interruption). */}
+        <div className="absolute bottom-3 left-3 z-30">
+          <StartMediaButton
+            label={t('controls.tapToPlay')}
+            className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-primary-600"
+          />
+        </div>
       </div>
 
       {/* Publish controls — big, tappable, single row on mobile. */}
@@ -154,20 +174,24 @@ function MeetingStage({
           </span>
         </TrackToggle>
 
-        <TrackToggle
-          source={Track.Source.ScreenShare}
-          showIcon={false}
-          onDeviceError={onError}
-          className={[
-            btnBase,
-            isScreenShareEnabled
-              ? 'bg-primary-500/20 text-fg ring-1 ring-primary-400/40'
-              : 'bg-gray-800 text-gray-300 ring-1 ring-gray-700 hover:text-fg',
-          ].join(' ')}
-        >
-          <Icon d="M4 5h16v10H4zM8 19h8M12 15v4" />
-          <span className="hidden sm:inline">{t('controls.screen')}</span>
-        </TrackToggle>
+        {/* getDisplayMedia does not exist on iOS/iPadOS Safari — hide the
+            toggle there instead of failing on tap (WEBRTC-BROWSER-COMPAT). */}
+        {supportsScreenShare() && (
+          <TrackToggle
+            source={Track.Source.ScreenShare}
+            showIcon={false}
+            onDeviceError={onError}
+            className={[
+              btnBase,
+              isScreenShareEnabled
+                ? 'bg-primary-500/20 text-fg ring-1 ring-primary-400/40'
+                : 'bg-gray-800 text-gray-300 ring-1 ring-gray-700 hover:text-fg',
+            ].join(' ')}
+          >
+            <Icon d="M4 5h16v10H4zM8 19h8M12 15v4" />
+            <span className="hidden sm:inline">{t('controls.screen')}</span>
+          </TrackToggle>
+        )}
 
         <DisconnectButton
           className={[btnBase, 'bg-red-500/90 text-white hover:bg-red-500'].join(' ')}
@@ -308,6 +332,7 @@ export default function Meeting() {
         connect
         audio={choices.audio}
         video={choices.video}
+        options={ROOM_OPTIONS}
         onDisconnected={leave}
         onError={handleConnectError}
         className="h-full"

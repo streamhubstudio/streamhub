@@ -1,0 +1,58 @@
+{
+  "overlayHint": "Los espectadores solo ven la portada si el plugin \"Live Control Overlay\" también está instalado y activo en esta app.",
+  "loadError": "No se pudieron cargar los datos de Live Control.",
+  "actionError": "La acción falló. Intentá de nuevo.",
+  "streamsError": "No se pudieron cargar los vivos.",
+  "streams": {
+    "title": "Streams en vivo",
+    "refresh": "Actualizar",
+    "empty": "No hay vivos en este momento."
+  },
+  "state": {
+    "live": "En vivo",
+    "paused": "Pausado",
+    "finished": "Finalizado"
+  },
+  "row": {
+    "viewers": "{{count}} espectadores",
+    "showing": "mostrando {{summary}}"
+  },
+  "actions": {
+    "resume": "Reanudar",
+    "pause": "Pausar",
+    "finish": "Finalizar",
+    "confirmPause": "Pausar ahora",
+    "confirmFinish": "Finalizar ahora",
+    "cancel": "Cancelar"
+  },
+  "mode": {
+    "text": "Placa de texto",
+    "image": "Imagen",
+    "video": "Video en bucle"
+  },
+  "editor": {
+    "mode": "Portada",
+    "cardTitle": "Título",
+    "cardText": "Mensaje",
+    "cardColor": "Color de fondo",
+    "asset": "Recurso",
+    "pickAsset": "Elegí un recurso…",
+    "noAssets": "Todavía no hay recursos de este tipo."
+  },
+  "assets": {
+    "title": "Recursos de portada",
+    "label": "Etiqueta",
+    "labelPlaceholder": "ej. Placa de intro",
+    "upload": "Subir recurso",
+    "uploading": "Subiendo…",
+    "empty": "Aún no hay recursos. Subí una imagen o un video corto en bucle.",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar el recurso \"{{name}}\"?",
+    "defaultPause": "Predet. (pausa)",
+    "defaultFinish": "Predet. (fin)",
+    "uploadError": "Falló la subida.",
+    "deleteError": "Falló la eliminación.",
+    "settingsError": "No se pudo guardar el valor predeterminado.",
+    "noStorage": "Esta app no tiene almacenamiento S3 configurado — configuralo en los ajustes de almacenamiento antes de subir portadas."
+  }
+}

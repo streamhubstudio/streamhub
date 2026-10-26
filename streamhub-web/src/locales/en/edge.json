@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "title": "Edge nodes",
+    "subtitle": "Cluster nodes with live telemetry — restart or reboot a worker host.",
+    "loading": "Loading nodes…",
+    "loadError": "Could not load edge nodes.",
+    "empty": "No nodes registered yet. Join a node to distribute processing.",
+    "online": "online",
+    "offline": "offline",
+    "stale": "stale",
+    "type": {
+      "common": "Common node",
+      "edge": "Edge node"
+    },
+    "cpu": "CPU",
+    "mem": "Memory",
+    "disk": "Disk",
+    "gpu": "GPU",
+    "gpuGeneric": "GPU present",
+    "noGpu": "No GPU reported",
+    "vram": "VRAM free / total",
+    "typeLabel": "Node type",
+    "weight": "Weight",
+    "weightHint": "Scheduling share — used with STREAMHUB_EDGE_SCHEDULER_POLICY=weighted.",
+    "restart": "Restart",
+    "reboot": "Reboot",
+    "commandError": "The command could not be delivered.",
+    "patchError": "Could not update the node."
+  },
+  "assignments": {
+    "title": "Assignments",
+    "subtitle": "Which app · plugin · stream runs on which node.",
+    "loading": "Loading assignments…",
+    "loadError": "Could not load assignments.",
+    "empty": "No edge assignments yet. They appear as edge-capable apps are scheduled onto nodes.",
+    "app": "App",
+    "plugin": "Plugin",
+    "stream": "Stream",
+    "node": "Node",
+    "status": "Status",
+    "allStreams": "all streams",
+    "unassigned": "unassigned"
+  }
+}

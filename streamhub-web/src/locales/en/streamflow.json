@@ -1,0 +1,106 @@
+{
+  "loading": "Loading…",
+  "section": {
+    "workflows": "Workflows",
+    "editor": "Editor",
+    "runs": "Runs",
+    "secrets": "Secrets"
+  },
+  "secrets": {
+    "help": "Secrets are encrypted at rest and never shown again. Reference one from any box field with a secret.NAME token in double curly braces — it is resolved only at run time, on the server.",
+    "name": "Name",
+    "value": "Value",
+    "save": "Save secret",
+    "empty": "No secrets yet.",
+    "badName": "Name must be UPPER_SNAKE_CASE (A–Z, 0–9, _).",
+    "needValue": "Enter a value.",
+    "saveFailed": "Could not save the secret.",
+    "confirmDelete": "Delete secret “{{name}}”?",
+    "delete": "Delete secret",
+    "refPrefix": "Use as"
+  },
+  "wf": {
+    "untitled": "Untitled workflow",
+    "namePlaceholder": "New workflow name…",
+    "create": "Create",
+    "enabled": "on",
+    "disabled": "off",
+    "open": "Open",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "empty": "No workflows yet. Create a blank one, or start from the intrusion template.",
+    "confirmDelete": "Delete workflow “{{name}}” and its run history?"
+  },
+  "template": {
+    "name": "Intrusion → AI → notify",
+    "start": "Start from template",
+    "insert": "Insert starter template"
+  },
+  "io": {
+    "import": "Import",
+    "export": "Export",
+    "exportFailed": "Export failed",
+    "importInvalid": "Not a valid workflow file",
+    "importFailed": "Import failed — check the box types"
+  },
+  "editor": {
+    "back": "Back to workflows",
+    "run": "Run now",
+    "replay": "Replay last run",
+    "save": "Save",
+    "saving": "Saving…",
+    "savedOk": "Saved",
+    "savedErr": "Save failed",
+    "runQueued": "Run queued",
+    "runFailed": "Run failed to queue",
+    "replaceConfirm": "Replace the current canvas with the starter template?",
+    "none": "No workflow open.",
+    "goWorkflows": "Pick one from Workflows."
+  },
+  "palette": {
+    "title": "Boxes",
+    "dangerous": "Execution node — runs code/commands on the server (enable in Settings)"
+  },
+  "group": {
+    "trigger": "Triggers",
+    "action": "Actions",
+    "logic": "Logic"
+  },
+  "canvas": {
+    "deleteEdge": "Click to delete this connection",
+    "smallScreenHint": "Tip: the flow editor is best used on a larger screen — drag to pan."
+  },
+  "panel": {
+    "close": "Close",
+    "noFields": "This box has no settings.",
+    "deleteBox": "Delete box",
+    "invalidJson": "Invalid JSON",
+    "noRules": "No rules yet — add one.",
+    "ruleField": "field",
+    "ruleOp": "operator",
+    "ruleValue": "value",
+    "ruleRemove": "Remove rule",
+    "addRule": "Add rule"
+  },
+  "runs": {
+    "empty": "No runs yet. Enable a workflow and trigger it, or use Run now in the editor.",
+    "manual": "manual",
+    "pickOne": "Select a run to see its steps.",
+    "steps": "Steps",
+    "noSteps": "No steps recorded.",
+    "in": "Input",
+    "out": "Output",
+    "status": {
+      "queued": "queued",
+      "running": "running",
+      "ok": "ok",
+      "failed": "failed"
+    },
+    "step": {
+      "ok": "ok",
+      "failed": "failed",
+      "skipped": "skipped"
+    }
+  }
+}

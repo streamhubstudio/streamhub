@@ -16,11 +16,11 @@ export interface SamplePageContext {
   appName: string;
   /** Default room name for the demos (usually the app's room prefix). */
   roomName: string;
-  /** Public base URL of the StreamHub deployment, e.g. https://streamhub.example.com */
+  /** Public base URL of the StreamHub deployment, e.g. https://streamhub.digitalhub.com.ar */
   publicBaseUrl: string;
-  /** Public LiveKit ws URL, e.g. wss://media.example.com */
+  /** Public LiveKit ws URL, e.g. wss://media.digitalhub.com.ar */
   publicWsUrl: string;
-  /** REST API base, e.g. https://streamhub.example.com/api/v1 */
+  /** REST API base, e.g. https://streamhub.digitalhub.com.ar/api/v1 */
   apiBase: string;
 }
 

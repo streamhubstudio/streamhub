@@ -55,11 +55,15 @@ describe('AuthController — /tokens global-scope guard (M2)', () => {
   describe('global / superadmin credentials pass', () => {
     it('global sk_ can list, create and revoke', async () => {
       await expect(controller.list(globalCtx)).resolves.toEqual([]);
-      await expect(controller.create(createDto, globalCtx)).resolves.toEqual({
+      await expect(
+        controller.create(createDto, undefined, globalCtx),
+      ).resolves.toEqual({
         id: 9,
         token: 'sk_new',
       });
-      await expect(controller.revoke(5, globalCtx)).resolves.toBeUndefined();
+      await expect(
+        controller.revoke(5, undefined, globalCtx),
+      ).resolves.toBeUndefined();
       expect(auth.listTokens).toHaveBeenCalled();
       expect(auth.createToken).toHaveBeenCalled();
       expect(auth.revokeToken).toHaveBeenCalledWith(5);
@@ -67,7 +71,9 @@ describe('AuthController — /tokens global-scope guard (M2)', () => {
 
     it('break-glass admin can manage tokens', async () => {
       await expect(controller.list(adminCtx)).resolves.toEqual([]);
-      await expect(controller.create(createDto, adminCtx)).resolves.toBeDefined();
+      await expect(
+        controller.create(createDto, undefined, adminCtx),
+      ).resolves.toBeDefined();
     });
 
     it('dev fallback: no auth context is allowed (mirrors cluster/db-admin)', async () => {
@@ -81,15 +87,18 @@ describe('AuthController — /tokens global-scope guard (M2)', () => {
       expect(auth.listTokens).not.toHaveBeenCalled();
     });
 
-    it('app token cannot mint a global token', () => {
-      expect(() => controller.create(createDto, appCtx)).toThrow(
-        ForbiddenException,
-      );
+    it('app token cannot mint a global token', async () => {
+      // create() is async (audit wiring) — the guard rejects the promise.
+      await expect(
+        controller.create(createDto, undefined, appCtx),
+      ).rejects.toThrow(ForbiddenException);
       expect(auth.createToken).not.toHaveBeenCalled();
     });
 
-    it('app token cannot revoke another token', () => {
-      expect(() => controller.revoke(1, appCtx)).toThrow(ForbiddenException);
+    it('app token cannot revoke another token', async () => {
+      await expect(controller.revoke(1, undefined, appCtx)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(auth.revokeToken).not.toHaveBeenCalled();
     });
   });

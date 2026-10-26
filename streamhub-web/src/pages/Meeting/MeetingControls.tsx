@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Track } from 'livekit-client'
 import { DisconnectButton, TrackToggle, useLocalParticipant } from '@livekit/components-react'
+import { supportsScreenShare } from '@/lib/browserCompat'
 import { EMOJIS } from './dataChannel'
 
 interface MeetingControlsProps {
@@ -90,20 +91,23 @@ export default function MeetingControls({
         {isCameraEnabled ? t('controls.camOn') : t('controls.camOff')}
       </TrackToggle>
 
-      <TrackToggle
-        source={Track.Source.ScreenShare}
-        showIcon={false}
-        onDeviceError={onDeviceError}
-        className={[
-          btnBase,
-          isScreenShareEnabled
-            ? 'bg-primary-500/20 text-white ring-1 ring-primary-400/40'
-            : 'bg-gray-800 text-gray-300 ring-1 ring-gray-700 hover:text-fg',
-        ].join(' ')}
-      >
-        <Icon d="M4 5h16v10H4zM8 19h8M12 15v4" />
-        <span className="hidden sm:inline">{t('controls.screen')}</span>
-      </TrackToggle>
+      {/* Hidden on iOS/iPadOS Safari — getDisplayMedia does not exist there. */}
+      {supportsScreenShare() && (
+        <TrackToggle
+          source={Track.Source.ScreenShare}
+          showIcon={false}
+          onDeviceError={onDeviceError}
+          className={[
+            btnBase,
+            isScreenShareEnabled
+              ? 'bg-primary-500/20 text-white ring-1 ring-primary-400/40'
+              : 'bg-gray-800 text-gray-300 ring-1 ring-gray-700 hover:text-fg',
+          ].join(' ')}
+        >
+          <Icon d="M4 5h16v10H4zM8 19h8M12 15v4" />
+          <span className="hidden sm:inline">{t('controls.screen')}</span>
+        </TrackToggle>
+      )}
 
       {/* Reactions */}
       <div className="relative">

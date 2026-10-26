@@ -1,7 +1,60 @@
 {
-  "advanced": {
-    "summary": "Avanzado",
-    "hint": "Editor YAML crudo y backups. Los controles de arriba son atajos que escriben acá."
+  "recordingStorage": {
+    "title": "Nombres de grabación y retención",
+    "subtitle": "Plantillas de nombre para grabaciones y snapshots, variables por app, y cuánto tiempo se conservan los VODs.",
+    "loading": "Cargando configuración de grabación…",
+    "loadError": "No se pudo cargar la configuración de grabación.",
+    "noBucket": "No hay bucket de almacenamiento configurado — las grabaciones no se pueden subir e iniciar una grabación fallará.",
+    "noBucketLink": "Configurar almacenamiento →",
+    "filenameTemplate": {
+      "label": "Plantilla de nombre de grabación",
+      "hint": "Vacío = nombre por defecto. Aplica al archivo local y a la clave S3. Incluí un token de tiempo para que sea único."
+    },
+    "snapshotTemplate": {
+      "label": "Plantilla de nombre de snapshot",
+      "hint": "Vacío = nombre por defecto. Nombra la miniatura de la grabación (${type} = jpg)."
+    },
+    "tokens": "Tokens: ${app} ${streamId} ${room} ${type} ${ts} ${date:yyyy-MM-dd} ${var.NAME}. Se convierte en un único segmento de nombre seguro (sin carpetas / path traversal).",
+    "retention": {
+      "label": "Retención de VODs",
+      "hint": "Elimina los VODs más antiguos que esto tanto de la base de datos como del almacenamiento S3. Off = conservar siempre.",
+      "off": "Off (conservar siempre)",
+      "days": "{{n}} días"
+    },
+    "variables": {
+      "label": "Variables",
+      "hint": "Configuración plana clave/valor usada en las plantillas como ${var.NAME}. Las claves deben ser letras, dígitos o guion bajo. NO son secretos — usá las credenciales de almacenamiento para secretos.",
+      "keyPlaceholder": "NOMBRE",
+      "valuePlaceholder": "valor",
+      "add": "+ Agregar variable",
+      "remove": "Eliminar variable"
+    },
+    "save": "Guardar",
+    "saved": "Guardado",
+    "saveError": "No se pudo guardar la configuración de grabación."
+  },
+  "timezone": {
+    "title": "Zona horaria",
+    "subtitle": "Muestra los timestamps del dashboard de esta app (logs, streams, VODs, backups…) en una zona horaria fija en vez de la hora local de cada operador. También es el valor por DEFECTO para cualquier plugin/horario que deje su propia zona horaria vacía (una zona horaria explícita a nivel de plugin siempre tiene prioridad).",
+    "loading": "Cargando zona horaria…",
+    "loadError": "No se pudo cargar la zona horaria.",
+    "label": "Zona horaria de la app",
+    "hint": "Buscá un nombre de zona horaria IANA (ej. America/Argentina/Buenos_Aires). Vacío = hora local del servidor.",
+    "placeholder": "ej. America/Argentina/Buenos_Aires",
+    "invalid": "No es un nombre de zona horaria IANA reconocido.",
+    "preview": "Ahí son: {{time}}",
+    "serverDefault": "No hay override configurado — los timestamps del dashboard de esta app usan la hora local del servidor.",
+    "clear": "Usar valor por defecto del servidor",
+    "save": "Guardar",
+    "saved": "Guardado",
+    "saveError": "No se pudo guardar la zona horaria."
+  },
+  "system": {
+    "title": "Sistema",
+    "subtitle": "Tokens de API/sala, integraciones (callbacks, almacenamiento, correo) y logs de esta app.",
+    "tokens": "Tokens",
+    "integraciones": "Integraciones",
+    "logs": "Logs"
   },
   "presets": {
     "title": "Presets de configuración",
@@ -14,12 +67,23 @@
     "applying": "Aplicando…",
     "confirm": "¿Aplicar el preset «{{title}}» a {{app}}? Se hace backup del config.yaml actual y se recarga en caliente. ¿Continuar?",
     "applyError": "No se pudo aplicar el preset.",
+    "appliedBadge": "Aplicado ✓",
+    "deactivate": "Desactivar",
+    "deactivating": "Desactivando…",
+    "confirmDeactivate": "¿Desactivar el preset «{{title}}» en {{app}}? Se revierten sus keys a los valores de fábrica del servidor (se hace backup del config.yaml actual y se recarga en caliente). ¿Continuar?",
+    "deactivateError": "No se pudo desactivar el preset.",
+    "deactivateHint": "Desactivar revierte estas keys a los valores de fábrica del servidor, no necesariamente a lo que tenían antes de aplicar el preset. Para el estado exacto anterior, usá la pestaña Backups.",
     "diffLabel": "Cambios aplicados",
     "warningsLabel": "Advertencias",
     "result": {
       "noChange": "La configuración ya coincidía con el preset — sin cambios.",
       "appliedReloaded": "Preset aplicado y recargado en caliente ({{added}} líneas +, {{removed}} −).",
       "appliedWritten": "Preset aplicado (revisá las advertencias)."
+    },
+    "deactivateResult": {
+      "noChange": "La configuración ya estaba en los valores de fábrica — sin cambios.",
+      "appliedReloaded": "Preset desactivado y recargado en caliente ({{added}} líneas +, {{removed}} −).",
+      "appliedWritten": "Preset desactivado (revisá las advertencias)."
     }
   },
   "transcoding": {
@@ -57,6 +121,22 @@
     "saveError": "No se pudo guardar.",
     "saveChanges": "Guardar cambios",
     "saved": "Guardado."
+  },
+  "passthrough": {
+    "label": "Passthrough RTMP → HLS (remux, sin transcode)",
+    "hint": "Remuxea el push RTMP directo a HLS (ffmpeg -c copy), sin pasar por LiveKit. CPU casi nula, sin GPU. Excluyente con transcoding/adaptativo — al activarlo se deshabilitan.",
+    "warningTitle": "Passthrough resigna (el media no entra a LiveKit):",
+    "lost": {
+      "webrtc": "Sin WebRTC / reproducción sub-segundo — solo HLS.",
+      "abr": "Sin bitrate adaptativo (ABR) — una sola rendition.",
+      "h264": "Sin red de seguridad de transcode — el origen DEBE ser H.264/AAC.",
+      "recording": "Sin grabación egress / VOD.",
+      "room": "Sin funciones de sala (contador de espectadores, chat, reacciones, moderación)."
+    },
+    "serverNote": "El ingest passthrough además requiere STREAMHUB_RTMP_PASSTHROUGH_ENABLE en el servidor y el puerto :1937 abierto. Sin eso, crear un Ingress passthrough devuelve 503.",
+    "transcodeDisabledNote": "Passthrough activo — transcoding/adaptativo están deshabilitados. Desactivá passthrough para editarlos.",
+    "saveError": "No se pudo actualizar el passthrough.",
+    "disabled503": "El passthrough RTMP está deshabilitado en este servidor. Activá STREAMHUB_RTMP_PASSTHROUGH_ENABLE y abrí el puerto :1937."
   },
   "raw": {
     "loading": "Cargando config.yaml…",

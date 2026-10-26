@@ -20,6 +20,7 @@ const PLACEMENT_TONE = {
   'app-tab': 'cyan',
   panel: 'slate',
   'player-overlay': 'amber',
+  player: 'green',
 } as const
 
 export function PluginCard({
@@ -32,6 +33,7 @@ export function PluginCard({
   onOpen,
   onConfigure,
   onLogs,
+  onDetails,
 }: {
   view: PluginView
   canEdit: boolean
@@ -43,6 +45,8 @@ export function PluginCard({
   onOpen?: () => void
   onConfigure: () => void
   onLogs: () => void
+  /** Opens the per-plugin detail/landing view. */
+  onDetails?: () => void
 }) {
   const { t } = useTranslation('marketplace')
 
@@ -51,8 +55,8 @@ export function PluginCard({
   const hasConfig =
     Boolean(view.configSchema?.fields.length) || Boolean(view.registered?.ConfigComponent)
 
-  return (
-    <div className="glass flex flex-col rounded-xl p-5 transition hover:ring-1 hover:ring-blue2/40">
+  const info = (
+    <>
       <div className="flex items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-blue2/15 text-sky2">
           <PluginIcon icon={view.icon} className="h-5 w-5" />
@@ -60,6 +64,7 @@ export function PluginCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-base font-semibold text-fg">{view.name}</h3>
+            {view.kind === 'app' && <Badge tone="cyan">{t('kind.app')}</Badge>}
             <Badge tone={statusTone}>{t(`status.${status}`)}</Badge>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -67,6 +72,7 @@ export function PluginCard({
             {view.ui && (
               <Badge tone={PLACEMENT_TONE[view.ui]}>{t(`placement.${view.ui}`)}</Badge>
             )}
+            {view.edge && <Badge tone="violet">{t('badge.edge')}</Badge>}
             {view.version && (
               <span className="font-mono text-[11px] text-slate-500">v{view.version}</span>
             )}
@@ -77,6 +83,24 @@ export function PluginCard({
       <p className="mt-3 min-h-[2.5rem] text-sm text-slate-400">
         {view.description || t('card.noDescription')}
       </p>
+    </>
+  )
+
+  return (
+    <div className="glass flex flex-col rounded-xl p-5 transition hover:ring-1 hover:ring-blue2/40">
+      {onDetails ? (
+        <button
+          type="button"
+          onClick={onDetails}
+          title={t('actions.details')}
+          aria-label={t('actions.details')}
+          className="-m-1 block w-full rounded-lg p-1 text-left transition hover:bg-white/5"
+        >
+          {info}
+        </button>
+      ) : (
+        info
+      )}
 
       {!view.hasFrontend && (
         <p className="mt-1 text-[11px] text-warn">{t('card.backendOnly')}</p>

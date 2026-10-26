@@ -86,6 +86,8 @@ describe('MqttService', () => {
       return c;
     });
     svc = new MqttService(apps as never, logs as never, factory as never);
+    // Egress SSRF guard DNS seam: resolve every host to a public IP (no network).
+    svc.hostResolver = async () => ['93.184.216.34'];
   });
 
   afterEach(() => {
@@ -365,5 +367,38 @@ describe('MqttService', () => {
     await expect(
       svc.publishEvent('live', 'stream_ended', { room: 'r' }),
     ).resolves.toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // publishRaw (Streamflow action.mqtt — arbitrary topic)
+  // ---------------------------------------------------------------------------
+
+  describe('publishRaw', () => {
+    it('namespaces a relative topic under the app prefix and JSON-encodes objects', async () => {
+      withConfig(mqttConfig());
+      await svc.publishRaw('live', 'gate/plate', { plate: 'ABC' }, { qos: 1, retain: true });
+      const [topic, payload, opts] = lastClient().publish.mock.calls[0] as [
+        string,
+        string,
+        { qos: number; retain?: boolean },
+      ];
+      expect(topic).toBe('streamhub/live/gate/plate');
+      expect(JSON.parse(payload)).toEqual({ plate: 'ABC' });
+      expect(opts).toEqual({ qos: 1, retain: true });
+    });
+
+    it('leaves an already-prefixed topic untouched and sends a string as-is', async () => {
+      withConfig(mqttConfig());
+      await svc.publishRaw('live', 'streamhub/live/raw', 'hello');
+      const [topic, payload] = lastClient().publish.mock.calls[0] as [string, string];
+      expect(topic).toBe('streamhub/live/raw');
+      expect(payload).toBe('hello');
+    });
+
+    it('is a no-op (no client) when MQTT is disabled, and never throws', async () => {
+      withConfig(mqttConfig({ enabled: false }));
+      await expect(svc.publishRaw('live', 'x/y', { a: 1 })).resolves.toBeUndefined();
+      expect(created.length).toBe(0);
+    });
   });
 });

@@ -1,0 +1,26 @@
+# StreamHub Vision Edge runtime deps.
+#
+# ultralytics pulls torch + torchvision (large) and ships the built-in
+# ByteTrack tracker used by occupancy/counting. On a CPU-only host install the
+# CPU wheels of torch first to avoid CUDA downloads:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+#
+# lapx: assignment solver ultralytics' trackers need (pinned so air-gapped/edge
+# installs don't need egress at runtime).
+# opencv-python-headless: HLS/RTSP decode via the bundled ffmpeg backend, no GUI
+# libs (works in containers).
+# websockets: the edge control channel (edge mode only). Event/telemetry POSTs
+# use the stdlib (no requests).
+ultralytics>=8.2,<9
+lapx>=0.5.5
+opencv-python-headless>=4.9
+numpy>=1.24
+websockets>=12
+
+# Optional extras (see pyproject.toml [project.optional-dependencies]):
+#   [demography]  insightface + onnxruntime + hsemotion  (local demography engine)
+#   [telemetry]   psutil                                  (nicer mem stats; stdlib fallback exists)
+#
+# Dev/test only — the pure-logic tests need NONE of the above:
+#   pip install pytest

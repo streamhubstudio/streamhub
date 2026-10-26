@@ -6,6 +6,12 @@
     "subtitle": "Applies to recordings you start under Live. Every change is saved automatically.",
     "saved": "Saved",
     "saveError": "Could not save the settings.",
+    "noBucket": "No storage bucket is configured — recordings can't be uploaded and starting a recording will fail with a storage error.",
+    "noBucketLink": "Configure storage →",
+    "enabledLabel": "Recording",
+    "enabledHint": "Master switch — when off, this app never records (no VODs are produced), regardless of the settings below or any record request.",
+    "on": "Enabled",
+    "off": "Disabled",
     "splitLabel": "Split recording",
     "splitHint": "Splits the MP4 every N minutes; each part becomes a separate VOD. No split = a single continuous file.",
     "snapshotLabel": "Snapshots",
@@ -72,6 +78,29 @@
     "duration": "Duration",
     "size": "Size",
     "created": "Created"
+  },
+  "transcript": {
+    "title": "Transcript",
+    "status": {
+      "queued": "queued",
+      "processing": "processing",
+      "ready": "ready",
+      "failed": "failed"
+    },
+    "language": "language: {{lang}}",
+    "downloadSrt": "Download SRT",
+    "start": "Transcribe",
+    "restart": "Re-transcribe",
+    "starting": "Starting…",
+    "loading": "Loading transcript…",
+    "empty": "No transcript yet. Install and enable the VOD Transcription plugin, then transcribe this recording.",
+    "loadError": "Could not load the transcript.",
+    "pending": "Transcribing… this can take a few minutes depending on the recording length.",
+    "failed": "Transcription failed.",
+    "speakers": "Speakers: {{speakers}}",
+    "noText": "The transcription produced no text.",
+    "errorTitle": "Transcription",
+    "triggerError": "Could not start the transcription. Is the VOD Transcription plugin enabled?"
   },
   "delete": {
     "title": "Delete VOD #{{id}}",

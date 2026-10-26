@@ -1,0 +1,113 @@
+# Promtail del MASTER (stream01). Corre en el overlay cluster/docker-compose.cluster.yml.
+# Empuja al Loki LOCAL (127.0.0.1:3100, network_mode: host).
+#
+# Fuentes en el master:
+#   - journald  -> skyline-core.service (pino JSON, level NUMÉRICO) y
+#                  livekit.service (zap JSON, level palabra). core+livekit son
+#                  NATIVOS (systemd) en el master, así que van por journald.
+#   - docker    -> contenedores ingress / egress / redis (media stack en docker).
+#   - archivos  -> /var/log/nginx/*.log (nginx nativo del master).
+#
+# Etiquetas de stream: node, service, container, level (+ source en core).
+# level se normaliza a palabra (pino numérico 30/40/50/60 -> info/warn/error/fatal).
+#
+# Requiere montar (ver compose): /var/log/journal, /etc/machine-id, el socket de
+# docker y /var/log/nginx. Corre con -config.expand-env=true.
+
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /promtail/positions.yaml
+
+clients:
+  - url: http://127.0.0.1:3100/loki/api/v1/push
+
+scrape_configs:
+  # -------------------------------------------------------------------------
+  # journald — streamhub-core (pino JSON, level numérico)
+  # -------------------------------------------------------------------------
+  - job_name: journal-core
+    journal:
+      path: /var/log/journal
+      max_age: 12h
+      matches: _SYSTEMD_UNIT=skyline-core.service
+      labels:
+        node: stream01
+        service: streamhub-core
+        container: skyline-core
+    pipeline_stages:
+      - json:
+          expressions:
+            lvlnum: level
+            source: source
+            msg: msg
+      - template:
+          source: level
+          template: '{{ if eq .lvlnum "60" }}fatal{{ else if eq .lvlnum "50" }}error{{ else if eq .lvlnum "40" }}warn{{ else if eq .lvlnum "30" }}info{{ else if eq .lvlnum "20" }}debug{{ else if eq .lvlnum "10" }}trace{{ else }}info{{ end }}'
+      - labels:
+          level:
+          source:
+
+  # -------------------------------------------------------------------------
+  # journald — LiveKit (zap JSON, level palabra)
+  # -------------------------------------------------------------------------
+  - job_name: journal-livekit
+    journal:
+      path: /var/log/journal
+      max_age: 12h
+      matches: _SYSTEMD_UNIT=livekit.service
+      labels:
+        node: stream01
+        service: livekit
+        container: livekit
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+      - labels:
+          level:
+
+  # -------------------------------------------------------------------------
+  # docker — ingress / egress / redis (media stack en docker en el master).
+  # docker_sd lee los logs vía la API de docker (ya sin el wrapper json-file).
+  # -------------------------------------------------------------------------
+  - job_name: docker-master
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: service
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: '(ingress|egress|redis)'
+        action: keep
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/?(.*)'
+        target_label: container
+        replacement: '${1}'
+      - target_label: node
+        replacement: stream01
+    pipeline_stages:
+      - match:
+          selector: '{service=~"ingress|egress"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+            - labels:
+                level:
+
+  # -------------------------------------------------------------------------
+  # archivos — nginx del master (access + error). Plano; se etiqueta por archivo.
+  # -------------------------------------------------------------------------
+  - job_name: nginx-master
+    static_configs:
+      - targets: [localhost]
+        labels:
+          node: stream01
+          service: nginx
+          container: nginx
+          __path__: /var/log/nginx/*.log

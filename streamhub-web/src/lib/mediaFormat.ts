@@ -6,6 +6,9 @@
  * The backend VodRecord speaks `durationS` + `startedAt`; older UI code (and
  * some legacy rows) used `durationSeconds` + `createdAt`. The pickers accept
  * both so Grabaciones always shows duration + date regardless of the origin.
+ *
+ * Datetime rendering itself lives in `@/lib/datetime` (`formatDateTime`) —
+ * the one shared util for every timestamp in the UI, not just VODs.
  */
 
 const DASH = '—'
@@ -49,11 +52,4 @@ export function vodStartedAt(v: {
   createdAt?: string | null
 }): string | undefined {
   return v.startedAt ?? v.createdAt ?? undefined
-}
-
-/** ISO (or SQLite datetime) → locale string; unparseable input verbatim. */
-export function formatDateTime(iso?: string | null): string {
-  if (!iso) return DASH
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }

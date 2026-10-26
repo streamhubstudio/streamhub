@@ -6,13 +6,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Optional,
   Param,
   Patch,
   Post,
   Req,
   Res,
-  ServiceUnavailableException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -22,19 +21,24 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { createHash, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 
 import { ConfigService } from '../../shared/config/config.service';
 import { AuthContext, CurrentAuth } from '../../shared/auth-context';
 import { Public } from '../../shared/auth';
+import { assertClusterToken } from './cluster-token.util';
+import { IpReputationService } from '../security/ip-reputation.service';
 import {
   ClusterInfo,
   ClusterService,
+  JoinMasterResult,
   JoinPayload,
+  LeaveResult,
   NodeRow,
 } from './cluster.service';
 import { JoinNodeDto } from './dto/join-node.dto';
+import { JoinMasterDto } from './dto/join-master.dto';
+import { LeaveDto } from './dto/leave.dto';
 import { HeartbeatDto } from './dto/heartbeat.dto';
 import { PatchNodeDto } from './dto/patch-node.dto';
 
@@ -62,6 +66,12 @@ export class ClusterController {
   constructor(
     private readonly config: ConfigService,
     private readonly cluster: ClusterService,
+    /**
+     * Network-security sink (optional for bare unit specs). A failed
+     * `X-Cluster-Token` check records an `invalid_token` offense so the existing
+     * auto-ban (modules/security) covers cluster brute-force. Fire-and-forget.
+     */
+    @Optional() private readonly reputation?: IpReputationService,
   ) {}
 
   @Public()
@@ -78,7 +88,10 @@ export class ClusterController {
     @Res({ passthrough: true }) res: Response,
   ): Envelope<JoinPayload> {
     this.assertClusterToken(req);
-    const { created, payload } = this.cluster.join(dto);
+    // P0: secrets are only vended over TLS — tell the service the transport.
+    const { created, payload } = this.cluster.join(dto, {
+      secure: this.isSecure(req),
+    });
     res.status(created ? HttpStatus.CREATED : HttpStatus.OK);
     return ok(payload);
   }
@@ -167,6 +180,49 @@ export class ClusterController {
   }
 
   // ---------------------------------------------------------------------------
+  // standalone ↔ cluster conversion (dashboard/CLI, global-scope)
+  // ---------------------------------------------------------------------------
+
+  @Post('join-master')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Convert this node into a cluster EDGE of a remote master. Server-side ' +
+      'calls the master /cluster/join with the given clusterToken, stores the ' +
+      'returned node id and sets role=edge. Returns the heartbeat.env values ' +
+      'the installer applies (media plane needs a container recreate). ' +
+      'Global-scope.',
+  })
+  @ApiOkResponse({ description: '{ data: JoinMasterResult }' })
+  async joinMaster(
+    @Body() dto: JoinMasterDto,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Promise<Envelope<JoinMasterResult>> {
+    this.requireGlobal(ctx);
+    return ok(await this.cluster.joinMaster(dto));
+  }
+
+  @Post('leave')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Leave the cluster: revert this node to standalone and clear the master ' +
+      'linkage (always succeeds locally), then best-effort de-register at the ' +
+      'master (pass the master global token to authenticate the DELETE). ' +
+      'Global-scope.',
+  })
+  @ApiOkResponse({ description: '{ data: LeaveResult }' })
+  async leave(
+    @Body() dto: LeaveDto,
+    @CurrentAuth() ctx?: AuthContext,
+  ): Promise<Envelope<LeaveResult>> {
+    this.requireGlobal(ctx);
+    return ok(await this.cluster.leave(dto));
+  }
+
+  // ---------------------------------------------------------------------------
   // internals
   // ---------------------------------------------------------------------------
 
@@ -174,27 +230,39 @@ export class ClusterController {
    * Manual cluster-token gate for the node-facing endpoints. Disabled (503)
    * when the env is unset; otherwise a timing-safe compare of the
    * `X-Cluster-Token` header against `STREAMHUB_CLUSTER_TOKEN` (401 on mismatch
-   * or absence). The token itself is never logged.
+   * or absence). The token itself is never logged. Shared with the GRID agent
+   * via `cluster-token.util`.
    */
   private assertClusterToken(req: Request): void {
-    const expected = this.config.clusterToken;
-    if (!expected) {
-      throw new ServiceUnavailableException({
-        error: 'cluster joining disabled (STREAMHUB_CLUSTER_TOKEN unset)',
-      });
-    }
-    const provided = req.header('x-cluster-token');
-    if (!this.tokenMatches(provided, expected)) {
-      throw new UnauthorizedException({ error: 'invalid cluster token' });
-    }
+    // Shared timing-safe gate (also used by the GRID agent). The `onInvalid`
+    // hook feeds the auto-ban (P1) so brute-forcing the cluster token gets the
+    // IP banned by the security middleware — fire-and-forget, never throws.
+    assertClusterToken(req, this.config.clusterToken, undefined, () =>
+      this.reputation?.recordOffense(this.clientIp(req), 'invalid_token'),
+    );
   }
 
-  /** Constant-time compare over SHA-256 digests (fixed length, no early-out). */
-  private tokenMatches(provided: string | undefined, expected: string): boolean {
-    if (typeof provided !== 'string' || provided.length === 0) return false;
-    const a = createHash('sha256').update(provided).digest();
-    const b = createHash('sha256').update(expected).digest();
-    return timingSafeEqual(a, b);
+  /**
+   * Whether this request reached us over TLS (P0 gate for vending secrets):
+   * `X-Forwarded-Proto === 'https'` at the trusted proxy, a direct TLS socket
+   * (`req.secure`), or a loopback client (same-host join / origin — not
+   * MITM-exposed, so secrets are safe).
+   */
+  private isSecure(req: Request): boolean {
+    const xfp = (req.header('x-forwarded-proto') || '')
+      .split(',')[0]
+      .trim()
+      .toLowerCase();
+    if (xfp === 'https') return true;
+    if (req.secure) return true;
+    const ip = this.clientIp(req);
+    return ip === '127.0.0.1' || ip === '::1' || ip === 'localhost';
+  }
+
+  /** Proxy-validated client IP (X-Forwarded-For honoured via `trust proxy`). */
+  private clientIp(req: Request): string {
+    const raw = req.ip || req.socket?.remoteAddress || '';
+    return raw.startsWith('::ffff:') ? raw.slice(7) : raw;
   }
 
   /** Reject app-scoped principals from the global surface (no-op in dev). */

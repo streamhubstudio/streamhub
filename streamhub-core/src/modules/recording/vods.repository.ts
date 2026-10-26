@@ -263,6 +263,27 @@ export class VodsRepository {
     return { sql: clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '', params };
   }
 
+  /**
+   * VOD ids past the retention window: TERMINAL rows (`ready`/`failed` — never a
+   * live `recording`/`uploading` one) whose `started_at` is strictly older than
+   * `cutoffIso`. Oldest first, capped at `limit` per sweep so a huge backlog is
+   * drained across passes rather than in one giant transaction.
+   */
+  listExpired(appName: string, cutoffIso: string, limit = 500): number[] {
+    const rows = this.db
+      .appDb(appName)
+      .prepare(
+        `SELECT id FROM vods
+           WHERE status IN ('ready', 'failed')
+             AND started_at IS NOT NULL
+             AND started_at < ?
+           ORDER BY started_at ASC
+           LIMIT ?`,
+      )
+      .all(cutoffIso, Math.max(1, Math.floor(limit))) as { id: number }[];
+    return rows.map((r) => r.id);
+  }
+
   delete(appName: string, id: number): void {
     this.db.appDb(appName).prepare('DELETE FROM vods WHERE id = ?').run(id);
   }

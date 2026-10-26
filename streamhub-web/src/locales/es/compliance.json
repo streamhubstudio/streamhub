@@ -1,0 +1,35 @@
+{
+  "title": "Postura de seguridad",
+  "subtitle": "Controles tecnológicos ISO 27002 §8 y su estado en vivo en este despliegue.",
+  "explain": "Evidencia en vivo de qué controles tecnológicos ISO 27002 §8 están activos en este despliegue.",
+  "refreshing": "Refrescando…",
+  "loadError": "No se pudo cargar la postura de seguridad.",
+  "forbidden": "La postura de seguridad es una vista solo para superadmin. Ingresá con una cuenta de alcance global para verla.",
+  "unsupported": "La postura de seguridad requiere una versión más nueva del core de StreamHub. Actualizá el servidor para habilitarla.",
+  "isoPrefix": "ISO 27002 §",
+  "checkedAt": "Evidencia recopilada {{at}}",
+  "state": {
+    "active": "activo",
+    "partial": "parcial",
+    "off": "apagado",
+    "unknown": "desconocido"
+  },
+  "col": {
+    "control": "Control",
+    "state": "Estado",
+    "iso": "ISO 27002 §",
+    "detail": "Evidencia"
+  },
+  "control": {
+    "authz_enforce": "Aplicación de autorización",
+    "tls": "Cifrado de transporte (TLS)",
+    "ip_filtering": "Control de acceso por IP",
+    "auto_ban": "Auto-ban de abuso",
+    "audit_log": "Registro de auditoría",
+    "backups": "Copias de seguridad",
+    "http_hardening": "Cabeceras de seguridad HTTP",
+    "metrics_protected": "Protección del endpoint de métricas",
+    "public_registration": "Registro público",
+    "log_retention": "Retención de logs"
+  }
+}

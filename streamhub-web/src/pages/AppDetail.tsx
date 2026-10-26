@@ -13,61 +13,52 @@
  * the built-in surfaces. Old plugin deep links (?tab=<pluginId>) fall back to
  * the Plugins tab so nothing 404s.
  */
+import {
+  LEGACY_SUBNAV_REDIRECT,
+  TAB_IDS,
+  isBuiltinTab,
+  type TabId,
+} from '@/lib/appDetailTabs'
+import { useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import { Tabs, Tag } from '@/ui'
+import { DocsHint } from '@/components/DocsHint'
+import { PluginIcon } from '@/plugins/ui'
+import type { DocsSection } from '@/lib/docs'
 import { formatBytes } from '@/lib/bytes'
 import { Loading, errMessage } from './AppDetail/ui'
+import { AppTimezoneProvider } from '@/lib/appTimezone'
 import { OverviewTab } from './AppDetail/OverviewTab'
 import { ConfigTab } from './AppDetail/ConfigTab'
 import { StreamsTab } from './AppDetail/StreamsTab'
 import { VodsTab } from './AppDetail/VodsTab'
 import { IngressTab } from './AppDetail/IngressTab'
-import { TokensTab } from './AppDetail/TokensTab'
-import { IntegracionesTab } from './AppDetail/IntegracionesTab'
-import { LogsTab } from './AppDetail/LogsTab'
 import { SamplesTab } from './AppDetail/SamplesTab'
 import { MaintenanceTab } from './AppDetail/MaintenanceTab'
 import { PluginsTab } from './AppDetail/PluginsTab'
-
-type TabId =
-  | 'overview'
-  | 'config'
-  | 'streams'
-  | 'vods'
-  | 'ingress'
-  | 'tokens'
-  | 'integraciones'
-  | 'logs'
-  | 'samples'
-  | 'plugins'
-  | 'sistema'
+import { usePluginCatalog } from '@/plugins/usePlugins'
+import { hasStreamflowTab } from '@/plugins/streamflow/appTab'
+import { StreamflowAppTab } from '@/plugins/streamflow/StreamflowAppTab'
+import { TAB_ICONS } from './AppDetail/tabIcons'
 
 /**
- * Tabs ordered by everyday flow. "Tablero" (overview) leads as the default
- * landing tab; the advanced "Config" tab is kept LAST:
- *  overview → live → recordings → ingest → tokens → samples → integrations →
- *  plugins → ops → config.
- * Labels/hints are resolved via i18n (appDetail:tabs.<id>).
+ * Tab → docs page (rendered as a <DocsHint/> next to the active-tab caption).
+ * Targets resolve through the single map in @/lib/docs, so every tab deep-links
+ * into https://streamhub.studio/docs consistently.
  */
-const TAB_IDS: TabId[] = [
-  'overview',
-  'streams',
-  'vods',
-  'ingress',
-  'tokens',
-  'samples',
-  'integraciones',
-  'plugins',
-  'logs',
-  'sistema',
-  'config',
-]
-
-function isTabId(v: string | null): v is TabId {
-  return TAB_IDS.some((id) => id === v)
+const TAB_DOCS: Record<TabId, DocsSection> = {
+  overview: 'pipeline',
+  streams: 'streams',
+  vods: 'recording',
+  ingress: 'ingress',
+  samples: 'samples',
+  streamflow: 'plugins',
+  plugins: 'plugins',
+  sistema: 'dbMaintenance',
+  config: 'config',
 }
 
 export default function AppDetail() {
@@ -75,20 +66,70 @@ export default function AppDetail() {
   const { app = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Streamflow gets its own first-class in-app tab when installed + active.
+  const { views: pluginViews } = usePluginCatalog(app)
+  const showStreamflow = hasStreamflowTab(pluginViews)
+  const tabIds: TabId[] = showStreamflow
+    ? TAB_IDS.flatMap((id): TabId[] =>
+        id === 'samples' ? ['samples', 'streamflow'] : [id],
+      )
+    : TAB_IDS
+
   const tabParam = searchParams.get('tab')
-  // Built-in TabId, else default. A non-empty unknown value is almost always a
+  // A legacy Tokens/Integraciones/Logs deep link now lives under Config → System.
+  const legacySub = tabParam ? LEGACY_SUBNAV_REDIRECT[tabParam] : undefined
+  // Built-in TabId, else a legacy sub (→ config), else the conditional
+  // streamflow tab, else default. A non-empty unknown value is almost always a
   // legacy plugin deep link (?tab=radio) → land on the Plugins tab.
-  const active: TabId = isTabId(tabParam)
-    ? tabParam
-    : tabParam
-      ? 'plugins'
-      : 'overview'
+  const active: TabId = legacySub
+    ? 'config'
+    : isBuiltinTab(tabParam)
+      ? tabParam
+      : tabParam === 'streamflow' && showStreamflow
+        ? 'streamflow'
+        : tabParam
+          ? 'plugins'
+          : 'overview'
+
+  const sectionParam = searchParams.get('section') ?? undefined
+
+  // Rewrite an old ?tab=tokens|integraciones|logs URL to its canonical home so
+  // the address bar (and any re-share) reflects the new Config → System location.
+  useEffect(() => {
+    if (!legacySub) return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', 'config')
+        next.set('section', 'system')
+        next.set('sub', legacySub)
+        return next
+      },
+      { replace: true },
+    )
+  }, [legacySub, setSearchParams])
 
   function selectTab(id: string) {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
         next.set('tab', id)
+        // section/sub belong to the config + streamflow tabs; clicking a
+        // top-level tab starts it fresh, so drop any carried-over drill-down.
+        next.delete('section')
+        next.delete('sub')
+        return next
+      },
+      { replace: true },
+    )
+  }
+
+  function selectSection(section: string) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', 'streamflow')
+        next.set('section', section)
         return next
       },
       { replace: true },
@@ -210,34 +251,45 @@ export default function AppDetail() {
         className="mb-2 text-sm"
       >
         <Tabs.TabList>
-          {TAB_IDS.map((id) => (
-            <Tabs.TabNav key={id} value={id}>
+          {tabIds.map((id) => (
+            <Tabs.TabNav
+              key={id}
+              value={id}
+              icon={<PluginIcon icon={TAB_ICONS[id]} className="h-4 w-4" />}
+            >
               <span title={t(`tabs.${id}.hint`)}>{t(`tabs.${id}.label`)}</span>
             </Tabs.TabNav>
           ))}
         </Tabs.TabList>
       </Tabs>
 
-      {/* Active-tab caption */}
-      <p className="mb-5 text-xs text-fg-subtle">{t(`tabs.${active}.hint`)}</p>
+      {/* Active-tab caption + deep link into the matching docs page */}
+      <p className="mb-5 flex flex-wrap items-center gap-x-2 text-xs text-fg-subtle">
+        <span>{t(`tabs.${active}.hint`)}</span>
+        <DocsHint section={TAB_DOCS[active]} showLabel />
+      </p>
 
-      {/* Tab content */}
+      {/* Tab content — wrapped in AppTimezoneProvider so every app-scoped tab
+          can render its timestamps in the app's configured timezone (owner
+          item 11) via useAppTimezone(), with no per-tab prop-drilling. */}
       {isLoading ? (
         <Loading label={t('loadingApp')} />
       ) : (
-        <div>
-          {active === 'overview' && <OverviewTab app={app} />}
-          {active === 'config' && <ConfigTab app={app} />}
-          {active === 'streams' && <StreamsTab app={app} />}
-          {active === 'vods' && <VodsTab app={app} />}
-          {active === 'ingress' && <IngressTab app={app} />}
-          {active === 'tokens' && <TokensTab app={app} />}
-          {active === 'integraciones' && <IntegracionesTab app={app} />}
-          {active === 'plugins' && <PluginsTab app={app} />}
-          {active === 'logs' && <LogsTab app={app} />}
-          {active === 'samples' && <SamplesTab app={app} />}
-          {active === 'sistema' && <MaintenanceTab app={app} />}
-        </div>
+        <AppTimezoneProvider app={app}>
+          <div>
+            {active === 'overview' && <OverviewTab app={app} />}
+            {active === 'config' && <ConfigTab app={app} />}
+            {active === 'streams' && <StreamsTab app={app} />}
+            {active === 'vods' && <VodsTab app={app} />}
+            {active === 'ingress' && <IngressTab app={app} />}
+            {active === 'streamflow' && (
+              <StreamflowAppTab app={app} section={sectionParam} onSection={selectSection} />
+            )}
+            {active === 'plugins' && <PluginsTab app={app} />}
+            {active === 'samples' && <SamplesTab app={app} />}
+            {active === 'sistema' && <MaintenanceTab app={app} />}
+          </div>
+        </AppTimezoneProvider>
       )}
     </div>
   )

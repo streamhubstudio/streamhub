@@ -1,0 +1,21 @@
+# Datasource Loki — provisionado al boot de Grafana (MODO CLUSTER).
+# Sólo tiene efecto cuando Loki está levantado (overlay cluster/docker-compose.cluster.yml);
+# en single-node este datasource aparece pero sin backend (los paneles de logs
+# quedan vacíos). No molesta al stack Fase 1.
+#
+# uid fijo "loki" para que los dashboards cluster-logs.json lo referencien sin
+# variables de import.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    # network_mode: host -> Grafana y Loki comparten la red del host (localhost).
+    url: http://127.0.0.1:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      # Deriva métricas de tasa (rate) sobre los logs sin muestreo agresivo.
+      maxLines: 1000

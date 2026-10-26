@@ -30,7 +30,7 @@ node run-latency.js "file://$PWD/latency-page.html?mode=hls&hlsurl=https://<domi
 
 Salida: JSON con `samples, p50, p90, p95, min, max, mean, badDecodes`.
 
-## Resultados medidos (2026-07-02, 8c/8GB VPS, RTT cliente↔server 158ms)
+## Resultados medidos (2026-07-02, stream01 OVH 8c/8GB, RTT cliente↔server 158ms)
 
 | Path | Config | p50 | p95 | Notas |
 |---|---|---|---|---|
@@ -51,5 +51,5 @@ congestion control default ya operan cerca del óptimo en red buena. El tuning
 (buffers UDP 16MB, playout delay bajo, aislar egress) protege el **p95/p99 bajo
 carga**, no el p50 en vacío.
 
-(HLS y RTMP: ver `streamhub-docs/features/hls-live.md` y las mediciones del
+(HLS y RTMP: ver `https://streamhub.studio/docs/features/hls-live` y las mediciones del
 informe G1 — órdenes de magnitud mayores por naturaleza del protocolo.)

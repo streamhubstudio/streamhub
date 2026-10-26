@@ -30,6 +30,7 @@ import {
 import { isValidRtmpUrl, usePublisher } from './Broadcast/usePublisher'
 import { Button, Card, Spinner, Switcher } from '@/ui'
 import { Logo } from '@/components/Logo'
+import { LEGACY_INLINE_VIDEO_ATTRS } from '@/lib/browserCompat'
 
 const RTMP_PLACEHOLDER = 'rtmp://a.rtmp.youtube.com/live2/<stream-key>'
 
@@ -113,6 +114,7 @@ export default function Broadcast() {
               autoPlay
               playsInline
               muted
+              {...LEGACY_INLINE_VIDEO_ATTRS}
               className="h-full w-full object-contain"
             />
             {/* Live overlay */}

@@ -25,7 +25,7 @@ import type {
 
 // --- per-plugin error boundary ---------------------------------------------
 
-class PluginErrorBoundary extends Component<
+export class PluginErrorBoundary extends Component<
   { pluginId: string; fallback: (id: string) => ReactNode; children: ReactNode },
   { error: Error | null }
 > {
@@ -45,7 +45,7 @@ class PluginErrorBoundary extends Component<
   }
 }
 
-function BoundaryFallback({ pluginId }: { pluginId: string }) {
+export function BoundaryFallback({ pluginId }: { pluginId: string }) {
   const { t } = useTranslation('marketplace')
   return (
     <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-danger">
@@ -56,7 +56,13 @@ function BoundaryFallback({ pluginId }: { pluginId: string }) {
 
 // --- component selection ----------------------------------------------------
 
-function componentFor(view: PluginView): PluginComponent | undefined {
+/**
+ * Pick the component that renders a view's primary surface, keyed by its
+ * declared `ui`. Shared by the stacked `<PluginSlot>` and the full-page Studio
+ * App view so both resolve the surface identically. Returns undefined for
+ * `player`/overlay-less views (no tab/panel surface).
+ */
+export function componentFor(view: PluginView): PluginComponent | undefined {
   const reg = view.registered
   if (!reg) return undefined
   switch (view.ui) {
@@ -107,8 +113,12 @@ export function PluginSlot({
   empty,
   public: isPublic = false,
 }: PluginSlotProps) {
+  // Pass the room so player-overlays honor the per-stream plugin opt-out: the
+  // backend subtracts the room's opted-out overlays. Only meaningful for
+  // player-overlay placements (app-tab/panel have no room).
   const views = usePluginsByPlacement(ctx?.app ?? '', placement, {
     public: isPublic,
+    room: placement === 'player-overlay' ? ctx?.room : undefined,
   })
 
   if (views.length === 0) return <>{empty ?? null}</>

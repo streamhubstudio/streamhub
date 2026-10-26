@@ -3,7 +3,7 @@
  * ==========================================================================================
  * Empuja frames JPEG (1 mensaje binario WS = 1 frame) a wss://<dominio>/ingest/ws,
  * autenticado con una stream key de StreamHub. SIN relay ffmpeg, SIN RTMP, SIN WebRTC.
- * Protocolo: streamhub-docs/integrations/ESP32-WS-INGEST.md (§3).
+ * Protocolo: https://streamhub.studio/docs/integrations/ESP32-WS-INGEST (§3).
  *
  * ⚠️ Este endpoint es un DISEÑO (fase F1 del doc). El sketch está completo y compila,
  *    pero el server /ingest/ws tiene que estar implementado para que conecte.

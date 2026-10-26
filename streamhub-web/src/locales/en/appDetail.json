@@ -47,16 +47,20 @@
       "label": "Integrations",
       "hint": "Callbacks and features"
     },
+    "streamflow": {
+      "label": "Streamflow",
+      "hint": "Visual event-workflow automation for this app"
+    },
     "plugins": {
-      "label": "Plugins",
-      "hint": "Install, configure and open this app's plugins"
+      "label": "Studio",
+      "hint": "Install, configure and open this app's Studio apps"
     },
     "logs": {
       "label": "Logs",
       "hint": "App events"
     },
     "sistema": {
-      "label": "System",
+      "label": "Maintenance",
       "hint": "Database and maintenance"
     },
     "config": {

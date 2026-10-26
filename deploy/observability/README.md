@@ -3,11 +3,11 @@
 Stack Prometheus + Grafana + node_exporter, **separado** del media stack
 (`docker-compose.yml` en la raíz del repo — ciclo de vida independiente, no se
 tocan sus servicios). Materializa la Fase 1 de
-[`streamhub-docs/operations/OBSERVABILITY-ROADMAP.md`](../../streamhub-docs/operations/OBSERVABILITY-ROADMAP.md)
+[`https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP`](https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP)
 (§4). Leé ese documento para el diseño completo (inventario de métricas,
 tableros panel-por-panel, alerting, fases 2/3) — acá sólo el **cómo desplegar**.
 
-Nodo de referencia (`your-server`): 8 GB RAM + 8 GB swap, sin GPU, compartido con
+Nodo de referencia (`stream01`): 8 GB RAM + 8 GB swap, sin GPU, compartido con
 el media stack (LiveKit + core nativos por systemd; `ingress`/`egress`/`redis`
 en Docker). Cuello de botella = RAM (cada `egress` es un Chrome headless) → **todo
 este stack bindea a `127.0.0.1` y nunca se expone directo a Internet.**
@@ -31,7 +31,7 @@ cp .env.example .env
 $EDITOR .env    # setear GRAFANA_ADMIN_PASSWORD
 
 # Token de streamhub-core para el job de scrape (si METRICS_TOKEN está seteado
-# en el core — ver streamhub-docs/operations/ENV.md). Si el core corre con
+# en el core — ver https://streamhub.studio/docs/operations/ENV). Si el core corre con
 # METRICS_TOKEN unset (endpoint público), este archivo puede quedar con el
 # placeholder: el header Bearer de más no rompe nada.
 cp secrets/metrics_token.example secrets/metrics_token
@@ -75,7 +75,7 @@ publicado al mundo**. Dos formas de entrar, elegí una:
 ### Opción A — túnel SSH (más simple, sin tocar nginx)
 
 ```bash
-ssh -N -L 3001:127.0.0.1:3001 usuario@your-server
+ssh -N -L 3001:127.0.0.1:3001 usuario@stream01
 # abrir http://127.0.0.1:3001 en el browser local
 ```
 
@@ -113,7 +113,7 @@ Retención de Prometheus: `--storage.tsdb.retention.time=15d` (default, override
 con `PROMETHEUS_RETENTION_TIME` en `.env`) + tope duro de disco
 `--storage.tsdb.retention.size=4GB` (`PROMETHEUS_RETENTION_SIZE`). 30 días de
 retención es el objetivo **al mover la observabilidad a un nodo dedicado**, no
-en `your-server` (mismo criterio que el roadmap para Loki, §3.4).
+en `stream01` (mismo criterio que el roadmap para Loki, §3.4).
 
 ## 5. Qué incluye este directorio
 
@@ -129,11 +129,58 @@ en `your-server` (mismo criterio que el roadmap para Loki, §3.4).
 | `grafana/dashboards/per-app.json` | Tablero 5.B: variable `$app`, viewers/streams/grabaciones/VODs/callbacks/quota por app. |
 | `grafana/dashboards/media-latency.json` | Tablero 5.C: métricas nativas de LiveKit (RTT, forward latency, packet loss, NACK/PLI, rooms). |
 
+## 6. Modo cluster (multi-nodo + logs)
+
+Para monitorear una **flota de 3 nodos** (master `stream01` + `stream02`/`stream03`)
+con **un solo** Prometheus + Grafana + **Loki** en el master, este directorio trae un
+set **aditivo** de assets bajo `cluster/` + `prometheus.cluster.yml` + `alerts.cluster.yml`
++ los dashboards `cluster-overview.json` / `cluster-logs.json` + el datasource Loki. El
+stack single-node de arriba **no se toca**: el modo cluster es un overlay opcional.
+
+Guía completa (arquitectura, firewall port-by-port, cómo agregar/quitar un nodo, seguridad):
+[`https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY`](https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY).
+
+**En el master** (levanta prom-cluster + grafana + node_exporter + Loki + Promtail):
+
+```bash
+cd deploy/observability
+cp .env.example .env                       # GRAFANA_ADMIN_PASSWORD
+cp secrets/metrics_token.example secrets/metrics_token   # METRICS_TOKEN (mismo en la flota)
+cluster/install-cluster-observability.sh   # o: docker compose -f docker-compose.observability.yml \
+                                           #      -f cluster/docker-compose.cluster.yml --env-file .env up -d
+```
+
+Aplicar en el master el snippet `cluster/nginx-loki-push.conf` (ingreso de logs de los nodos).
+
+**En cada nodo** (`stream02`/`stream03`):
+
+```bash
+# nginx: pegar cluster/nginx-metrics-export.conf en el server{} 443 del nodo → reload
+cd deploy/observability/cluster
+cp .env.node.example .env.node             # NODE_NAME + MASTER_LOKI_PUSH_URL
+./install-node-agent.sh                    # node_exporter :9100 + Promtail
+sudo ufw allow from 203.0.113.10 to any port 9100 proto tcp
+```
+
+| Archivo (cluster) | Rol |
+|---|---|
+| `prometheus.cluster.yml` | Scrape de los 3 nodos (core/livekit/ingress/egress/node), label `node` por target. Master local `127.0.0.1`; nodos vía nginx TLS + `:9100`. |
+| `alerts.cluster.yml` | Alertas por-nodo (core/livekit/exporter down por nodo, nodo totalmente inalcanzable, Loki/Promtail down, RAM/disco por nodo). |
+| `cluster/docker-compose.cluster.yml` | Overlay del master: cambia Prometheus a la config cluster + agrega Loki y Promtail(master). |
+| `cluster/loki-config.yml` | Loki single-binary, filesystem, retención 30d, `127.0.0.1:3100`. |
+| `cluster/promtail-master.yml` | journald (`skyline-core`/`livekit`) + docker (ingress/egress/redis) + nginx. |
+| `cluster/promtail-node.yml` | docker (core/livekit/ingress/egress/redis) + nginx; push al Loki del master. |
+| `cluster/node-agent-compose.yml` | Agente de nodo: node_exporter (:9100) + Promtail. |
+| `cluster/nginx-metrics-export.conf` | Snippet nginx del NODO: expone `/metrics*` sólo al master. |
+| `cluster/nginx-loki-push.conf` | Snippet nginx del MASTER: recibe push de logs sólo de las IPs de nodo. |
+| `cluster/install-cluster-observability.sh` / `install-node-agent.sh` | Instaladores idempotentes (master / nodo). |
+| `grafana/dashboards/cluster-overview.json` / `cluster-logs.json` | Tableros: salud/recursos por nodo · explorador de logs por `node`/`service` + tasa de error. |
+
 ## Qué queda fuera de este stack (Fase 2/3 del roadmap)
 
-- **Loki + Alloy** (logs consultables desde Grafana, retención 30 días,
-  chunks en S3) — requiere +350–600 MB de RAM, preferible en el nodo de
-  observabilidad dedicado, no en `your-server` (§3.4/§4.1 del roadmap).
+- **Chunks de Loki en S3** (hoy filesystem local en el master) y **Alloy** como
+  agente alternativo a Promtail — ver el comentario de `cluster/loki-config.yml`
+  y §3.3 del roadmap. Loki ya está integrado en modo cluster (sección 6).
 - **Alertmanager** — este directorio sólo trae las *reglas* (`alerts.yml`);
   el ruteo/notificación (Slack, email, PagerDuty…) no está desplegado. En el
   ínterin, revisar `http://127.0.0.1:9090/alerts` o las alertas nativas de
@@ -148,5 +195,7 @@ en `your-server` (mismo criterio que el roadmap para Loki, §3.4).
 - Job de purga 30 días de `server_logs` en el core (mencionado en el roadmap
   §3.4/§7 fase 1) — es un cambio de código del core, no de este stack de
   despliegue.
-- Cluster / multi-nodo (Prometheus central, Alertmanager con routing,
-  dashboards agregados) — fase 3 del roadmap.
+- **Alertmanager con routing** para el cluster (Slack/email/PagerDuty) —
+  `alerts.cluster.yml` ya trae las reglas por-nodo; el ruteo no está desplegado.
+  El resto de "cluster / multi-nodo" (Prometheus central, dashboards agregados)
+  **ya está** — ver sección 6 y `CLUSTER-OBSERVABILITY.md`.

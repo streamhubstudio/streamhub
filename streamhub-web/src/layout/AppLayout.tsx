@@ -18,7 +18,10 @@ import {
   HiOutlinePuzzle,
   HiOutlineDocumentText,
   HiOutlineServer,
+  HiOutlineTrendingUp,
   HiOutlineCog,
+  HiOutlineClipboardList,
+  HiOutlineShieldCheck,
   HiOutlineUserCircle,
   HiOutlineMenuAlt2,
   HiOutlineLogout,
@@ -29,7 +32,10 @@ import { useAuth } from '@/auth/useAuth'
 import { ThemeToggle } from '@/theme'
 import { LanguageSwitcher } from '@/i18n'
 import { Logo } from '@/components/Logo'
+import { VersionBadge } from '@/components/VersionBadge'
 import { Avatar, Dropdown, Drawer } from '@/ui'
+import { DOCS_URL, REPO_URL } from '@/lib/links'
+import { StudioLauncher } from './StudioLauncher'
 
 interface NavItem {
   to: string
@@ -47,10 +53,13 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/', labelKey: 'nav.dashboard', end: true, icon: <HiOutlineChartSquareBar /> },
   { to: '/apps', labelKey: 'nav.apps', icon: <HiOutlineViewBoards /> },
-  { to: '/plugins', labelKey: 'nav.plugins', icon: <HiOutlinePuzzle /> },
+  { to: '/studio', labelKey: 'nav.plugins', icon: <HiOutlinePuzzle /> },
   { to: '/cluster', labelKey: 'nav.cluster', icon: <HiOutlineServer /> },
   { to: '/logs', labelKey: 'nav.logs', icon: <HiOutlineDocumentText /> },
+  { to: '/resources', labelKey: 'nav.resources', icon: <HiOutlineTrendingUp />, superadminOnly: true },
   { to: '/settings', labelKey: 'nav.serverSettings', icon: <HiOutlineCog />, superadminOnly: true },
+  { to: '/audit', labelKey: 'nav.audit', icon: <HiOutlineClipboardList />, superadminOnly: true },
+  { to: '/compliance', labelKey: 'nav.compliance', icon: <HiOutlineShieldCheck />, superadminOnly: true },
   { to: '/account', labelKey: 'nav.account', icon: <HiOutlineUserCircle /> },
 ]
 
@@ -246,6 +255,7 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            <StudioLauncher />
             <LanguageSwitcher />
             <ThemeToggle />
             <div className="mx-1 hidden h-6 w-px bg-border sm:block" />
@@ -257,8 +267,30 @@ export function AppLayout() {
           <Outlet />
         </main>
 
-        <footer className="border-t border-border px-4 py-4 text-xs text-fg-subtle sm:px-6">
-          {t('layout.footer')}
+        <footer className="flex flex-col gap-2 border-t border-border px-4 py-4 text-xs text-fg-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{t('layout.footer')}</span>
+            {/* Real product version (GET /auth/config appVersion) → changelog. */}
+            <VersionBadge />
+          </div>
+          <nav className="flex items-center gap-4">
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="transition hover:text-fg"
+            >
+              {t('layout.docs')}
+            </a>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="transition hover:text-fg"
+            >
+              {t('layout.source')}
+            </a>
+          </nav>
         </footer>
       </div>
 

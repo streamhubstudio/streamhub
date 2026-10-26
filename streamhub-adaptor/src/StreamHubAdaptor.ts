@@ -3,6 +3,7 @@ import {
   RoomEvent,
   Track,
   ConnectionState,
+  ConnectionQuality,
   type RemoteTrack,
   type RemoteTrackPublication,
   type RemoteParticipant,
@@ -18,6 +19,13 @@ import type {
   AntMediaErrorCallback,
 } from "./types.js";
 import { resolveToken } from "./tokenClient.js";
+import {
+  applyInlinePlaybackAttributes,
+  classifyGetUserMediaError,
+  installAutoplayUnlock,
+  supportsScreenShare,
+  withTurnHint,
+} from "./browserCompat.js";
 
 const textEncoder =
   typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
@@ -68,6 +76,7 @@ export class StreamHubAdaptor {
   private connecting: Promise<void> | null = null;
   private connected = false;
   private publishStarted = false;
+  private dataChannelOpened = false;
   private dataChannelEnabled: boolean;
 
   private statsTimer: any = null;
@@ -75,6 +84,8 @@ export class StreamHubAdaptor {
     ts: number;
     bytesSent: number;
   } | null = null;
+  /** Disposer for the one-shot gesture listener that unlocks blocked audio. */
+  private autoplayUnlockDispose: (() => void) | null = null;
 
   constructor(config: StreamHubAdaptorConfig) {
     this.config = config;
@@ -98,11 +109,25 @@ export class StreamHubAdaptor {
         ? (document.getElementById(config.remoteVideoId) as HTMLVideoElement)
         : null);
 
+    // iOS/WebKit hardening (WEBRTC-BROWSER-COMPAT): make sure the app's video
+    // elements play INLINE (no fullscreen hijack) and the local preview is
+    // muted (echo + muted-autoplay policy). Attribute-level, additive, safe
+    // even when the app already set them.
+    applyInlinePlaybackAttributes(this.localVideoElement, { muted: true });
+    applyInlinePlaybackAttributes(this.remoteVideoElement);
+
+    // Adaptive stream + dynacast (LIVEKIT-UNUSED-FEATURES): config-driven,
+    // default ON — adaptiveStream drops layers the element can't display,
+    // dynacast pauses layers nobody subscribes to. Pass `false` to disable.
     const roomOptions: RoomOptions = {
-      adaptiveStream: true,
-      dynacast: true,
+      adaptiveStream: config.adaptiveStream ?? true,
+      dynacast: config.dynacast ?? true,
       publishDefaults: {
         simulcast: true,
+        // H.264 by default (WEBRTC-BROWSER-COMPAT): AntMedia parity, hardware
+        // codec on Safari/iOS, and what HLS/MP4 egress wants. livekit-client's
+        // own default is vp8 — override unless the app picks another codec.
+        videoCodec: config.videoCodec ?? "h264",
         videoEncoding: config.bandwidth
           ? { maxBitrate: config.bandwidth * 1000 }
           : undefined,
@@ -195,7 +220,15 @@ export class StreamHubAdaptor {
         this.emit("publish_started", { streamId });
       }
     } catch (e: any) {
-      this.error("publishError", e?.message || String(e));
+      // AntMedia parity: camera/mic acquisition failures surface the
+      // DOMException NAME ("NotAllowedError", "NotFoundError", …) — apps key
+      // their permission UIs on those exact strings.
+      const gumError = classifyGetUserMediaError(e);
+      if (gumError) {
+        this.error(gumError, e?.message || String(e));
+      } else {
+        this.error("publishError", e?.message || String(e));
+      }
     }
   }
 
@@ -311,6 +344,17 @@ export class StreamHubAdaptor {
 
   /** AntMedia: `switchDesktopCapture(streamId)` — screen share on. */
   async switchDesktopCapture(_streamId?: string): Promise<void> {
+    // iOS/iPadOS Safari has NO getDisplayMedia at all — fail fast with a
+    // clear message instead of a cryptic DeviceUnsupportedError. (Browser
+    // contexts only; non-DOM test environments skip the guard.)
+    if (typeof window !== "undefined" && !supportsScreenShare()) {
+      this.error(
+        "screenShareError",
+        "getDisplayMedia is not supported in this browser — iOS/iPadOS " +
+          "Safari cannot capture the screen from a web page.",
+      );
+      return;
+    }
     try {
       await this.room.localParticipant.setScreenShareEnabled(true);
       this.emit("screen_share_started");
@@ -431,6 +475,21 @@ export class StreamHubAdaptor {
   updateAudioLevel(): void {}
 
   /**
+   * StreamHub extension — resume blocked audio playback (Safari/iOS autoplay
+   * policy). Call from a click/tap handler ("tap to unmute" button). The
+   * adaptor also arms an automatic first-gesture unlock whenever LiveKit
+   * reports playback blocked (see `audioPlaybackStatusChanged`), so calling
+   * this manually is optional.
+   */
+  async startAudioPlayback(): Promise<void> {
+    try {
+      await this.room.startAudio();
+    } catch (e) {
+      this.log("startAudio failed (needs a user gesture)", e);
+    }
+  }
+
+  /**
    * AntMedia EE: virtual-background / blur (`enableEffect`, `setBackgroundImage`).
    * No equivalent shipped with livekit-client core (needs @livekit/track-processors).
    * Documented no-op so calls don't throw. See README "No-op / deprecated".
@@ -458,6 +517,7 @@ export class StreamHubAdaptor {
     r.on(RoomEvent.Disconnected, () => {
       this.connected = false;
       this.publishStarted = false;
+      this.dataChannelOpened = false;
       this.emit("closed");
     });
 
@@ -488,9 +548,21 @@ export class StreamHubAdaptor {
       },
     );
 
-    r.on(RoomEvent.TrackUnsubscribed, () => {
-      this.emit("roomInformation", this.roomInfoPayload());
-    });
+    r.on(
+      RoomEvent.TrackUnsubscribed,
+      (
+        _track: RemoteTrack,
+        _pub: RemoteTrackPublication,
+        participant: RemoteParticipant,
+      ) => {
+        // AntMedia parity: a played remote stream going away fires
+        // `play_finished` (README: "on unsubscribe / stop"). Without this the
+        // event was documented but never emitted, so viewer tiles never cleaned
+        // up on the drop-in path.
+        this.emit("play_finished", { streamId: participant?.identity });
+        this.emit("roomInformation", this.roomInfoPayload());
+      },
+    );
 
     // Roster changes -> roomInformation (the streamList the app diffs against).
     r.on(RoomEvent.ParticipantConnected, () =>
@@ -518,7 +590,13 @@ export class StreamHubAdaptor {
     );
 
     r.on(RoomEvent.LocalTrackPublished, () => {
-      if (this.dataChannelEnabled) this.emit("data_channel_opened", {});
+      // AntMedia fires `data_channel_opened` once, when the single data channel
+      // opens — not once per published track. Guard so publishing camera+mic
+      // (two tracks) doesn't double-emit.
+      if (this.dataChannelEnabled && !this.dataChannelOpened) {
+        this.dataChannelOpened = true;
+        this.emit("data_channel_opened", {});
+      }
     });
 
     // Device hot-plug -> available_devices.
@@ -535,6 +613,84 @@ export class StreamHubAdaptor {
         });
       },
     );
+
+    // ---- StreamHub extensions (no AntMedia equivalent — see README) --------
+
+    // Room metadata set server-side (PATCH /apps/:app/rooms/:room/metadata).
+    r.on(RoomEvent.RoomMetadataChanged, (metadata: string) => {
+      this.emit("roomMetadataChanged", {
+        room: this.roomName,
+        metadata,
+      });
+    });
+
+    // Participant metadata set server-side (PATCH .../participants/:identity).
+    r.on(
+      RoomEvent.ParticipantMetadataChanged,
+      (prevMetadata: string | undefined, participant: Participant) => {
+        this.emit("participantMetadataChanged", {
+          streamId: participant.identity,
+          metadata: participant.metadata,
+          prevMetadata,
+          isLocal: participant === r.localParticipant,
+        });
+      },
+    );
+
+    // Connection quality (excellent/good/poor/lost) per participant — drives
+    // poor-connection banners in players.
+    r.on(
+      RoomEvent.ConnectionQualityChanged,
+      (quality: ConnectionQuality, participant: Participant) => {
+        this.emit("connectionQualityChanged", {
+          streamId: participant.identity,
+          quality: String(quality),
+          isLocal: participant === r.localParticipant,
+        });
+      },
+    );
+
+    // Active speakers (ordered by audio level) — drives speaker highlight.
+    r.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
+      this.emit("activeSpeakersChanged", {
+        speakers: speakers.map((p) => p.identity),
+      });
+    });
+
+    // Autoplay policy (WEBRTC-BROWSER-COMPAT): Safari/iOS block audio
+    // playback until a user gesture. When LiveKit reports it blocked, arm a
+    // ONE-SHOT first-gesture unlock (room.startAudio()) so drop-in apps get
+    // sound on the first tap with zero code changes, and surface the state so
+    // apps can render their own "tap to unmute" UI.
+    r.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+      const canPlayback = r.canPlaybackAudio;
+      this.emit("audioPlaybackStatusChanged", { canPlayback });
+      if (!canPlayback) {
+        this.armAutoplayUnlock();
+      } else if (this.autoplayUnlockDispose) {
+        this.autoplayUnlockDispose();
+        this.autoplayUnlockDispose = null;
+      }
+    });
+
+    // Camera/mic acquisition failures OUTSIDE an explicit publish() call
+    // (device switch, reconnect re-acquire). AntMedia parity: emit the
+    // DOMException name apps already switch on.
+    r.on(RoomEvent.MediaDevicesError, (e: Error) => {
+      this.error(
+        classifyGetUserMediaError(e) ?? "mediaDevicesError",
+        e?.message || String(e),
+      );
+    });
+  }
+
+  /** Arm the one-shot gesture unlock for blocked audio (idempotent). */
+  private armAutoplayUnlock(): void {
+    if (this.autoplayUnlockDispose) return;
+    this.autoplayUnlockDispose = installAutoplayUnlock(() => {
+      this.autoplayUnlockDispose = null;
+      void this.startAudioPlayback();
+    });
   }
 
   private announceTrack(track: RemoteTrack, participant: Participant): void {
@@ -579,7 +735,14 @@ export class StreamHubAdaptor {
         canSubscribe: grants.canSubscribe,
       });
       const connectOpts: RoomConnectOptions = { autoSubscribe: true };
-      await this.room.connect(tok.wsUrl, tok.token, connectOpts);
+      try {
+        await this.room.connect(tok.wsUrl, tok.token, connectOpts);
+      } catch (e: any) {
+        // Transport-level failures get the TURN hint appended: Safari behind
+        // symmetric NAT/VPN is the #1 "connects on WiFi, fails at the office"
+        // report, and the fix (TURN/TLS) is server-side.
+        throw new Error(withTurnHint(e?.message || String(e)));
+      }
       this.connected = true;
       this.roomName = tok.room || room;
       this.refreshPeerShim();
@@ -595,6 +758,10 @@ export class StreamHubAdaptor {
 
   private async disconnectInternal(): Promise<void> {
     this.disableStats();
+    if (this.autoplayUnlockDispose) {
+      this.autoplayUnlockDispose();
+      this.autoplayUnlockDispose = null;
+    }
     if (this.connected || this.room.state !== ConnectionState.Disconnected) {
       await this.room.disconnect();
     }
@@ -633,6 +800,9 @@ export class StreamHubAdaptor {
 
   private attachLocalPreview(): void {
     if (!this.localVideoElement) return;
+    // Re-assert inline/muted before every attach — apps re-create or re-parent
+    // preview elements between camera switches (iOS drops the attributes).
+    applyInlinePlaybackAttributes(this.localVideoElement, { muted: true });
     const camPub = this.room.localParticipant.getTrackPublication(
       Track.Source.Camera,
     );

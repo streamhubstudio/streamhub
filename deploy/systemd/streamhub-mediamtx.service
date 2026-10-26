@@ -1,0 +1,29 @@
+[Unit]
+# StreamHub — MediaMTX single-port RTMP front (:1935), bare-node deployment.
+# Runs the native mediamtx binary ALONGSIDE the docker compose stack: it owns the
+# public :1935 and fires loopback HTTP hooks to the core for every publish. The
+# CORE classifies by stream key (ptk_ → passthrough remux, else → forward to the
+# LiveKit ingress on :11935) and owns every ffmpeg — MediaMTX itself only execs
+# `wget`. OPT-IN: installed + enabled by install.sh only when
+# STREAMHUB_MEDIAMTX_ENABLE=true (which also moves the ingress to :11935 via
+# STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT). See features/rtmp-single-port.md.
+Description=StreamHub MediaMTX RTMP front (single-port :1935 ingest router)
+Documentation=https://www.streamhub.studio
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# The shared hook secret (STREAMHUB_MEDIAMTX_HOOK_SECRET) lives here; MediaMTX
+# expands ${...} from its process environment into the ready/notready hook
+# header. The leading '-' makes the file optional (won't fail if absent).
+EnvironmentFile=-/etc/streamhub/mediamtx.env
+# install.sh installs the pinned binary here and the config at /etc/streamhub.
+ExecStart=/usr/local/bin/mediamtx /etc/streamhub/mediamtx.yml
+Restart=on-failure
+RestartSec=3
+# `wget` (the ready/notready hooks) must be on PATH; the installer apt-installs
+# it when MediaMTX is enabled. No ffmpeg needed here — the core owns it.
+
+[Install]
+WantedBy=multi-user.target

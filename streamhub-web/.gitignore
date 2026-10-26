@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Playwright e2e artifacts + captured auth state (holds a dev JWT)
+test-results
+playwright-report
+e2e/.auth
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

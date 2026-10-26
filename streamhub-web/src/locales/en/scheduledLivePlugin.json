@@ -1,0 +1,56 @@
+{
+  "overlay": {
+    "aria": "{{headline}} — countdown to the live premiere",
+    "soon": "Starting soon",
+    "startsAt": "Starts {{time}}",
+    "units": {
+      "days": "days",
+      "hours": "hrs",
+      "minutes": "min",
+      "seconds": "sec"
+    }
+  },
+  "config": {
+    "display": {
+      "title": "Display options",
+      "mode": "Mode",
+      "modeCover": "Full cover (hide the stream until start)",
+      "modeBadge": "Corner badge only",
+      "accent": "Accent colour",
+      "headline": "Headline",
+      "revealAnimation": "Reveal animation",
+      "animFade": "Fade",
+      "animZoom": "Zoom",
+      "animNone": "None",
+      "muteUntilStart": "Mute the stream until start",
+      "showViewerLocalTime": "Show the viewer's local time",
+      "autoHide": "Reveal animation length (seconds)"
+    },
+    "agenda": {
+      "title": "Premiere agenda",
+      "empty": "No premieres scheduled yet.",
+      "loading": "Loading…",
+      "refresh": "Refresh",
+      "loadError": "Couldn't load the agenda.",
+      "saveError": "Couldn't save the event.",
+      "invalidDatetime": "Pick a valid date and time.",
+      "add": "Add premiere",
+      "fields": {
+        "title": "Title",
+        "datetime": "Start date and time",
+        "timezone": "Timezone",
+        "room": "Room (optional)",
+        "roomHint": "Empty = every room in the app",
+        "message": "Message (optional)",
+        "enabled": "Active"
+      },
+      "row": {
+        "allRooms": "All rooms",
+        "delete": "Delete",
+        "confirmDelete": "Delete the premiere \"{{title}}\"?",
+        "untitled": "(untitled)"
+      },
+      "note": "Agenda changes are saved instantly. The Save button below saves the display options."
+    }
+  }
+}

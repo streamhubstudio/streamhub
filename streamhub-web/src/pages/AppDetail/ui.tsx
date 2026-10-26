@@ -31,6 +31,11 @@ export function errMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+/** True when an API error is an HTTP 503 (feature disabled server-side). */
+export function isServiceUnavailable(error: unknown): boolean {
+  return error instanceof ApiRequestError && error.status === 503
+}
+
 // --- state blocks -----------------------------------------------------------
 
 export function Loading({ label }: { label?: string }) {
@@ -82,8 +87,8 @@ export function SectionTitle({
   right?: ReactNode
 }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div>
+    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      <div className="min-w-0">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           {title}
         </h3>
@@ -279,15 +284,19 @@ export function Toggle({
   checked,
   onChange,
   disabled,
+  ariaLabel,
 }: {
   checked: boolean
   onChange: (v: boolean) => void
   disabled?: boolean
+  /** Accessible name for the underlying checkbox (a11y + test targeting). */
+  ariaLabel?: string
 }) {
   return (
     <Switcher
       checked={checked}
       disabled={disabled}
+      aria-label={ariaLabel}
       onChange={() => onChange(!checked)}
     />
   )
@@ -318,7 +327,11 @@ export function Badge({
 
 // --- copy-to-clipboard ------------------------------------------------------
 
-function useCopy(): [boolean, (text: string) => void] {
+/**
+ * Copy-to-clipboard with a transient 1.5s "copied" flag. Shared by CopyButton /
+ * CopyField and richer widgets (e.g. the StreamsTab ShareMenu).
+ */
+export function useCopy(): [boolean, (text: string) => void] {
   const [copied, setCopied] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const copy = useCallback((text: string) => {

@@ -13,6 +13,7 @@
  *   - app-tab plugins + disabled overlays are excluded.
  *   - yolo's callbackUrl is stripped from the public config (no secret leaks).
  */
+import * as path from 'path';
 import { bootstrapTestApp, type TestApp } from './helpers';
 import { AppPluginsRepository } from '../src/modules/plugins/app-plugins.repository';
 
@@ -23,7 +24,11 @@ describe('plugins public overlays (e2e)', () => {
   let ctx: TestApp;
 
   beforeAll(async () => {
-    ctx = await bootstrapTestApp();
+    // `refoverlay` (a synthetic player-overlay fixture with a callbackUrl) stands
+    // in for the real overlay app that decouples — discovered via the fixture root.
+    ctx = await bootstrapTestApp({
+      env: { STREAMHUB_PLUGIN_FIXTURE_ROOT: path.join(__dirname, 'fixtures', 'plugins') },
+    });
 
     // Seed install state directly (no HTTP auth) against the seeded `live` app.
     const repo = ctx.app.get(AppPluginsRepository);
@@ -32,15 +37,12 @@ describe('plugins public overlays (e2e)', () => {
     // Enabled overlay carrying a callback URL → should appear, URL stripped.
     repo.install(
       APP,
-      'yolo',
+      'refoverlay',
       {
         room: 'cam1',
         model: 'nano',
-        cuda: false,
-        callbackUrl: 'https://secret.example.com/hooks/yolo',
         confidence: 0.5,
-        fps: 2,
-        classes: '',
+        callbackUrl: 'https://secret.example.com/hooks/refoverlay',
       },
       true,
     );
@@ -53,6 +55,7 @@ describe('plugins public overlays (e2e)', () => {
 
   afterAll(async () => {
     await ctx?.close();
+    delete process.env.STREAMHUB_PLUGIN_FIXTURE_ROOT;
   });
 
   it('401s on the AUTHENTICATED plugins list with no token (guard enforcing)', async () => {
@@ -66,7 +69,7 @@ describe('plugins public overlays (e2e)', () => {
     const ids = overlays.map((o) => o.id).sort();
 
     // enabled overlays present; app-tab + disabled overlay absent
-    expect(ids).toEqual(['timestamp', 'yolo']);
+    expect(ids).toEqual(['refoverlay', 'timestamp']);
     expect(ids).not.toContain('cockpit');
     expect(ids).not.toContain('watermark');
     for (const o of overlays) expect(o.manifest.ui).toBe('player-overlay');
@@ -74,13 +77,13 @@ describe('plugins public overlays (e2e)', () => {
 
   it('strips callback/webhook URLs from the public config (no secret leak)', async () => {
     const res = await ctx.request().get(`${P}/apps/${APP}/plugins/public`).expect(200);
-    const yolo = (res.body.data as Array<{ id: string; config: Record<string, unknown> }>).find(
-      (o) => o.id === 'yolo',
+    const overlay = (res.body.data as Array<{ id: string; config: Record<string, unknown> }>).find(
+      (o) => o.id === 'refoverlay',
     );
-    expect(yolo).toBeTruthy();
-    expect(yolo!.config).not.toHaveProperty('callbackUrl');
+    expect(overlay).toBeTruthy();
+    expect(overlay!.config).not.toHaveProperty('callbackUrl');
     // render-safe fields survive
-    expect(yolo!.config.model).toBe('nano');
+    expect(overlay!.config.model).toBe('nano');
     // the secret URL appears nowhere in the payload
     expect(JSON.stringify(res.body)).not.toContain('secret.example.com');
   });

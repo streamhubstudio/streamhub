@@ -1,0 +1,9 @@
+{
+  "aria": {
+    "paused": "The live stream is paused",
+    "finished": "The live stream has finished"
+  },
+  "badge": {
+    "finished": "Finished"
+  }
+}

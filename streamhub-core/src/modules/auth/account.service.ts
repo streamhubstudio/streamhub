@@ -8,8 +8,39 @@ import * as QRCode from 'qrcode';
 import { AuthContext } from '../../shared/auth-context';
 import { ConfigService } from '../../shared/config/config.service';
 import { TenancyService } from '../tenancy/tenancy.service';
+import { EmailService, SendResult } from '../email/email.service';
 import { hashPassword, verifyPassword } from './password.util';
+import { decryptUserSmtpSecret, encryptUserSmtpSecret } from './secret-cipher.util';
 import { TotpService } from './totp.service';
+
+/**
+ * GET/PUT /account/smtp — masked view (owner item 29). The password is never
+ * returned in clear (same masking convention as the app-level S3/MQTT/SMTP
+ * credentials).
+ */
+export interface MaskedAccountSmtp {
+  enabled: boolean;
+  host: string;
+  port: number;
+  user: string;
+  from: string;
+  /** Masked password (display only). */
+  pass: string;
+  hasPass: boolean;
+  /** Whether the block is usable (enabled + host + password). */
+  configured: boolean;
+}
+
+/** Input for PUT /account/smtp. */
+export interface SetAccountSmtpInput {
+  enabled?: boolean;
+  host?: string;
+  port?: number;
+  user?: string;
+  from?: string;
+  /** Plaintext — encrypted before it ever touches storage. */
+  pass?: string;
+}
 
 /** GET /account — the signed-in user's own profile + tenant context. */
 export interface AccountInfo {
@@ -60,6 +91,7 @@ export class AccountService {
     private readonly config: ConfigService,
     private readonly tenancy: TenancyService,
     private readonly totp: TotpService,
+    private readonly email: EmailService,
   ) {}
 
   /** Resolve the caller's own account (user row + tenant + role). */
@@ -185,6 +217,72 @@ export class AccountService {
   disableTwoFa(ctx: AuthContext, code: string): void {
     const user = this.requireUser(ctx);
     this.totp.disable(user.id, code);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-user SMTP override (owner item 29)
+  // ---------------------------------------------------------------------------
+
+  /** GET /account/smtp — masked view (password never returned in clear). */
+  getSmtp(ctx: AuthContext): MaskedAccountSmtp {
+    const user = this.requireUser(ctx);
+    return this.maskedSmtp(user.id);
+  }
+
+  /**
+   * PUT /account/smtp — update my SMTP override. `pass` is encrypted with the
+   * deployment's JWT secret (domain-separated from the TOTP secret — see
+   * auth/secret-cipher.util) before it ever touches storage; omit it to keep
+   * the stored one.
+   */
+  setSmtp(ctx: AuthContext, patch: SetAccountSmtpInput): MaskedAccountSmtp {
+    const user = this.requireUser(ctx);
+    this.tenancy.setUserSmtp(user.id, {
+      enabled: patch.enabled,
+      host: patch.host?.trim(),
+      port: patch.port,
+      user: patch.user,
+      from: patch.from?.trim(),
+      passEnc: patch.pass
+        ? encryptUserSmtpSecret(patch.pass, this.config.jwtSecret || '')
+        : undefined,
+    });
+    this.logger.log(`smtp override updated for user ${user.id}`);
+    return this.maskedSmtp(user.id);
+  }
+
+  /**
+   * POST /account/smtp/test — send a probe email using MY OWN configured SMTP
+   * (bypasses the `enabled` gate so I can verify it before flipping the
+   * switch). Never throws — the result carries ok/error/skipped.
+   */
+  async testSmtp(ctx: AuthContext, to: string): Promise<SendResult> {
+    const user = this.requireUser(ctx);
+    return this.email.testUserSmtp(user.id, to);
+  }
+
+  private maskedSmtp(userId: string): MaskedAccountSmtp {
+    const row = this.tenancy.getUserSmtp(userId);
+    const pass = row?.passEnc
+      ? decryptUserSmtpSecret(row.passEnc, this.config.jwtSecret || '')
+      : null;
+    const port = row?.port && row.port > 0 ? row.port : 587;
+    return {
+      enabled: !!row?.enabled,
+      host: row?.host ?? '',
+      port,
+      user: row?.user ?? '',
+      from: row?.from ?? '',
+      pass: this.mask(pass ?? ''),
+      hasPass: !!pass,
+      configured: !!row?.enabled && !!row?.host && !!pass,
+    };
+  }
+
+  private mask(value: string): string {
+    if (!value) return '';
+    if (value.length <= 4) return '****';
+    return `${value.slice(0, 2)}***${value.slice(-2)}`;
   }
 
   // ---------------------------------------------------------------------------

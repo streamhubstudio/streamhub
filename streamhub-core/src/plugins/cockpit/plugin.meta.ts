@@ -17,6 +17,9 @@ export default definePlugin({
   category: 'panel',
   ui: 'panel',
   version: '1.0.0',
+  // Studio App: an app-sized camera-wall UI. No worker/DB; web-bundle export is
+  // phase 2, so not exportable v1.
+  kind: 'app',
   icon: 'grid',
   configSchema: [
     {

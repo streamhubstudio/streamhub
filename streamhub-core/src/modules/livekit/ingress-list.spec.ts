@@ -79,6 +79,12 @@ function makeController(items: IngressListItem[]) {
     ),
   } as any;
   const quotas = {} as any;
+  const ingressBackup = {
+    getRoleInfo: () => ({ role: null, pairedIngressId: null }),
+    getLinkFor: () => null,
+    remove: () => {},
+    link: () => {},
+  } as any;
 
   const controller = new LiveKitController(
     livekit,
@@ -86,6 +92,7 @@ function makeController(items: IngressListItem[]) {
     ingressAuth,
     moduleRef,
     quotas,
+    ingressBackup,
   );
   return { controller, listIngress, listRooms, ingressAuth };
 }

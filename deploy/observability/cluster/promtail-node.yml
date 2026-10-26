@@ -1,0 +1,94 @@
+# Promtail de NODO (stream02 / stream03). Corre en cluster/node-agent-compose.yml.
+# Empuja al Loki del MASTER (a través del nginx del master, TLS + allowlist).
+#
+# Config parametrizada por variables de entorno (el compose corre promtail con
+# -config.expand-env=true):
+#   NODE_NAME             -> stream02 | stream03  (label `node`)
+#   MASTER_LOKI_PUSH_URL  -> https://<fqdn-del-master>/loki/api/v1/push
+#                            (default seguro: vía nginx del master, TLS).
+#                            Alternativa directa (cleartext): http://203.0.113.10:3100/loki/api/v1/push
+#                            (requiere ufw allow from IP-del-nodo to :3100).
+#
+# Fuentes en un nodo (todo en docker + nginx nativo):
+#   - docker  -> contenedores core / livekit / ingress / egress / redis.
+#   - archivos-> /var/log/nginx/*.log
+#
+# Etiquetas de stream: node, service, container, level (+ source en core).
+
+server:
+  http_listen_address: 127.0.0.1
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /promtail/positions.yaml
+
+clients:
+  - url: ${MASTER_LOKI_PUSH_URL}
+    # TLS del nginx del master: si scrapeás por IP o el cert no valida, poné
+    # insecure_skip_verify. Por FQDN con cert válido, dejalo en false.
+    tls_config:
+      insecure_skip_verify: true
+
+scrape_configs:
+  # -------------------------------------------------------------------------
+  # docker — core / livekit / ingress / egress / redis (todo dockerizado).
+  # docker_sd lee los logs vía la API de docker (sin wrapper json-file).
+  # -------------------------------------------------------------------------
+  - job_name: docker-node
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: service
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: '(core|livekit|ingress|egress|redis)'
+        action: keep
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: 'core'
+        target_label: service
+        replacement: streamhub-core
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/?(.*)'
+        target_label: container
+        replacement: '${1}'
+      - target_label: node
+        replacement: ${NODE_NAME}
+    pipeline_stages:
+      # core: pino JSON, level numérico -> palabra.
+      - match:
+          selector: '{service="streamhub-core"}'
+          stages:
+            - json:
+                expressions:
+                  lvlnum: level
+                  source: source
+                  msg: msg
+            - template:
+                source: level
+                template: '{{ if eq .lvlnum "60" }}fatal{{ else if eq .lvlnum "50" }}error{{ else if eq .lvlnum "40" }}warn{{ else if eq .lvlnum "30" }}info{{ else if eq .lvlnum "20" }}debug{{ else if eq .lvlnum "10" }}trace{{ else }}info{{ end }}'
+            - labels:
+                level:
+                source:
+      # livekit / ingress / egress: zap JSON, level palabra.
+      - match:
+          selector: '{service=~"livekit|ingress|egress"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+            - labels:
+                level:
+
+  # -------------------------------------------------------------------------
+  # archivos — nginx del nodo (access + error).
+  # -------------------------------------------------------------------------
+  - job_name: nginx-node
+    static_configs:
+      - targets: [localhost]
+        labels:
+          node: ${NODE_NAME}
+          service: nginx
+          container: nginx
+          __path__: /var/log/nginx/*.log

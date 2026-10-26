@@ -52,6 +52,7 @@ function cameraOf(s: Stream): CockpitCamera {
     id: s.streamId,
     room: s.room,
     label: s.participant || s.streamId || s.room,
+    type: s.type,
   }
 }
 

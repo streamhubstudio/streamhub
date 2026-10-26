@@ -79,13 +79,16 @@ function makeHarness(withReputation = true): Harness {
 }
 
 function reqWithBearer(token?: string): Request {
-  const headers: Record<string, string> = { 'x-forwarded-for': IP };
+  const headers: Record<string, string> = {};
   if (token) headers['authorization'] = `Bearer ${token}`;
   return {
     headers,
     path: '/api/v1/apps',
     url: '/api/v1/apps',
-    socket: { remoteAddress: '127.0.0.1' },
+    // Fix P0-2: offenses are attributed to the PROXY-VALIDATED req.ip, never
+    // to a client-supplied X-Forwarded-For header.
+    ip: IP,
+    socket: { remoteAddress: IP },
   } as unknown as Request;
 }
 

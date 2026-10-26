@@ -74,11 +74,44 @@ export interface CreateIngressInput {
   roomName: string;
   /** rtmp = push URL+key; whip = WHIP endpoint; url = pull a remote source. */
   inputType: 'rtmp' | 'whip' | 'url';
+  /**
+   * Ingest MODE. `transcode` (default) = the normal LiveKit ingress (WebRTC +
+   * optional HLS). `passthrough` = REMUX the RTMP straight to HLS (`ffmpeg -c
+   * copy`), bypassing LiveKit — handled entirely OUTSIDE `LiveKitService`
+   * (PassthroughModule), so this field is advisory on the LiveKit contract and
+   * only ever `transcode` reaches `createIngress`.
+   */
+  mode?: 'transcode' | 'passthrough';
   participantIdentity: string;
   participantName?: string;
   /** For inputType 'url': the source URL (e.g. rtsp:// relay). */
   url?: string;
   enableTranscoding?: boolean;
+  /**
+   * Simulcast ladder on a TRANSCODED ingress. LiveKit's default for a
+   * transcoded RTMP/URL input is a 3-layer H.264 720p simulcast (CPU-heavy:
+   * three real-time encodes). `false` forces a SINGLE layer (~3× less CPU) —
+   * wired from the app's `webrtc.adaptive` so turning adaptive off actually
+   * reduces the ingress transcode. Default/undefined = simulcast (back-compat).
+   */
+  simulcast?: boolean;
+  /**
+   * Audio-only ingest (radio). LiveKit's `audioOnly` makes the ingress DROP the
+   * incoming video track entirely — so even if the encoder pushes video there is
+   * NO video encode (the ~1 core/channel cost), leaving only the trivial
+   * AAC→Opus audio transcode → near-idle CPU without a GPU. When set, no video
+   * options are attached. Default/undefined = keep video.
+   */
+  audioOnly?: boolean;
+  /**
+   * Resolution cap (px height) for the TRANSCODED ingress — the app's
+   * `webrtc.transcode_max_height` (360|480|720|1080). Bounds the built video
+   * encoding: a single-layer ingest re-encodes to this height, an adaptive
+   * ingest caps its top ladder layer here. Undefined ⇒ the 720p default
+   * (see modules/livekit/ingress-encoding.util). Ignored for audio-only /
+   * WHIP-bypass ingest (no video encode).
+   */
+  maxHeight?: number;
 }
 
 export interface IngressInfo {
@@ -149,6 +182,14 @@ export interface StartHlsEgressInput {
   outputDir: string;
   /** Playlist filename written inside `outputDir` (e.g. "index.m3u8"). */
   playlistName: string;
+  /**
+   * DVR (QW-4): rolling live-window playlist filename written inside `outputDir`
+   * (e.g. "live.m3u8"). When set, the egress ALSO writes this bounded playlist
+   * alongside the full `playlistName`, and StreamHub serves it as the public
+   * manifest so the live edge never grows unbounded. Omit for the default
+   * behaviour (single full playlist).
+   */
+  livePlaylistName?: string;
   /** HLS segment duration in seconds (default 4). */
   segmentDurationS?: number;
   /** Optional egress layout (e.g. "grid", "speaker"). */

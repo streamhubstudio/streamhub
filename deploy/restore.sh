@@ -11,7 +11,7 @@
 #   deploy/restore.sh                         # restore the LATEST backup
 #   deploy/restore.sh --from 20260701T031500Z # restore a specific backup
 #   deploy/restore.sh --from /path/x.tar.gz  # restore an explicit local file
-#   deploy/restore.sh --target /opt/streamhub-core/data --yes   # non-interactive
+#   deploy/restore.sh --target /opt/skyline-core/data --yes   # non-interactive
 #
 # Flags:
 #   --from <timestamp|latest|FILE>  which backup (default: latest)
@@ -24,7 +24,7 @@
 # Uses the same env vars as backup.sh (BACKUP_S3_BUCKET / _ENDPOINT / _PREFIX /
 # _REGION / _ACCESS_KEY_ID / _SECRET_ACCESS_KEY, BACKUP_LOCAL_DIR,
 # BACKUP_DATA_DIR). IMPORTANT: stop the core (docker compose stop core, or
-# systemctl stop streamhub-core) before restoring — writing DBs under a live core
+# systemctl stop skyline-core) before restoring — writing DBs under a live core
 # is unsafe.
 #
 # Exit codes: 0 ok · 1 usage · 2 preflight · 3 not found · 4 verify failed
@@ -157,7 +157,7 @@ done < <(find "$EXTRACT/data" -type f -name '*.db' -print0)
 # --- confirm -----------------------------------------------------------------
 log "about to restore into TARGET: $TARGET_DIR"
 warn "this OVERWRITES streamhub.db, apps/*/app.db and secrets.json in the target."
-warn "make sure the core is STOPPED first (docker compose stop core | systemctl stop streamhub-core)."
+warn "make sure the core is STOPPED first (docker compose stop core | systemctl stop skyline-core)."
 if [ "$ASSUME_YES" != "1" ]; then
   if [ ! -t 0 ]; then die "refusing to restore without a TTY; pass --yes to force" 5; fi
   printf 'Type the target path (%s) to confirm: ' "$TARGET_DIR"

@@ -1,0 +1,14 @@
+{
+  "name": "streamhub-health-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "StreamHub stream-health worker: sampling-based ORIGIN HLS quality probe (ffprobe/ffmpeg subprocesses, zero npm dependencies).",
+  "license": "AGPL-3.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\""
+  }
+}

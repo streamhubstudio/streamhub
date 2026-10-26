@@ -1,0 +1,39 @@
+{
+  "badge": {
+    "armed": "ARMADO",
+    "disarmed": "Desarmado",
+    "offline": "Sin señal"
+  },
+  "mode": {
+    "schedule": "Agenda",
+    "armed": "Armar",
+    "disarmed": "Desarmar"
+  },
+  "zones": {
+    "title": "Zonas restringidas",
+    "stageAria": "Editor de zonas — arrastrá para dibujar una zona restringida",
+    "frameAlt": "Cuadro en vivo de la cámara",
+    "noFrame": "Esperando la vista previa del worker…",
+    "noRoom": "Configurá el room/cámara en los ajustes del plugin para empezar a vigilar.",
+    "hint": "Arrastrá sobre el cuadro para dibujar una zona restringida. Los recuadros verdes son personas detectadas en vivo; las áreas rojas alertan mientras está armado.",
+    "empty": "Todavía no hay zonas — arrastrá sobre el cuadro para dibujar la primera.",
+    "nameAria": "Nombre de la zona",
+    "remove": "Quitar",
+    "save": "Guardar zonas",
+    "saving": "Guardando…",
+    "discard": "Descartar",
+    "saveNote": "Guardar reinicia el worker con las zonas nuevas."
+  },
+  "alerts": {
+    "title": "Cola de alertas",
+    "unacked_one": "{{count}} nueva",
+    "unacked_other": "{{count}} nuevas",
+    "empty": "Sin intrusiones registradas.",
+    "offline": "Worker sin conexión — no llega el feed de alertas. Revisá el estado del worker del plugin.",
+    "thumbAlt": "Captura de la intrusión — zona {{zone}}",
+    "noThumb": "sin vista previa",
+    "ack": "Reconocer",
+    "acked": "reconocida",
+    "ackNote": "Reconocer marca esa alerta y todas las anteriores como atendidas (el worker se reinicia para aplicarlo). Las capturas y clips completos quedan en apps/<app>/perimeter/evidence/ en el servidor."
+  }
+}
