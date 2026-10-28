@@ -33,6 +33,7 @@ export const EVENT_SUGGESTIONS = [
   'plugin.version_changed',
   'network.threshold_exceeded', 'network.threshold_recovered',
   'iot.data',
+  'fleet.battery_low', 'fleet.battery_recovered',
   'node.online', 'node.offline', 'cluster.capacity', 'node.*',
   'streamflow.run_started', 'streamflow.run_finished', 'streamflow.run_failed', 'streamflow.output',
   'plate.detected', 'plate.allowed', 'plate.denied', 'plate.*',

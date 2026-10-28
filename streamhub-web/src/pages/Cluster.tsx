@@ -45,10 +45,10 @@ function statusTone(status: string, stale: boolean): 'green' | 'amber' | 'red' |
 }
 
 const BADGE_TONE: Record<string, string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  red: 'bg-red-500/20 text-red-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 function ToneBadge({ tone, children }: { tone: keyof typeof BADGE_TONE; children: ReactNode }) {
@@ -97,7 +97,7 @@ function CopyButton({ value }: { value: string }) {
 function CodeCopy({ value }: { value: string }) {
   return (
     <div className="flex items-start gap-2">
-      <pre className="min-w-0 flex-1 overflow-x-auto rounded-lg bg-gray-100 px-3 py-2 font-mono text-xs text-gray-800 dark:bg-gray-700/60 dark:text-gray-100">
+      <pre className="min-w-0 flex-1 overflow-x-auto rounded-lg px-3 py-2 font-mono text-xs bg-gray-700/60 text-gray-100">
         <code className="whitespace-pre-wrap break-all">{value}</code>
       </pre>
       <CopyButton value={value} />
@@ -204,11 +204,11 @@ function InfoBlock({
           </div>
         </div>
       ) : (
-        <div className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-slate-600 dark:border-gray-600 dark:bg-gray-700/30 dark:text-slate-300">
+        <div className="mt-4 rounded-lg border border-dashed px-4 py-6 text-sm border-gray-600 bg-gray-700/30 text-slate-300">
           <p className="font-medium text-fg">{t('disabled.title')}</p>
           <p className="mt-1 text-xs">
             {t('disabled.body')}{' '}
-            <code className="rounded bg-gray-200 px-1 py-0.5 font-mono text-[11px] dark:bg-gray-600/60">
+            <code className="rounded px-1 py-0.5 font-mono text-[11px] bg-gray-600/60">
               STREAMHUB_CLUSTER_TOKEN
             </code>
           </p>
@@ -240,7 +240,7 @@ function NodeStats({ stats }: { stats: Record<string, unknown> }) {
       {entries.map(([k, v]) => (
         <div
           key={k}
-          className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-700/40"
+          className="rounded-lg border px-3 py-2 border-gray-600 bg-gray-700/40"
         >
           <div className="text-[10px] uppercase tracking-wide text-slate-500">{k}</div>
           <div className="mt-0.5 font-mono text-sm tabular-nums text-fg">{String(v)}</div>
@@ -274,18 +274,18 @@ function EditNodeDialog({ node, onClose }: { node: ClusterNode; onClose: () => v
 
   return (
     <Dialog isOpen width={460} closable={false} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <h5 className="mb-4 text-lg font-semibold text-gray-100">
         {t('edit.title', { name: node.name })}
       </h5>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-100">
             {t('edit.name')}
           </label>
           <Input autoFocus size="sm" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-100">
             {t('edit.region')}
           </label>
           <Input
@@ -333,12 +333,12 @@ function DeleteNodeDialog({ node, onClose }: { node: ClusterNode; onClose: () =>
       onRequestClose={() => !remove.isPending && onClose()}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h5 className="text-lg font-semibold text-gray-100">
           {t('delete.title', { name: node.name })}
         </h5>
         <ToneBadge tone="red">{t('delete.destructive')}</ToneBadge>
       </div>
-      <p className="mb-4 text-xs font-medium text-amber-600 dark:text-amber-300">
+      <p className="mb-4 text-xs font-medium text-amber-300">
         {t('delete.warning')}
       </p>
       {remove.isError && (
@@ -465,7 +465,7 @@ function NodesTable({
                   </Tr>
                   {isOpen && hasStats && (
                     <Tr>
-                      <Td colSpan={6} className="bg-gray-50 dark:bg-gray-700/30">
+                      <Td colSpan={6} className="bg-gray-700/30">
                         <NodeStats stats={node.stats as Record<string, unknown>} />
                       </Td>
                     </Tr>
@@ -516,7 +516,7 @@ export default function Cluster() {
       </div>
 
       {/* Sub-tabs: the node registry (join/edit) vs the Edge processing surface. */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap gap-2 border-b border-gray-700">
         {tabs.map((tk) => (
           <button
             key={tk}
@@ -526,8 +526,8 @@ export default function Cluster() {
             className={[
               '-mb-px border-b-2 px-3 py-2 text-sm font-semibold transition',
               tab === tk
-                ? 'border-primary-500 text-primary-600 dark:text-primary-200'
-                : 'border-transparent text-slate-500 hover:text-primary-600 dark:hover:text-primary-100',
+                ? 'border-primary-500 text-primary-200'
+                : 'border-transparent text-slate-500 hover:text-primary-100',
             ].join(' ')}
           >
             {t(`tab.${tk}`)}

@@ -1,0 +1,1 @@
+{"label":"node-mixed","mode":"hls","viewers":2500,"segP95ms":4435.4,"segP99ms":4731.6,"errorPct":16.6,"cpuAvgPct":190.1,"note":"recovered from the run log (the jsonl was overwritten by the mixed1000 run)"}

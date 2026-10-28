@@ -1,0 +1,131 @@
+{
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "unknown": "No status"
+  },
+  "filter": {
+    "all": "All ({{count}})",
+    "online": "Online ({{count}})",
+    "offline": "Offline ({{count}})",
+    "site": "Site",
+    "allSites": "All sites"
+  },
+  "metric": {
+    "fw": "Firmware",
+    "signal": "Signal",
+    "stream": "Stream",
+    "sd": "microSD",
+    "queue": "Queue",
+    "seen": "Seen",
+    "uptime": "Uptime",
+    "ip": "IP",
+    "mem": "Free RAM",
+    "load": "Load",
+    "reboot": "Last reboot"
+  },
+  "stream": {
+    "on": "Streaming",
+    "off": "Stopped"
+  },
+  "sd": {
+    "none": "no card"
+  },
+  "card": {
+    "noThumb": "No thumbnail",
+    "safeMode": "Safe mode: the camera rebooted repeatedly"
+  },
+  "inactive": "The console is not active: install and enable the Cameras app and configure the app's MQTT broker (mqtt.url). Cameras must publish under {{topic}}/<device>/….",
+  "empty": "No cameras yet. Add one, or point an OpenCam camera at this app's MQTT broker.",
+  "error": {
+    "load": "Could not load cameras"
+  },
+  "detail": {
+    "pick": "Select a camera to watch it and control it.",
+    "close": "Close",
+    "loading": "Loading…",
+    "ptz": "PTZ",
+    "control": "Actions",
+    "commands": "Recent commands",
+    "noCommands": "No commands sent yet.",
+    "events": "Events",
+    "provisioning": "Provisioning",
+    "downloadIni": "Download config.ini",
+    "provisioned": "Registered in StreamHub",
+    "discovered": "Discovered over MQTT (not registered)",
+    "streamStopped": "Stream stopped: showing the last thumbnail",
+    "noRoom": "No linked room: showing the last thumbnail",
+    "eventsLost": "{{count}} events were lost (seq gap); they were requested again from the camera.",
+    "offlineHint": "The camera is offline: commands will expire unanswered."
+  },
+  "ptz": {
+    "pad": "PTZ pad",
+    "stop": "Stop",
+    "speed": "Speed",
+    "preset": "Preset",
+    "goPreset": "Go to preset",
+    "home": "Home",
+    "hint": "Hold an arrow to move; release to stop. If the network drops, the camera stops by itself.",
+    "dir": {
+      "up": "Up",
+      "down": "Down",
+      "left": "Left",
+      "right": "Right",
+      "ul": "Up left",
+      "ur": "Up right",
+      "dl": "Down left",
+      "dr": "Down right"
+    }
+  },
+  "action": {
+    "streamStart": "Start stream",
+    "streamStop": "Stop stream",
+    "hd": "View in HD",
+    "hdOff": "Back to normal quality",
+    "snapshot": "Snapshot now",
+    "voiceTest": "Voice test",
+    "reboot": "Reboot"
+  },
+  "hd": {
+    "until": "HD on until {{time}}; then back to the sub-stream."
+  },
+  "reboot": {
+    "confirm": "Reboot the camera?",
+    "yes": "Yes, reboot",
+    "no": "Cancel"
+  },
+  "cmd": {
+    "queued": "{{command}} sent ({{id}})",
+    "failed": "Command failed"
+  },
+  "cmdStatus": {
+    "sent": "sent",
+    "pending": "pending",
+    "accepted": "accepted",
+    "progress": "in progress",
+    "done": "ok",
+    "failed": "failed",
+    "timeout": "no answer"
+  },
+  "events": {
+    "level": "Level",
+    "allLevels": "All levels",
+    "src": "Source",
+    "empty": "No events."
+  },
+  "add": {
+    "open": "Add camera",
+    "cancel": "Cancel",
+    "title": "Register a camera",
+    "device": "Device (device.id)",
+    "name": "Name",
+    "room": "Room",
+    "roomPh": "Room (defaults to the device)",
+    "site": "Site",
+    "stand": "Stand",
+    "createIngress": "Create the camera's passthrough RTMP ingress",
+    "note": "Then download the config.ini and copy it to the microSD root. The camera's MQTT credential must be created on the broker.",
+    "submit": "Register",
+    "badDevice": "The device id allows only letters, digits, dot, dash and underscore (max 64)."
+  }
+}

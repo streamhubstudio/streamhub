@@ -1,0 +1,248 @@
+{
+  "module": "ws-ingest",
+  "description": "WS ingest key provisioning REST + the /live HTTP mount (ws-keys.controller.ts, live-http.ts). The WebSocket paths are covered by Go integration tests.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "wsi-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "wsiEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "wsi-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "wsiViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "wsi-list-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-create",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken",
+      "body": {
+        "room": "cam1"
+      },
+      "mask": [
+        "data.id",
+        "data.streamKey",
+        "data.identity"
+      ],
+      "capture": {
+        "wsiKey1": "data.id"
+      }
+    },
+    {
+      "name": "wsi-create-identity",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken",
+      "body": {
+        "room": "live-cam2",
+        "identity": "porton-norte"
+      },
+      "mask": [
+        "data.id",
+        "data.streamKey"
+      ],
+      "capture": {
+        "wsiKey2": "data.id"
+      }
+    },
+    {
+      "name": "wsi-create-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-create-bad",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken",
+      "body": {
+        "room": "bad room!",
+        "identity": "x y"
+      }
+    },
+    {
+      "name": "wsi-create-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken",
+      "body": {
+        "room": 5,
+        "identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "wsi-create-ghost",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost/ws-ingest",
+      "auth": "globalToken",
+      "body": {
+        "room": "cam1"
+      }
+    },
+    {
+      "name": "wsi-create-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "wsiViewerJwt",
+      "body": {
+        "room": "cam1"
+      }
+    },
+    {
+      "name": "wsi-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken",
+      "mask": [
+        "data.*.id",
+        "data.*.streamKey"
+      ],
+      "unordered": [
+        "data"
+      ]
+    },
+    {
+      "name": "wsi-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "appToken",
+      "mask": [
+        "data.*.id",
+        "data.*.streamKey"
+      ],
+      "unordered": [
+        "data"
+      ]
+    },
+    {
+      "name": "wsi-list-ghost",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/ws-ingest",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-list-editor-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "wsiEditorJwt"
+    },
+    {
+      "name": "wsi-live-info-public",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest/live/cam1"
+    },
+    {
+      "name": "wsi-live-info-namespaced",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest/live/live-cam1"
+    },
+    {
+      "name": "wsi-live-info-ghost",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/ws-ingest/live/cam1"
+    },
+    {
+      "name": "wsi-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ws-ingest/{{wsiKey1}}",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-delete-again",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ws-ingest/{{wsiKey1}}",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-delete-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ws-ingest/wsi_nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-delete-ghost",
+      "method": "DELETE",
+      "path": "/api/v1/apps/ghost/ws-ingest/wsi_nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-delete-viewer",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ws-ingest/{{wsiKey2}}",
+      "auth": "wsiViewerJwt"
+    },
+    {
+      "name": "wsi-delete-2",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ws-ingest/{{wsiKey2}}",
+      "auth": "globalToken"
+    },
+    {
+      "name": "wsi-list-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ws-ingest",
+      "auth": "globalToken"
+    },
+    {
+      "name": "live-frame-no-frame",
+      "method": "GET",
+      "path": "/live/live/cam1/frame.jpg"
+    },
+    {
+      "name": "live-mjpeg-ghost",
+      "method": "GET",
+      "path": "/live/ghost/cam1/mjpeg"
+    },
+    {
+      "name": "live-bad-shape",
+      "method": "GET",
+      "path": "/live/live/cam1"
+    },
+    {
+      "name": "live-root",
+      "method": "GET",
+      "path": "/live"
+    },
+    {
+      "name": "live-post",
+      "method": "POST",
+      "path": "/live/live/cam1/frame.jpg"
+    },
+    {
+      "name": "live-ws-no-upgrade",
+      "method": "GET",
+      "path": "/live/ws?app=live&room=cam1"
+    }
+  ]
+}

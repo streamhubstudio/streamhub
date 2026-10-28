@@ -1,0 +1,506 @@
+{
+  "module": "tags",
+  "description": "Per-app dynamic tags CRUD + stream/room tagging (tags.controller.ts, stream-tags.controller.ts).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "tag-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "tagEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "tag-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "tagViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "tags-list-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-create-ordered-config",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "{\"slug\":\"store-a\",\"label\":\"  Store A  \",\"kind\":\"store\",\"config_json\":{\"b\":1,\"2\":\"x\",\"10\":true,\"a\":{\"z\":1.50,\"y\":[1e2,-0.0,\"<&>\"]},\"b\":2},\"extra\":1}",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "name": "tags-create-defaults",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "zone-1",
+        "label": "Zone"
+      }
+    },
+    {
+      "name": "tags-create-empty-kind",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "zone-2",
+        "label": "Zone 2",
+        "kind": "   "
+      }
+    },
+    {
+      "name": "tags-create-duplicate",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "store-a",
+        "label": "Again"
+      }
+    },
+    {
+      "name": "tags-create-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-create-bad-slug",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "Bad Slug",
+        "label": "x"
+      }
+    },
+    {
+      "name": "tags-create-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "label": "lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll",
+        "kind": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+      }
+    },
+    {
+      "name": "tags-create-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": 5,
+        "label": true,
+        "kind": 3,
+        "config_json": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "tags-create-config-null",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "zone-3",
+        "label": "Z3",
+        "config_json": null
+      }
+    },
+    {
+      "name": "tags-create-blank-label",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "zone-4",
+        "label": "   "
+      }
+    },
+    {
+      "name": "tags-create-slug-trailing-space",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "zone-5 ",
+        "label": "x"
+      }
+    },
+    {
+      "name": "tags-list-all",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-list-kind",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags?kind=store",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-list-kind-blank",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags?kind=%20%20",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-list-kind-none",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags?kind=nothing",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-get",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags/store-a",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags/nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-update-label",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "body": {
+        "label": " Zone One "
+      }
+    },
+    {
+      "name": "tags-update-kind-blank",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "body": {
+        "kind": "  "
+      }
+    },
+    {
+      "name": "tags-update-config",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "rawBody": "{\"config_json\":{\"z\":1,\"1\":2,\"nested\":{\"k\":[{\"a\":1}]}}}",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    },
+    {
+      "name": "tags-update-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "tags-update-blank-label",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "body": {
+        "label": "   "
+      }
+    },
+    {
+      "name": "tags-update-bad-types",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "body": {
+        "label": "",
+        "kind": 5,
+        "config_json": "x"
+      }
+    },
+    {
+      "name": "tags-update-missing",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/nope",
+      "auth": "globalToken",
+      "body": {
+        "label": "x"
+      }
+    },
+    {
+      "name": "tags-update-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-room-apply-no-rows",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken",
+      "body": {
+        "tags": [
+          " store-a",
+          "zone-1",
+          "store-a",
+          ""
+        ]
+      }
+    },
+    {
+      "name": "tags-room-apply-unknown",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken",
+      "body": {
+        "tags": [
+          "store-a",
+          "ghost-1",
+          "ghost-2"
+        ]
+      }
+    },
+    {
+      "name": "tags-room-apply-dupes",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken",
+      "body": {
+        "tags": [
+          "a",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "tags-room-apply-not-array",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken",
+      "body": {
+        "tags": "store-a"
+      }
+    },
+    {
+      "name": "tags-room-apply-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-room-apply-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room/lobby",
+      "auth": "globalToken",
+      "body": {
+        "tags": []
+      }
+    },
+    {
+      "name": "tags-patch-slug-room",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/room",
+      "auth": "globalToken",
+      "body": {
+        "label": "x"
+      },
+      "note": "single segment: the :slug route, tag 'room' does not exist"
+    },
+    {
+      "name": "tags-stream-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/nope/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-stream-set-missing",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/tags",
+      "auth": "globalToken",
+      "body": {
+        "tags": [
+          "store-a"
+        ]
+      }
+    },
+    {
+      "name": "tags-stream-set-unknown-first",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/tags",
+      "auth": "globalToken",
+      "body": {
+        "tags": [
+          "ghost"
+        ]
+      }
+    },
+    {
+      "name": "tags-stream-set-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-viewer-list-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "tagViewerJwt"
+    },
+    {
+      "name": "tags-editor-create-other-tenant",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "tagEditorJwt",
+      "body": {
+        "slug": "x",
+        "label": "x"
+      }
+    },
+    {
+      "name": "tags-viewer-stream-tags",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/tags",
+      "auth": "tagViewerJwt",
+      "body": {
+        "tags": []
+      }
+    },
+    {
+      "name": "tags-app-token-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "appToken"
+    },
+    {
+      "name": "tags-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags"
+    },
+    {
+      "name": "tags-ghost-list",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-ghost-create",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost/tags",
+      "auth": "globalToken",
+      "body": {
+        "slug": "a",
+        "label": "b"
+      }
+    },
+    {
+      "name": "tags-ghost-get",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/tags/a",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-ghost-update",
+      "method": "PATCH",
+      "path": "/api/v1/apps/ghost/tags/a",
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "tags-ghost-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/ghost/tags/a",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-ghost-room",
+      "method": "PATCH",
+      "path": "/api/v1/apps/ghost/tags/room/r",
+      "auth": "globalToken",
+      "body": {
+        "tags": []
+      }
+    },
+    {
+      "name": "tags-ghost-stream-get",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams/s/tags",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-ghost-stream-set",
+      "method": "PATCH",
+      "path": "/api/v1/apps/ghost/streams/s/tags",
+      "auth": "globalToken",
+      "body": {
+        "tags": []
+      }
+    },
+    {
+      "name": "tags-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/store-a",
+      "auth": "globalToken",
+      "compare": "status"
+    },
+    {
+      "name": "tags-delete-again",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/store-a",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tags-delete-rest-1",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/zone-1",
+      "auth": "globalToken",
+      "compare": "status"
+    },
+    {
+      "name": "tags-delete-rest-2",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/zone-2",
+      "auth": "globalToken",
+      "compare": "status"
+    },
+    {
+      "name": "tags-delete-rest-3",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/zone-3",
+      "auth": "globalToken",
+      "compare": "status"
+    },
+    {
+      "name": "tags-list-after-delete",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken"
+    }
+  ]
+}

@@ -23,7 +23,7 @@ export function idFromSource(source: string): string {
 
 /**
  * A VENDORED plugin lives under `src/plugins-vendor/` (composed in from a
- * decoupled app package by scripts/apps-pull.mjs). Discovery globs it alongside
+ * decoupled app package by `streamhub-core apps pull`). Discovery globs it alongside
  * the in-tree `src/plugins/`, but an in-tree plugin of the same id always WINS —
  * so dropping a vendored package that collides with a shipped one never shadows
  * the shipped UI (mirrors the core registry's in-tree-wins rule).

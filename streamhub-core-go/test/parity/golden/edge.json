@@ -1,0 +1,1042 @@
+{
+  "module": "edge",
+  "cases": [
+    {
+      "name": "edge-join-node",
+      "fingerprint": "sha256:f5f48f279ece14ce",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/cluster/join",
+        "headers": {
+          "X-Cluster-Token": "parity-cluster-token"
+        },
+        "body": {
+          "name": "parity-edge-e",
+          "ip": "192.0.2.44",
+          "type": "edge"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "livekit": {
+            "apiKey": "",
+            "apiSecret": "",
+            "wsUrl": "ws://127.0.0.1:7880"
+          },
+          "name": "parity-edge-e",
+          "nodeId": "{{edgeNode}}",
+          "publicWsUrl": null,
+          "redisUrl": null
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "edge-nodes-no-auth",
+      "fingerprint": "sha256:49c10100414f312a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/nodes"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "edge-nodes-app-token",
+      "fingerprint": "sha256:7fde9bc8ecb11b7d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/nodes",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "edge-nodes",
+      "fingerprint": "sha256:566514aed575dbb9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/nodes",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "connected": false,
+            "createdAt": "<sql-ts>",
+            "id": "origin",
+            "lastSeenAt": "<sql-ts>",
+            "name": "origin",
+            "region": "origin",
+            "stale": false,
+            "stats": "<masked>",
+            "status": "active",
+            "type": "common",
+            "url": null,
+            "weight": 100
+          },
+          {
+            "connected": false,
+            "createdAt": "<sql-ts>",
+            "id": "<uuid#1>",
+            "lastSeenAt": "<sql-ts>",
+            "name": "parity-edge-1",
+            "region": "us-east",
+            "stale": false,
+            "stats": {
+              "a": [
+                1,
+                "x",
+                null
+              ],
+              "cpu": 0.25,
+              "grid": {
+                "capabilities": [
+                  "cuda"
+                ],
+                "gpu": true,
+                "vramFreeMb": 4000,
+                "vramGb": 8
+              },
+              "mem": {
+                "total": 8,
+                "used": 1.5
+              },
+              "z": 1
+            },
+            "status": "draining",
+            "type": "edge",
+            "url": "https://edge1.example.com",
+            "weight": 100
+          },
+          {
+            "connected": false,
+            "createdAt": "<sql-ts>",
+            "id": "{{edgeNode}}",
+            "lastSeenAt": "<sql-ts>",
+            "name": "parity-edge-e",
+            "region": null,
+            "stale": false,
+            "stats": null,
+            "status": "active",
+            "type": "edge",
+            "url": "192.0.2.44",
+            "weight": 100
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "edge-patch-bad",
+      "fingerprint": "sha256:f0f80f2fbf8b855f",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}",
+        "auth": "globalToken",
+        "body": {
+          "type": "gpu",
+          "weight": 1.5
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "type must be one of the following values: common, edge",
+          "weight must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "edge-patch-range",
+      "fingerprint": "sha256:9a3e3603f9bf30fd",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}",
+        "auth": "globalToken",
+        "body": {
+          "weight": 100001
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "weight must not be greater than 100000"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "edge-patch-unknown",
+      "fingerprint": "sha256:3ac05702af19c997",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/edge/nodes/ghost",
+        "auth": "globalToken",
+        "body": {
+          "weight": 5
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "unknown node"
+      }
+    },
+    {
+      "name": "edge-patch",
+      "fingerprint": "sha256:538827e36dd32d04",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}",
+        "auth": "globalToken",
+        "body": {
+          "type": "edge",
+          "weight": 50
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "connected": false,
+          "createdAt": "<sql-ts>",
+          "id": "{{edgeNode}}",
+          "lastSeenAt": "<sql-ts>",
+          "name": "parity-edge-e",
+          "region": null,
+          "stale": false,
+          "stats": null,
+          "status": "active",
+          "type": "edge",
+          "url": "192.0.2.44",
+          "weight": 50
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "edge-patch-common",
+      "fingerprint": "sha256:224dcde7b3689bc9",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}",
+        "auth": "globalToken",
+        "body": {
+          "type": "common"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "connected": false,
+          "createdAt": "<sql-ts>",
+          "id": "{{edgeNode}}",
+          "lastSeenAt": "<sql-ts>",
+          "name": "parity-edge-e",
+          "region": null,
+          "stale": false,
+          "stats": null,
+          "status": "active",
+          "type": "common",
+          "url": "192.0.2.44",
+          "weight": 50
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "edge-cmd-bad",
+      "fingerprint": "sha256:e20b5a7f99bdabae",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+        "auth": "globalToken",
+        "body": {
+          "command": "format",
+          "args": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "command must be one of the following values: restart, reboot, ping",
+          "args must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "edge-cmd-not-connected",
+      "fingerprint": "sha256:db586dbad6661d96",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+        "auth": "globalToken",
+        "body": {
+          "command": "ping",
+          "args": {
+            "x": 1
+          }
+        }
+      },
+      "status": 503,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "node not connected"
+      }
+    },
+    {
+      "name": "edge-cmd-app-token",
+      "fingerprint": "sha256:157a23f82942a290",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+        "auth": "appToken",
+        "body": {
+          "command": "ping"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "edge-logs-not-connected",
+      "fingerprint": "sha256:94374fb12ad788f0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/nodes/{{edgeNode}}/logs?lines=0",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "node not connected"
+      }
+    },
+    {
+      "name": "edge-asg-bad",
+      "fingerprint": "sha256:f6219ac8944d2518",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "app": "bad app",
+          "pluginId": "-x",
+          "streamId": "",
+          "config": [
+            1
+          ],
+          "policy": "random"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "app must be a slug",
+          "pluginId must be a slug",
+          "streamId must be longer than or equal to 1 characters",
+          "config must be an object",
+          "policy must be one of the following values: round_robin, weighted"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "edge-asg-empty",
+      "fingerprint": "sha256:1d182774953e4a22",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/assignments",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "app must be a slug",
+          "app must be a string",
+          "pluginId must be a slug",
+          "pluginId must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "edge-asg-create",
+      "fingerprint": "sha256:43172aeb8b0d406f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "app": "live",
+          "pluginId": "parity-worker",
+          "streamId": "cam1",
+          "config": {
+            "room": "cam1",
+            "z": 1,
+            "a": {
+              "b": [
+                1,
+                2
+              ]
+            }
+          }
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "app": "live",
+          "config": {
+            "a": {
+              "b": [
+                1,
+                2
+              ]
+            },
+            "room": "cam1",
+            "z": 1
+          },
+          "createdAt": "<sql-ts>",
+          "detail": null,
+          "id": "{{asg1}}",
+          "nodeId": "",
+          "pluginId": "parity-worker",
+          "status": "pending",
+          "streamId": "cam1",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "edge-asg-create-weighted",
+      "fingerprint": "sha256:6333152809626ff4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "app": "other-app",
+          "pluginId": "p2",
+          "policy": "weighted"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "app": "other-app",
+          "config": {},
+          "createdAt": "<sql-ts>",
+          "detail": null,
+          "id": "{{asg2}}",
+          "nodeId": "",
+          "pluginId": "p2",
+          "status": "pending",
+          "streamId": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "edge-asg-list",
+      "fingerprint": "sha256:3d632460c97b2001",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/assignments",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "app": "live",
+            "config": {
+              "a": {
+                "b": [
+                  1,
+                  2
+                ]
+              },
+              "room": "cam1",
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg1}}",
+            "nodeId": "",
+            "pluginId": "parity-worker",
+            "status": "pending",
+            "streamId": "cam1",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "app": "other-app",
+            "config": {},
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg2}}",
+            "nodeId": "",
+            "pluginId": "p2",
+            "status": "pending",
+            "streamId": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "edge-asg-list-app",
+      "fingerprint": "sha256:69c182e4ee5097f6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/assignments?app=live",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "app": "live",
+            "config": {
+              "a": {
+                "b": [
+                  1,
+                  2
+                ]
+              },
+              "room": "cam1",
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg1}}",
+            "nodeId": "",
+            "pluginId": "parity-worker",
+            "status": "pending",
+            "streamId": "cam1",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "edge-asg-list-none",
+      "fingerprint": "sha256:1cb1cdfce6038f22",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/assignments?app=nope",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "edge-asg-app-token",
+      "fingerprint": "sha256:0b664ac3c0292e05",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/edge/assignments",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "edge-asg-revoke-unknown",
+      "fingerprint": "sha256:b9c1cb7572327607",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/edge/assignments/ghost",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "unknown assignment"
+      }
+    },
+    {
+      "name": "edge-asg-revoke",
+      "fingerprint": "sha256:805758e26cdc562e",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/edge/assignments/{{asg2}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "id": "{{asg2}}",
+          "revoked": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "app-asg-list",
+      "fingerprint": "sha256:5861d09951d090d7",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "app": "live",
+            "config": {
+              "a": {
+                "b": [
+                  1,
+                  2
+                ]
+              },
+              "room": "cam1",
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg1}}",
+            "nodeId": "",
+            "pluginId": "parity-worker",
+            "status": "pending",
+            "streamId": "cam1",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "app-asg-list-viewer",
+      "fingerprint": "sha256:381261d37bf2c51b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "app-asg-list-app-token",
+      "fingerprint": "sha256:51dfb18c94b84c25",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "app": "live",
+            "config": {
+              "a": {
+                "b": [
+                  1,
+                  2
+                ]
+              },
+              "room": "cam1",
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg1}}",
+            "nodeId": "",
+            "pluginId": "parity-worker",
+            "status": "pending",
+            "streamId": "cam1",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "app-asg-ghost-app",
+      "fingerprint": "sha256:4b7073959c9c7839",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/parity-ghost/edge/assignments",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'parity-ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "app-asg-create-bad",
+      "fingerprint": "sha256:78c4fa4a24e1bd9a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "pluginId": "",
+          "policy": 1
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "pluginId must be a slug",
+          "policy must be one of the following values: round_robin, weighted"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "app-asg-create-unknown-plugin",
+      "fingerprint": "sha256:742c9a1725fedd14",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "pluginId": "parity-nope"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "plugin 'parity-nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "app-asg-create-not-edge",
+      "fingerprint": "sha256:d22af8f902c774ed",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "pluginId": "stream-health"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "plugin 'stream-health' is not edge-capable (worker.edge)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "app-asg-create-ghost-app",
+      "fingerprint": "sha256:5f0fd47d43782bac",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/parity-ghost/edge/assignments",
+        "auth": "globalToken",
+        "body": {
+          "pluginId": "stream-health"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'parity-ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "app-asg-revoke-unknown",
+      "fingerprint": "sha256:990e751a64a71e2e",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/edge/assignments/ghost",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown assignment for this app",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "app-asg-revoke-other-app",
+      "fingerprint": "sha256:dfbbf8d2ee2324d8",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/edge/assignments/{{asg2}}",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown assignment for this app",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "app-asg-revoke",
+      "fingerprint": "sha256:4f76ea409e3dc753",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/edge/assignments/{{asg1}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "id": "{{asg1}}",
+          "revoked": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "app-asg-list-after",
+      "fingerprint": "sha256:5861d09951d090d7",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/edge/assignments",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "app": "live",
+            "config": {
+              "a": {
+                "b": [
+                  1,
+                  2
+                ]
+              },
+              "room": "cam1",
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "detail": null,
+            "id": "{{asg1}}",
+            "nodeId": "",
+            "pluginId": "parity-worker",
+            "status": "revoked",
+            "streamId": "cam1",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 Stack Prometheus + Grafana + node_exporter, **separado** del media stack
 (`docker-compose.yml` en la raíz del repo — ciclo de vida independiente, no se
 tocan sus servicios). Materializa la Fase 1 de
-[`https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP`](https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP)
+[operations/OBSERVABILITY-ROADMAP](https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP)
 (§4). Leé ese documento para el diseño completo (inventario de métricas,
 tableros panel-por-panel, alerting, fases 2/3) — acá sólo el **cómo desplegar**.
 
@@ -138,7 +138,7 @@ set **aditivo** de assets bajo `cluster/` + `prometheus.cluster.yml` + `alerts.c
 stack single-node de arriba **no se toca**: el modo cluster es un overlay opcional.
 
 Guía completa (arquitectura, firewall port-by-port, cómo agregar/quitar un nodo, seguridad):
-[`https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY`](https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY).
+[operations/CLUSTER-OBSERVABILITY](https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY).
 
 **En el master** (levanta prom-cluster + grafana + node_exporter + Loki + Promtail):
 

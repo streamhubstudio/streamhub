@@ -1,0 +1,66 @@
+long: >-
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+nested:
+  a:
+    b:
+      c:
+        d:
+          e:
+            f:
+              g:
+                h:
+                  i:
+                    j:
+                      k:
+                        l:
+                          m:
+                            'n':
+                              o:
+                                p:
+                                  q:
+                                    r:
+                                      s:
+                                        t: >-
+                                          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                                          incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                                          nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+long_nospace: >-
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+long_multispace: >-
+  word  word  word  word  word  word  word  word  word  word  word  word  word  word  word  word  word  word  word 
+  word  word  word  word  word  word  word  word  word  word  word  end
+long_lead_space: ' Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.'
+long_multi: >-
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+
+    more-indented Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+long_trailing_nl: >
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+  aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+edge_121: >-
+  a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a
+  a b
+edge_118: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+in_list:
+  - >-
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+    aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+  - - >-
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore
+      magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea.
+long_emoji: >-
+  🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥
+  🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 🎥 end
+long_cjk: >-
+  日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト
+  日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 日本語のテキスト 
+long_colon: >-
+  key: value key: value key: value key: value key: value key: value key: value key: value key: value key: value key:
+  value key: value key: value key: value key: value 

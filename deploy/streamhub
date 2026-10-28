@@ -93,6 +93,23 @@ require_install() {
 env_get() { { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- ; } || true ; }
 core_port() { local p; p="$(env_get PORT)"; printf '%s' "${p:-3020}"; }
 
+# opsfmt VIEW [ARGS] — render a /api/v1 JSON response (stdin) for the operator:
+# `streamhub-core opsfmt`, byte-identical to the python3 one-liners it replaced
+# (so the host needs neither python3 nor jq). Uses a host binary when there is
+# one (STREAMHUB_CORE_BIN, PATH, <install>/bin), else the one in the core
+# container — which is up whenever these commands have a response to render.
+opsfmt() {
+  local bin="${STREAMHUB_CORE_BIN:-}"
+  if [ -z "$bin" ]; then
+    if command -v streamhub-core >/dev/null 2>&1; then bin=streamhub-core
+    elif [ -x "$INSTALL_DIR/bin/streamhub-core" ]; then bin="$INSTALL_DIR/bin/streamhub-core"
+    fi
+  fi
+  if [ -n "$bin" ]; then "$bin" opsfmt "$@"
+  else compose exec -T core streamhub-core opsfmt "$@"
+  fi
+}
+
 # ---- subcommands ------------------------------------------------------------
 cmd_start() {
   require_install
@@ -266,8 +283,8 @@ cmd_uninstall() {
 # ---- cluster admin (origin/master only) -------------------------------------
 # Thin curl wrapper over the core's global-scope REST surface, authenticated
 # with the superadmin token from .env. Edge nodes are behind NAT, so all cluster
-# admin is done from the master. No jq — JSON is parsed with python3 (as the
-# installer does). Routes: GET/PATCH /edge/nodes, POST /edge/nodes/:id/command,
+# admin is done from the master. No jq/python — responses are rendered by
+# `opsfmt` (the core binary). Routes: GET/PATCH /edge/nodes, POST /edge/nodes/:id/command,
 # PATCH /cluster/nodes/:id (status), GET /edge/assignments, GET /logs?source=edge.
 cluster_api_base() { printf 'http://127.0.0.1:%s/api/v1' "$(core_port)"; }
 
@@ -299,64 +316,20 @@ cluster_api() {
 cluster_resolve_node() {
   local ref="$1" id
   [ -n "$ref" ] || die "a node name or id is required."
-  id="$(cluster_api GET /edge/nodes | python3 -c '
-import sys, json
-ref = sys.argv[1]
-for n in json.load(sys.stdin).get("data", []):
-    if n.get("id") == ref or n.get("name") == ref:
-        print(n["id"]); sys.exit(0)
-sys.exit(3)
-' "$ref")" || die "no node matching '$ref' — see 'streamhub cluster status'."
+  id="$(cluster_api GET /edge/nodes | opsfmt node-id "$ref")" || die "no node matching '$ref' — see 'streamhub cluster status'."
   printf '%s' "$id"
 }
 
 cluster_status() {
   echo "Nodes:"
-  cluster_api GET /edge/nodes | python3 -c '
-import sys, json
-data = json.load(sys.stdin).get("data", [])
-def pct(x):
-    try: return "%d%%" % round(float(x) * 100)
-    except (TypeError, ValueError): return "-"
-rows = [("NODE","TYPE","STATE","CPU","MEM","DISK","GPU","VRAMFREE","WT")]
-for n in data:
-    st = n.get("stats") or {}
-    grid = st.get("grid") or {}
-    disk = st.get("disk") or {}
-    state = "stale" if n.get("stale") else "up"
-    gpu = grid.get("gpuName") or ("yes" if grid.get("gpu") else "no")
-    vram = grid.get("vramFreeMb")
-    rows.append((
-        str(n.get("name","?")), str(n.get("type","?")), state,
-        pct(st.get("cpu")), pct(st.get("memUsedRatio")), pct(disk.get("usedRatio")),
-        str(gpu), "-" if vram is None else str(vram), str(n.get("weight","-")),
-    ))
-if len(rows) == 1:
-    print("  (no nodes registered)"); sys.exit(0)
-w = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
-for r in rows:
-    print("  " + "  ".join(r[i].ljust(w[i]) for i in range(len(r))))
-'
+  cluster_api GET /edge/nodes | opsfmt nodes
   echo ""
   echo "Assignments:"
-  cluster_api GET /edge/assignments | python3 -c '
-import sys, json
-from collections import Counter
-data = json.load(sys.stdin).get("data", [])
-c = Counter(a.get("status","unknown") for a in data)
-order = ["running","offered","pending","failed","stopped","revoked"]
-keys = [k for k in order if k in c] + sorted(k for k in c if k not in order)
-if not keys:
-    print("  (no assignments)")
-else:
-    for k in keys:
-        print("  %-9s %d" % (k, c[k]))
-    print("  %-9s %d  (parked — no eligible node)" % ("PENDING", c.get("pending", 0)))
-'
+  cluster_api GET /edge/assignments | opsfmt assignments
 }
 
 cluster_nodes_json() {
-  cluster_api GET /edge/nodes | python3 -c 'import sys, json; print(json.dumps(json.load(sys.stdin).get("data", []), indent=2))'
+  cluster_api GET /edge/nodes | opsfmt nodes-json
 }
 
 cluster_events() {
@@ -368,26 +341,14 @@ cluster_events() {
     esac
   done
   case "$n" in *[!0-9]*) die "-n must be a positive integer." ;; esac
-  cluster_api GET "/logs?source=edge&limit=$n" | python3 -c '
-import sys, json
-data = json.load(sys.stdin).get("data", [])
-if not data:
-    print("  (no edge events)")
-for e in data:
-    print("  %s  %-5s  %s" % (e.get("ts","?"), str(e.get("level","?")).upper(), e.get("message","")))
-'
+  cluster_api GET "/logs?source=edge&limit=$n" | opsfmt events
 }
 
 cluster_command() {
   local cmd="$1" ref="$2" id
   id="$(cluster_resolve_node "$ref")"
   log "sending '$cmd' to node '$ref' ($id)"
-  cluster_api POST "/edge/nodes/$id/command" "{\"command\":\"$cmd\"}" | python3 -c '
-import sys, json
-d = json.load(sys.stdin).get("data", {})
-out = d.get("output")
-print("  ok=%s%s" % (d.get("ok"), ("  output=%s" % out) if out else ""))
-'
+  cluster_api POST "/edge/nodes/$id/command" "{\"command\":\"$cmd\"}" | opsfmt command
   ok "$cmd requested on '$ref'."
 }
 
@@ -432,7 +393,6 @@ cmd_cluster() {
   require_install
   [ "$MODE" = "join" ] && die "cluster admin runs on the MASTER — this is a join-mode node. Run 'streamhub cluster ...' on the origin."
   command -v curl >/dev/null 2>&1 || die "curl is required for cluster commands."
-  command -v python3 >/dev/null 2>&1 || die "python3 is required for cluster commands (JSON parsing)."
   case "$sub" in
     status)   cluster_status ;;
     nodes)    cluster_nodes_json ;;
@@ -450,27 +410,15 @@ cmd_cluster() {
 # Thin curl wrapper over the core's appstore + per-app version REST surface,
 # authenticated with the superadmin token from .env (same token as cluster admin;
 # the appstore routes require a superadmin/global credential). Edge nodes are
-# behind NAT, so this is master-only, like cluster admin. No jq — JSON is parsed
-# with python3. Routes: GET/POST/DELETE /plugins/:id/versions[...] (appstore) +
+# behind NAT, so this is master-only, like cluster admin. No jq/python — JSON is
+# rendered by `opsfmt`. Routes: GET/POST/DELETE /plugins/:id/versions[...] (appstore) +
 # GET/PUT/POST /apps/:app/plugins/:id/version[s][...] (per-app pin/rollback).
 
 # Pull a human message out of a Nest error body ({statusCode,message,error});
 # `message` may be a string or a class-validator array. Falls back to the code.
 app_api_err() {
   local code="$1" body="$2" msg
-  msg="$(printf '%s' "$body" | python3 -c '
-import sys, json
-try:
-    d = json.load(sys.stdin)
-except Exception:
-    print(""); sys.exit(0)
-m = d.get("message")
-if m is None:
-    m = d.get("error")
-if isinstance(m, list):
-    m = "; ".join(str(x) for x in m)
-print(m or "")
-' 2>/dev/null || true)"
+  msg="$(printf '%s' "$body" | opsfmt api-error 2>/dev/null || true)"
   if [ -n "$msg" ]; then printf 'request failed (%s): %s' "$code" "$msg"
   else printf 'request failed (%s)' "$code"; fi
 }
@@ -506,12 +454,7 @@ app_sha256_file() {
 
 # Render an AppVersionView (pin + effective) from stdin.
 app_print_pin() {
-  python3 -c '
-import sys, json
-d = json.load(sys.stdin).get("data", {})
-print("  pin:       %s" % (d.get("active") or "(none — runs built-in/latest)"))
-print("  effective: %s" % (d.get("effective") or "-"))
-'
+  opsfmt pin
 }
 
 # versions <pluginId> [--app <tenant>]
@@ -527,56 +470,10 @@ app_versions() {
   [ -n "$plugin" ] || die "usage: streamhub app versions <pluginId> [--app <tenant>]"
   local path out
   if [ -n "$app" ]; then path="/apps/$app/plugins/$plugin/versions"; else path="/plugins/$plugin/versions"; fi
-  # Capture first so a failing app_api (which die()s) aborts BEFORE python runs —
-  # piping directly would run python on empty stdin after the error.
+  # Capture first so a failing app_api (which die()s) aborts BEFORE opsfmt runs —
+  # piping directly would run it on empty stdin after the error.
   out="$(app_api GET "$path")"
-  printf '%s\n' "$out" | python3 -c '
-import sys, json
-d = json.load(sys.stdin).get("data", {})
-# An app-view carries .available (the catalog) + pin/effective/history; the
-# superadmin catalog view IS the catalog itself.
-if "available" in d:
-    cat = d.get("available") or {}
-    effective = d.get("effective")
-    active = d.get("active")
-    history = d.get("history") or []
-    app = d.get("app")
-else:
-    cat, effective, active, history, app = d, None, None, None, None
-versions = cat.get("versions") or []
-def human(n):
-    try: n = float(n)
-    except (TypeError, ValueError): return "-"
-    for u in ("B","KiB","MiB","GiB"):
-        if n < 1024 or u == "GiB":
-            return ("%d %s" % (int(n), u)) if u == "B" else ("%.1f %s" % (n, u))
-        n /= 1024
-def when(v):
-    s = v.get("createdAt") or ""
-    return s[:19].replace("T", " ") if s else "-"
-rows = [("VERSION","SOURCE","SIZE","CREATED","FLAGS")]
-for v in versions:
-    f = []
-    if v.get("builtin"): f.append("builtin")
-    if v.get("latest"):  f.append("latest")
-    if effective is not None and v.get("version") == effective: f.append("ACTIVE")
-    rows.append((str(v.get("version","?")), str(v.get("source","?")),
-                 human(v.get("bundleBytes")), when(v), ",".join(f) or "-"))
-if len(rows) == 1:
-    print("  (no versions stored — the built-in materializes at first boot)")
-else:
-    w = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
-    for r in rows:
-        print("  " + "  ".join(r[i].ljust(w[i]) for i in range(len(r))))
-if app is not None:
-    print("")
-    print("  app %r: pin=%s  effective=%s" % (app, active or "(none)", effective or "-"))
-    if history:
-        print("  history (newest first):")
-        for h in history[:20]:
-            at = (h.get("at") or "")[:19].replace("T", " ")
-            print("    %s  %s -> %s" % (at, h.get("from") or "builtin", h.get("to") or "builtin"))
-'
+  printf '%s\n' "$out" | opsfmt versions
 }
 
 # push <bundle.tar.gz> --plugin <id> --version <semver> [--notes '...']
@@ -611,17 +508,7 @@ app_push() {
     409) die "$(app_api_err 409 "$body") — versions are immutable; bump the semver." ;;
     *)   die "$(app_api_err "$code" "$body")" ;;
   esac
-  printf '%s' "$body" | python3 -c '
-import sys, json
-m = json.load(sys.stdin).get("data", {})
-files = m.get("files") or {}
-print("  plugin:  %s" % m.get("pluginId","?"))
-print("  version: %s" % m.get("version","?"))
-print("  source:  %s" % m.get("source","?"))
-print("  sha256:  %s" % m.get("sha256","?"))
-print("  size:    %s bytes (%s files)" % (files.get("bytes","?"), files.get("count","?")))
-if m.get("notes"): print("  notes:   %s" % m["notes"])
-'
+  printf '%s' "$body" | opsfmt pushed
   ok "pushed '$plugin' version $version."
 }
 
@@ -784,7 +671,6 @@ cmd_app() {
   require_install
   [ "$MODE" = "join" ] && die "appstore admin runs on the MASTER — this is a join-mode node. Run 'streamhub app ...' on the origin."
   command -v curl >/dev/null 2>&1 || die "curl is required for app commands."
-  command -v python3 >/dev/null 2>&1 || die "python3 is required for app commands (JSON parsing)."
   case "$sub" in
     versions)       app_versions "$@" ;;
     push)           app_push "$@" ;;

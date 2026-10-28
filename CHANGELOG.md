@@ -2,6 +2,163 @@
 
 All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 
+## 3.3.2
+
+### Added
+- **HLS direct-serve** (`STREAMHUB_HLS_DIRECT_SERVE`, off by default): the front proxy serves live
+  `.ts`/`.m3u8` straight from disk instead of passing them through the core, and falls back to
+  the core for anything not on disk. Caddy (compose: read-only data mount + the flag) and nginx
+  (`install.sh` fills the vhost root and gives only the nginx user traverse access). Paths with
+  dot segments are never served from disk. Trade-offs and how to toggle it:
+  `https://streamhub.studio/docs/operations/SCALING`.
+- **Fleet battery alert:** agents may report `battery` (percent) in their telemetry; it shows on
+  the agent card and in `metrics.battery` (`null` on hosts without one). New fleet setting
+  `batteryLowPercent` (default `0` = off) fires `fleet.battery_low` and `fleet.battery_recovered`
+  (10-point hysteresis, per agent, payload `{agentId, batteryPercent, thresholdPercent}`) through
+  webhooks, MQTT, notifiers and Streamflow triggers.
+- **`loadgen hls` finds the knee** ("fly mode", replaces the 2.x `scripts/hls-loadtest.mjs`): stops
+  at the first step over `-target-p95`/`-max-error`, plus `-plan`, `-viewers`, `-insecure` and
+  master-playlist resolution.
+
+### Docs
+- [operations/SCALING](https://streamhub.studio/docs/operations/SCALING) brought over from 2.x and
+  updated for the Go core (load-test findings; StreamHub stays on stock LiveKit).
+
+### Changed — ops without Python
+- **`streamhub` CLI**: `cluster` and `app` commands no longer need python3 — responses are
+  rendered by the new `streamhub-core opsfmt <view>` subcommand (host binary, or the one in the
+  core container), byte-identical to the former `python3 -c` output.
+- **Installer**: the join-mode parse of the cluster join response is pure shell (no python3);
+  python3 is now used only to build the app-worker venv.
+- **e2e harness**: the webhook receiver is Go (`test/e2e/receiver`, was `receiver.py`); the
+  cluster heartbeat-age check uses `date`.
+
+## 3.3.1
+
+### Changed — decoupled apps
+- **Vision apps 0.1.2** (occupancy, counting, crowd, demography): single-node start (edge
+  worker-manager co-located), assignment state reported to the master, child processes get only an
+  env allowlist.
+- **YOLO 1.0.1**: `callbackUrl` is optional (empty = detections are only logged).
+- **Transcription 1.0.1**: Studio panel (recent VODs, transcript status, SRT download,
+  re-transcribe) and standalone export.
+
+### Fixed
+- Parity harness: `-accept` re-baselines the composed-apps digest instead of refusing to run.
+
+## 3.3.0
+
+### Added
+- **Cameras app (F1 — console):** the `cameras` Studio App drives OpenCam cameras over the app's
+  MQTT broker — live state per camera, PTZ pad with deadman, stream start/stop and temporary HD,
+  snapshot, voice test and reboot with per-command phase tracking, and a `config.ini` generator to
+  provision a camera from its microSD. Ships `opencam-sim` to simulate cameras against a broker.
+  See `https://streamhub.studio/docs/features/cameras`.
+- **Samples on their own origin** (`STREAMHUB_SAMPLES_URL`, e.g. `https://samples.example.com`):
+  sample pages are served only on that host (with the API, SDK and HLS they call same-origin) and
+  never on the dashboard's, whose storage holds the session. `/samples/*` on the dashboard redirects
+  there, and the dashboard is never served on the samples host (redirected back). Sample pages,
+  embed URLs, the Samples editor (preview, links) and the Radio listener link use it; untouched
+  pages move to it at boot. Proxy recipes: `SAMPLES_DOMAIN` in `deploy/Caddyfile`,
+  `deploy/nginx-samples.conf`, `install.sh --samples-domain`. Unset = unchanged behaviour.
+
+### Security
+- With `STREAMHUB_SAMPLES_URL` set, the 3.2.1 restriction is lifted: editing samples is plain RBAC
+  again (owner/editor, app tokens on their own app). Without it, it stays superadmin-only.
+
+## 3.2.1
+
+### Security
+- **Editing samples is superadmin-only** (`PUT /apps/:app/samples/:file`, `POST …/samples/regenerate`),
+  for every tenant role and for app-scoped API tokens. Samples are served from the dashboard's origin,
+  so a stored sample could read the session of whoever opened it. Reading samples is unchanged. This
+  is lifted when samples move to their own origin.
+
+## 3.2.0
+
+### Changed — dashboard restyle
+- **Always dark**: the light theme and the theme toggle are gone. New "control room" palette (steel-grey
+  surfaces, cyan for selection/focus, blue for actions, red/green/amber for state; text at WCAG AA).
+  Studio Apps and vendored app frontends inherit it unchanged. The sidebar logo no longer clips.
+- **Version always visible** in the sidebar footer (and the mobile top bar). Clicking it opens an
+  **About / Build** panel: version, commit, build date, the core's Go toolchain, the dashboard's
+  Node/Vite/React, a dashboard↔core build-mismatch warning and "copy build info".
+- **Changelog in the app**: the binary embeds `CHANGELOG.md` (`go generate ./internal/buildinfo`);
+  new routes `GET /api/v1/system/build` and `GET /api/v1/system/changelog`.
+
+### Fixed
+- `PUBLIC_BASE_URL` falls back to `STREAMHUB_PUBLIC_URL` (what `install.sh` sets): WS-ingest
+  provisioning and passthrough URLs were relative, and grid/edge workers got no ingest/events URL.
+- `hls-player` sample: a missing playlist now shows a player error instead of throwing.
+- Studio: the "Worker running" badge reflects the real worker process (running / crashed / stopped).
+- ESP32 sketch header, MQTT, fleet, samples and SDK docs aligned with the Go core.
+
+## 3.1.0
+
+### Changed — no Node left in the product
+- **Stream-health worker in Go**: `streamhub-core health-worker` (spawned by the plugin framework)
+  replaces the Node `health-worker/`. Same env, events, payloads and SQLite; the event sequence was
+  diffed against the Node worker on synthetic HLS (silence, desync, low bitrate, stall, CC errors,
+  gaps). The runtime image and the native bundle no longer ship `node`; `PLUGIN_NODE` and
+  `HEALTH_WORKER_DIR` are gone.
+- **Apps tooling in Go**: `streamhub-core apps pull|pack|bump` replaces `scripts/apps-*.mjs`.
+  Byte-identical bundles (same content sha256 for every pinned app), so existing `apps.lock.json`
+  pins stay valid. Composed backend apps now live in the repo-root `plugins-vendor/`.
+- **MCP server in Go**: `streamhub-mcp` (also `streamhub-core mcp`), a single static binary per
+  platform on the official Go SDK — same tools, resources, prompts, schemas and destructive-ops gate.
+  No more `npx`/Node for AI clients.
+- **Smokes and tooling in Go**: `cmd/smoke` (`-read-only`, `-routes`, `conference`, `call`),
+  `go generate ./cmd/build-examples`, `loadgen latency`. `scripts/` is gone.
+- **The NestJS core is retired from the repo**: parity runs as a replay against the recorded Node
+  answers (`test/parity/golden/`, 1343 cases); the 2.x source stays at tag `v2.24.0`.
+  `legacy/` removed.
+- Node is now only the build toolchain of the dashboard SPA and the browser SDK.
+
+### Fixed
+- The smoke's "origin node present" check skips on a standalone core (no cluster configured).
+- Vision Edge (`install.sh`): `streamhub-edge.service` writes `VISION_EDGE_LOG`, so the master's node
+  logs have something to read.
+
+## 3.0.0
+
+### Changed — the core is Go
+- **The core is rewritten in Go** (`streamhub-core-go/`): one static binary (`streamhub-core`,
+  pure-Go SQLite, no CGO) replaces the NestJS core. Same contract: same `/api/v1` routes,
+  operationIds, JSON, status codes and error texts; same `.env`, `DATA_DIR` layout and SQLite
+  schema — the SPA, MCP server, browser SDK, Python apps and 2.x installs work unchanged.
+  Verified by a Node↔Go differential parity harness (`cmd/parity`), the dashboard e2e suite
+  and a real-media e2e (RTMP/WHIP, HLS, recording, cluster + Vision Edge).
+- **The NestJS core is legacy**: `streamhub-core/` stays only as the parity oracle (frozen at
+  2.24.0, tag `v2.24.0`); it is no longer built or shipped.
+- **No Redis/BullMQ in the core**: upload/transcode/streamflow queues run in-process; pending
+  uploads/transcodes are re-enqueued from state at boot.
+- **Performance**: HLS fan-out and the REST API scale several times past the Node core.
+- **LiveKit pinned to the latest stable**: server v1.13.11, ingress v1.5.0, egress v1.15.0
+  (`room.enable_remote_unmute` and `ingress.rtmp_base_url`/`whip_base_url` now set).
+- **MCP server in Go**: `streamhub-mcp` (also `streamhub-core mcp`) replaces the Node
+  `mcp-server/` — one static binary per platform (darwin/linux/windows × amd64/arm64,
+  `deploy/make-mcp.sh`), no Node/npx on the client. Same 89 tools, 3
+  resources and 2 prompts, same schemas, env vars, destructive gate and error texts (locked
+  by vectors from the TypeScript server). Point the client `command` at the binary
+  (`https://streamhub.studio/docs/integrations/MCP`).
+- **Native shape**: `deploy/make-core-bundle.sh` + `deploy/deploy-core.sh` install the binary
+  under systemd (converting a 2.x Node unit in place) and provision the Python workers' venv
+  (`PLUGIN_PYTHON`, `WORKER_DEPS`).
+
+### Fixed (Node bugs)
+- Edge workers' results reach the app (edge ingest token accepted; batched vision events).
+- stream-health and streamflow routes no longer shadowed by the vision-apps route; fleet
+  `command` honours its documented body; deleted/disabled streamflow schedules stop firing.
+- A pending edge command whose socket drops answers 504 instead of hanging.
+- Graceful shutdown on SIGTERM (workers, WS gateways, MQTT, SQLite).
+- Directories are created `0777 &^ umask` so egress (other uid) can write recordings/HLS.
+
+### Security
+- **Plugin/app workers no longer inherit the core's environment** (JWT/SMTP/LiveKit secrets,
+  API token, S3 keys): only an OS/runtime allowlist + `STREAMHUB_WORKER_ENV_ALLOW`.
+- LiveKit webhooks with an empty `LIVEKIT_API_SECRET` are rejected; the IP ban applies to the
+  edge WebSocket upgrade.
+
 ## 2.24.0
 
 ### Changed — app navigation regroup

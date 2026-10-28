@@ -28,6 +28,15 @@ turn:
   udp_port: 3478
   cert_file: /etc/letsencrypt/live/turn.<dominio>/fullchain.pem
   key_file: /etc/letsencrypt/live/turn.<dominio>/privkey.pem
+# live-control resume desmutea server-side los tracks del publisher: sin esto
+# LiveKit rechaza el unmute y el audio queda muteado para siempre.
+room:
+  enable_remote_unmute: true
+# URLs publicas de ingest que LiveKit devuelve en CreateIngress `url` (WHIP las
+# muestra el dashboard). LiveKit >=1.13 devuelve "" si faltan.
+ingress:
+  rtmp_base_url: rtmp://<dominio>:1935/live
+  whip_base_url: http://<dominio>:8080/w
 logging:
   level: info
   json: false

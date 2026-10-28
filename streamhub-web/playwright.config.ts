@@ -2,26 +2,30 @@
  * Playwright config for the streamhub-web BEHAVIORAL e2e suite.
  *
  * These specs drive the real dashboard SPA served by a locally-booted
- * streamhub-core (NOT the vite dev server). They assert real behaviour —
+ * core (the Go core, NOT the vite dev server). They assert real behaviour —
  * persisted state, network responses — not just visibility.
  *
+ * Full recipe (plus the composed plugins-vendor dirs the occupancy specs
+ * need): e2e/README.md.
+ *
  * HOW TO RUN (the core must be booted first — the COMPLETE recipe):
- *   1. cd streamhub-core && npm run build
- *   2. cd streamhub-web && npm run build && rm -rf ../streamhub-core/web && \
- *        cp -R dist ../streamhub-core/web
+ *   1. cd streamhub-core-go && go build -o bin/streamhub ./cmd/streamhub
+ *   2. cd streamhub-web && npm run build
  *   3. boot the core on :3216 (every var below is REQUIRED — login 401s
  *      without the JWT secret; token minting fails without LiveKit creds):
+ *        cd streamhub-core-go && \
  *        PORT=3216 HOST=127.0.0.1 DATA_DIR=<scratch-dir> \
+ *        WEB_DIR=../streamhub-web/dist \
  *        STREAMHUB_JWT_SECRET=devsecretdevsecretdevsecret \
  *        ADMIN_USER=admin ADMIN_PASS=admin123 \
  *        LIVEKIT_URL=ws://127.0.0.1:7880 LIVEKIT_API_KEY=devkey \
  *        LIVEKIT_API_SECRET=devsecretdevsecretdevsecretdev \
  *        REDIS_URL=redis://127.0.0.1:6399 NODE_ENV=production \
  *        STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on \
- *        node dist/main.js
+ *        ./bin/streamhub
  *   4. seed the global token the 07-tokens spec revokes:
- *        cd streamhub-core && NODE_PATH=$PWD/node_modules DATA_DIR=<scratch-dir> \
- *          node ../deploy/seed-token.js sk_e2e_disposable_xxxxxxxxxxxx e2e-disposable
+ *        DATA_DIR=<scratch-dir> streamhub-core-go/bin/streamhub \
+ *          seed-token sk_e2e_disposable_xxxxxxxxxxxx e2e-disposable
  *   5. cd streamhub-web && npm run test:e2e
  *   6. kill the core and delete the scratch dir.
  *

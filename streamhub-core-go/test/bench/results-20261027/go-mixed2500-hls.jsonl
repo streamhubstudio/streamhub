@@ -1,0 +1,1 @@
+{"label":"go-mixed","mode":"hls","viewers":2500,"segP95ms":3.1,"segP99ms":6.2,"errorPct":0,"cpuAvgPct":93.5,"note":"recovered from the run log (the jsonl was overwritten by the mixed1000 run)"}

@@ -1,0 +1,233 @@
+{
+  "module": "restream",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "rs-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "rsEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "rs-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "rsViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "rs-add-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "body": {
+        "platform": "youtube",
+        "key": "abcd-efgh"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "rs-add-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "rsViewerJwt",
+      "body": {
+        "platform": "youtube",
+        "key": "abcd-efgh"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "rs-add-editor-other-tenant",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "rsEditorJwt",
+      "body": {
+        "platform": "youtube",
+        "key": "abcd-efgh"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "rs-add-validation",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "body": {
+        "platform": "myspace",
+        "url": "http://x",
+        "key": 5,
+        "name": 7,
+        "layout": false
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "rs-add-validation-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "body": {
+        "key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "rs-add-null-fields",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "body": {
+        "platform": null,
+        "url": null,
+        "key": null
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-add-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-add-stream-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "body": {
+        "platform": "custom",
+        "url": "rtmp://ingest.example.com/live/key"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-add-app-token",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "appToken",
+      "body": {
+        "platform": "twitch",
+        "key": "live_1"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-add-ghost-app",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost/streams/s1/restream",
+      "auth": "globalToken",
+      "body": {
+        "platform": "twitch",
+        "key": "live_1"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-add-admin",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "adminJwt",
+      "body": {
+        "platform": "facebook",
+        "key": "FB-1"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "expectStatus": 401
+    },
+    {
+      "name": "rs-list-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-list-viewer-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "rsViewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "rs-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/s1/restream",
+      "auth": "appToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-list-encoded-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/live-room%2Fcam-1/restream",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-list-ghost-app",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams/s1/restream",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-remove-no-auth",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/s1/restream/EG_x",
+      "expectStatus": 401
+    },
+    {
+      "name": "rs-remove-missing-stream",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/s1/restream/EG_x",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "rs-remove-blank-egress",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/s1/restream/%20",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "rs-remove-editor",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/s1/restream/EG_x",
+      "auth": "rsEditorJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "rs-remove-ghost-app",
+      "method": "DELETE",
+      "path": "/api/v1/apps/ghost/streams/s1/restream/EG_x",
+      "auth": "globalToken",
+      "expectStatus": 404
+    }
+  ]
+}

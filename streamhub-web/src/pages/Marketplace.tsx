@@ -31,9 +31,9 @@ type Tone = 'cyan' | 'slate' | 'amber' | 'violet'
 
 const TAG_CLASS: Record<Tone, string> = {
   cyan: 'border-transparent bg-primary-500/10 text-primary-500',
-  slate: 'border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
-  amber: 'border-transparent bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
-  violet: 'border-transparent bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-100',
+  slate: 'border-transparent bg-gray-600/60 text-gray-100',
+  amber: 'border-transparent bg-amber-500/20 text-amber-100',
+  violet: 'border-transparent bg-violet-500/20 text-violet-100',
 }
 
 const PLACEMENT_TONE: Record<string, Tone> = {

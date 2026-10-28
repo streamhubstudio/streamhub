@@ -1,0 +1,984 @@
+{
+  "module": "recording",
+  "cases": [
+    {
+      "name": "rec-setup-app",
+      "fingerprint": "sha256:a72eaca52671e45e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps",
+        "auth": "globalToken",
+        "body": {
+          "name": "par-rec",
+          "displayName": "REC"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "rec-setup-config",
+      "fingerprint": "sha256:114ec0cb93586f5f",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/par-rec/config/raw",
+        "auth": "globalToken",
+        "body": {
+          "yaml": "name: par-rec\nroom_prefix: prec\ndisplay_name: REC\nrecording:\n  enabled: true\n  split_minutes: 15\n  snapshot_seconds: 30\n  filename_template: '${app}_${room}_${var.site}'\nvariables:\n  site: hq\ns3:\n  provider: aws\n  bucket: parity-bucket\n  region: us-east-1\n"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "rec-setup-nobucket",
+      "fingerprint": "sha256:4fa67523dbafe2f2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps",
+        "auth": "globalToken",
+        "body": {
+          "name": "par-rec2",
+          "displayName": "REC2"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "rec-setup-nobucket-config",
+      "fingerprint": "sha256:00113efe5b78ec74",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/par-rec2/config/raw",
+        "auth": "globalToken",
+        "body": {
+          "yaml": "name: par-rec2\nrecording:\n  enabled: true\n"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "start-no-auth",
+      "fingerprint": "sha256:78732fa8af809967",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/start",
+        "body": {}
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "start-viewer",
+      "fingerprint": "sha256:551e0c5bb6de4b15",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/start",
+        "auth": "viewerJwt",
+        "body": {
+          "roomName": "r"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks recording:start",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "start-empty",
+      "fingerprint": "sha256:13efa4dbc6d1a20d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/start",
+        "auth": "globalToken",
+        "rawBody": ""
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "roomName must be shorter than or equal to 200 characters",
+          "roomName must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "start-types",
+      "fingerprint": "sha256:f891c3804bbc9328",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": 5,
+          "streamId": "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+          "recordMode": "video",
+          "participantIdentity": []
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "roomName must be shorter than or equal to 200 characters",
+          "roomName must be a string",
+          "streamId must be shorter than or equal to 200 characters",
+          "recordMode must be one of the following values: composite, track, audio",
+          "participantIdentity must be shorter than or equal to 200 characters",
+          "participantIdentity must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "start-live",
+      "fingerprint": "sha256:d85260d14f53447b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "room1"
+        }
+      },
+      "status": 409,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "app": "live",
+        "error": "storage_not_configured",
+        "message": "app 'live' has no S3 storage bucket configured; recordings cannot be uploaded"
+      }
+    },
+    {
+      "name": "start-room-blank",
+      "fingerprint": "sha256:a2113af4921d0faf",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": ""
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "roomName is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "start-no-bucket",
+      "fingerprint": "sha256:e5e935a878a5c37b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec2/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "r1"
+        }
+      },
+      "status": 409,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "app": "par-rec2",
+        "error": "storage_not_configured",
+        "message": "app 'par-rec2' has no S3 storage bucket configured; recordings cannot be uploaded"
+      }
+    },
+    {
+      "name": "start-egress-fails",
+      "fingerprint": "sha256:250962bd6c36fd44",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "prec-r1",
+          "streamId": "cam/1"
+        }
+      },
+      "status": 500,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Internal Server Error",
+        "message": "failed to start egress: LiveKit startEgress failed: api-key and api-secret must be set",
+        "statusCode": 500
+      }
+    },
+    {
+      "name": "start-track-fails",
+      "fingerprint": "sha256:4d68bc08e9614f38",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "prec-r1",
+          "recordMode": "track"
+        }
+      },
+      "status": 500,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Internal Server Error",
+        "message": "failed to start egress: LiveKit startTrackCompositeEgress failed: api-key and api-secret must be set",
+        "statusCode": 500
+      }
+    },
+    {
+      "name": "start-audio-fails",
+      "fingerprint": "sha256:ab122447cc8cf023",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "prec-r1",
+          "recordMode": "audio",
+          "participantIdentity": "host"
+        }
+      },
+      "status": 500,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Internal Server Error",
+        "message": "failed to start egress: LiveKit startTrackCompositeEgress failed: api-key and api-secret must be set",
+        "statusCode": 500
+      }
+    },
+    {
+      "name": "start-unknown-app",
+      "fingerprint": "sha256:2b6c14942a7ac849",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/no-such-app/recording/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "r"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'no-such-app' config unavailable: app \"no-such-app\" not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "start-app-token-other",
+      "fingerprint": "sha256:02aeb2e440619bb4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/recording/start",
+        "auth": "appToken",
+        "body": {
+          "roomName": "r"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'par-rec' is outside this credential's app scope",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "stop-unknown-num",
+      "fingerprint": "sha256:5e79e86ed4fb45ee",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/99/stop",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "recording 99 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stop-unknown-egress",
+      "fingerprint": "sha256:ff98e275827c26ee",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/EG_nope/stop",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "recording EG_nope not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stop-viewer",
+      "fingerprint": "sha256:ffbef5ca4fc75299",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/recording/1/stop",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks recording:stop",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "stream-start-unknown",
+      "fingerprint": "sha256:2291e97a76aaf23f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/record/start",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stream-start-nobody",
+      "fingerprint": "sha256:a2f6851657ec6164",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/record/start",
+        "auth": "globalToken",
+        "rawBody": ""
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stream-start-bad",
+      "fingerprint": "sha256:3273cdb0659fb935",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/record/start",
+        "auth": "globalToken",
+        "body": {
+          "recordMode": "x",
+          "participantIdentity": 1
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "recordMode must be one of the following values: composite, track, audio",
+          "participantIdentity must be shorter than or equal to 200 characters",
+          "participantIdentity must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "stream-stop-unknown",
+      "fingerprint": "sha256:2cd68bf641d27040",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/record/stop",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "no in-progress recording for stream 'nope'",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vods-no-auth",
+      "fingerprint": "sha256:3665370fba25b408",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "vods-empty",
+      "fingerprint": "sha256:148d7b89f8997f3b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null,
+        "limit": 200,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "vods-viewer",
+      "fingerprint": "sha256:cd2a1d5188fe436e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "vods-all",
+      "fingerprint": "sha256:fff20b9d9f3cff4f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?all=1&order=size_bytes&dir=asc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null,
+        "limit": 0,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "vods-filters",
+      "fingerprint": "sha256:5c73531a387278f1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?room=r&status=ready&since=2026-01-01&until=2026-12-31T23:59:59Z&limit=5000&offset=-3",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null,
+        "limit": 1000,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "vods-bad-query",
+      "fingerprint": "sha256:1653476974b60e73",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?status=done&since=yesterday&until=2026-13-01&order=name&dir=up&limit=abc&offset=1.5",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "status must be one of the following values: recording, uploading, ready, failed",
+          "since must be a valid ISO 8601 date string",
+          "until must be a valid ISO 8601 date string",
+          "order must be one of the following values: started_at, size_bytes, id",
+          "dir must be one of the following values: asc, desc",
+          "limit must be an integer number",
+          "offset must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vods-iso-variants",
+      "fingerprint": "sha256:ebb8fba7c71b9551",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?since=2026-W01-1&until=2026-001T10:00",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null,
+        "limit": 200,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "vods-array-room",
+      "fingerprint": "sha256:36273c32b0e67f41",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?room=a&room=b",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 200 characters",
+          "room must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vods-long-room",
+      "fingerprint": "sha256:5cb5c31436f74ba5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods?room=rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 200 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vod-get-missing",
+      "fingerprint": "sha256:4d9e5df7286cce76",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods/1",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vod-get-nan",
+      "fingerprint": "sha256:201b60ea1f8b74bf",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods/abc",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vod-download-missing",
+      "fingerprint": "sha256:5da77b5f3bf6febe",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods/1/download",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vod-raw-missing",
+      "fingerprint": "sha256:f24b891ee45a519c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods/1/raw",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vod-raw-nan",
+      "fingerprint": "sha256:a08ac1df6c2ba329",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/vods/1.5/raw",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vod-probe-missing",
+      "fingerprint": "sha256:8f65c2b60d73c86a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-rec/vods/1/probe",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vod-probe-viewer",
+      "fingerprint": "sha256:ed1e9e56ce331f0d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/vods/1/probe",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks vod:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "vod-delete-missing",
+      "fingerprint": "sha256:97e8e12fb4105428",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-rec/vods/1",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1 not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vod-delete-viewer",
+      "fingerprint": "sha256:cfc07eea7ba9d085",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/vods/1",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks vod:delete",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "stats-app",
+      "fingerprint": "sha256:a463ecfbe0562f41",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-rec/stats",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "app": {
+            "displayName": "REC",
+            "name": "par-rec"
+          },
+          "events24h": {
+            "error": 0,
+            "info": 0,
+            "warn": 0
+          },
+          "ingress": {
+            "active": 0,
+            "total": 0
+          },
+          "live": {
+            "activeStreams": 0,
+            "rooms": [],
+            "totalViewers": 0
+          },
+          "storage": {
+            "vodBytes": 0
+          },
+          "vods": {
+            "byStatus": {
+              "failed": 0,
+              "ready": 0,
+              "recording": 0,
+              "uploading": 0
+            },
+            "count": 0,
+            "totalBytes": 0
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "stats-unknown",
+      "fingerprint": "sha256:5af34faa905d0228",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-app/stats",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'no-such-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stats-viewer",
+      "fingerprint": "sha256:81d1acdb25e3993d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/stats",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "stats-no-auth",
+      "fingerprint": "sha256:4c3a29845c74ea99",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/stats"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "rec-teardown",
+      "fingerprint": "sha256:dbe71582a50470d8",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-rec",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "rec-teardown2",
+      "fingerprint": "sha256:b71e5dda2ef5a500",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-rec2",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    }
+  ]
+}

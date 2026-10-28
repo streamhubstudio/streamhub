@@ -146,7 +146,7 @@ export function TeamCard({
         />
 
         {canManage && (
-          <div className="mb-5 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/40">
+          <div className="mb-5 rounded-lg border p-4 border-gray-600 bg-gray-700/40">
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
               <Field label={t('members.emailLabel')}>
                 <TextInput
@@ -197,7 +197,7 @@ export function TeamCard({
         {active.length === 0 ? (
           <Empty label={t('members.empty')} />
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+          <ul className="divide-y divide-gray-700">
             {active.map((m: TeamMember) => {
               const isSelf = selfId && m.userId === selfId
               return (
@@ -246,7 +246,7 @@ export function TeamCard({
           ) : pending.length === 0 ? (
             <Empty label={t('invites.empty')} />
           ) : (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            <ul className="divide-y divide-gray-700">
               {pending.map((i) => (
                 <li
                   key={i.userId}

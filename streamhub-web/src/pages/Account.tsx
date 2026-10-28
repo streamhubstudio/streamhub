@@ -60,7 +60,7 @@ export default function Account() {
         )}
       </div>
 
-      <div className="mb-5 flex gap-1 overflow-x-auto border-b border-gray-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible dark:border-gray-700">
+      <div className="mb-5 flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible border-gray-700">
         {tabs.map((tab) => {
           const isActive = tab.id === active
           return (

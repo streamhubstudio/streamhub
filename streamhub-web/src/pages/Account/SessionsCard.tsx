@@ -94,7 +94,7 @@ export function SessionsCard() {
       ) : list.length === 0 ? (
         <p className="text-sm text-slate-500">{t('sessions.empty')}</p>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+        <ul className="divide-y divide-gray-700">
           {list.map((s) => (
             <li
               key={s.id}
@@ -151,7 +151,7 @@ export function SessionsCard() {
           onClose={() => !busy && setConfirm(null)}
           onRequestClose={() => !busy && setConfirm(null)}
         >
-          <h5 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h5 className="mb-2 text-lg font-semibold text-gray-100">
             {confirm.kind === 'others'
               ? t('sessions.confirmOthersTitle')
               : t('sessions.confirmOneTitle')}

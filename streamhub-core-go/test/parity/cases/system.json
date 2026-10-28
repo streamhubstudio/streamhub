@@ -1,0 +1,125 @@
+{
+  "module": "system",
+  "description": "System controller: GPU status/refresh (no GPU on the parity host), redacted server settings, OS-tuning report, global-scope gates.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "gpu-no-auth",
+      "method": "GET",
+      "path": "/api/v1/system/gpu",
+      "expectStatus": 401
+    },
+    {
+      "name": "gpu-global",
+      "method": "GET",
+      "path": "/api/v1/system/gpu",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "gpu-refresh-query",
+      "method": "GET",
+      "path": "/api/v1/system/gpu?refresh=1",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "gpu-refresh-post",
+      "method": "POST",
+      "path": "/api/v1/system/gpu/refresh",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "gpu-viewer",
+      "method": "GET",
+      "path": "/api/v1/system/gpu",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "gpu-app-token",
+      "method": "GET",
+      "path": "/api/v1/system/gpu",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "settings-global",
+      "method": "GET",
+      "path": "/api/v1/system/settings",
+      "auth": "globalToken",
+      "ignore": [
+        "data.runtime",
+        "data.versions.node",
+        "data.core.port",
+        "data.ports.core",
+        "data.storage.dbSizeBytes",
+        "data.cluster.nodesCount"
+      ],
+      "note": "ignored: process facts (pid/uptime/rss/runtime), the random parity ports, file sizes; nodesCount waits for the cluster port (Node's origin self-registers)",
+      "expectStatus": 200
+    },
+    {
+      "name": "settings-admin",
+      "method": "GET",
+      "path": "/api/v1/system/settings",
+      "auth": "adminJwt",
+      "ignore": [
+        "data.runtime",
+        "data.versions.node",
+        "data.core.port",
+        "data.ports.core",
+        "data.storage.dbSizeBytes",
+        "data.cluster.nodesCount"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "settings-app-token",
+      "method": "GET",
+      "path": "/api/v1/system/settings",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "settings-viewer",
+      "method": "GET",
+      "path": "/api/v1/system/settings",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "settings-no-auth",
+      "method": "GET",
+      "path": "/api/v1/system/settings",
+      "expectStatus": 401
+    },
+    {
+      "name": "os-tuning-global",
+      "method": "GET",
+      "path": "/api/v1/system/os-tuning",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "os-tuning-app-token",
+      "method": "GET",
+      "path": "/api/v1/system/os-tuning",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "os-tuning-owner",
+      "method": "GET",
+      "path": "/api/v1/system/os-tuning",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    }
+  ]
+}

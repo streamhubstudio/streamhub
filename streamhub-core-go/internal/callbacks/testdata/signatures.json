@@ -1,0 +1,93 @@
+[
+  {
+    "name": "stream-started",
+    "app": "live",
+    "event": "stream_started",
+    "secret": "s3cret",
+    "payload": {
+      "room": "live_cam1",
+      "streamId": "cam1",
+      "participants": 2
+    },
+    "payloadJson": "{\"room\":\"live_cam1\",\"streamId\":\"cam1\",\"participants\":2}",
+    "ts": "2026-10-27T12:34:56.789Z",
+    "id": "11111111-2222-4333-8444-555555555555",
+    "body": "{\"id\":\"11111111-2222-4333-8444-555555555555\",\"event\":\"stream_started\",\"app\":\"live\",\"room\":\"live_cam1\",\"ts\":\"2026-10-27T12:34:56.789Z\",\"timestamp\":\"2026-10-27T12:34:56.789Z\",\"data\":{\"room\":\"live_cam1\",\"streamId\":\"cam1\",\"participants\":2}}",
+    "signature": "sha256=1ca50ca90708710421bc002ee9a1fc52aa18a9eccdcd31ca7c5726ccca716f01"
+  },
+  {
+    "name": "no-room-numbers",
+    "app": "shop",
+    "event": "vod_ready",
+    "secret": "k",
+    "payload": {
+      "vodId": 42,
+      "sizeBytes": 123456789012,
+      "ratio": 0.1,
+      "tiny": 1e-7,
+      "big": 1e+21,
+      "neg": -0.5,
+      "ok": true,
+      "none": null
+    },
+    "payloadJson": "{\"vodId\":42,\"sizeBytes\":123456789012,\"ratio\":0.1,\"tiny\":1e-7,\"big\":1e+21,\"neg\":-0.5,\"ok\":true,\"none\":null}",
+    "ts": "2026-10-27T12:34:56.789Z",
+    "id": "11111111-2222-4333-8444-555555555555",
+    "body": "{\"id\":\"11111111-2222-4333-8444-555555555555\",\"event\":\"vod_ready\",\"app\":\"shop\",\"room\":null,\"ts\":\"2026-10-27T12:34:56.789Z\",\"timestamp\":\"2026-10-27T12:34:56.789Z\",\"data\":{\"vodId\":42,\"sizeBytes\":123456789012,\"ratio\":0.1,\"tiny\":1e-7,\"big\":1e+21,\"neg\":-0.5,\"ok\":true,\"none\":null}}",
+    "signature": "sha256=359a34797f2c2aa31cd9eee482367fe985b101aaa796a8f05c0ddee344071566"
+  },
+  {
+    "name": "unicode-html",
+    "app": "live",
+    "event": "chat_message",
+    "secret": "ñandú-🔑",
+    "payload": {
+      "room": "sala",
+      "message": "<b>hola</b> & \"chau\"   ñ 😀 \t\n",
+      "nested": {
+        "z": 1,
+        "a": [
+          1,
+          "x",
+          {
+            "b": false
+          }
+        ]
+      }
+    },
+    "payloadJson": "{\"room\":\"sala\",\"message\":\"<b>hola</b> & \\\"chau\\\"   ñ 😀 \\t\\n\",\"nested\":{\"z\":1,\"a\":[1,\"x\",{\"b\":false}]}}",
+    "ts": "2026-10-27T12:34:56.789Z",
+    "id": "11111111-2222-4333-8444-555555555555",
+    "body": "{\"id\":\"11111111-2222-4333-8444-555555555555\",\"event\":\"chat_message\",\"app\":\"live\",\"room\":\"sala\",\"ts\":\"2026-10-27T12:34:56.789Z\",\"timestamp\":\"2026-10-27T12:34:56.789Z\",\"data\":{\"room\":\"sala\",\"message\":\"<b>hola</b> & \\\"chau\\\"   ñ 😀 \\t\\n\",\"nested\":{\"z\":1,\"a\":[1,\"x\",{\"b\":false}]}}}",
+    "signature": "sha256=655951e030ddbe180c674d59e1e38ff112239b6c22a9fc19911b82e747d476f2"
+  },
+  {
+    "name": "room-non-string",
+    "app": "live",
+    "event": "iot.data",
+    "secret": "x",
+    "payload": {
+      "room": 7,
+      "data": {
+        "temp": 21.5
+      }
+    },
+    "payloadJson": "{\"room\":7,\"data\":{\"temp\":21.5}}",
+    "ts": "2026-10-27T12:34:56.789Z",
+    "id": "11111111-2222-4333-8444-555555555555",
+    "body": "{\"id\":\"11111111-2222-4333-8444-555555555555\",\"event\":\"iot.data\",\"app\":\"live\",\"room\":null,\"ts\":\"2026-10-27T12:34:56.789Z\",\"timestamp\":\"2026-10-27T12:34:56.789Z\",\"data\":{\"room\":7,\"data\":{\"temp\":21.5}}}",
+    "signature": "sha256=e56510be701a03fa0220a070616f71b7ab5a697729e67d230958d023b4a3c3bb"
+  },
+  {
+    "name": "empty-payload",
+    "app": "live",
+    "event": "room_finished",
+    "secret": "x",
+    "payload": {},
+    "payloadJson": "{}",
+    "ts": "2026-10-27T12:34:56.789Z",
+    "id": "11111111-2222-4333-8444-555555555555",
+    "body": "{\"id\":\"11111111-2222-4333-8444-555555555555\",\"event\":\"room_finished\",\"app\":\"live\",\"room\":null,\"ts\":\"2026-10-27T12:34:56.789Z\",\"timestamp\":\"2026-10-27T12:34:56.789Z\",\"data\":{}}",
+    "signature": "sha256=f0679eb100e592a5fff1650ce7b133ad54139d7de47db6f7575222a2d2d6a33f"
+  }
+]

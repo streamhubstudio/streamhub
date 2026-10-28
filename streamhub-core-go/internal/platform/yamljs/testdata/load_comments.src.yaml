@@ -1,0 +1,3 @@
+a: 1 # trailing
+# full
+b: "x # not comment"

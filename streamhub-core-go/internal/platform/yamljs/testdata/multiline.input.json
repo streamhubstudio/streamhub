@@ -1,0 +1,24 @@
+{
+  "lit": "line one\nline two\n",
+  "lit_nonl": "line one\nline two",
+  "lit_keep": "a\nb\n\n",
+  "lit_keep3": "a\n\n\n",
+  "only_nl": "\n",
+  "two_nl": "\n\n",
+  "lead_nl": "\nfoo",
+  "lead_space": "  indented\nnext\n",
+  "lead_nl_space": "\n  x\ny",
+  "trailing_space_line": "a \nb",
+  "with_tab": "a\tb\nc",
+  "blank_lines": "p1\n\np2\n\n\np3\n",
+  "crlf": "a\r\nb\r\n",
+  "nested": {
+    "deeper": {
+      "text": "#!/bin/sh\necho \"hi: there\"\nexit 0\n"
+    }
+  },
+  "in_list": [
+    "first\nsecond",
+    "x\ny\n"
+  ]
+}

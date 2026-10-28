@@ -226,7 +226,7 @@ function EventsFeed({ app }: { app: string }) {
       ) : items.length === 0 ? (
         <Empty label={t('events.empty')} />
       ) : (
-        <div className="max-h-[42vh] divide-y divide-gray-200 overflow-auto font-mono text-xs dark:divide-gray-700">
+        <div className="max-h-[42vh] divide-y overflow-auto font-mono text-xs divide-gray-700">
           {items.map((entry, i) => {
             const lvl = field(entry, 'level') || 'info'
             const message = field(entry, 'message', 'msg')
@@ -238,7 +238,7 @@ function EventsFeed({ app }: { app: string }) {
                 onClick={() => toggleRow(i)}
                 aria-expanded={isOpen}
                 aria-label={t('events.toggleRow')}
-                className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-gray-100/50 dark:hover:bg-gray-700/40"
+                className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-gray-700/40"
               >
                 <span className="w-40 shrink-0 text-slate-500">
                   {fmtTime(field(entry, 'ts', 'time') || undefined, tz)}
@@ -249,9 +249,7 @@ function EventsFeed({ app }: { app: string }) {
                 </span>
                 <span
                   title={message}
-                  className={`min-w-0 flex-1 text-slate-600 dark:text-slate-300 ${
-                    isOpen ? 'whitespace-pre-wrap break-words' : 'truncate'
-                  }`}
+                  className={`min-w-0 flex-1 text-slate-300 ${ isOpen ? 'whitespace-pre-wrap break-words' : 'truncate' }`}
                 >
                   {message}
                 </span>
@@ -355,13 +353,13 @@ function LiveRooms({ app, rooms }: { app: string; rooms: AppLiveRoom[] }) {
                   </RTd>
                   <RTd
                     label={t('rooms.viewers')}
-                    className="tabular-nums text-slate-600 dark:text-slate-300"
+                    className="tabular-nums text-slate-300"
                   >
                     {r.viewers ?? '—'}
                   </RTd>
                   <RTd
                     label={t('rooms.publishers')}
-                    className="tabular-nums text-slate-600 dark:text-slate-300"
+                    className="tabular-nums text-slate-300"
                   >
                     {r.publishers}
                   </RTd>
@@ -386,7 +384,7 @@ function LiveRooms({ app, rooms }: { app: string; rooms: AppLiveRoom[] }) {
             })}
           </RTable>
           {sorted.length > ROOMS_PAGE_SIZE && (
-            <div className="flex justify-end border-t border-gray-200 p-4 dark:border-gray-700">
+            <div className="flex justify-end border-t p-4 border-gray-700">
               <Pagination
                 currentPage={safePage}
                 pageSize={ROOMS_PAGE_SIZE}

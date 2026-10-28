@@ -24,7 +24,7 @@ fix before any public disclosure.
 ## Scope
 
 This repository is the self-hosted **open-source core**. When reporting, note whether the
-issue affects the core API (`streamhub-core`), the dashboard (`streamhub-web`), the browser
+issue affects the core API (`streamhub-core-go`), the MCP server (`streamhub-mcp`), the dashboard (`streamhub-web`), the browser
 SDK (`streamhub-adaptor`), the installer/deploy tooling, or the underlying LiveKit
 configuration shipped here.
 

@@ -41,7 +41,7 @@ const Tooltip = (props: TooltipProps) => {
     const tooltipBackground = 'gray-800'
     const tooltipDarkBackground = 'black'
 
-    const defaultTooltipClass = `tooltip bg-${tooltipBackground} dark:bg-${tooltipDarkBackground}`
+    const defaultTooltipClass = `tooltip bg-${tooltipDarkBackground}`
 
     const { refs, floatingStyles, context } = useFloating({
         open: isOpen,

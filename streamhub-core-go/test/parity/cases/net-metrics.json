@@ -1,0 +1,142 @@
+{
+  "module": "net-metrics",
+  "description": "GET /apps/:app/net and /apps/:app/net/history (usage:read). No media traffic in the parity env: every counter is 0 and history is empty on both sides.",
+  "defaults": {
+    "compareHeaders": ["content-type"]
+  },
+  "cases": [
+    {
+      "name": "net-summary-live",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-summary-global-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-summary-app-token-own-app",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-summary-app-token-other-app",
+      "method": "GET",
+      "path": "/api/v1/apps/other-app/net",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-summary-owner-cross-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "net-summary-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "net-summary-unknown-app",
+      "note": "Node does not check the app exists (zeros; app.db is created lazily)",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-net-app/net",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-summary-no-auth-401",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "expectStatus": 401
+    },
+    {
+      "name": "net-summary-revoked-401",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net",
+      "auth": "revokedToken",
+      "expectStatus": 401
+    },
+    {
+      "name": "net-history-default",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-hours",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=6",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-fractional-hours-echoed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=2.5",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-hex-hours",
+      "note": "Number('0x10') = 16",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=0x10",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-huge-hours-echoed-unclamped",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=100000",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-invalid-hours-default",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=abc",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-zero-hours-default",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=0",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-negative-hours-default",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history?hours=-3",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "net-history-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "net-history-no-auth-401",
+      "method": "GET",
+      "path": "/api/v1/apps/live/net/history",
+      "expectStatus": 401
+    }
+  ]
+}

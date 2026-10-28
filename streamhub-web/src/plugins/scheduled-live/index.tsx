@@ -415,7 +415,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
     <div className="space-y-6">
       {/* ---- display options (persisted by ConfigForm's Save button) ---- */}
       <section className="space-y-4">
-        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-100">
+        <h4 className="text-sm font-semibold text-gray-100">
           {t('config.display.title')}
         </h4>
 
@@ -432,7 +432,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
               type="color"
               value={String(values.accent ?? '#2f7bff')}
               onChange={(e) => set('accent', e.target.value)}
-              className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-transparent dark:border-gray-600"
+              className="h-9 w-12 cursor-pointer rounded border bg-transparent border-gray-600"
               aria-label={t('config.display.accent')}
             />
             <TextInput
@@ -462,7 +462,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
         </Field>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <span className="text-sm font-semibold text-gray-100">
             {t('config.display.muteUntilStart')}
           </span>
           <Toggle
@@ -472,7 +472,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <span className="text-sm font-semibold text-gray-100">
             {t('config.display.showViewerLocalTime')}
           </span>
           <Toggle
@@ -493,9 +493,9 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
       </section>
 
       {/* ---- agenda manager (saved immediately via the scheduled-live API) ---- */}
-      <section className="space-y-3 border-t border-gray-200 pt-5 dark:border-gray-700">
+      <section className="space-y-3 border-t pt-5 border-gray-700">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <h4 className="text-sm font-semibold text-gray-100">
             {t('config.agenda.title')}
           </h4>
           <Button variant="ghost" onClick={() => void refetch()} disabled={loading || busy}>
@@ -506,19 +506,19 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
         {error && <ErrorBanner message={error} />}
 
         {events.length === 0 && !loading ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('config.agenda.empty')}</p>
+          <p className="text-sm text-gray-400">{t('config.agenda.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {events.map((ev) => (
               <li
                 key={ev.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-700"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 border-gray-700"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                  <div className="truncate text-sm font-semibold text-gray-100">
                     {ev.title || t('config.agenda.row.untitled')}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-gray-400">
                     {whenLabel(ev)}
                     {' · '}
                     {ev.room ? ev.room : t('config.agenda.row.allRooms')}
@@ -536,7 +536,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
         )}
 
         {/* add-event form */}
-        <div className="space-y-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <div className="space-y-3 rounded-lg p-3 bg-gray-800/50">
           <Field label={t('config.agenda.fields.title')}>
             <TextInput value={form.title} onChange={(e) => setFormField('title', e.target.value)} />
           </Field>
@@ -565,7 +565,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
             <TextInput value={form.message} onChange={(e) => setFormField('message', e.target.value)} />
           </Field>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-100">
+            <span className="text-sm font-semibold text-gray-100">
               {t('config.agenda.fields.enabled')}
             </span>
             <Toggle checked={form.enabled} onChange={(v) => setFormField('enabled', v)} />
@@ -575,7 +575,7 @@ function ScheduledConfig({ values, onChange, app }: PluginConfigProps) {
           </Button>
         </div>
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">{t('config.agenda.note')}</p>
+        <p className="text-xs text-gray-400">{t('config.agenda.note')}</p>
       </section>
     </div>
   )

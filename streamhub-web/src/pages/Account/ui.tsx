@@ -17,6 +17,7 @@ import {
   Switcher,
   Tag,
 } from '@/ui'
+import { EmptyState } from '@/components/EmptyState'
 
 export function errMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiRequestError) return error.message
@@ -36,9 +37,7 @@ export function Loading({ label }: { label?: string }) {
 export function Empty({ label }: { label?: string }) {
   const { t } = useTranslation('account')
   return (
-    <div className="px-5 py-10 text-center text-sm text-slate-500">
-      {label ?? t('ui.empty')}
-    </div>
+    <EmptyState label={label ?? t('ui.empty')} />
   )
 }
 
@@ -114,7 +113,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...rest}
-      className={`input input-md h-11 bg-white ltr:pr-8 rtl:pl-8 focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 ${className}`}
+      className={`input input-md h-11 ltr:pr-8 rtl:pl-8 focus:border-primary-500 focus:ring-primary-500 bg-gray-700 ${className}`}
     />
   )
 }
@@ -174,8 +173,8 @@ export function RoleBadge({ role }: { role: TenantRole | 'superadmin' }) {
   const tones: Record<string, string> = {
     owner: 'border-transparent bg-primary-500/10 text-primary-500',
     editor: 'border-transparent bg-primary-500/10 text-primary-500',
-    viewer: 'border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
-    superadmin: 'border-transparent bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+    viewer: 'border-transparent bg-gray-600/60 text-gray-100',
+    superadmin: 'border-transparent bg-amber-500/20 text-amber-100',
   }
   return <Tag className={tones[role]}>{t(`roles.${role}`)}</Tag>
 }
@@ -207,7 +206,7 @@ export function UsageBar({
           {limit > 0 && <span className="ml-1 text-slate-500">({pct}%)</span>}
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-700">
         <div className={`h-full ${bar} transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>

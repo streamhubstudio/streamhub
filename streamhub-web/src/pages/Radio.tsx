@@ -26,6 +26,7 @@ import {
   TextInput,
 } from './Broadcast/ui'
 import { useRadioMaster } from './Radio/useRadioMaster'
+import { useSamplesOrigin } from '@/lib/useSamplesOrigin'
 import { Logo } from '@/components/Logo'
 
 function CopyRow({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
@@ -38,15 +39,13 @@ function CopyRow({ label, value, mono = true }: { label: string; value: string; 
   }
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-gray-400">{label}</span>
       <div className="flex items-center gap-2">
         <input
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className={`w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-fg ${
-            mono ? 'font-mono text-xs' : ''
-          }`}
+          className={`w-full rounded-lg border border-gray-700 bg-gray-700 px-3 py-2 text-sm text-fg ${ mono ? 'font-mono text-xs' : '' }`}
         />
         <Button variant="default" size="sm" onClick={copy} className="shrink-0">
           {copied ? t('actions.copied') : t('actions.copy')}
@@ -66,20 +65,20 @@ export default function Radio() {
   const listenToken = useMutation({
     mutationFn: () => api.apps.radioListenToken(app, room),
   })
+  const samples = useSamplesOrigin()
 
   if (!app || !room) {
     return (
       <div className="flex min-h-full items-center justify-center p-6">
-        <div className="max-w-md rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-6 text-center">
+        <div className="max-w-md rounded-xl border shadow-sm border-gray-700 bg-gray-800 p-6 text-center">
           <h1 className="text-lg font-semibold text-fg">{t('invalid.title')}</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('invalid.message')}</p>
+          <p className="mt-1 text-sm text-gray-400">{t('invalid.message')}</p>
         </div>
       </div>
     )
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const listenerUrl = `${origin}/samples/${encodeURIComponent(app)}/audio-radio.html?room=${encodeURIComponent(room)}`
+  const listenerUrl = `${samples.origin}/samples/${encodeURIComponent(app)}/audio-radio.html?room=${encodeURIComponent(room)}`
   const embed = `<iframe src="${listenerUrl}" width="360" height="120" allow="autoplay" style="border:0"></iframe>`
 
   const isLive = state.phase === 'live'
@@ -94,7 +93,7 @@ export default function Radio() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Link to={`/apps/${encodeURIComponent(app)}`} className="shrink-0">
             <Logo className="h-7 w-auto" />
@@ -103,7 +102,7 @@ export default function Radio() {
             <h1 className="truncate text-sm font-semibold text-fg">
               {t('header.title', { room })}
             </h1>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            <p className="truncate text-xs text-gray-400">
               {t('header.subtitle', { app })}
             </p>
           </div>
@@ -111,13 +110,13 @@ export default function Radio() {
         <div className="flex items-center gap-2">
           <PhaseBadge phase={state.phase} />
           {state.startedAt && (
-            <span className="rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs text-gray-600 dark:text-gray-300">
+            <span className="rounded-md bg-gray-700 px-2 py-1 text-xs text-gray-300">
               <Duration since={state.startedAt} />
             </span>
           )}
           <Link
             to={`/apps/${encodeURIComponent(app)}`}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 transition hover:text-fg"
+            className="rounded-lg border border-gray-700 px-3 py-1 text-xs text-gray-300 transition hover:text-fg"
           >
             {t('header.exit')}
           </Link>
@@ -127,11 +126,11 @@ export default function Radio() {
       <main className="mx-auto grid w-full max-w-6xl flex-1 gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_360px]">
         {/* Máster + monitor */}
         <section className="flex flex-col gap-5">
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+          <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-fg">{t('master.title')}</h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 ring-1 ring-gray-200 dark:ring-gray-700">
-                <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'animate-pulse bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-700 px-3 py-1 text-xs font-medium text-gray-200 ring-1 ring-gray-700">
+                <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'animate-pulse bg-primary-500' : 'bg-gray-600'}`} />
                 {t('master.listeners', { count: state.listeners })}
               </span>
             </div>
@@ -176,12 +175,12 @@ export default function Radio() {
                 </Button>
               )}
               {state.permission === 'denied' && (
-                <p className="text-center text-[11px] text-amber-600 dark:text-amber-400">
+                <p className="text-center text-[11px] text-amber-400">
                   {t('master.permissionDenied')}
                 </p>
               )}
             </div>
-            <p className="mt-4 text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+            <p className="mt-4 text-[11px] leading-snug text-gray-400">
               <Trans
                 i18nKey="radio:master.note"
                 components={{ strong: <strong /> }}
@@ -190,7 +189,7 @@ export default function Radio() {
           </div>
 
           {/* Listener monitor — counts as one oyente while abierto. */}
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+          <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
             <h2 className="mb-3 text-sm font-semibold text-fg">{t('monitor.title')}</h2>
             <LivePlayer
               app={app}
@@ -199,18 +198,18 @@ export default function Radio() {
               audioLabel={t('monitor.audioLabel', { room })}
               addons={{ viewers: true }}
             />
-            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{t('monitor.note')}</p>
+            <p className="mt-2 text-[11px] text-gray-400">{t('monitor.note')}</p>
           </div>
         </section>
 
         {/* Share / embed */}
         <aside className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+          <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-fg">{t('share.title')}</h2>
             <div className="mt-4 space-y-4">
               <CopyRow label={t('share.listenerLink')} value={listenerUrl} mono={false} />
               <CopyRow label={t('share.embed')} value={embed} />
-              <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+              <p className="text-[11px] leading-snug text-gray-400">
                 <Trans
                   i18nKey="radio:share.note"
                   components={{ strong: <strong /> }}
@@ -219,9 +218,9 @@ export default function Radio() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+          <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-fg">{t('token.title')}</h2>
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-[11px] text-gray-400">
               <Trans
                 i18nKey="radio:token.subtitle"
                 components={{ strong: <strong /> }}
@@ -237,7 +236,7 @@ export default function Radio() {
               {listenToken.isPending ? t('token.generating') : t('token.generate')}
             </Button>
             {listenToken.isError && (
-              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">{t('token.error')}</p>
+              <p className="mt-2 text-[11px] text-amber-400">{t('token.error')}</p>
             )}
             {listenToken.data && (
               <div className="mt-3 space-y-3">
@@ -247,7 +246,7 @@ export default function Radio() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+          <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-fg">{t('room.title')}</h2>
             <div className="mt-3 flex items-end gap-2">
               <div className="flex-1">

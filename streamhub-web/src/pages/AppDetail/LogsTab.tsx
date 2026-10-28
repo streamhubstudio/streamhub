@@ -146,13 +146,13 @@ export function LogsTab({ app }: { app: string }) {
       ) : logs.length === 0 ? (
         <Empty label={t('empty')} />
       ) : (
-        <div className="max-h-[65vh] divide-y divide-gray-200 overflow-auto font-mono text-xs dark:divide-gray-700">
+        <div className="max-h-[65vh] divide-y overflow-auto font-mono text-xs divide-gray-700">
           {logs.map((entry, i) => {
             const lvl = field(entry, 'level') || 'info'
             return (
               <div
                 key={i}
-                className="px-4 py-2 hover:bg-gray-100/50 md:flex md:gap-3 md:py-1.5 dark:hover:bg-gray-700/40"
+                className="px-4 py-2 md:flex md:gap-3 md:py-1.5 hover:bg-gray-700/40"
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 md:contents">
                   <span className="text-slate-500 md:w-44 md:shrink-0">
@@ -165,7 +165,7 @@ export function LogsTab({ app }: { app: string }) {
                     {field(entry, 'source', 'app')}
                   </span>
                 </div>
-                <span className="mt-1 block break-all text-slate-600 md:mt-0 dark:text-slate-300">
+                <span className="mt-1 block break-all md:mt-0 text-slate-300">
                   {field(entry, 'message', 'msg')}
                 </span>
               </div>
@@ -175,7 +175,7 @@ export function LogsTab({ app }: { app: string }) {
       )}
 
       {effectiveTotal > PAGE_SIZE && (
-        <div className="flex justify-end border-t border-gray-200 p-4 dark:border-gray-700">
+        <div className="flex justify-end border-t p-4 border-gray-700">
           <Pagination
             currentPage={page}
             pageSize={PAGE_SIZE}

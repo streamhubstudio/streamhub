@@ -1,0 +1,103 @@
+{
+  "$obj": [
+    [
+      "name",
+      "demo"
+    ],
+    [
+      "enabled",
+      true
+    ],
+    [
+      "max_streams",
+      {
+        "$num": "50"
+      }
+    ],
+    [
+      "webhooks",
+      [
+        {
+          "$obj": [
+            [
+              "url",
+              "https://hooks.example.com/x?y=1"
+            ],
+            [
+              "events",
+              [
+                "all"
+              ]
+            ],
+            [
+              "secret",
+              ""
+            ]
+          ]
+        },
+        {
+          "$obj": [
+            [
+              "url",
+              "http://10.0.0.1:8080"
+            ],
+            [
+              "events",
+              [
+                "stream.started"
+              ]
+            ]
+          ]
+        }
+      ]
+    ],
+    [
+      "transcoding",
+      {
+        "$obj": [
+          [
+            "layers",
+            [
+              {
+                "$obj": [
+                  [
+                    "name",
+                    "720p"
+                  ],
+                  [
+                    "width",
+                    {
+                      "$num": "1280"
+                    }
+                  ],
+                  [
+                    "bitrate",
+                    {
+                      "$num": "2500000"
+                    }
+                  ]
+                ]
+              }
+            ]
+          ]
+        ]
+      }
+    ],
+    [
+      "features",
+      {
+        "$obj": []
+      }
+    ],
+    [
+      "tags",
+      []
+    ],
+    [
+      "created",
+      {
+        "$date": "2024-03-01T12:00:00.000Z"
+      }
+    ]
+  ]
+}

@@ -68,7 +68,7 @@ const StepItem = forwardRef<HTMLDivElement, StepItemProps>((props, ref) => {
         status === COMPLETE && `bg-${color} text-white`,
         status === ERROR && `step-item-icon-error`,
         status === IN_PROGRESS &&
-            `text-${color} dark:text-gray-100 border-${color} step-item-icon-current`,
+            `text-gray-100 border-${color} step-item-icon-current`,
     )
 
     const stepConnectClass = classNames(

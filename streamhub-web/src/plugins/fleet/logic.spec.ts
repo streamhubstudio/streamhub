@@ -25,7 +25,7 @@ function agent(id: string, online: boolean): AgentView {
     version: '1.12',
     lastSeen: '',
     ageMs: 1000,
-    metrics: { cpu: 10, mem: 20, temp: 40, uptime: 60, cameras: 1, disk: 30, relay: 'running' },
+    metrics: { cpu: 10, mem: 20, temp: 40, uptime: 60, cameras: 1, disk: 30, battery: null, relay: 'running' },
   }
 }
 
@@ -42,6 +42,12 @@ test('parseAgents coerces + drops junk', () => {
   assert.equal(r.agents[0].agentId, 'a')
   assert.equal(r.agents[0].metrics.cpu, 5)
   assert.equal(r.agents[0].metrics.mem, null)
+  assert.equal(r.agents[0].metrics.battery, null) // AC-only host: absent, not 0
+})
+
+test('parseAgents keeps a reported battery', () => {
+  const r = parseAgents({ agents: [{ agentId: 'cam', metrics: { battery: 42 } }] })
+  assert.equal(r.agents[0].metrics.battery, 42)
 })
 
 test('parseAgents tolerates a missing/garbage body', () => {

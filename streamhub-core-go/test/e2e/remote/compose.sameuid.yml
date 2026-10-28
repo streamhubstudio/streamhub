@@ -1,0 +1,10 @@
+# Overlay for E2E_SHAPE=sameuid: the core runs as the (non-root) host user,
+# so egress runs as that uid too, with a writable tmpfs home (the image
+# entrypoint cleans /home/egress/tmp and starts pulseaudio there).
+services:
+  egress:
+    user: "${E2E_UID}:${E2E_GID}"
+    tmpfs:
+      - /home/egress:uid=${E2E_UID},gid=${E2E_GID},mode=0755
+    environment:
+      HOME: /home/egress

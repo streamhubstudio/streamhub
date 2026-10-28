@@ -1,0 +1,1420 @@
+{
+  "module": "apps",
+  "description": "App registry (apps.controller.ts, 22 routes) + admin restart gate: CRUD with tenant scoping and RBAC denials, config.yaml YAML parity (Node js-yaml dump vs Go), PATCH mapping/validation, raw editor + dry-run + backups/revert/reload, presets, masked S3/MQTT/SMTP blocks. Every app created here is deleted at the end (the file runs before auth.json).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "apps-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "expectStatus": 401
+    },
+    {
+      "name": "apps-list-global",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-list-admin",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-list-owner-empty",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "ownerJwt",
+      "expectStatus": 200,
+      "note": "owner tenant has no apps yet"
+    },
+    {
+      "name": "apps-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "appToken",
+      "expectStatus": 200,
+      "note": "app-scoped token: tenant-filtered view"
+    },
+    {
+      "name": "apps-create-invalid-slug",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "Bad Name!"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "apps-create-wrong-types",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": 5,
+        "displayName": 3,
+        "roomPrefix": [
+          "x"
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "apps-create-empty-body",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "apps-create-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "note": "a missing body validates as {}"
+    },
+    {
+      "name": "raw-put-no-body",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "apps-create-too-long-display",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-x",
+        "displayName": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "roomPrefix": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "apps-create-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "viewerJwt",
+      "body": {
+        "name": "par-viewer"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "apps-create-ok",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-one",
+        "displayName": "  Parity One  ",
+        "roomPrefix": "PAR-One"
+      },
+      "expectStatus": 201,
+      "capture": {
+        "parOneId": "id"
+      }
+    },
+    {
+      "name": "apps-create-duplicate",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-one"
+      },
+      "expectStatus": 409
+    },
+    {
+      "name": "apps-create-defaults",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "adminJwt",
+      "body": {
+        "name": "par-two"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "apps-create-owner",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "ownerJwt",
+      "body": {
+        "name": "par-owner",
+        "displayName": "Owner App"
+      },
+      "expectStatus": 201,
+      "note": "stamped with the owner's tenant"
+    },
+    {
+      "name": "apps-list-owner-sees-own",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "ownerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-list-editor-denied",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "editorJwt",
+      "expectStatus": 403,
+      "note": "editor policy has no app:read"
+    },
+    {
+      "name": "apps-list-global-all",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-get-ok",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-get-live",
+      "method": "GET",
+      "path": "/api/v1/apps/live",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/does-not-exist",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "apps-get-cross-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one",
+      "auth": "appToken",
+      "expectStatus": 403,
+      "note": "app-scoped token on another app"
+    },
+    {
+      "name": "apps-get-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one",
+      "auth": "ownerJwt",
+      "expectStatus": 403,
+      "note": "platform app outside the owner tenant"
+    },
+    {
+      "name": "apps-get-own-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/par-owner",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "apps-sizes",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/sizes",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.dbSizeBytes"
+      ],
+      "note": "db size includes WAL/SHM: engine-dependent"
+    },
+    {
+      "name": "apps-sizes-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/sizes",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "raw-get-created",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-defaults",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-owner-app",
+      "method": "GET",
+      "path": "/api/v1/apps/par-owner/config/raw",
+      "auth": "editorJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-live",
+      "method": "GET",
+      "path": "/api/v1/apps/live/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-viewer-own",
+      "method": "GET",
+      "path": "/api/v1/apps/par-owner/config/raw",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "patch-viewer-denied",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-owner",
+      "auth": "viewerJwt",
+      "body": {
+        "displayName": "x"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "patch-invalid",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "displayName": 7,
+        "roomPrefix": "Bad Prefix",
+        "timezone": "Not/AZone",
+        "recordingEnabled": "yes",
+        "splitMinutes": 7,
+        "snapshotSeconds": "60",
+        "filenameTemplate": 5,
+        "retentionDays": 31,
+        "rtmpPassthrough": 1,
+        "transcodeMaxHeight": 2000,
+        "callbackUrl": [
+          "x"
+        ],
+        "callbackSecret": "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+        "features": {
+          "chat": "yes",
+          "publicPlayback": 1,
+          "unknown": true
+        },
+        "variables": [
+          1
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-timezone-number",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "timezone": 12345
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-timezone-too-long",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "timezone": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-features-not-object",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "features": "on"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-private-callback",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "callbackUrl": "http://10.0.0.1/hook"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-bad-scheme-callback",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "callbackUrl": "ftp://93.184.216.34/hook"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-missing-app",
+      "method": "PATCH",
+      "path": "/api/v1/apps/nope-app",
+      "auth": "globalToken",
+      "body": {
+        "displayName": "x"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "patch-full",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "displayName": "Parity One Patched",
+        "roomPrefix": "par-room",
+        "timezone": "  America/Argentina/Buenos_Aires ",
+        "recordingEnabled": false,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd}",
+        "snapshotTemplate": "snap: #1",
+        "retentionDays": 30,
+        "transcodeMaxHeight": 1080,
+        "callbackUrl": "https://93.184.216.34/hook",
+        "callbackSecret": "cb-secret-123",
+        "features": {
+          "chat": true,
+          "publicPlayback": false,
+          "reactions": true,
+          "wsIngest": {
+            "enabled": false
+          }
+        },
+        "variables": {
+          "site": "HQ",
+          "2": "two",
+          "n": 5,
+          "bad key": "x",
+          "nul": null,
+          "obj": {
+            "a": 1
+          },
+          "arr": [
+            1,
+            "b"
+          ],
+          "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-after-patch",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-passthrough",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "rtmpPassthrough": true
+      },
+      "expectStatus": 200,
+      "note": "forces transcode/adaptive off"
+    },
+    {
+      "name": "patch-transcode-height-clears-nothing",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {
+        "transcodeMaxHeight": 360,
+        "timezone": ""
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-editor-own-tenant",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-owner",
+      "auth": "editorJwt",
+      "body": {
+        "displayName": "Edited by editor",
+        "variables": {}
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-after-patch-2",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-put-not-string",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": 5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-missing",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-parse-error",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "a: [1, 2\n"
+      },
+      "expectStatus": 400,
+      "mask": [
+        "message"
+      ],
+      "note": "js-yaml error text is not reproduced byte-for-byte"
+    },
+    {
+      "name": "raw-put-not-mapping",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "- a\n- b\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-scalar",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "just text\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-empty",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": ""
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-name-mismatch",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: other\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-name-number",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: 12\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-s3-not-map",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-one\ns3: nope\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-recording-null",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-one\nrecording: null\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-private-callback",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-one\ncallbacks:\n  url: http://169.254.169.254/latest\n"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "raw-put-viewer-denied",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-owner/config/raw",
+      "auth": "viewerJwt",
+      "body": {
+        "yaml": "name: par-owner\n"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "raw-put-ok-warnings",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "# hand-edited by an operator\nnotifications:\n  email: ops@example.com\n  on: [stream_started, 'yes']\nname: par-one\ndisplay_name: Hand Edited\ns3:\n  key: inline-key\n  bucket: my-bucket\nmqtt:\n  password: nope\n  events: []\n  qos: 7\nsmtp:\n  pass: nope\n  port: 70000\ntimezone: ' Mars/Olympus '\nrecording:\n  split_minutes: '15'\n  retention_days: 31\nwebrtc:\n  layers: []\n  transcode_max_height: 1440\n  extra: dropped\nrtmp:\n  transcode: false\nfeatures:\n  chat: true\n  linear:\n    dvr: true\n    dvr_window_seconds: -5\n  drm:\n    enabled: true\n    systems: [FairPlay, bogus, fairplay]\n    scheme: CENC\ntranscoding:\n  encoding: H264+VP8\n  vod_renditions:\n    - {height: 720, bitrate_kbps: 2800}\n    - {height: 100, bitrate_kbps: 1}\n    - {height: 1080.7, bitrate_kbps: '5000'}\n    - {height: 720, bitrate_kbps: 1}\nquotas:\n  max_concurrent_streams: 3\n  max_viewers_per_stream: 0\nlatency_alert:\n  threshold_ms: 0\n  interval_seconds: 1\nvariables:\n  b: 1\n  '10': ten\n  a: true\nreleased: 2024-01-02\n'1': one\nzeta: {nested: [1, {x: y}]}\nlong: \"word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"\nmulti: |\n  line one\n  line two\n"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-get-verbatim",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-empty-resolves-handedit",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-one",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200,
+      "note": "structured save re-dumps the hand-edited yaml (unknown blocks first, sanitized resolve)"
+    },
+    {
+      "name": "raw-after-structured-save",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "validate-ok-diff",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/raw/validate",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-one\nroom_prefix: par-one\n"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "validate-invalid",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/raw/validate",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: wrong\n"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "validate-private-callback",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/raw/validate",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-one\ncallbacks: {url: 'http://127.0.0.1:9/x'}\n"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "validate-parse-error",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/raw/validate",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "a: : b\n  - c"
+      },
+      "expectStatus": 201,
+      "mask": [
+        "data.error"
+      ]
+    },
+    {
+      "name": "validate-viewer-allowed",
+      "method": "POST",
+      "path": "/api/v1/apps/par-owner/config/raw/validate",
+      "auth": "viewerJwt",
+      "body": {
+        "yaml": "name: par-owner\n"
+      },
+      "expectStatus": 201,
+      "note": "config:read"
+    },
+    {
+      "name": "validate-bad-body",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/raw/validate",
+      "auth": "globalToken",
+      "body": {
+        "yaml": [
+          "x"
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "backups-list",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.*.ts",
+        "data.*.file",
+        "data.*.createdAt"
+      ],
+      "capture": {
+        "bkNewest": "data.0.ts"
+      }
+    },
+    {
+      "name": "backups-list-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "backup-get",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups/{{bkNewest}}",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "backup-get-invalid-id",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups/bad%20id!",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "backup-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups/20990101T000000000Z",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "backup-revert-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/backups/20990101T000000000Z/revert",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "backup-revert-invalid",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/config/backups/a$b/revert",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "backup-revert-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps/par-owner/config/backups/x/revert",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "reload-ok",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/reload",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "reload-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/nope-app/reload",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "reload-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps/par-owner/reload",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "presets-list",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/presets",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "presets-apply-low-latency",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/low-latency/apply",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-list-after-apply",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/presets",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-after-preset",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "presets-apply-hq",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/high-quality-recording/apply",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-apply-mass",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/mass-audience-HLS/apply",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-deactivate-mass",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/mass-audience-HLS/deactivate",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-apply-passthrough",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/rtmp-passthrough/apply",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-deactivate-low-latency",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/low-latency/deactivate",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "raw-after-presets",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "presets-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/nope/apply",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "presets-deactivate-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/par-two/presets/nope/deactivate",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "presets-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/presets",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "presets-apply-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps/par-owner/presets/low-latency/apply",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "presets-on-handedited",
+      "method": "POST",
+      "path": "/api/v1/apps/par-one/presets/mass-audience-HLS/apply",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "presets-list-handedited",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/presets",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-get-default",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-put-invalid",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "body": {
+        "provider": "gcs",
+        "bucket": 5,
+        "region": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "forcePathStyle": "no",
+        "key": [
+          "k"
+        ],
+        "confirmPublic": "y"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "s3-put-ok",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "body": {
+        "provider": "aws",
+        "bucket": "par-bucket",
+        "region": "sa-east-1",
+        "prefix": "rec/par",
+        "key": "AKIAPARITYKEY123",
+        "secret": "parity-secret-xyz"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-put-public-no-confirm",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "body": {
+        "public_url": "https://cdn.example.com/"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "s3-put-public-confirm",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "body": {
+        "public_url": "https://cdn.example.com///",
+        "confirmPublic": true,
+        "key": "abc"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-put-clear-public",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/s3",
+      "auth": "globalToken",
+      "body": {
+        "public_url": "",
+        "endpoint": "https://s3.example.com",
+        "forcePathStyle": true
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-viewer-read",
+      "method": "GET",
+      "path": "/api/v1/apps/par-owner/s3",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-viewer-write-denied",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-owner/s3",
+      "auth": "viewerJwt",
+      "body": {
+        "bucket": "x"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "s3-editor-write",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-owner/s3",
+      "auth": "editorJwt",
+      "body": {
+        "bucket": "owner-bucket",
+        "secret": "sec"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "s3-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/s3",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "patch-after-s3-shows-creds",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-two",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200,
+      "note": "PATCH returns resolved S3 creds in clear (Node behaviour)"
+    },
+    {
+      "name": "raw-after-s3",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "mqtt-get-default",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "mqtt-put-invalid",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "enabled": "y",
+        "qos": 3,
+        "events": [
+          "a",
+          5,
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "logs": {
+          "level": "verbose",
+          "enabled": 1
+        },
+        "latencyAlert": {
+          "thresholdMs": 0,
+          "intervalSeconds": 1,
+          "cooldownSeconds": "5"
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "mqtt-put-qos-float",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "qos": 1.5,
+        "events": "all",
+        "logs": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "mqtt-put-ok",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true,
+        "url": "  mqtt://broker.example.com:1883 ",
+        "username": "u",
+        "password": "mqtt-pass-1",
+        "topicPrefix": "  ",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          " stream_started ",
+          "",
+          " vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        },
+        "latencyAlert": {
+          "enabled": true,
+          "thresholdMs": 250.5,
+          "cooldownSeconds": 0,
+          "intervalSeconds": 2
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "mqtt-put-keep-password",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "events": [],
+        "qos": 0
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "mqtt-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/mqtt",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "mqtt-viewer-denied",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-owner/mqtt",
+      "auth": "viewerJwt",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mqtt-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/mqtt",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "patch-after-mqtt-masks",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-two",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200,
+      "note": "mqtt.password masked as ****"
+    },
+    {
+      "name": "smtp-get-default",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-put-invalid",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "body": {
+        "port": 0,
+        "host": "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
+        "pass": 5,
+        "enabled": "true"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "smtp-put-port-float",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "body": {
+        "port": 587.5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "smtp-put-ok",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true,
+        "host": " smtp.example.com ",
+        "port": 465,
+        "user": "no-reply@example.com",
+        "pass": "smtp-pass",
+        "from": " App <no-reply@example.com> "
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-put-keep-pass",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "body": {
+        "enabled": false
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-viewer-read",
+      "method": "GET",
+      "path": "/api/v1/apps/par-owner/smtp",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-viewer-denied",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-owner/smtp",
+      "auth": "viewerJwt",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "raw-after-blocks",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "raw-put-inline-secrets-warn",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-two/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-two\nroom_prefix: par-two\nmqtt:\n  password: x\nsmtp:\n  pass: y\n"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "smtp-get-after-raw",
+      "method": "GET",
+      "path": "/api/v1/apps/par-two/smtp",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "admin-restart-viewer",
+      "method": "POST",
+      "path": "/api/v1/admin/restart",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "admin-restart-owner-jwt",
+      "method": "POST",
+      "path": "/api/v1/admin/restart",
+      "auth": "editorJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "admin-restart-no-auth",
+      "method": "POST",
+      "path": "/api/v1/admin/restart",
+      "expectStatus": 401
+    },
+    {
+      "name": "delete-viewer-denied",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-owner",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "delete-editor-denied",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-owner",
+      "auth": "editorJwt",
+      "expectStatus": 403,
+      "note": "editor lacks app:delete"
+    },
+    {
+      "name": "delete-owner-ok",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-owner?deleteVods=true",
+      "auth": "ownerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "delete-bool-yes-is-false",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-one?deleteVods=yes",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "note": "global ValidationPipe turns any non-'true' into false before ParseBoolPipe: never a 400"
+    },
+    {
+      "name": "recreate-one-reuses-dir",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-one"
+      },
+      "expectStatus": 201,
+      "note": "config.yaml rewritten over preserved files"
+    },
+    {
+      "name": "raw-recreated",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "backups-survive-recreate",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.*.ts",
+        "data.*.file",
+        "data.*.createdAt"
+      ]
+    },
+    {
+      "name": "delete-repeated-bool-is-false",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-one?deleteVods=true&deleteVods=true",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "note": "array value → false (files kept)"
+    },
+    {
+      "name": "recreate-one-again",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-one"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "backups-still-there",
+      "method": "GET",
+      "path": "/api/v1/apps/par-one/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.*.ts",
+        "data.*.file",
+        "data.*.createdAt"
+      ]
+    },
+    {
+      "name": "delete-missing-bool-garbage",
+      "method": "DELETE",
+      "path": "/api/v1/apps/nope-app?deleteVods=maybe",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "delete-one-purge",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-one?deleteVods=true",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "delete-two",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-two",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "delete-again-404",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-two",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "apps-list-final",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

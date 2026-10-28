@@ -44,6 +44,7 @@ vi.mock('@/plugins', async (importOriginal) => {
 
 import StudioAppPage from './StudioAppPage'
 import type { PluginView } from '@/plugins'
+import { pluginsApi } from '@/plugins/api'
 
 function makeView(over: Partial<PluginView> = {}): PluginView {
   const Tab = () => <div data-testid="app-surface">running-surface</div>
@@ -118,6 +119,26 @@ describe('StudioAppPage — full-page Studio App view', () => {
     expect(screen.getByText('studio.tabs.settings')).toBeTruthy()
     expect(screen.getByText('studio.tabs.logs')).toBeTruthy()
     expect(screen.getByText('studio.tabs.export')).toBeTruthy()
+  })
+
+  it('worker badge follows the worker process state, not the enabled flag', async () => {
+    const spy = vi
+      .spyOn(pluginsApi, 'workerStatus')
+      .mockResolvedValue({ status: 'crashed', exitCode: 2, pid: null })
+    catalogMock.mockReturnValue({
+      views: [makeView({ active: true })],
+      isLoading: false,
+      isFetching: false,
+      backendError: null,
+      refetch: vi.fn(),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/studio\.worker\.crashed/)).toBeTruthy()
+    expect(screen.getByText(/exit 2/)).toBeTruthy()
+    expect(screen.queryByText('studio.worker.running')).toBeNull()
+    expect(spy).toHaveBeenCalledWith('live', 'lpr', expect.anything())
+    spy.mockRestore()
   })
 
   it('shows the not-installed empty state when the app is not installed', () => {

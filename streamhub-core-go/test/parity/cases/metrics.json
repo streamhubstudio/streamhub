@@ -1,0 +1,43 @@
+{
+  "module": "metrics",
+  "description": "Prometheus /metrics at the ROOT path (excluded from /api/v1). Fase-0 M8 default-deny: the parity env sets no METRICS_TOKEN, so the endpoint answers 404 whatever the credentials. The 403/200 paths (Bearer + ?token=) are covered by internal/metrics tests; covering them here needs a per-file env (harness feature).",
+  "defaults": {
+    "compareHeaders": ["content-type", "cache-control"]
+  },
+  "cases": [
+    {
+      "name": "metrics-disabled-404",
+      "method": "GET",
+      "path": "/metrics",
+      "expectStatus": 404
+    },
+    {
+      "name": "metrics-disabled-404-with-bearer",
+      "method": "GET",
+      "path": "/metrics",
+      "headers": {"Authorization": "Bearer some-token"},
+      "expectStatus": 404
+    },
+    {
+      "name": "metrics-disabled-404-with-query-token",
+      "method": "GET",
+      "path": "/metrics?token=some-token",
+      "expectStatus": 404
+    },
+    {
+      "name": "metrics-disabled-404-with-api-token",
+      "note": "@Public: an API credential neither helps nor 401s",
+      "method": "GET",
+      "path": "/metrics",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "metrics-not-under-api-prefix",
+      "method": "GET",
+      "path": "/api/v1/metrics",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    }
+  ]
+}

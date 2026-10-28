@@ -1,0 +1,97 @@
+{
+  "name": "demo-app",
+  "display_name": "Demo App",
+  "room_prefix": "demo_",
+  "enabled": true,
+  "max_streams": 50,
+  "bitrate_kbps": 2500.5,
+  "description": "",
+  "s3": {
+    "bucket": "streamhub-demo",
+    "region": "us-east-1",
+    "prefix": "",
+    "path_style": false,
+    "secret_ref": "s3:demo"
+  },
+  "recording": {
+    "enabled": false,
+    "format": "mp4",
+    "layers": []
+  },
+  "hls": {
+    "enabled": true,
+    "segment_seconds": 2,
+    "playlist_size": 6,
+    "low_latency": false
+  },
+  "transcoding": {
+    "enabled": true,
+    "layers": [
+      {
+        "name": "1080p",
+        "width": 1920,
+        "height": 1080,
+        "bitrate": 4500000,
+        "fps": 30
+      },
+      {
+        "name": "720p",
+        "width": 1280,
+        "height": 720,
+        "bitrate": 2500000,
+        "fps": 30
+      },
+      {
+        "name": "360p",
+        "width": 640,
+        "height": 360,
+        "bitrate": 800000,
+        "fps": 15.5
+      }
+    ]
+  },
+  "webhooks": [
+    {
+      "url": "https://hooks.example.com/streamhub?token=abc&x=1",
+      "events": [
+        "all"
+      ],
+      "secret": "whsec_123",
+      "retries": 3
+    },
+    {
+      "url": "http://10.0.0.5:8080/cb",
+      "events": [
+        "stream.started",
+        "stream.ended"
+      ],
+      "headers": {}
+    }
+  ],
+  "features": {
+    "cockpit": {
+      "enabled": true,
+      "layout": "grid"
+    },
+    "lpr": {},
+    "deface": {
+      "enabled": false,
+      "threshold": 0.35
+    }
+  },
+  "security": {
+    "ip_allow": [],
+    "ip_block": [
+      "10.0.0.0/8",
+      "192.168.1.1"
+    ],
+    "play_token_ttl": 3600
+  },
+  "callback_url": null,
+  "tags": [
+    "prod",
+    "live",
+    "2024"
+  ],
+  "meta": {}
+}

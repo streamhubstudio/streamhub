@@ -1,0 +1,101 @@
+{
+  "module": "transcription",
+  "description": "Transcription routes: auth/permission gates, ParseIntPipe, plugin/app/vod guards, transcript + SRT 404s (no VOD fixture, no worker is ever run).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "tr-transcribe-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/vods/1/transcribe",
+      "expectStatus": 401
+    },
+    {
+      "name": "tr-transcribe-bad-id",
+      "method": "POST",
+      "path": "/api/v1/apps/live/vods/abc/transcribe",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "tr-transcribe",
+      "method": "POST",
+      "path": "/api/v1/apps/live/vods/987654/transcribe",
+      "auth": "globalToken"
+    },
+    {
+      "name": "tr-transcribe-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/vods/1/transcribe",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "tr-transcribe-missing-app",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost-app/vods/1/transcribe",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "tr-transcript-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/987654/transcript",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "tr-transcript-bad-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/x/transcript",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "tr-transcript-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost-app/vods/1/transcript",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "tr-srt-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/987654/transcript.srt",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "tr-srt-exp-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/1e3/transcript.srt",
+      "auth": "globalToken",
+      "expectStatus": 404,
+      "note": "global ValidationPipe runs Number() before ParseIntPipe: 1e3 \u2192 1000"
+    },
+    {
+      "name": "tr-srt-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/1/transcript.srt",
+      "expectStatus": 401
+    },
+    {
+      "name": "tr-transcript-frac-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/1.5/transcript",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "tr-transcript-hex-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods/0x10/transcript",
+      "auth": "globalToken",
+      "expectStatus": 404
+    }
+  ]
+}

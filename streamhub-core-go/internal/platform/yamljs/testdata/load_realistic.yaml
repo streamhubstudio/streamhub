@@ -1,0 +1,19 @@
+name: demo
+enabled: true
+max_streams: 50
+webhooks:
+  - url: https://hooks.example.com/x?y=1
+    events:
+      - all
+    secret: ''
+  - url: http://10.0.0.1:8080
+    events:
+      - stream.started
+transcoding:
+  layers:
+    - name: 720p
+      width: 1280
+      bitrate: 2500000
+features: {}
+tags: []
+created: 2024-03-01T12:00:00.000Z

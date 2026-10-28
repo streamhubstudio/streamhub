@@ -1,0 +1,3041 @@
+{
+  "module": "streamflow",
+  "cases": [
+    {
+      "name": "boxes",
+      "fingerprint": "sha256:2cf260d3d45795fa",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "description": "Fires when a StreamHub domain event is dispatched (plate.*, occupancy.*, perimeter intrusion, stream.*, node.*, …), optionally filtered by room, tags or a predicate.",
+            "fields": [
+              {
+                "help": "Exact name or prefix wildcard (e.g. plate.*). Empty = any.",
+                "key": "event",
+                "label": "Event",
+                "type": "string"
+              },
+              {
+                "help": "Only fire for this room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              },
+              {
+                "help": "Array; fire when any matches the payload tags.",
+                "key": "tags",
+                "label": "Tags",
+                "type": "json"
+              },
+              {
+                "help": "Condition config: {match, rules:[{field,op,value}]}.",
+                "key": "predicate",
+                "label": "Predicate",
+                "type": "json"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On event",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.event"
+          },
+          {
+            "description": "Fires on an interval / cron (BullMQ repeatable).",
+            "fields": [
+              {
+                "help": "Cron expression, e.g. 0 * * * *.",
+                "key": "cron",
+                "label": "Cron",
+                "type": "string"
+              },
+              {
+                "help": "Simple interval; used when no cron.",
+                "key": "everySeconds",
+                "label": "Every (seconds)",
+                "type": "number"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On schedule",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.schedule"
+          },
+          {
+            "description": "Fires on an inbound MQTT topic on the app's broker.",
+            "fields": [
+              {
+                "help": "Topic filter (wildcards allowed).",
+                "key": "topic",
+                "label": "Topic",
+                "type": "string"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On MQTT message",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.mqtt"
+          },
+          {
+            "description": "Fires from the Run button or POST …/run.",
+            "fields": [],
+            "group": "trigger",
+            "inputs": [],
+            "label": "Manual / API",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.manual"
+          },
+          {
+            "description": "Capture a JPEG frame from a room (uploaded to the app S3).",
+            "fields": [
+              {
+                "help": "Defaults to the trigger room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Snapshot",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.snapshot"
+          },
+          {
+            "description": "Upload an in-memory blob (text/JSON/base64) to the app bucket.",
+            "fields": [
+              {
+                "help": "Object key; templated.",
+                "key": "key",
+                "label": "Key",
+                "type": "string"
+              },
+              {
+                "help": "String/JSON/template. Objects are JSON-encoded.",
+                "key": "content",
+                "label": "Content",
+                "type": "text"
+              },
+              {
+                "help": "Decode content from base64 before upload.",
+                "key": "base64",
+                "label": "Base64",
+                "type": "boolean"
+              },
+              {
+                "key": "contentType",
+                "label": "Content-Type",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Store to S3",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.s3"
+          },
+          {
+            "description": "POST a mapped JSON body to any URL (SSRF-guarded).",
+            "fields": [
+              {
+                "key": "url",
+                "label": "URL",
+                "type": "string"
+              },
+              {
+                "help": "Templated; defaults to the trigger payload.",
+                "key": "body",
+                "label": "Body",
+                "type": "json"
+              },
+              {
+                "key": "headers",
+                "label": "Headers",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "HTTP POST",
+            "outputs": [
+              "out",
+              "error"
+            ],
+            "type": "action.http"
+          },
+          {
+            "description": "Send a prompt (optionally with an image) to OpenAI/DeepSeek and capture the reply — budget-guarded.",
+            "fields": [
+              {
+                "key": "prompt",
+                "label": "Prompt",
+                "type": "text"
+              },
+              {
+                "key": "system",
+                "label": "System prompt",
+                "type": "text"
+              },
+              {
+                "help": "Templated, e.g. {{snap.url}}.",
+                "key": "imageUrl",
+                "label": "Image URL",
+                "type": "string"
+              },
+              {
+                "key": "jsonMode",
+                "label": "JSON mode",
+                "type": "boolean"
+              },
+              {
+                "key": "maxTokens",
+                "label": "Max tokens",
+                "type": "number"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Analyze with AI",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.ai"
+          },
+          {
+            "description": "Dispatch a streamflow.* event through the app's signed callbacks + MQTT.",
+            "fields": [
+              {
+                "key": "event",
+                "label": "Event",
+                "options": [
+                  {
+                    "label": "streamflow.output",
+                    "value": "streamflow.output"
+                  },
+                  {
+                    "label": "streamflow.run_finished",
+                    "value": "streamflow.run_finished"
+                  },
+                  {
+                    "label": "streamflow.run_failed",
+                    "value": "streamflow.run_failed"
+                  }
+                ],
+                "type": "select"
+              },
+              {
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Emit event",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.emit"
+          },
+          {
+            "description": "Publish a payload to an arbitrary topic on the app's MQTT broker (no-op when MQTT is disabled for the app).",
+            "fields": [
+              {
+                "help": "Templated; namespaced under the app topic prefix.",
+                "key": "topic",
+                "label": "Topic",
+                "type": "string"
+              },
+              {
+                "help": "Templated; defaults to the trigger payload. Objects are JSON-encoded.",
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              },
+              {
+                "help": "0 (default) | 1 | 2.",
+                "key": "qos",
+                "label": "QoS",
+                "type": "number"
+              },
+              {
+                "key": "retain",
+                "label": "Retain",
+                "type": "boolean"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Publish MQTT",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.mqtt"
+          },
+          {
+            "description": "Fan out via the notifier (callback/MQTT/email/Discord/Telegram).",
+            "fields": [
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "string"
+              },
+              {
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              },
+              {
+                "help": "Array subset, e.g. [\"discord\"].",
+                "key": "channels",
+                "label": "Channels",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Notify",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.notify"
+          },
+          {
+            "description": "POST an event to another installed plugin's /events channel.",
+            "fields": [
+              {
+                "key": "plugin",
+                "label": "Plugin id",
+                "type": "string"
+              },
+              {
+                "key": "event",
+                "label": "Event name",
+                "type": "string"
+              },
+              {
+                "key": "data",
+                "label": "Data",
+                "type": "json"
+              },
+              {
+                "help": "The target worker's ingest token.",
+                "key": "token",
+                "label": "Ingest token",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Call plugin",
+            "outputs": [
+              "out",
+              "error"
+            ],
+            "type": "action.plugin"
+          },
+          {
+            "description": "Branch true/false on a safe typed comparison over the bag.",
+            "fields": [
+              {
+                "key": "match",
+                "label": "Match",
+                "options": [
+                  {
+                    "label": "All (AND)",
+                    "value": "all"
+                  },
+                  {
+                    "label": "Any (OR)",
+                    "value": "any"
+                  }
+                ],
+                "type": "select"
+              },
+              {
+                "help": "[{field, op, value}] — op: eq/ne/gt/gte/lt/lte/contains/matches/exists/…",
+                "key": "rules",
+                "label": "Rules",
+                "type": "json"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Condition",
+            "outputs": [
+              "true",
+              "false"
+            ],
+            "type": "logic.condition"
+          },
+          {
+            "description": "Wait before continuing (bounded to 60s).",
+            "fields": [
+              {
+                "key": "seconds",
+                "label": "Seconds",
+                "type": "number"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Delay",
+            "outputs": [
+              "out"
+            ],
+            "type": "logic.delay"
+          },
+          {
+            "description": "Map/transform bag fields into vars for downstream boxes.",
+            "fields": [
+              {
+                "help": "{ \"vars.x\": \"{{trigger.plate}}\" }",
+                "key": "set",
+                "label": "Set",
+                "type": "json"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Set variable",
+            "outputs": [
+              "out"
+            ],
+            "type": "logic.setvar"
+          },
+          {
+            "description": "Route to a port by matching a field against cases.",
+            "fields": [
+              {
+                "key": "field",
+                "label": "Field",
+                "type": "string"
+              },
+              {
+                "help": "[{value, port}]",
+                "key": "cases",
+                "label": "Cases",
+                "type": "json"
+              },
+              {
+                "key": "default",
+                "label": "Default port",
+                "type": "string"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Switch",
+            "outputs": [
+              "default"
+            ],
+            "type": "logic.switch"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "events",
+      "fingerprint": "sha256:a13b7b83f0cc61ef",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/events",
+        "auth": "adminJwt"
+      },
+      "skip": "GO-DIVERGENCE (Node bug fixed in Go): Node's VisionAppsController apps/:app/plugins/:model/events shadows StreamflowController_events (404 'unknown vision model'), so the trigger picker never gets the event catalogue; Go serves it (TestEventsRouteNotShadowed)."
+    },
+    {
+      "name": "boxes-no-auth",
+      "fingerprint": "sha256:9f79f2e3e9dbc5d9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/boxes"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "boxes-viewer-cross-tenant",
+      "fingerprint": "sha256:01757f746603aa93",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "boxes-app-token",
+      "fingerprint": "sha256:cee56bae614c466a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "description": "Fires when a StreamHub domain event is dispatched (plate.*, occupancy.*, perimeter intrusion, stream.*, node.*, …), optionally filtered by room, tags or a predicate.",
+            "fields": [
+              {
+                "help": "Exact name or prefix wildcard (e.g. plate.*). Empty = any.",
+                "key": "event",
+                "label": "Event",
+                "type": "string"
+              },
+              {
+                "help": "Only fire for this room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              },
+              {
+                "help": "Array; fire when any matches the payload tags.",
+                "key": "tags",
+                "label": "Tags",
+                "type": "json"
+              },
+              {
+                "help": "Condition config: {match, rules:[{field,op,value}]}.",
+                "key": "predicate",
+                "label": "Predicate",
+                "type": "json"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On event",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.event"
+          },
+          {
+            "description": "Fires on an interval / cron (BullMQ repeatable).",
+            "fields": [
+              {
+                "help": "Cron expression, e.g. 0 * * * *.",
+                "key": "cron",
+                "label": "Cron",
+                "type": "string"
+              },
+              {
+                "help": "Simple interval; used when no cron.",
+                "key": "everySeconds",
+                "label": "Every (seconds)",
+                "type": "number"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On schedule",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.schedule"
+          },
+          {
+            "description": "Fires on an inbound MQTT topic on the app's broker.",
+            "fields": [
+              {
+                "help": "Topic filter (wildcards allowed).",
+                "key": "topic",
+                "label": "Topic",
+                "type": "string"
+              }
+            ],
+            "group": "trigger",
+            "inputs": [],
+            "label": "On MQTT message",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.mqtt"
+          },
+          {
+            "description": "Fires from the Run button or POST …/run.",
+            "fields": [],
+            "group": "trigger",
+            "inputs": [],
+            "label": "Manual / API",
+            "outputs": [
+              "out"
+            ],
+            "type": "trigger.manual"
+          },
+          {
+            "description": "Capture a JPEG frame from a room (uploaded to the app S3).",
+            "fields": [
+              {
+                "help": "Defaults to the trigger room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Snapshot",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.snapshot"
+          },
+          {
+            "description": "Upload an in-memory blob (text/JSON/base64) to the app bucket.",
+            "fields": [
+              {
+                "help": "Object key; templated.",
+                "key": "key",
+                "label": "Key",
+                "type": "string"
+              },
+              {
+                "help": "String/JSON/template. Objects are JSON-encoded.",
+                "key": "content",
+                "label": "Content",
+                "type": "text"
+              },
+              {
+                "help": "Decode content from base64 before upload.",
+                "key": "base64",
+                "label": "Base64",
+                "type": "boolean"
+              },
+              {
+                "key": "contentType",
+                "label": "Content-Type",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Store to S3",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.s3"
+          },
+          {
+            "description": "POST a mapped JSON body to any URL (SSRF-guarded).",
+            "fields": [
+              {
+                "key": "url",
+                "label": "URL",
+                "type": "string"
+              },
+              {
+                "help": "Templated; defaults to the trigger payload.",
+                "key": "body",
+                "label": "Body",
+                "type": "json"
+              },
+              {
+                "key": "headers",
+                "label": "Headers",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "HTTP POST",
+            "outputs": [
+              "out",
+              "error"
+            ],
+            "type": "action.http"
+          },
+          {
+            "description": "Send a prompt (optionally with an image) to OpenAI/DeepSeek and capture the reply — budget-guarded.",
+            "fields": [
+              {
+                "key": "prompt",
+                "label": "Prompt",
+                "type": "text"
+              },
+              {
+                "key": "system",
+                "label": "System prompt",
+                "type": "text"
+              },
+              {
+                "help": "Templated, e.g. {{snap.url}}.",
+                "key": "imageUrl",
+                "label": "Image URL",
+                "type": "string"
+              },
+              {
+                "key": "jsonMode",
+                "label": "JSON mode",
+                "type": "boolean"
+              },
+              {
+                "key": "maxTokens",
+                "label": "Max tokens",
+                "type": "number"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Analyze with AI",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.ai"
+          },
+          {
+            "description": "Dispatch a streamflow.* event through the app's signed callbacks + MQTT.",
+            "fields": [
+              {
+                "key": "event",
+                "label": "Event",
+                "options": [
+                  {
+                    "label": "streamflow.output",
+                    "value": "streamflow.output"
+                  },
+                  {
+                    "label": "streamflow.run_finished",
+                    "value": "streamflow.run_finished"
+                  },
+                  {
+                    "label": "streamflow.run_failed",
+                    "value": "streamflow.run_failed"
+                  }
+                ],
+                "type": "select"
+              },
+              {
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Emit event",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.emit"
+          },
+          {
+            "description": "Publish a payload to an arbitrary topic on the app's MQTT broker (no-op when MQTT is disabled for the app).",
+            "fields": [
+              {
+                "help": "Templated; namespaced under the app topic prefix.",
+                "key": "topic",
+                "label": "Topic",
+                "type": "string"
+              },
+              {
+                "help": "Templated; defaults to the trigger payload. Objects are JSON-encoded.",
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              },
+              {
+                "help": "0 (default) | 1 | 2.",
+                "key": "qos",
+                "label": "QoS",
+                "type": "number"
+              },
+              {
+                "key": "retain",
+                "label": "Retain",
+                "type": "boolean"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Publish MQTT",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.mqtt"
+          },
+          {
+            "description": "Fan out via the notifier (callback/MQTT/email/Discord/Telegram).",
+            "fields": [
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "string"
+              },
+              {
+                "key": "payload",
+                "label": "Payload",
+                "type": "json"
+              },
+              {
+                "help": "Array subset, e.g. [\"discord\"].",
+                "key": "channels",
+                "label": "Channels",
+                "type": "json"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Notify",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.notify"
+          },
+          {
+            "description": "POST an event to another installed plugin's /events channel.",
+            "fields": [
+              {
+                "key": "plugin",
+                "label": "Plugin id",
+                "type": "string"
+              },
+              {
+                "key": "event",
+                "label": "Event name",
+                "type": "string"
+              },
+              {
+                "key": "data",
+                "label": "Data",
+                "type": "json"
+              },
+              {
+                "help": "The target worker's ingest token.",
+                "key": "token",
+                "label": "Ingest token",
+                "type": "string"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Call plugin",
+            "outputs": [
+              "out",
+              "error"
+            ],
+            "type": "action.plugin"
+          },
+          {
+            "description": "Branch true/false on a safe typed comparison over the bag.",
+            "fields": [
+              {
+                "key": "match",
+                "label": "Match",
+                "options": [
+                  {
+                    "label": "All (AND)",
+                    "value": "all"
+                  },
+                  {
+                    "label": "Any (OR)",
+                    "value": "any"
+                  }
+                ],
+                "type": "select"
+              },
+              {
+                "help": "[{field, op, value}] — op: eq/ne/gt/gte/lt/lte/contains/matches/exists/…",
+                "key": "rules",
+                "label": "Rules",
+                "type": "json"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Condition",
+            "outputs": [
+              "true",
+              "false"
+            ],
+            "type": "logic.condition"
+          },
+          {
+            "description": "Wait before continuing (bounded to 60s).",
+            "fields": [
+              {
+                "key": "seconds",
+                "label": "Seconds",
+                "type": "number"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Delay",
+            "outputs": [
+              "out"
+            ],
+            "type": "logic.delay"
+          },
+          {
+            "description": "Map/transform bag fields into vars for downstream boxes.",
+            "fields": [
+              {
+                "help": "{ \"vars.x\": \"{{trigger.plate}}\" }",
+                "key": "set",
+                "label": "Set",
+                "type": "json"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Set variable",
+            "outputs": [
+              "out"
+            ],
+            "type": "logic.setvar"
+          },
+          {
+            "description": "Route to a port by matching a field against cases.",
+            "fields": [
+              {
+                "key": "field",
+                "label": "Field",
+                "type": "string"
+              },
+              {
+                "help": "[{value, port}]",
+                "key": "cases",
+                "label": "Cases",
+                "type": "json"
+              },
+              {
+                "key": "default",
+                "label": "Default port",
+                "type": "string"
+              }
+            ],
+            "group": "logic",
+            "inputs": [
+              "in"
+            ],
+            "label": "Switch",
+            "outputs": [
+              "default"
+            ],
+            "type": "logic.switch"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "workflows-empty",
+      "fingerprint": "sha256:7e5c862a053047ad",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "workflows-unknown-app",
+      "fingerprint": "sha256:cbd0cf7fcf8010a6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/workflows",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'no-such-sf-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "create-no-body",
+      "fingerprint": "sha256:d98a158e8a7b539f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "name must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "create-blank-name",
+      "fingerprint": "sha256:643898c0a7cb8494",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "body": {
+          "name": "   "
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "body must carry a 'name'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "create-bad-types",
+      "fingerprint": "sha256:810e87d3ae775e50",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "body": {
+          "name": 5,
+          "enabled": "yes",
+          "graph": [
+            1
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "name must be a string",
+          "enabled must be a boolean value",
+          "graph must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "create-minimal",
+      "fingerprint": "sha256:a1f94a5d91205716",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "body": {
+          "name": " Minimal "
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [],
+            "edges": []
+          },
+          "id": "{{wfMin}}",
+          "name": "Minimal",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "create-full",
+      "fingerprint": "sha256:1356718f87d2609f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{\"name\": \"Full\", \"enabled\": false, \"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}, \"extra\": \"ignored\"}"
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "sk-abcdefghijklmnop",
+                  "password": "hunter2",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ],
+            "zoom": 1.25
+          },
+          "id": "{{wfFull}}",
+          "name": "Full",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "create-null-graph",
+      "fingerprint": "sha256:37f43aed9038cd02",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "body": {
+          "name": "Nulls",
+          "enabled": null,
+          "graph": null
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [],
+            "edges": []
+          },
+          "id": "{{wfNull}}",
+          "name": "Nulls",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "create-unknown-app",
+      "fingerprint": "sha256:ce54c3cf61715c61",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/workflows",
+        "auth": "adminJwt",
+        "body": {
+          "name": "x"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'no-such-sf-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "workflows-list",
+      "fingerprint": "sha256:7e5c862a053047ad",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [],
+              "edges": []
+            },
+            "id": "{{wfMin}}",
+            "name": "Minimal",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "graph": {
+              "boxes": [
+                {
+                  "config": {},
+                  "id": "t",
+                  "type": "trigger.manual",
+                  "x": 10.5,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "match": "all",
+                    "rules": [
+                      {
+                        "field": "trigger.n",
+                        "op": "gt",
+                        "value": "1e1"
+                      }
+                    ]
+                  },
+                  "id": "c",
+                  "type": "logic.condition"
+                },
+                {
+                  "config": {
+                    "apiKey": "sk-abcdefghijklmnop",
+                    "password": "hunter2",
+                    "token": "{{secret.TOKEN}}",
+                    "url": "https://example.com/hook"
+                  },
+                  "id": "h",
+                  "type": "action.http"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "t",
+                  "to": "c"
+                },
+                {
+                  "from": "c",
+                  "fromPort": "true",
+                  "to": "h"
+                }
+              ],
+              "zoom": 1.25
+            },
+            "id": "{{wfFull}}",
+            "name": "Full",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [],
+              "edges": []
+            },
+            "id": "{{wfNull}}",
+            "name": "Nulls",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-get",
+      "fingerprint": "sha256:9edbf26c1bb6e831",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "sk-abcdefghijklmnop",
+                  "password": "hunter2",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ],
+            "zoom": 1.25
+          },
+          "id": "{{wfFull}}",
+          "name": "Full",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-get-404",
+      "fingerprint": "sha256:860294c9c8818c8a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "workflow 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "workflow-export",
+      "fingerprint": "sha256:173fe073d2c110f7",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/export",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "",
+                  "password": "",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ]
+          },
+          "name": "Full",
+          "redactions": [
+            "h.apiKey",
+            "h.password"
+          ],
+          "streamflow": 1
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-export-404",
+      "fingerprint": "sha256:354d42b59b0e27f0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/export",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "workflow 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "workflow-update",
+      "fingerprint": "sha256:9a38774cd2dbc265",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+        "auth": "adminJwt",
+        "body": {
+          "name": "Renamed",
+          "graph": {
+            "edges": [],
+            "boxes": [
+              {
+                "type": "trigger.event",
+                "id": "e",
+                "config": {
+                  "event": "plate.*"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {
+                  "event": "plate.*"
+                },
+                "id": "e",
+                "type": "trigger.event"
+              }
+            ],
+            "edges": []
+          },
+          "id": "{{wfMin}}",
+          "name": "Renamed",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-update-nulls",
+      "fingerprint": "sha256:ae31495848a130ff",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfNull}}",
+        "auth": "adminJwt",
+        "body": {
+          "name": null,
+          "enabled": null,
+          "graph": null
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "graph": {
+            "boxes": [],
+            "edges": []
+          },
+          "id": "{{wfNull}}",
+          "name": "null",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-update-empty",
+      "fingerprint": "sha256:989ff4b2f7ec97ed",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+        "auth": "adminJwt",
+        "body": {}
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {
+                  "event": "plate.*"
+                },
+                "id": "e",
+                "type": "trigger.event"
+              }
+            ],
+            "edges": []
+          },
+          "id": "{{wfMin}}",
+          "name": "Renamed",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-update-bad",
+      "fingerprint": "sha256:fd9b95b243483c40",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+        "auth": "adminJwt",
+        "body": {
+          "enabled": 1,
+          "graph": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "enabled must be a boolean value",
+          "graph must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "workflow-update-404",
+      "fingerprint": "sha256:674fb56b1261aa30",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope",
+        "auth": "adminJwt",
+        "body": {
+          "name": "x"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "workflow 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "workflow-enable-false",
+      "fingerprint": "sha256:39412e0cf450cf64",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}/enable",
+        "auth": "adminJwt",
+        "body": {
+          "enabled": false
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "graph": {
+            "boxes": [
+              {
+                "config": {
+                  "event": "plate.*"
+                },
+                "id": "e",
+                "type": "trigger.event"
+              }
+            ],
+            "edges": []
+          },
+          "id": "{{wfMin}}",
+          "name": "Renamed",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-enable-default",
+      "fingerprint": "sha256:92ab016bfcc44277",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/enable",
+        "auth": "adminJwt",
+        "body": {}
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "sk-abcdefghijklmnop",
+                  "password": "hunter2",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ],
+            "zoom": 1.25
+          },
+          "id": "{{wfFull}}",
+          "name": "Full",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-enable-bad",
+      "fingerprint": "sha256:66c2c4a416d22fed",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/enable",
+        "auth": "adminJwt",
+        "body": {
+          "enabled": "no"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "enabled must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "workflow-enable-404",
+      "fingerprint": "sha256:d59ee381919f4f52",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/enable",
+        "auth": "adminJwt",
+        "body": {
+          "enabled": true
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "workflow 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "import-ok",
+      "fingerprint": "sha256:e547189b288abae9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{\"workflow\": {\"streamflow\": 1, \"name\": \" Imported \", \"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}, \"junk\": 1}}"
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "sk-abcdefghijklmnop",
+                  "password": "hunter2",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ]
+          },
+          "id": "{{wfImp}}",
+          "name": "Imported",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "import-name-override",
+      "fingerprint": "sha256:739e9b8ddb96f6d9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{\"workflow\": {\"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}}, \"name\": \"  Over  \"}"
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {},
+                "id": "t",
+                "type": "trigger.manual",
+                "x": 10.5,
+                "y": 2
+              },
+              {
+                "config": {
+                  "match": "all",
+                  "rules": [
+                    {
+                      "field": "trigger.n",
+                      "op": "gt",
+                      "value": "1e1"
+                    }
+                  ]
+                },
+                "id": "c",
+                "type": "logic.condition"
+              },
+              {
+                "config": {
+                  "apiKey": "sk-abcdefghijklmnop",
+                  "password": "hunter2",
+                  "token": "{{secret.TOKEN}}",
+                  "url": "https://example.com/hook"
+                },
+                "id": "h",
+                "type": "action.http"
+              }
+            ],
+            "edges": [
+              {
+                "from": "t",
+                "to": "c"
+              },
+              {
+                "from": "c",
+                "fromPort": "true",
+                "to": "h"
+              }
+            ]
+          },
+          "id": "<uuid#1>",
+          "name": "Over",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "import-default-name",
+      "fingerprint": "sha256:f61ee918a36a4c92",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "trigger.manual"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "trigger.manual"
+              }
+            ],
+            "edges": []
+          },
+          "id": "<uuid#1>",
+          "name": "Imported workflow",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "import-unknown-types",
+      "fingerprint": "sha256:252ba0ae8e74e5ad",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "nope.x"
+                },
+                {
+                  "id": "b",
+                  "type": "nope.y"
+                },
+                {
+                  "id": "c"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unknown box types: nope.x, nope.y, ",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-unknown-type",
+      "fingerprint": "sha256:28c0655e1ab4c96f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "nope.x"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unknown box type: nope.x",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-cycle",
+      "fingerprint": "sha256:f99084dc070a4ce4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "logic.delay"
+                },
+                {
+                  "id": "b",
+                  "type": "logic.delay"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "a",
+                  "to": "b"
+                },
+                {
+                  "from": "b:out",
+                  "to": "a"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "cycle through box 'a'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-dup-id",
+      "fingerprint": "sha256:2e715e253303eba9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "logic.delay"
+                },
+                {
+                  "id": "a",
+                  "type": "logic.delay"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "duplicate box id 'a'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-bad-edge",
+      "fingerprint": "sha256:bbc14ed5a31c09e9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "logic.delay"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "a",
+                  "to": "zz"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "edge to unknown box 'zz'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-empty",
+      "fingerprint": "sha256:cb3f27e36cf46c53",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {}
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "workflow has no boxes to import",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-dangerous-ok",
+      "fingerprint": "sha256:57f0f5fc4e4c9e8e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": {
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "action.shell",
+                  "config": {
+                    "command": "ls",
+                    "dsn": "postgres://u:p@h/db"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "graph": {
+            "boxes": [
+              {
+                "config": {
+                  "command": "ls",
+                  "dsn": "postgres://u:p@h/db"
+                },
+                "id": "a",
+                "type": "action.shell"
+              }
+            ],
+            "edges": []
+          },
+          "id": "<uuid#1>",
+          "name": "Imported workflow",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "import-not-object",
+      "fingerprint": "sha256:de99a8fa13f142f0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt",
+        "body": {
+          "workflow": [
+            1
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "workflow must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "import-no-body",
+      "fingerprint": "sha256:76e027ea4dd86c4c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+        "auth": "adminJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "workflow must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "runs-empty",
+      "fingerprint": "sha256:873d690035cf9962",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/runs",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "runs-filter-limit",
+      "fingerprint": "sha256:f9705afaa0b1410f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/runs?workflowId=%20{{wfFull}}%20&limit=abc",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "run-get-404",
+      "fingerprint": "sha256:0e88cad6ba91f087",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/runs/nope",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "run 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "run-manual-404",
+      "fingerprint": "sha256:95b50b1f94559d3f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/run",
+        "auth": "adminJwt",
+        "body": {}
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "workflow 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "run-manual-bad-payload",
+      "fingerprint": "sha256:39c9a94fadea8df4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/run",
+        "auth": "adminJwt",
+        "body": {
+          "payload": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "payload must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "secrets-empty",
+      "fingerprint": "sha256:292588e32f53f4fc",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "secret-put-bad-name",
+      "fingerprint": "sha256:f1a77037ab6c4d81",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/lower_case",
+        "auth": "adminJwt",
+        "body": {
+          "value": "abc"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "secret name must be UPPER_SNAKE_CASE (A–Z, 0–9, _), 1–64 chars",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "secret-put-no-value",
+      "fingerprint": "sha256:5c80c05b04543fea",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "value must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "secret-put-blank",
+      "fingerprint": "sha256:abe7fbf447107bd4",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt",
+        "body": {
+          "value": "   "
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "secret value is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "secret-put-masked",
+      "fingerprint": "sha256:19eb105d5f9ea5bb",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt",
+        "body": {
+          "value": "sk-\u2026abcd"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "refusing to store a masked value",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "secret-put-ok",
+      "fingerprint": "sha256:2c11c4635be38edd",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt",
+        "body": {
+          "value": "sk-live-ABCDEFGH1234"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "",
+          "last4": "1234",
+          "name": "API_KEY",
+          "updatedAt": ""
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "secret-put-short",
+      "fingerprint": "sha256:51363175f5af6b9e",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/%20PIN%20",
+        "auth": "adminJwt",
+        "body": {
+          "value": "1234"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "",
+          "last4": "",
+          "name": "PIN",
+          "updatedAt": ""
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "secret-put-unicode",
+      "fingerprint": "sha256:ac563e87690515cd",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/EMOJI",
+        "auth": "adminJwt",
+        "body": {
+          "value": "p\u00e4ss\ud83d\ude00w\u00f6rd"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "",
+          "last4": "wörd",
+          "name": "EMOJI",
+          "updatedAt": ""
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "secrets-list",
+      "fingerprint": "sha256:292588e32f53f4fc",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "last4": "1234",
+            "name": "API_KEY",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "last4": "wörd",
+            "name": "EMOJI",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "last4": "",
+            "name": "PIN",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "secret-delete",
+      "fingerprint": "sha256:715114a44ef53b66",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "secret-delete-404",
+      "fingerprint": "sha256:715114a44ef53b66",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "secret 'API_KEY' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "secret-put-unknown-app",
+      "fingerprint": "sha256:06b551ee9cd6673f",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/secrets/X",
+        "auth": "adminJwt",
+        "body": {
+          "value": "abcdef"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'no-such-sf-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "secrets-viewer",
+      "fingerprint": "sha256:074201ee9360ca8f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "workflow-delete",
+      "fingerprint": "sha256:caad6e1176c793c2",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfImp}}",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-delete-again",
+      "fingerprint": "sha256:caad6e1176c793c2",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfImp}}",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": false
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "workflow-delete-no-auth",
+      "fingerprint": "sha256:bba512d4ac7a94c3",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "workflows-list-final",
+      "fingerprint": "sha256:7e5c862a053047ad",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "graph": {
+              "boxes": [
+                {
+                  "config": {
+                    "event": "plate.*"
+                  },
+                  "id": "e",
+                  "type": "trigger.event"
+                }
+              ],
+              "edges": []
+            },
+            "id": "{{wfMin}}",
+            "name": "Renamed",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [
+                {
+                  "config": {},
+                  "id": "t",
+                  "type": "trigger.manual",
+                  "x": 10.5,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "match": "all",
+                    "rules": [
+                      {
+                        "field": "trigger.n",
+                        "op": "gt",
+                        "value": "1e1"
+                      }
+                    ]
+                  },
+                  "id": "c",
+                  "type": "logic.condition"
+                },
+                {
+                  "config": {
+                    "apiKey": "sk-abcdefghijklmnop",
+                    "password": "hunter2",
+                    "token": "{{secret.TOKEN}}",
+                    "url": "https://example.com/hook"
+                  },
+                  "id": "h",
+                  "type": "action.http"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "t",
+                  "to": "c"
+                },
+                {
+                  "from": "c",
+                  "fromPort": "true",
+                  "to": "h"
+                }
+              ],
+              "zoom": 1.25
+            },
+            "id": "{{wfFull}}",
+            "name": "Full",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "graph": {
+              "boxes": [],
+              "edges": []
+            },
+            "id": "{{wfNull}}",
+            "name": "null",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [
+                {
+                  "config": {},
+                  "id": "t",
+                  "type": "trigger.manual",
+                  "x": 10.5,
+                  "y": 2
+                },
+                {
+                  "config": {
+                    "match": "all",
+                    "rules": [
+                      {
+                        "field": "trigger.n",
+                        "op": "gt",
+                        "value": "1e1"
+                      }
+                    ]
+                  },
+                  "id": "c",
+                  "type": "logic.condition"
+                },
+                {
+                  "config": {
+                    "apiKey": "sk-abcdefghijklmnop",
+                    "password": "hunter2",
+                    "token": "{{secret.TOKEN}}",
+                    "url": "https://example.com/hook"
+                  },
+                  "id": "h",
+                  "type": "action.http"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "t",
+                  "to": "c"
+                },
+                {
+                  "from": "c",
+                  "fromPort": "true",
+                  "to": "h"
+                }
+              ]
+            },
+            "id": "<uuid#1>",
+            "name": "Over",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [
+                {
+                  "id": "a",
+                  "type": "trigger.manual"
+                }
+              ],
+              "edges": []
+            },
+            "id": "<uuid#2>",
+            "name": "Imported workflow",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "graph": {
+              "boxes": [
+                {
+                  "config": {
+                    "command": "ls",
+                    "dsn": "postgres://u:p@h/db"
+                  },
+                  "id": "a",
+                  "type": "action.shell"
+                }
+              ],
+              "edges": []
+            },
+            "id": "<uuid#3>",
+            "name": "Imported workflow",
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    }
+  ]
+}

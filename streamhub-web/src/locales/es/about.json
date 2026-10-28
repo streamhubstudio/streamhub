@@ -1,0 +1,37 @@
+{
+  "title": "Acerca de este servidor",
+  "open": "StreamHub {{version}} — detalles del build y changelog",
+  "loading": "Cargando…",
+  "copy": "Copiar datos del build",
+  "copied": "Copiado",
+  "yes": "sí",
+  "no": "no",
+  "slate": {
+    "running": "Corriendo en este servidor"
+  },
+  "core": {
+    "commit": "Commit",
+    "built": "Compilado",
+    "modified": "árbol modificado",
+    "unavailable": "Este core no informa datos del build. GET /system/build requiere StreamHub 3.2 o posterior."
+  },
+  "diverge": "El panel (commit {{web}}) y el core (commit {{core}}) vienen de builds distintos. Recargá la página; si sigue, redesplegá ambos desde la misma versión.",
+  "toolchain": {
+    "title": "Compiladores y toolchain",
+    "core": "Binario del core",
+    "web": "Bundle del panel",
+    "target": "Destino",
+    "version": "Versión",
+    "vcs": "Sello VCS de Go",
+    "noVcs": "sin sello",
+    "media": "El core no informa las versiones de LiveKit server, ingress y egress; revisá los tags de imagen en docker-compose.yml."
+  },
+  "changelog": {
+    "title": "Changelog",
+    "source": "CHANGELOG.md en GitHub",
+    "running": "En uso",
+    "showAll": "Ver las {{count}} versiones",
+    "emptyRelease": "Sin notas para esta versión.",
+    "unavailable": "Este core no incluye su changelog. Abrí CHANGELOG.md en GitHub."
+  }
+}

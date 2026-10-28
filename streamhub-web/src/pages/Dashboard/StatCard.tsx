@@ -55,7 +55,7 @@ export function StatCard({ label, value, hint, percent, loading }: StatCardProps
 
       {hasGauge && (
         <div className="mt-3">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700">
             <div
               className={`h-full rounded-full bg-gradient-to-r ${BAR_TONE[tone]} transition-[width] duration-500`}
               style={{ width: `${loading ? 0 : width}%` }}

@@ -14,7 +14,8 @@
     "temp": "Temp",
     "uptime": "Actividad",
     "cameras": "Cámaras",
-    "disk": "Disco"
+    "disk": "Disco",
+    "battery": "Batería"
   },
   "agent": {
     "noVersion": "desconocida",

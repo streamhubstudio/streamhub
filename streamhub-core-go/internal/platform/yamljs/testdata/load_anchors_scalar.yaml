@@ -1,0 +1,7 @@
+x: hello
+'y': hello
+'n': 42
+m: 42
+list:
+  - hello
+  - 42

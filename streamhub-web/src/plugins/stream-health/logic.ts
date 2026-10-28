@@ -136,13 +136,13 @@ export function sortSnapshots(list: StreamSnapshot[]): StreamSnapshot[] {
 export function statusTone(status: HealthStatus): string {
   switch (status) {
     case 'healthy':
-      return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+      return 'bg-emerald-500/15 text-emerald-400'
     case 'degraded':
-      return 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+      return 'bg-amber-500/15 text-amber-400'
     case 'critical':
-      return 'bg-red-500/15 text-red-600 dark:text-red-400'
+      return 'bg-red-500/15 text-red-400'
     default:
-      return 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400'
+      return 'bg-zinc-500/15 text-zinc-400'
   }
 }
 

@@ -1,0 +1,6 @@
+{
+  "password": "correct horse ✓",
+  "hash": "scrypt$32768$8$1$b471590656117264e2b2ef97be50ad33$e435ae246d26acf978320d046aa5d8fb9130550c9c4b9e69b10e69698f51b8fd01fabd09f050de8c6ce6bf61fe374febc37c4f091a243156db8445dcb256f727",
+  "jwtSecret": "s3cret",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTMxMjQ1MTQsImV4cCI6NDk0NjcyNDUxNCwic3ViIjoiYWRtaW4iLCJyb2xlIjoic3VwZXJhZG1pbiJ9.oDkkk1g_KkQUBqHuJ2Oam1ibDDhOL7-KDRQVpqeiAiI"
+}

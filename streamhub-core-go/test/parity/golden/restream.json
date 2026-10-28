@@ -1,0 +1,520 @@
+{
+  "module": "restream",
+  "cases": [
+    {
+      "name": "rs-login-editor",
+      "fingerprint": "sha256:ec0388df3613d215",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{editorEmail}}",
+          "password": "{{editorPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{rsEditorJwt}}"
+        }
+      }
+    },
+    {
+      "name": "rs-login-viewer",
+      "fingerprint": "sha256:b73cd744139e75a2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{rsViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "rs-add-no-auth",
+      "fingerprint": "sha256:64068d952e434fb9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "body": {
+          "platform": "youtube",
+          "key": "abcd-efgh"
+        }
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "rs-add-viewer",
+      "fingerprint": "sha256:d95fef801cc88165",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "rsViewerJwt",
+        "body": {
+          "platform": "youtube",
+          "key": "abcd-efgh"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks broadcast:start",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rs-add-editor-other-tenant",
+      "fingerprint": "sha256:b5be469f711991e9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "rsEditorJwt",
+        "body": {
+          "platform": "youtube",
+          "key": "abcd-efgh"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rs-add-validation",
+      "fingerprint": "sha256:53363f77d7e41b9d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken",
+        "body": {
+          "platform": "myspace",
+          "url": "http://x",
+          "key": 5,
+          "name": 7,
+          "layout": false
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "platform must be one of the following values: youtube, twitch, facebook, custom",
+          "url must start with rtmp:// or rtmps://",
+          "key must be shorter than or equal to 500 characters",
+          "key must be a string",
+          "name must be shorter than or equal to 120 characters",
+          "name must be a string",
+          "layout must be shorter than or equal to 100 characters",
+          "layout must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rs-add-validation-long",
+      "fingerprint": "sha256:50cc878600ab35a7",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken",
+        "body": {
+          "key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+          "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "key must be shorter than or equal to 500 characters",
+          "name must be shorter than or equal to 120 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rs-add-null-fields",
+      "fingerprint": "sha256:74d74734626cd403",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken",
+        "body": {
+          "platform": null,
+          "url": null,
+          "key": null
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-add-no-body",
+      "fingerprint": "sha256:132a0e6d42337c6c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-add-stream-missing",
+      "fingerprint": "sha256:09dcd4f81a916f9e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken",
+        "body": {
+          "platform": "custom",
+          "url": "rtmp://ingest.example.com/live/key"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-add-app-token",
+      "fingerprint": "sha256:aed92d0fd9ed1239",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "appToken",
+        "body": {
+          "platform": "twitch",
+          "key": "live_1"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-add-ghost-app",
+      "fingerprint": "sha256:e2d40f2fdf88843f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost/streams/s1/restream",
+        "auth": "globalToken",
+        "body": {
+          "platform": "twitch",
+          "key": "live_1"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-add-admin",
+      "fingerprint": "sha256:1c470985de7b5d62",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "adminJwt",
+        "body": {
+          "platform": "facebook",
+          "key": "FB-1"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-list-no-auth",
+      "fingerprint": "sha256:3a8593ade89f0082",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/s1/restream"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "rs-list-missing",
+      "fingerprint": "sha256:0e52964191948f5e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-list-viewer-other-tenant",
+      "fingerprint": "sha256:bd03a90666cc97f0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "rsViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rs-list-app-token",
+      "fingerprint": "sha256:264dab52f3ca19ef",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/s1/restream",
+        "auth": "appToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-list-encoded-id",
+      "fingerprint": "sha256:55d441387a120b9d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/live-room%2Fcam-1/restream",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'live-room/cam-1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-list-ghost-app",
+      "fingerprint": "sha256:eb2ec1de15dc8535",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams/s1/restream",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-remove-no-auth",
+      "fingerprint": "sha256:c182484fe6b3cf51",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/s1/restream/EG_x"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "rs-remove-missing-stream",
+      "fingerprint": "sha256:6e943be36d868de9",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/s1/restream/EG_x",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 's1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rs-remove-blank-egress",
+      "fingerprint": "sha256:0175d038efbfb2a8",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/s1/restream/%20",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "egress id is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rs-remove-editor",
+      "fingerprint": "sha256:2032003faaeacb9e",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/s1/restream/EG_x",
+        "auth": "rsEditorJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rs-remove-ghost-app",
+      "fingerprint": "sha256:b08a655b22bc6435",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/ghost/streams/s1/restream/EG_x",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    }
+  ]
+}

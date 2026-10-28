@@ -1,0 +1,239 @@
+{
+  "module": "fleet",
+  "description": "Fleet plugin API (fleet.controller.ts). No broker in the harness: agent data stays empty; the MQTT/telemetry/command paths are covered by Go unit tests.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "fleet-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "fltEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "fleet-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "fltViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "fleet-agents-not-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agents-admin",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agent-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents/b09994",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agent-encoded-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents/a%20b%2Fc",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-command-full-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "globalToken",
+      "body": {
+        "agentId": "b09994",
+        "command": "ping",
+        "args": {}
+      },
+      "expectStatus": 400,
+      "skip": "Node bug: SendCommandDto has no class-validator decorators \u2192 whitelist strips the body \u2192 always 400"
+    },
+    {
+      "name": "fleet-command-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "fleet-command-ota",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "globalToken",
+      "body": {
+        "agentId": "a1",
+        "command": "ota",
+        "args": {
+          "url": "ftp://x"
+        }
+      },
+      "expectStatus": 400,
+      "skip": "Node bug: SendCommandDto has no class-validator decorators \u2192 whitelist strips the body \u2192 always 400"
+    },
+    {
+      "name": "fleet-ghost-agents",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/plugins/fleet/agents",
+      "auth": "globalToken",
+      "note": "no app check in Node: empty fleet (creates a stray fleet.db)",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-ghost-agent",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/plugins/fleet/agents/x",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-viewer-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "fltViewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "fleet-editor-command-other-tenant",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "fltEditorJwt",
+      "body": {
+        "agentId": "b09994",
+        "command": "ping",
+        "args": {}
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "fleet-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-app-token-command",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "appToken",
+      "body": {
+        "agentId": "b09994",
+        "command": "ping",
+        "args": {}
+      },
+      "expectStatus": 400,
+      "skip": "Node bug: SendCommandDto has no class-validator decorators \u2192 whitelist strips the body \u2192 always 400"
+    },
+    {
+      "name": "fleet-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "expectStatus": 401
+    },
+    {
+      "name": "fleet-install-plugin",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/install",
+      "auth": "globalToken",
+      "body": {},
+      "compare": "status",
+      "note": "setup: fleet enabled + private broker \u2192 the SSRF guard rejects the client, fleet stays inactive",
+      "expectStatus": 201
+    },
+    {
+      "name": "fleet-set-mqtt",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true,
+        "url": "mqtt://127.0.0.1:1883",
+        "topicPrefix": "acme/fleet/"
+      },
+      "compare": "status",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agents-installed-private-broker",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agent-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents/a1",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-command-installed",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/fleet/command",
+      "auth": "globalToken",
+      "body": {
+        "agentId": "b09994",
+        "command": "ping",
+        "args": {}
+      },
+      "expectStatus": 400,
+      "skip": "Node bug: SendCommandDto has no class-validator decorators \u2192 whitelist strips the body \u2192 always 400"
+    },
+    {
+      "name": "fleet-unset-mqtt",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/mqtt",
+      "auth": "globalToken",
+      "body": {
+        "enabled": false,
+        "url": ""
+      },
+      "compare": "status",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-uninstall-plugin",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/fleet",
+      "auth": "globalToken",
+      "compare": "status",
+      "expectStatus": 200
+    },
+    {
+      "name": "fleet-agents-after-uninstall",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/fleet/agents",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

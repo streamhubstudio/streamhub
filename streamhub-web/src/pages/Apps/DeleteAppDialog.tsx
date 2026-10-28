@@ -106,7 +106,7 @@ export function DeleteAppDialog({ app, onClose, onDeleted }: DeleteAppDialogProp
             type="checkbox"
             checked={deleteVods}
             onChange={(e) => setDeleteVods(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 accent-red-500 dark:border-gray-600"
+            className="h-4 w-4 rounded accent-red-500 border-gray-600"
           />
           {t('apps:delete.deleteVods')}
         </label>

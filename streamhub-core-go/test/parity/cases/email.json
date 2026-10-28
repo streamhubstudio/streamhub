@@ -1,0 +1,99 @@
+{
+  "module": "email",
+  "description": "POST /apps/:app/smtp/test: DTO validation, 404, unconfigured-SMTP result, permission gate. No SMTP is ever dialed (the parity app has none).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "smtp-test-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "body": {
+        "to": "ops@example.com"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "smtp-test-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "smtp-test-bad-email",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "globalToken",
+      "body": {
+        "to": "not-an-email"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "smtp-test-too-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "globalToken",
+      "body": {
+        "to": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "smtp-test-ghost",
+      "method": "POST",
+      "path": "/api/v1/apps/parity-ghost/smtp/test",
+      "auth": "globalToken",
+      "body": {
+        "to": "ops@example.com"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "smtp-test-unconfigured",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "globalToken",
+      "body": {
+        "to": "ops@example.com"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "smtp-test-app-token",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "appToken",
+      "body": {
+        "to": "ops@example.com"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "smtp-test-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/smtp/test",
+      "auth": "viewerJwt",
+      "body": {
+        "to": "ops@example.com"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "smtp-test-viewer-ghost",
+      "method": "POST",
+      "path": "/api/v1/apps/parity-ghost/smtp/test",
+      "auth": "viewerJwt",
+      "body": {
+        "to": "bad"
+      },
+      "expectStatus": 403
+    }
+  ]
+}

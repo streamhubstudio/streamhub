@@ -1,0 +1,170 @@
+{
+  "manifestVersion": 1,
+  "id": "deface",
+  "name": "Deface — Face Obfuscation",
+  "description": "Detects faces in the app's live stream (CenterFace) and obfuscates them on the player: blur, mosaic or solid mask over each face.",
+  "category": "processor",
+  "ui": "player-overlay",
+  "version": "0.1.0",
+  "kind": "app",
+  "icon": "shield",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "export": {
+    "workerDir": "deface-worker"
+  },
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "live",
+      "help": "HLS room name to process — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "thresh",
+      "type": "number",
+      "label": "Detection threshold",
+      "default": 0.2,
+      "min": 0,
+      "max": 1,
+      "help": "Face detection sensitivity (0–1). Lower catches more faces but adds false positives; raise it if too much is masked."
+    },
+    {
+      "key": "replacewith",
+      "type": "select",
+      "label": "Anonymization method",
+      "default": "blur",
+      "options": [
+        {
+          "value": "blur",
+          "label": "Blur (gaussian)"
+        },
+        {
+          "value": "mosaic",
+          "label": "Mosaic (pixelate)"
+        },
+        {
+          "value": "solid",
+          "label": "Solid (black fill)"
+        },
+        {
+          "value": "none",
+          "label": "None (detect only)"
+        }
+      ],
+      "help": "How the player masks each detected face region."
+    },
+    {
+      "key": "maskScale",
+      "type": "number",
+      "label": "Mask scale",
+      "default": 1.3,
+      "min": 1,
+      "max": 3,
+      "help": "Enlarge detected boxes by this factor to cover hair/chin (deface --mask-scale)."
+    },
+    {
+      "key": "boxes",
+      "type": "boolean",
+      "label": "Rectangular masks",
+      "default": false,
+      "help": "On masks with rectangles; off uses ellipses (deface default)."
+    },
+    {
+      "key": "mosaicSize",
+      "type": "number",
+      "label": "Mosaic block size",
+      "default": 20,
+      "min": 2,
+      "max": 200,
+      "help": "Pixel size of mosaic blocks — only used when method is 'mosaic'."
+    },
+    {
+      "key": "scale",
+      "type": "string",
+      "label": "Detection downscale",
+      "default": "",
+      "placeholder": "640x360",
+      "help": "WxH to downscale frames for detection (empty = native). Smaller is much faster on CPU at a small accuracy cost (deface --scale)."
+    },
+    {
+      "key": "backend",
+      "type": "select",
+      "label": "Inference backend",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": "Auto (onnxrt if available, else opencv)"
+        },
+        {
+          "value": "onnxrt",
+          "label": "ONNX Runtime"
+        },
+        {
+          "value": "opencv",
+          "label": "OpenCV DNN"
+        }
+      ]
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU. Falls back to CPU automatically when CUDA is unavailable."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 2,
+      "min": 0.1,
+      "max": 30,
+      "help": "Frames per second to sample from the stream (lower = less CPU)."
+    },
+    {
+      "key": "drawScores",
+      "type": "boolean",
+      "label": "Draw detection scores",
+      "default": false,
+      "help": "Show the confidence score next to each mask (debugging)."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m deface_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "DEFACE_APP": "{{app}}",
+      "DEFACE_ROOM": "{{config.room}}",
+      "DEFACE_THRESH": "{{config.thresh}}",
+      "DEFACE_MASK_SCALE": "{{config.maskScale}}",
+      "DEFACE_SCALE": "{{config.scale}}",
+      "DEFACE_BACKEND": "{{config.backend}}",
+      "DEFACE_EXECUTION_PROVIDER": "{{ config.cuda | ternary:cuda:cpu }}",
+      "DEFACE_FPS": "{{config.fps}}",
+      "DEFACE_MODEL_DIR": "{{dataDir}}/models/deface",
+      "DEFACE_HLS_DIR": "{{appDir}}/hls",
+      "DEFACE_PUBLIC_BASE": "{{publicBase}}",
+      "DEFACE_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true,
+    "docs": "STANDALONE.md"
+  }
+}

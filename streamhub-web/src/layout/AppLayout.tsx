@@ -1,13 +1,15 @@
 /**
- * Authenticated shell — re-skinned on the Elstar "Modern" layout: a
- * collapsible left sidebar (full ⇄ icon rail) + a sticky header with the
- * sidebar toggle, language / theme switches and a user dropdown. On < lg the
- * sidebar collapses into a slide-in Drawer.
+ * Authenticated shell — the "Control Room" console chrome: a collapsible
+ * left rail (full ⇄ icon rail) on the darkest surface, a sticky header with
+ * the sidebar toggle, language switch and a user dropdown, and the running
+ * version always visible (sidebar footer; top bar under lg) as the entry to
+ * the About / Build panel. On < lg the sidebar collapses into a Drawer.
  *
  * This is CHROME ONLY: it wraps the existing <Outlet/> untouched — routes,
- * data-layer, auth and plugins are unchanged. Brand tokens (StreamHub navy
- * sidebar + brand `primary` accent, light/dark by `.dark` class) drive the
- * colours; ported UI primitives (Avatar, Dropdown, Drawer) come from `@/ui`.
+ * data-layer, auth and plugins are unchanged. Dark only: the semantic tokens
+ * in index.css drive the colours; the active nav row carries the cyan
+ * "selected source" bar; ported primitives (Avatar, Dropdown, Drawer) come
+ * from `@/ui`.
  */
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -29,7 +31,6 @@ import {
   HiOutlineX,
 } from 'react-icons/hi'
 import { useAuth } from '@/auth/useAuth'
-import { ThemeToggle } from '@/theme'
 import { LanguageSwitcher } from '@/i18n'
 import { Logo } from '@/components/Logo'
 import { VersionBadge } from '@/components/VersionBadge'
@@ -68,12 +69,12 @@ const SIDEBAR_KEY = 'streamhub-sidebar-collapsed'
 
 function navRowClass({ isActive }: { isActive: boolean }, collapsed: boolean) {
   return [
-    'flex min-h-[44px] items-center rounded-lg text-sm font-medium transition',
+    'relative flex min-h-[40px] items-center rounded-control text-sm font-medium transition-colors',
     collapsed ? 'justify-center px-0' : 'gap-3 px-3',
-    'py-2.5',
+    'py-2',
     isActive
-      ? 'bg-primary-500/10 text-primary-600 ring-1 ring-primary-500/30 dark:text-primary-400'
-      : 'text-fg-muted hover:bg-surface-raised hover:text-fg',
+      ? "bg-surface-raised text-fg before:absolute before:inset-y-2 before:-left-3 before:w-[3px] before:rounded-r-full before:bg-sky2 before:content-['']"
+      : 'text-fg-muted hover:bg-surface-raised/60 hover:text-fg',
   ].join(' ')
 }
 
@@ -89,7 +90,7 @@ function NavList({
   const { isSuperadmin } = useAuth()
   const items = NAV.filter((item) => !item.superadminOnly || isSuperadmin)
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
       {items.map((item) => (
         <NavLink
           key={item.to}
@@ -99,7 +100,7 @@ function NavList({
           title={collapsed ? t(item.labelKey) : undefined}
           className={(state) => navRowClass(state, collapsed)}
         >
-          <span className="shrink-0 text-xl">{item.icon}</span>
+          <span className="shrink-0 text-lg">{item.icon}</span>
           {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
         </NavLink>
       ))}
@@ -221,14 +222,15 @@ export function AppLayout() {
           </NavLink>
         </div>
         <NavList collapsed={collapsed} />
-        <div className="border-t border-border px-3 py-3 text-[10px] text-fg-subtle">
-          {!collapsed && t('layout.footer')}
+        {/* Running version — always visible; opens About / Build. */}
+        <div className="border-t border-border p-3">
+          <VersionBadge variant="slate" collapsed={collapsed} />
         </div>
       </aside>
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-border bg-surface/85 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b border-border bg-bg/90 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-2">
             {/* Desktop collapse toggle */}
             <button
@@ -250,14 +252,19 @@ export function AppLayout() {
               <HiOutlineMenuAlt2 className="text-xl" />
             </button>
             <NavLink to="/" className="lg:hidden" aria-label="StreamHub">
-              <Logo className="h-7 w-auto" />
+              {/* Phones: mark only, so the version chip always fits. */}
+              <img src="/favicon.svg" alt="" className="h-7 w-auto sm:hidden" />
+              <span className="hidden sm:inline">
+                <Logo className="h-7 w-auto" />
+              </span>
             </NavLink>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Sidebar (and its version slate) is hidden under lg. */}
+            <VersionBadge variant="chip" className="lg:hidden" />
             <StudioLauncher />
             <LanguageSwitcher />
-            <ThemeToggle />
             <div className="mx-1 hidden h-6 w-px bg-border sm:block" />
             <UserMenu />
           </div>
@@ -270,8 +277,6 @@ export function AppLayout() {
         <footer className="flex flex-col gap-2 border-t border-border px-4 py-4 text-xs text-fg-subtle sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>{t('layout.footer')}</span>
-            {/* Real product version (GET /auth/config appVersion) → changelog. */}
-            <VersionBadge />
           </div>
           <nav className="flex items-center gap-4">
             <a
@@ -309,9 +314,11 @@ export function AppLayout() {
       >
         <div className="flex h-full flex-col">
           <NavList collapsed={false} onNavigate={() => setDrawerOpen(false)} />
-          <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-4">
+          <div className="border-t border-border px-3 pt-3">
+            <VersionBadge variant="slate" />
+          </div>
+          <div className="flex items-center justify-between gap-2 px-4 py-4">
             <LanguageSwitcher />
-            <ThemeToggle />
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}

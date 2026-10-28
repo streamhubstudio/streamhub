@@ -1,0 +1,42 @@
+{
+  "$obj": [
+    [
+      "nan",
+      {
+        "$num": "NaN"
+      }
+    ],
+    [
+      "inf",
+      {
+        "$num": "Infinity"
+      }
+    ],
+    [
+      "ninf",
+      {
+        "$num": "-Infinity"
+      }
+    ],
+    [
+      "negzero",
+      {
+        "$num": "-0"
+      }
+    ],
+    [
+      "list",
+      [
+        {
+          "$num": "NaN"
+        },
+        {
+          "$num": "-0"
+        },
+        {
+          "$num": "-Infinity"
+        }
+      ]
+    ]
+  ]
+}

@@ -5,8 +5,10 @@
  * autenticado con una stream key de StreamHub. SIN relay ffmpeg, SIN RTMP, SIN WebRTC.
  * Protocolo: https://streamhub.studio/docs/integrations/ESP32-WS-INGEST (§3).
  *
- * ⚠️ Este endpoint es un DISEÑO (fase F1 del doc). El sketch está completo y compila,
- *    pero el server /ingest/ws tiene que estar implementado para que conecte.
+ * Implementado en el core (paquete streamhub-core-go/internal/wsingest). Protocolo
+ * verificado en 3.1.0 con un simulador que replica este sketch byte a byte
+ * (header Authorization + ?app=&room=, espera "ready", 1 JPEG por mensaje binario,
+ * stats/data por texto) contra prod detrás de nginx.
  *
  * Hardware : AI-Thinker ESP32-CAM (OV2640, 4 MB PSRAM)
  * Board    : "AI Thinker ESP32-CAM" — PSRAM: Enabled — Partition: Huge APP
@@ -17,8 +19,12 @@
  *
  * Provisioning previo (una vez, desde tu backend/CLI — ver doc §3.6):
  *   curl -X POST https://streamhub.example.com/api/v1/apps/live/ws-ingest \
- *        -H "Authorization: Bearer $STREAMHUB_TOKEN" -d '{"room":"cam1"}'
- *   → { "streamKey": "wsk_...", "wsUrl": "wss://streamhub.example.com/ingest/ws", ... }
+ *        -H "Authorization: Bearer $STREAMHUB_TOKEN" -H "Content-Type: application/json" \
+ *        -d '{"room":"cam1"}'
+ *   → { "data": { "streamKey": "wsk_...",
+ *                 "wsUrl": "wss://streamhub.example.com/ingest/ws?app=live&room=cam1", ... } }
+ *   (wsUrl es absoluta cuando el core tiene PUBLIC_BASE_URL o STREAMHUB_PUBLIC_URL;
+ *    acá solo hacen falta host/puerto y SH_APP/SH_ROOM.)
  */
 
 #include "esp_camera.h"

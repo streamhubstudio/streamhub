@@ -489,7 +489,7 @@ export function StreamsTab({ app }: { app: string }) {
           onRequestClose={() => setPluginEditing(null)}
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <h5 className="text-base font-semibold text-gray-100">
               {t('plugins.modalTitle')}
             </h5>
             <Button variant="ghost" onClick={() => setPluginEditing(null)}>
@@ -514,7 +514,7 @@ export function StreamsTab({ app }: { app: string }) {
           onRequestClose={() => setTagEditing(null)}
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <h5 className="text-base font-semibold text-gray-100">
               {t('tags.modalTitle')}
             </h5>
             <Button variant="ghost" onClick={() => setTagEditing(null)}>
@@ -539,7 +539,7 @@ export function StreamsTab({ app }: { app: string }) {
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <h5 className="text-base font-semibold text-gray-100">
                 {t('modal.room')} <span className="font-mono">{watching.room}</span>
               </h5>
               {isRecording(watching) && <Badge tone="red">{t('status.recording')}</Badge>}
@@ -568,7 +568,7 @@ export function StreamsTab({ app }: { app: string }) {
           <div className="max-h-[80vh] overflow-y-auto">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                <h5 className="text-base font-semibold text-gray-100">
                   {t('hls.liveTitle')}
                   {hlsStream && (
                     <>
@@ -578,7 +578,7 @@ export function StreamsTab({ app }: { app: string }) {
                   )}
                 </h5>
                 <Badge tone="cyan">HLS</Badge>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                <span className="text-[11px] text-gray-400">
                   {t('hls.latency')}
                 </span>
               </div>
@@ -595,7 +595,7 @@ export function StreamsTab({ app }: { app: string }) {
               <div
                 role="group"
                 aria-label={t('hls.playerLabel')}
-                className="mb-3 inline-flex overflow-hidden rounded-lg border border-gray-300 text-xs dark:border-gray-600"
+                className="mb-3 inline-flex overflow-hidden rounded-lg border text-xs border-gray-600"
               >
                 <button
                   type="button"
@@ -605,7 +605,7 @@ export function StreamsTab({ app }: { app: string }) {
                     'px-3 py-1.5 transition',
                     hlsPlayerChoice === 'provider'
                       ? 'bg-primary-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700',
+                      : 'text-gray-300 hover:bg-gray-700',
                   ].join(' ')}
                 >
                   {playerProvider?.name || t('hls.providerPlayer')}
@@ -615,10 +615,10 @@ export function StreamsTab({ app }: { app: string }) {
                   aria-pressed={hlsPlayerChoice === 'builtin'}
                   onClick={() => setHlsChoice('builtin')}
                   className={[
-                    'border-l border-gray-300 px-3 py-1.5 transition dark:border-gray-600',
+                    'border-l px-3 py-1.5 transition border-gray-600',
                     hlsPlayerChoice === 'builtin'
                       ? 'bg-primary-500 text-white'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700',
+                      : 'text-gray-300 hover:bg-gray-700',
                   ].join(' ')}
                 >
                   {t('hls.builtinPlayer')}
@@ -639,7 +639,7 @@ export function StreamsTab({ app }: { app: string }) {
               <CopyField label={t('hls.playlistUrl')} value={hlsSession.playlistUrl} />
 
               <div>
-                <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+                <span className="mb-1.5 block text-sm font-semibold text-gray-100">
                   {t('hls.embed')}
                 </span>
                 <div className="flex items-start gap-2">
@@ -660,7 +660,7 @@ export function StreamsTab({ app }: { app: string }) {
                     })}
                   />
                 </div>
-                <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
+                <span className="mt-1 block text-[11px] text-gray-400">
                   {t(
                     hlsPlayerChoice === 'provider'
                       ? 'hls.embedHelpProvider'

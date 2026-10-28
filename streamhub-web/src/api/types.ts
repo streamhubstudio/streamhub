@@ -59,6 +59,11 @@ export interface AuthConfig {
    * dashboard footer. Optional: older backends omit it (footer hides then).
    */
   appVersion?: string
+  /**
+   * Dedicated origin samples are served from (STREAMHUB_SAMPLES_URL), e.g.
+   * `https://samples.example.com`. Omitted when samples share this origin.
+   */
+  samplesUrl?: string
 }
 
 export interface LoginResponse {
@@ -299,6 +304,34 @@ export interface Health {
   version: string
   ts: string
   uptimeSeconds: number
+}
+
+/** GET /system/build — build stamp + toolchain of the running core (3.2+). */
+export interface CoreBuildInfo {
+  version: string
+  /** ldflags stamp, else the Go toolchain's vcs.revision, else "". */
+  commit: string
+  /** RFC 3339 UTC, or "" when the binary wasn't stamped. */
+  buildDate: string
+  /** vcs.modified when the toolchain stamped it, else null. */
+  dirty: boolean | null
+  toolchain: {
+    goVersion: string
+    compiler: string
+    goos: string
+    goarch: string
+    cgo?: string
+    trimpath: boolean
+    module?: string
+  }
+  vcs: { system?: string; revision?: string; time?: string; modified?: boolean } | null
+}
+
+/** GET /system/changelog — the CHANGELOG.md embedded in the core (3.2+). */
+export interface CoreChangelog {
+  version: string
+  source: 'embedded' | 'file' | 'none'
+  markdown: string
 }
 
 export interface CpuStats {

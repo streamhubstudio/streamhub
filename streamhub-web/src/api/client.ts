@@ -26,6 +26,8 @@ import type {
   NetSummary,
   NetHistory,
   AuthConfig,
+  CoreBuildInfo,
+  CoreChangelog,
   ChangePasswordRequest,
   ClusterInfo,
   ClusterNode,
@@ -269,6 +271,18 @@ const system = {
       query: { range: params.range, metric: params.metric },
       signal,
     })
+  },
+  /**
+   * GET /system/build — version, commit, build date and Go toolchain of the
+   * running core (About / Build panel). Any authenticated principal; a core
+   * older than 3.2 answers 404.
+   */
+  build(signal?: AbortSignal): Promise<CoreBuildInfo> {
+    return request<CoreBuildInfo>('/system/build', { signal })
+  },
+  /** GET /system/changelog — CHANGELOG.md embedded in the core, as markdown. */
+  changelog(signal?: AbortSignal): Promise<CoreChangelog> {
+    return request<CoreChangelog>('/system/changelog', { signal })
   },
 }
 

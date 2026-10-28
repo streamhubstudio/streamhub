@@ -1,0 +1,376 @@
+[
+ {
+  "view": "nodes",
+  "args": [],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "  NODE        TYPE    STATE  CPU   MEM  DISK  GPU              VRAMFREE  WT  \n  origin      origin  up     12%   50%  100%  no               -         1   \n  edge-gpü-1  edge    stale  34%   12%  0%    NVIDIA RTX 4090  20480     2.5 \n  None        ?       up     -     -    -     no               -         -   \n  num         edge    up     100%  -    -     yes              0.0       None\n  neg         edge    up     0%    0%   -     yes              1e+20     -   \n",
+  "code": 0
+ },
+ {
+  "view": "nodes",
+  "args": [],
+  "input": "{\"data\": []}",
+  "stdout": "  (no nodes registered)\n",
+  "code": 0
+ },
+ {
+  "view": "nodes",
+  "args": [],
+  "input": "{}",
+  "stdout": "  (no nodes registered)\n",
+  "code": 0
+ },
+ {
+  "view": "nodes",
+  "args": [],
+  "input": "{\"data\":[{\"name\":\"x\",\"weight\":1.0,\"stats\":{\"cpu\":1e-7,\"grid\":{\"vramFreeMb\":1E3}}}]}",
+  "stdout": "  NODE  TYPE  STATE  CPU  MEM  DISK  GPU  VRAMFREE  WT \n  x     ?     up     0%   -    -     no   1000.0    1.0\n",
+  "code": 0
+ },
+ {
+  "view": "nodes-json",
+  "args": [],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "[\n  {\n    \"id\": \"n-origin\",\n    \"name\": \"origin\",\n    \"type\": \"origin\",\n    \"stale\": false,\n    \"weight\": 1,\n    \"stats\": {\n      \"cpu\": 0.125,\n      \"memUsedRatio\": 0.5049,\n      \"disk\": {\n        \"usedRatio\": 0.995\n      },\n      \"grid\": {\n        \"gpu\": false,\n        \"vramFreeMb\": null\n      }\n    }\n  },\n  {\n    \"id\": \"n-2\",\n    \"name\": \"edge-gp\\u00fc-1\",\n    \"type\": \"edge\",\n    \"stale\": true,\n    \"weight\": 2.5,\n    \"stats\": {\n      \"cpu\": \"0.335\",\n      \"memUsedRatio\": 0.115,\n      \"disk\": {\n        \"usedRatio\": 0.0\n      },\n      \"grid\": {\n        \"gpu\": true,\n        \"gpuName\": \"NVIDIA RTX 4090\",\n        \"vramFreeMb\": 20480\n      }\n    }\n  },\n  {\n    \"id\": \"n-3\",\n    \"name\": null,\n    \"stats\": null\n  },\n  {\n    \"id\": 42,\n    \"name\": \"num\",\n    \"type\": \"edge\",\n    \"weight\": null,\n    \"stats\": {\n      \"cpu\": true,\n      \"memUsedRatio\": \"abc\",\n      \"grid\": {\n        \"gpu\": 1,\n        \"vramFreeMb\": 0.0\n      },\n      \"disk\": []\n    }\n  },\n  {\n    \"id\": \"n-5\",\n    \"name\": \"neg\",\n    \"type\": \"edge\",\n    \"stats\": {\n      \"cpu\": -0.001,\n      \"memUsedRatio\": 0.005,\n      \"grid\": {\n        \"gpuName\": \"\",\n        \"gpu\": \"x\",\n        \"vramFreeMb\": 1e+20\n      }\n    }\n  }\n]\n",
+  "code": 0
+ },
+ {
+  "view": "nodes-json",
+  "args": [],
+  "input": "{\"data\": []}",
+  "stdout": "[]\n",
+  "code": 0
+ },
+ {
+  "view": "nodes-json",
+  "args": [],
+  "input": "{}",
+  "stdout": "[]\n",
+  "code": 0
+ },
+ {
+  "view": "nodes-json",
+  "args": [],
+  "input": "{\"data\":[{\"a\":1.0,\"b\":-0,\"c\":1e16,\"d\":0.00001,\"e\":\"t\\u00e9\\ud83d\\ude00\\n\\t\\\"/\\\\\\u0001\\u007f\",\"f\":{},\"g\":[],\"h\":[1,[2,{}]],\"a\":2,\"i\":123456789012345678901234567890,\"j\":1.5E+300,\"k\":null,\"l\":true,\"m\":0.1,\"n\":123.456e5}]}",
+  "stdout": "[\n  {\n    \"a\": 2,\n    \"b\": 0,\n    \"c\": 1e+16,\n    \"d\": 1e-05,\n    \"e\": \"t\\u00e9\\ud83d\\ude00\\n\\t\\\"/\\\\\\u0001\\u007f\",\n    \"f\": {},\n    \"g\": [],\n    \"h\": [\n      1,\n      [\n        2,\n        {}\n      ]\n    ],\n    \"i\": 123456789012345678901234567890,\n    \"j\": 1.5e+300,\n    \"k\": null,\n    \"l\": true,\n    \"m\": 0.1,\n    \"n\": 12345600.0\n  }\n]\n",
+  "code": 0
+ },
+ {
+  "view": "nodes-json",
+  "args": [],
+  "input": "{\"data\":null}",
+  "stdout": "null\n",
+  "code": 0
+ },
+ {
+  "view": "node-id",
+  "args": [
+   "origin"
+  ],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "n-origin\n",
+  "code": 0
+ },
+ {
+  "view": "node-id",
+  "args": [
+   "n-2"
+  ],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "n-2\n",
+  "code": 0
+ },
+ {
+  "view": "node-id",
+  "args": [
+   "42"
+  ],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "",
+  "code": 3
+ },
+ {
+  "view": "node-id",
+  "args": [
+   "nope"
+  ],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "",
+  "code": 3
+ },
+ {
+  "view": "node-id",
+  "args": [
+   "edge-gpü-1"
+  ],
+  "input": "{\"data\": [{\"id\": \"n-origin\", \"name\": \"origin\", \"type\": \"origin\", \"stale\": false, \"weight\": 1, \"stats\": {\"cpu\": 0.125, \"memUsedRatio\": 0.5049, \"disk\": {\"usedRatio\": 0.995}, \"grid\": {\"gpu\": false, \"vramFreeMb\": null}}}, {\"id\": \"n-2\", \"name\": \"edge-gpü-1\", \"type\": \"edge\", \"stale\": true, \"weight\": 2.5, \"stats\": {\"cpu\": \"0.335\", \"memUsedRatio\": 0.115, \"disk\": {\"usedRatio\": 0.0}, \"grid\": {\"gpu\": true, \"gpuName\": \"NVIDIA RTX 4090\", \"vramFreeMb\": 20480}}}, {\"id\": \"n-3\", \"name\": null, \"stats\": null}, {\"id\": 42, \"name\": \"num\", \"type\": \"edge\", \"weight\": null, \"stats\": {\"cpu\": true, \"memUsedRatio\": \"abc\", \"grid\": {\"gpu\": 1, \"vramFreeMb\": 0.0}, \"disk\": []}}, {\"id\": \"n-5\", \"name\": \"neg\", \"type\": \"edge\", \"stats\": {\"cpu\": -0.001, \"memUsedRatio\": 0.005, \"grid\": {\"gpuName\": \"\", \"gpu\": \"x\", \"vramFreeMb\": 1e+20}}}]}",
+  "stdout": "n-2\n",
+  "code": 0
+ },
+ {
+  "view": "assignments",
+  "args": [],
+  "input": "{\"data\": [{\"status\": \"running\"}, {\"status\": \"running\"}, {\"status\": \"pending\"}, {\"status\": \"failed\"}, {\"status\": \"zombie\"}, {\"status\": \"alpha\"}, {\"status\": \"offered\"}, {\"status\": \"stopped\"}, {\"status\": \"revoked\"}, {\"status\": \"running\"}, {}]}",
+  "stdout": "  running   3\n  offered   1\n  pending   1\n  failed    1\n  stopped   1\n  revoked   1\n  alpha     1\n  unknown   1\n  zombie    1\n  PENDING   1  (parked — no eligible node)\n",
+  "code": 0
+ },
+ {
+  "view": "assignments",
+  "args": [],
+  "input": "{\"data\": []}",
+  "stdout": "  (no assignments)\n",
+  "code": 0
+ },
+ {
+  "view": "assignments",
+  "args": [],
+  "input": "{\"data\": [{\"status\": \"running\"}]}",
+  "stdout": "  running   1\n  PENDING   0  (parked — no eligible node)\n",
+  "code": 0
+ },
+ {
+  "view": "assignments",
+  "args": [],
+  "input": "{\"data\": [{\"status\": \"pending\"}]}",
+  "stdout": "  pending   1\n  PENDING   1  (parked — no eligible node)\n",
+  "code": 0
+ },
+ {
+  "view": "assignments",
+  "args": [],
+  "input": "{\"data\": [{\"status\": \"ñandú-very-long-status\"}]}",
+  "stdout": "  ñandú-very-long-status 1\n  PENDING   0  (parked — no eligible node)\n",
+  "code": 0
+ },
+ {
+  "view": "events",
+  "args": [],
+  "input": "{\"data\": [{\"ts\": \"2026-10-28T10:00:00.000Z\", \"level\": \"info\", \"message\": \"edge n-2 connected\"}, {\"ts\": 1730000000123, \"level\": \"warning\", \"message\": \"multi\\nline\"}, {\"level\": null}, {\"ts\": 1.5, \"level\": \"debug\", \"message\": {\"k\": \"v\", \"n\": [1, null, true], \"q\": \"it's\"}}]}",
+  "stdout": "  2026-10-28T10:00:00.000Z  INFO   edge n-2 connected\n  1730000000123  WARNING  multi\nline\n  ?  NONE   \n  1.5  DEBUG  {'k': 'v', 'n': [1, None, True], 'q': \"it's\"}\n",
+  "code": 0
+ },
+ {
+  "view": "events",
+  "args": [],
+  "input": "{\"data\": []}",
+  "stdout": "  (no edge events)\n",
+  "code": 0
+ },
+ {
+  "view": "events",
+  "args": [],
+  "input": "{}",
+  "stdout": "  (no edge events)\n",
+  "code": 0
+ },
+ {
+  "view": "command",
+  "args": [],
+  "input": "{\"data\": {\"ok\": true, \"output\": \"restarting\"}}",
+  "stdout": "  ok=True  output=restarting\n",
+  "code": 0
+ },
+ {
+  "view": "command",
+  "args": [],
+  "input": "{\"data\": {\"ok\": false}}",
+  "stdout": "  ok=False\n",
+  "code": 0
+ },
+ {
+  "view": "command",
+  "args": [],
+  "input": "{\"data\": {\"ok\": true, \"output\": \"\"}}",
+  "stdout": "  ok=True\n",
+  "code": 0
+ },
+ {
+  "view": "command",
+  "args": [],
+  "input": "{}",
+  "stdout": "  ok=None\n",
+  "code": 0
+ },
+ {
+  "view": "command",
+  "args": [],
+  "input": "{\"data\": {\"output\": {\"a\": 1}}}",
+  "stdout": "  ok=None  output={'a': 1}\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"statusCode\": 400, \"message\": \"bad version\", \"error\": \"Bad Request\"}",
+  "stdout": "bad version\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"statusCode\": 400, \"message\": [\"version must be semver\", \"notes too long\"], \"error\": \"Bad Request\"}",
+  "stdout": "version must be semver; notes too long\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"statusCode\": 404, \"error\": \"Not Found\"}",
+  "stdout": "Not Found\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"statusCode\": 500}",
+  "stdout": "\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"message\": null, \"error\": \"boom\"}",
+  "stdout": "boom\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"message\": \"\", \"error\": \"x\"}",
+  "stdout": "\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "{\"message\": [1, null, \"it's\"]}",
+  "stdout": "1; None; it's\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "not json at all",
+  "stdout": "\n",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "[1,2]",
+  "stdout": "",
+  "code": 0
+ },
+ {
+  "view": "api-error",
+  "args": [],
+  "input": "",
+  "stdout": "\n",
+  "code": 0
+ },
+ {
+  "view": "pin",
+  "args": [],
+  "input": "{\"data\": {\"active\": \"1.2.0\", \"effective\": \"1.2.0\"}}",
+  "stdout": "  pin:       1.2.0\n  effective: 1.2.0\n",
+  "code": 0
+ },
+ {
+  "view": "pin",
+  "args": [],
+  "input": "{\"data\": {\"active\": null, \"effective\": \"1.0.0\"}}",
+  "stdout": "  pin:       (none — runs built-in/latest)\n  effective: 1.0.0\n",
+  "code": 0
+ },
+ {
+  "view": "pin",
+  "args": [],
+  "input": "{\"data\": {}}",
+  "stdout": "  pin:       (none — runs built-in/latest)\n  effective: -\n",
+  "code": 0
+ },
+ {
+  "view": "pin",
+  "args": [],
+  "input": "{}",
+  "stdout": "  pin:       (none — runs built-in/latest)\n  effective: -\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"pluginId\": \"lpr\", \"versions\": [{\"version\": \"1.0.0\", \"source\": \"builtin\", \"bundleBytes\": 512, \"createdAt\": \"2026-10-01T12:34:56.789Z\", \"builtin\": true}, {\"version\": \"1.1.0\", \"source\": \"upload\", \"bundleBytes\": 1536, \"createdAt\": \"2026-10-02T00:00:00Z\", \"latest\": true}, {\"version\": \"1.2.0\", \"source\": \"upload\", \"bundleBytes\": 52428800, \"createdAt\": null}, {\"version\": \"2.0.0\", \"source\": \"upload\", \"bundleBytes\": 3298534883328, \"createdAt\": \"\"}, {\"version\": \"2.0.1\", \"source\": \"upload\", \"bundleBytes\": \"1048575.95\"}, {\"version\": \"x\", \"bundleBytes\": null}, {\"source\": \"upload\", \"bundleBytes\": 1023.9}]}}",
+  "stdout": "  VERSION  SOURCE   SIZE        CREATED              FLAGS  \n  1.0.0    builtin  512 B       2026-10-01 12:34:56  builtin\n  1.1.0    upload   1.5 KiB     2026-10-02 00:00:00  latest \n  1.2.0    upload   50.0 MiB    -                    -      \n  2.0.0    upload   3072.0 GiB  -                    -      \n  2.0.1    upload   1024.0 KiB  -                    -      \n  x        ?        -           -                    -      \n  ?        upload   1023 B      -                    -      \n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"versions\": []}}",
+  "stdout": "  (no versions stored — the built-in materializes at first boot)\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{}",
+  "stdout": "  (no versions stored — the built-in materializes at first boot)\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"versions\": null}}",
+  "stdout": "  (no versions stored — the built-in materializes at first boot)\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"app\": \"live\", \"active\": \"1.1.0\", \"effective\": \"1.1.0\", \"available\": {\"versions\": [{\"version\": \"1.0.0\", \"source\": \"builtin\", \"bundleBytes\": 512, \"createdAt\": \"2026-10-01T12:34:56.789Z\", \"builtin\": true}, {\"version\": \"1.1.0\", \"source\": \"upload\", \"bundleBytes\": 1536, \"createdAt\": \"2026-10-02T00:00:00Z\", \"latest\": true}, {\"version\": \"1.2.0\", \"source\": \"upload\", \"bundleBytes\": 52428800, \"createdAt\": null}, {\"version\": \"2.0.0\", \"source\": \"upload\", \"bundleBytes\": 3298534883328, \"createdAt\": \"\"}, {\"version\": \"2.0.1\", \"source\": \"upload\", \"bundleBytes\": \"1048575.95\"}, {\"version\": \"x\", \"bundleBytes\": null}, {\"source\": \"upload\", \"bundleBytes\": 1023.9}]}, \"history\": [{\"at\": \"2026-10-01T10:00:00Z\", \"from\": null, \"to\": \"1.1.0\"}, {\"at\": \"2026-10-02T10:00:00Z\", \"from\": \"1.1.0\", \"to\": \"1.2.0\"}, {\"at\": \"2026-10-03T10:00:00Z\", \"from\": \"1.2.0\", \"to\": \"1.3.0\"}, {\"at\": \"2026-10-04T10:00:00Z\", \"from\": null, \"to\": \"1.4.0\"}, {\"at\": \"2026-10-05T10:00:00Z\", \"from\": \"1.4.0\", \"to\": \"1.5.0\"}, {\"at\": \"2026-10-06T10:00:00Z\", \"from\": \"1.5.0\", \"to\": \"1.6.0\"}, {\"at\": \"2026-10-07T10:00:00Z\", \"from\": null, \"to\": \"1.7.0\"}, {\"at\": \"2026-10-08T10:00:00Z\", \"from\": \"1.7.0\", \"to\": \"1.8.0\"}, {\"at\": \"2026-10-09T10:00:00Z\", \"from\": \"1.8.0\", \"to\": \"1.9.0\"}, {\"at\": \"2026-10-10T10:00:00Z\", \"from\": null, \"to\": \"1.10.0\"}, {\"at\": \"2026-10-11T10:00:00Z\", \"from\": \"1.10.0\", \"to\": \"1.11.0\"}, {\"at\": \"2026-10-12T10:00:00Z\", \"from\": \"1.11.0\", \"to\": \"1.12.0\"}, {\"at\": \"2026-10-13T10:00:00Z\", \"from\": null, \"to\": \"1.13.0\"}, {\"at\": \"2026-10-14T10:00:00Z\", \"from\": \"1.13.0\", \"to\": \"1.14.0\"}, {\"at\": \"2026-10-15T10:00:00Z\", \"from\": \"1.14.0\", \"to\": \"1.15.0\"}, {\"at\": \"2026-10-16T10:00:00Z\", \"from\": null, \"to\": \"1.16.0\"}, {\"at\": \"2026-10-17T10:00:00Z\", \"from\": \"1.16.0\", \"to\": \"1.17.0\"}, {\"at\": \"2026-10-18T10:00:00Z\", \"from\": \"1.17.0\", \"to\": \"1.18.0\"}, {\"at\": \"2026-10-19T10:00:00Z\", \"from\": null, \"to\": \"1.19.0\"}, {\"at\": \"2026-10-20T10:00:00Z\", \"from\": \"1.19.0\", \"to\": \"1.20.0\"}, {\"at\": \"2026-10-21T10:00:00Z\", \"from\": \"1.20.0\", \"to\": \"1.21.0\"}, {\"at\": \"2026-10-22T10:00:00Z\", \"from\": null, \"to\": \"1.22.0\"}, {\"at\": \"2026-10-23T10:00:00Z\", \"from\": \"1.22.0\", \"to\": \"1.23.0\"}, {\"at\": \"2026-10-24T10:00:00Z\", \"from\": \"1.23.0\", \"to\": \"1.24.0\"}, {\"at\": \"2026-10-25T10:00:00Z\", \"from\": null, \"to\": \"1.25.0\"}]}}",
+  "stdout": "  VERSION  SOURCE   SIZE        CREATED              FLAGS        \n  1.0.0    builtin  512 B       2026-10-01 12:34:56  builtin      \n  1.1.0    upload   1.5 KiB     2026-10-02 00:00:00  latest,ACTIVE\n  1.2.0    upload   50.0 MiB    -                    -            \n  2.0.0    upload   3072.0 GiB  -                    -            \n  2.0.1    upload   1024.0 KiB  -                    -            \n  x        ?        -           -                    -            \n  ?        upload   1023 B      -                    -            \n\n  app 'live': pin=1.1.0  effective=1.1.0\n  history (newest first):\n    2026-10-01 10:00:00  builtin -> 1.1.0\n    2026-10-02 10:00:00  1.1.0 -> 1.2.0\n    2026-10-03 10:00:00  1.2.0 -> 1.3.0\n    2026-10-04 10:00:00  builtin -> 1.4.0\n    2026-10-05 10:00:00  1.4.0 -> 1.5.0\n    2026-10-06 10:00:00  1.5.0 -> 1.6.0\n    2026-10-07 10:00:00  builtin -> 1.7.0\n    2026-10-08 10:00:00  1.7.0 -> 1.8.0\n    2026-10-09 10:00:00  1.8.0 -> 1.9.0\n    2026-10-10 10:00:00  builtin -> 1.10.0\n    2026-10-11 10:00:00  1.10.0 -> 1.11.0\n    2026-10-12 10:00:00  1.11.0 -> 1.12.0\n    2026-10-13 10:00:00  builtin -> 1.13.0\n    2026-10-14 10:00:00  1.13.0 -> 1.14.0\n    2026-10-15 10:00:00  1.14.0 -> 1.15.0\n    2026-10-16 10:00:00  builtin -> 1.16.0\n    2026-10-17 10:00:00  1.16.0 -> 1.17.0\n    2026-10-18 10:00:00  1.17.0 -> 1.18.0\n    2026-10-19 10:00:00  builtin -> 1.19.0\n    2026-10-20 10:00:00  1.19.0 -> 1.20.0\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"app\": \"it's\", \"active\": null, \"effective\": null, \"available\": {\"versions\": [{\"version\": \"1.0.0\", \"source\": \"builtin\", \"bundleBytes\": 512, \"createdAt\": \"2026-10-01T12:34:56.789Z\", \"builtin\": true}, {\"version\": \"1.1.0\", \"source\": \"upload\", \"bundleBytes\": 1536, \"createdAt\": \"2026-10-02T00:00:00Z\", \"latest\": true}]}, \"history\": []}}",
+  "stdout": "  VERSION  SOURCE   SIZE     CREATED              FLAGS  \n  1.0.0    builtin  512 B    2026-10-01 12:34:56  builtin\n  1.1.0    upload   1.5 KiB  2026-10-02 00:00:00  latest \n\n  app \"it's\": pin=(none)  effective=-\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"app\": \"tab\\there\", \"active\": null, \"effective\": \"1.0.0\", \"available\": null, \"history\": null}}",
+  "stdout": "  (no versions stored — the built-in materializes at first boot)\n\n  app 'tab\\there': pin=(none)  effective=1.0.0\n",
+  "code": 0
+ },
+ {
+  "view": "versions",
+  "args": [],
+  "input": "{\"data\": {\"app\": null, \"effective\": \"1.0.0\", \"available\": {\"versions\": [{\"version\": \"1.0.0\", \"source\": \"builtin\", \"bundleBytes\": 512, \"createdAt\": \"2026-10-01T12:34:56.789Z\", \"builtin\": true}]}}}",
+  "stdout": "  VERSION  SOURCE   SIZE   CREATED              FLAGS         \n  1.0.0    builtin  512 B  2026-10-01 12:34:56  builtin,ACTIVE\n",
+  "code": 0
+ },
+ {
+  "view": "pushed",
+  "args": [],
+  "input": "{\"data\": {\"pluginId\": \"lpr\", \"version\": \"1.3.0\", \"source\": \"upload\", \"sha256\": \"abababababababababababababababababababababababababababababababab\", \"files\": {\"bytes\": 123456, \"count\": 17}, \"notes\": \"fix the thing\"}}",
+  "stdout": "  plugin:  lpr\n  version: 1.3.0\n  source:  upload\n  sha256:  abababababababababababababababababababababababababababababababab\n  size:    123456 bytes (17 files)\n  notes:   fix the thing\n",
+  "code": 0
+ },
+ {
+  "view": "pushed",
+  "args": [],
+  "input": "{\"data\": {\"pluginId\": \"lpr\", \"version\": \"1.3.0\", \"files\": null, \"notes\": \"\"}}",
+  "stdout": "  plugin:  lpr\n  version: 1.3.0\n  source:  ?\n  sha256:  ?\n  size:    ? bytes (? files)\n",
+  "code": 0
+ },
+ {
+  "view": "pushed",
+  "args": [],
+  "input": "{}",
+  "stdout": "  plugin:  ?\n  version: ?\n  source:  ?\n  sha256:  ?\n  size:    ? bytes (? files)\n",
+  "code": 0
+ }
+]

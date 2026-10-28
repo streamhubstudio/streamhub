@@ -174,6 +174,11 @@ Origin flags (all optional; prompted unless --non-interactive)
                          opens the ports. ORIGIN-only in v1 (serves the whole mesh).
   --turn-domain <fqdn>   TURN domain (needs its own DNS A record → this host).
                          Default: turn.<domain>. Implies --turn.
+  --samples-domain <fqdn>
+                         Serve the per-app sample pages from their OWN origin
+                         (needs its own DNS A record → this host). Sets
+                         STREAMHUB_SAMPLES_URL; installs its nginx vhost + cert
+                         (or the Caddy site). Recommended for multi-tenant use.
   --no-plugins           Bare media server: disable the plugin framework in the
                          core (empty catalog, plugin routes 404, no workers) and
                          skip baking the deface worker into the image. Reversible
@@ -220,7 +225,8 @@ STREAMHUB_CLUSTER_TOKEN/ORIGIN_IP/ORIGIN_URL), STREAMHUB_NODE_NAME,
 STREAMHUB_REGION, STREAMHUB_DIR, STREAMHUB_NON_INTERACTIVE=1,
 STREAMHUB_FORCE_REINSTALL=1, STREAMHUB_MEDIAMTX_ENABLE=1 (--mediamtx),
 STREAMHUB_NO_PLUGINS=1 (--no-plugins), STREAMHUB_TURN_ENABLE=1 (--turn) +
-STREAMHUB_TURN_DOMAIN (--turn-domain), STREAMHUB_NODE_EGRESS=1 (--with-egress).
+STREAMHUB_TURN_DOMAIN (--turn-domain), STREAMHUB_NODE_EGRESS=1 (--with-egress),
+STREAMHUB_SAMPLES_DOMAIN (--samples-domain).
 Re-runs: idempotent. If a newer VERSION is fetched, an UPGRADE runs (pre-upgrade
 DB backup → rebuild → migrate on boot → verify → re-stamp $INSTALL_DIR/VERSION).
 Flags/env update their .env keys; generated secrets are never rotated.
@@ -258,6 +264,11 @@ TURN_ENABLE="${STREAMHUB_TURN_ENABLE:-0}"
 case "$TURN_ENABLE" in 1|true|on|yes|TRUE|On|Yes) TURN_ENABLE=1 ;; *) TURN_ENABLE=0 ;; esac
 TURN_DOMAIN="${STREAMHUB_TURN_DOMAIN:-}"
 
+# Samples origin (features/samples.md) — OFF by default, origin only. A second
+# hostname for the tenant-editable sample pages, so they never run on the
+# dashboard's origin. Persisted as STREAMHUB_SAMPLES_URL (+ SAMPLES_DOMAIN for Caddy).
+SAMPLES_DOMAIN="${STREAMHUB_SAMPLES_DOMAIN:-}"
+
 # Egress affinity: a joined COMMON node does NOT run egress unless it opts in
 # (--with-egress / STREAMHUB_NODE_EGRESS=1), so recording/HLS artifacts land on
 # the ORIGIN's disk (cross-node egress is broken for artifacts until S3 transport
@@ -286,6 +297,7 @@ while [ $# -gt 0 ]; do
     --no-mediamtx)       MEDIAMTX_ENABLE=0; shift ;;
     --turn)              TURN_ENABLE=1; shift ;;
     --turn-domain)       TURN_DOMAIN="${2?$1 requires a value}"; TURN_ENABLE=1; shift 2 ;;
+    --samples-domain)    SAMPLES_DOMAIN="${2?$1 requires a value}"; shift 2 ;;
     --with-egress)       WITH_EGRESS=1; EXPLICIT_EGRESS=1; shift ;;
     --no-egress)         WITH_EGRESS=0; EXPLICIT_EGRESS=1; shift ;;
     --no-tls)            NO_TLS=1; shift ;;
@@ -444,10 +456,11 @@ check_port() { # check_port <port> <proto>
   else owner=$(ss -Hlnpt "( sport = :$p )" 2>/dev/null | awk 'NR==1{print $NF}'); fi
   [ -z "$owner" ] && return 0
   case "$owner" in
-    # "MainThread" = the host-network core's socket as node names its main
-    # thread (seen on in-place origin upgrades). A foreign process squatting
-    # the port under that name would still fail loudly at compose up.
-    *docker*|*nginx*|*caddy*|*livekit*|*ingress*|*egress*|*redis*|*node*|*mediamtx*|*MainThread*) return 0 ;;  # ours on re-run
+    # "streamhub-core" = the host-network Go core (3.x); "node"/"MainThread" =
+    # the 2.x Node core as it names its main thread (seen on in-place origin
+    # upgrades). A foreign process squatting the port under one of these names
+    # would still fail loudly at compose up.
+    *docker*|*nginx*|*caddy*|*livekit*|*ingress*|*egress*|*redis*|*streamhub-core*|*node*|*mediamtx*|*MainThread*) return 0 ;;  # ours on re-run
     *) echo "$owner"; return 1 ;;
   esac
 }
@@ -835,6 +848,19 @@ if [ "$MODE" = "origin" ]; then
       fi
     fi
   fi
+  # Samples origin: only written when asked for — unset keeps samples on the
+  # dashboard origin (and sample:write superadmin-only), zero behavior change.
+  if [ -n "$SAMPLES_DOMAIN" ]; then
+    if [ "$STREAMHUB_DOMAIN" = "localhost" ] || is_ip "$SAMPLES_DOMAIN" || [ "$SAMPLES_DOMAIN" = "$STREAMHUB_DOMAIN" ]; then
+      warn "--samples-domain needs its own DNS name, distinct from the dashboard's (got '$SAMPLES_DOMAIN') — skipping."
+    else
+      SAMPLES_SCHEME="https"; [ "$NO_TLS" = "1" ] && SAMPLES_SCHEME="http"
+      env_set STREAMHUB_SAMPLES_URL "$SAMPLES_SCHEME://$SAMPLES_DOMAIN"
+      # Caddy site address (compose → SAMPLES_SITE_ADDRESS): bare = auto-TLS.
+      if [ "$NO_TLS" = "1" ]; then env_set SAMPLES_DOMAIN "http://$SAMPLES_DOMAIN"; else env_set SAMPLES_DOMAIN "$SAMPLES_DOMAIN"; fi
+      ok "samples origin → $SAMPLES_SCHEME://$SAMPLES_DOMAIN"
+    fi
+  fi
   env_put STREAMHUB_CLUSTER_TOKEN "clt_$(rand 32)"
   env_put DATA_DIR                "/data"
   env_put STREAMHUB_HOST_DATA_DIR "./data"
@@ -931,11 +957,20 @@ else # ---- join mode config ---------------------------------------------------
       die "cluster join failed (tried: ${JOIN_CANDIDATES[*]}) — check --cluster-token and that the origin's proxy is reachable (default target is http://$ORIGIN_IP on :80; pass --origin-url to override). Response: $JOIN_RESP"
     fi
   else
-    jget() { printf '%s' "$JOIN_RESP" | python3 -c "import sys,json;d=json.load(sys.stdin).get('data',{});v=d$1;print(v if v is not None else '')" 2>/dev/null || true; }
-    LK_KEY="$(jget "['livekit']['apiKey']")"
-    LK_SECRET="$(jget "['livekit']['apiSecret']")"
-    REDIS_FROM_ORIGIN="$(jget "['redisUrl']")"
-    NODE_ID="$(jget "['nodeId']")"
+    # jget KEY → the string value of "KEY" in the join response ('' when absent
+    # or null). Pure sed — the core binary isn't on this host yet, and no
+    # python3/jq is needed. The keys are unique in the payload
+    # ({data:{nodeId,name,redisUrl,publicWsUrl,livekit:{apiKey,apiSecret,wsUrl}}});
+    # unescapes what Go's encoder emits for these values (\" \\ \/ & < >).
+    jget() {
+      printf '%s' "$JOIN_RESP" | tr -d '\n' \
+        | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -n1 \
+        | sed -e 's/\\u0026/\&/g' -e 's/\\u003c/</g' -e 's/\\u003e/>/g' -e 's/\\\//\//g' -e 's/\\"/"/g' -e 's/\\\\/\\/g' || true
+    }
+    LK_KEY="$(jget apiKey)"
+    LK_SECRET="$(jget apiSecret)"
+    REDIS_FROM_ORIGIN="$(jget redisUrl)"
+    NODE_ID="$(jget nodeId)"
     if [ -z "$LK_KEY" ] || [ -z "$LK_SECRET" ]; then
       [ "$ALREADY_JOINED" = "1" ] || die "origin did not return LiveKit keys — is its core up to date? Response: $JOIN_RESP"
       warn "origin did not return LiveKit keys — keeping the existing ones"
@@ -1116,6 +1151,7 @@ install_edge_placeholder_unit() { # install_edge_placeholder_unit <api_base> <to
 STREAMHUB_MASTER_URL=$ed_url
 STREAMHUB_CLUSTER_TOKEN=$ed_token
 STREAMHUB_NODE_ID=$ed_node
+VISION_EDGE_LOG=/var/log/streamhub-edge.log
 EOF
   )
   cat > /etc/systemd/system/streamhub-edge.service <<'EOF'
@@ -1131,6 +1167,9 @@ ConditionPathExists=/usr/local/bin/streamhub-vision-edge
 Type=simple
 EnvironmentFile=-/etc/streamhub/edge.env
 ExecStart=/usr/local/bin/streamhub-vision-edge
+# stdout goes to VISION_EDGE_LOG so the master's node logs (edge log_tail)
+# have something to read; stderr stays in journald.
+StandardOutput=append:/var/log/streamhub-edge.log
 Restart=on-failure
 RestartSec=5
 Nice=5
@@ -1227,7 +1266,7 @@ EOF
     systemctl daemon-reload >/dev/null 2>&1 || true
     systemctl enable streamhub-edge.service >/dev/null 2>&1 || true
     systemctl restart streamhub-edge.service >/dev/null 2>&1 \
-      || warn "could not start streamhub-edge.service (check: journalctl -u streamhub-edge)"
+      || warn "could not start streamhub-edge.service (check: journalctl -u streamhub-edge, /var/log/streamhub-edge.log)"
   fi
   ok "Vision Edge runtime provisioned ($venv) — streamhub-edge.service dials the master WS control channel."
 }
@@ -1466,13 +1505,32 @@ if [ "$MODE" = "origin" ]; then
   log "seeding the global API token (idempotent)"
   # stdin ("-"): the sk_ token must never ride an argv (visible in ps/cmdline)
   printf '%s' "$(env_get STREAMHUB_API_TOKEN)" \
-    | docker compose exec -T core node deploy/seed-token.js - bootstrap \
+    | docker compose exec -T core streamhub-core seed-token - bootstrap \
     || warn "token seed skipped (probably already seeded)"
 
   # ---- proxy server-block + (optional) certbot ------------------------------
   DOMAIN="$(env_get STREAMHUB_DOMAIN)"
   if [ "$PROXY" = "nginx" ] && [ "$DOMAIN" != "localhost" ]; then
     AVAIL="/etc/nginx/sites-available/$DOMAIN"
+    # HLS direct-serve (STREAMHUB_HLS_DIRECT_SERVE, operations/SCALING.md): ON
+    # points nginx's /hls root at the host DATA_DIR so live .ts/.m3u8 are served
+    # straight from disk (sendfile). OFF (default) uses a non-existent root, so
+    # try_files always misses and everything falls back to the core (no change).
+    HLS_DS="$(env_get STREAMHUB_HLS_DIRECT_SERVE)"; : "${HLS_DS:=${STREAMHUB_HLS_DIRECT_SERVE:-}}"
+    case "${HLS_DS,,}" in
+      on|1|true|yes) HLS_ROOT="$(cd "$INSTALL_DIR" 2>/dev/null && realpath -m "${DATA_HOST_DIR:-./data}" 2>/dev/null || echo "${DATA_HOST_DIR:-./data}")"
+         log "HLS direct-serve ON — nginx serves /hls from disk at $HLS_ROOT"
+         # data/apps is 770 (umask 077 + g+rwX above): give ONLY the nginx worker
+         # user traverse (x, no listing) down to the per-app dirs — not o+x, which
+         # would open app.db (664) to every local user.
+         NGX_USER="$(awk '$1=="user"{gsub(";","",$2); print $2; exit}' /etc/nginx/nginx.conf 2>/dev/null)"; : "${NGX_USER:=www-data}"
+         if command -v setfacl >/dev/null 2>&1; then
+           for d in "$INSTALL_DIR" "$HLS_ROOT" "$HLS_ROOT/apps"; do setfacl -m "u:$NGX_USER:x" "$d" 2>/dev/null || true; done
+         else
+           warn "setfacl not found — nginx ($NGX_USER) may get 403 on /hls; run: setfacl -m u:$NGX_USER:x $HLS_ROOT/apps (apt install acl)"
+         fi ;;
+      *) HLS_ROOT="/var/empty" ;;
+    esac
     if [ ! -f "$AVAIL" ]; then
       if is_ip "$DOMAIN"; then
         # IP origin: a catch-all default_server answers on :80 for ANY Host
@@ -1481,10 +1539,13 @@ if [ "$MODE" = "origin" ]; then
         sed -e 's/server_name streamhub\.example\.com;/server_name _;/' \
             -e 's/listen 80;/listen 80 default_server;/' \
             -e 's/listen \[::\]:80;/listen [::]:80 default_server;/' \
+            -e "s#__STREAMHUB_HLS_ROOT__#$HLS_ROOT#" \
             deploy/nginx-streamhub.conf > "$AVAIL"
       else
         log "writing nginx server block for $DOMAIN"
-        sed "s/streamhub.example.com/$DOMAIN/" deploy/nginx-streamhub.conf > "$AVAIL"
+        sed -e "s/streamhub.example.com/$DOMAIN/" \
+            -e "s#__STREAMHUB_HLS_ROOT__#$HLS_ROOT#" \
+            deploy/nginx-streamhub.conf > "$AVAIL"
       fi
       ln -sf "$AVAIL" "/etc/nginx/sites-enabled/$DOMAIN"
       rm -f /etc/nginx/sites-enabled/default
@@ -1502,6 +1563,26 @@ if [ "$MODE" = "origin" ]; then
       log "requesting Let's Encrypt cert for $DOMAIN"
       certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect -m "$(env_get ACME_EMAIL)" \
         || warn "certbot failed — check the DNS A record for $DOMAIN and re-run this installer"
+    fi
+    # Samples origin vhost (+ cert): a second server block, same core upstream;
+    # the core splits by Host (features/samples.md).
+    SAMPLES_URL_SET="$(env_get STREAMHUB_SAMPLES_URL)"
+    if [ -n "$SAMPLES_URL_SET" ] && ! is_ip "$DOMAIN"; then
+      SDOM="${SAMPLES_URL_SET#*://}"; SDOM="${SDOM%%/*}"
+      SAVAIL="/etc/nginx/sites-available/$SDOM"
+      if [ ! -f "$SAVAIL" ]; then
+        log "writing nginx server block for the samples origin $SDOM"
+        sed "s/samples.example.com/$SDOM/" deploy/nginx-samples.conf > "$SAVAIL"
+        ln -sf "$SAVAIL" "/etc/nginx/sites-enabled/$SDOM"
+        nginx -t && systemctl reload nginx
+      else
+        ok "nginx server block for $SDOM already present"
+      fi
+      if [ "$NO_TLS" != "1" ] && [ ! -d "/etc/letsencrypt/live/$SDOM" ]; then
+        log "requesting Let's Encrypt cert for the samples origin $SDOM"
+        certbot --nginx -d "$SDOM" --non-interactive --agree-tos --redirect -m "$(env_get ACME_EMAIL)" \
+          || warn "certbot failed for $SDOM — check its DNS A record points here and re-run; samples are unreachable until it exists."
+      fi
     fi
     # TURN cert (dedicated cert for turn.<domain> in its OWN live/ dir so the
     # compose cert_file path derives cleanly from STREAMHUB_TURN_DOMAIN). certonly
@@ -1643,6 +1724,7 @@ if [ "$MODE" = "origin" ]; then
   echo "  API token     : $(reveal "$(env_get STREAMHUB_API_TOKEN)")    (Authorization: Bearer ...)"
   echo "  RTMP publish  : rtmp://$(env_get RTMP_PUBLIC_HOST):1935/x  ·  WHIP: :8080  ·  HLS: /hls/<app>/<room>/index.m3u8"
   [ "$(env_get STREAMHUB_TURN_ENABLE)" = "true" ] && echo "  TURN relay    : turn:$(env_get STREAMHUB_TURN_DOMAIN):5349 (TLS) + :3478/udp  ·  ICE servers auto-advertised in the JoinResponse"
+  [ -n "$(env_get STREAMHUB_SAMPLES_URL)" ] && echo "  Samples       : $(env_get STREAMHUB_SAMPLES_URL)/samples/<app>/<file>   (own origin)"
   echo "  Cluster token : $(reveal "$(env_get STREAMHUB_CLUSTER_TOKEN)")"
   echo "  Join an edge  : curl -fsSL $SELF_URL | sudo bash -s -- --join \\"
   echo "                    --master-token $(reveal "$(env_get STREAMHUB_CLUSTER_TOKEN)") --master-ip <THIS_SERVER_IP> --master-url $SCHEME://$DOMAIN"
@@ -1654,6 +1736,7 @@ if [ "$MODE" = "origin" ]; then
     warn "DNS: A record '$(env_get STREAMHUB_DOMAIN)' -> this server's public IP (DNS-only, no CDN proxy)."
     warn "Firewall: open 80,443,1935,7880,7881/tcp and 7882/udp."
     [ "$(env_get STREAMHUB_TURN_ENABLE)" = "true" ] && warn "TURN: also open 5349/tcp + 3478/udp, and add DNS A record '$(env_get STREAMHUB_TURN_DOMAIN)' -> this server."
+    [ -n "$(env_get STREAMHUB_SAMPLES_URL)" ] && warn "Samples: add DNS A record '$(s="$(env_get STREAMHUB_SAMPLES_URL)"; s="${s#*://}"; echo "${s%%/*}")' -> this server."
   fi
   # Cluster readiness: without a private-IP Redis bind, edges get redis://<ip>:6379
   # and crash-loop (AWS-POC2 finding #2). Warn prominently unless the operator

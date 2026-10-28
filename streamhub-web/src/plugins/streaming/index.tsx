@@ -76,8 +76,8 @@ function StreamingTab({ ctx }: PluginComponentProps) {
 
   if (!app) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-6 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('streaming:invalid')}</p>
+      <div className="rounded-xl border shadow-sm border-gray-700 bg-gray-800 p-6 text-center">
+        <p className="text-sm text-gray-400">{t('streaming:invalid')}</p>
       </div>
     )
   }
@@ -96,34 +96,34 @@ function StreamingTab({ ctx }: PluginComponentProps) {
       {/* Preview */}
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400">{t('streaming:subtitle')}</p>
+          <p className="text-xs text-gray-400">{t('streaming:subtitle')}</p>
           <Link
             to={`/broadcast/${encodeURIComponent(app)}`}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 transition hover:text-fg"
+            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-300 transition hover:text-fg"
           >
             {t('streaming:openStudio')}
           </Link>
         </div>
 
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-black">
+        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-700 bg-black">
           <video ref={videoRef} autoPlay playsInline muted {...LEGACY_INLINE_VIDEO_ATTRS} className="h-full w-full object-contain" />
           <div className="pointer-events-none absolute left-3 top-3">
             {(isLive || state.phase === 'connecting') && <PhaseBadge phase={state.phase} />}
           </div>
           {!state.previewTrack && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-gray-500 dark:text-gray-400">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-gray-400">
               {state.audioOnly ? (
                 <>
                   <svg className="h-10 w-10 text-primary-500" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3zM19 12a7 7 0 01-14 0M12 19v3" />
                   </svg>
                   <p className="text-sm">{t('broadcast:preview.audioOnly')}</p>
-                  <p className="max-w-xs text-xs text-gray-500 dark:text-gray-400">{t('broadcast:preview.audioOnlyHint')}</p>
+                  <p className="max-w-xs text-xs text-gray-400">{t('broadcast:preview.audioOnlyHint')}</p>
                 </>
               ) : state.permission === 'denied' ? (
                 <>
                   <p className="text-sm">{t('broadcast:preview.permissionDenied')}</p>
-                  <p className="max-w-xs text-xs text-gray-500 dark:text-gray-400">{t('broadcast:preview.permissionHint')}</p>
+                  <p className="max-w-xs text-xs text-gray-400">{t('broadcast:preview.permissionHint')}</p>
                   <Button variant="default" size="sm" className="mt-1" onClick={retryPermission}>
                     {t('broadcast:preview.retryPermission')}
                   </Button>
@@ -138,7 +138,7 @@ function StreamingTab({ ctx }: PluginComponentProps) {
           )}
         </div>
 
-        <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+        <p className="text-[11px] leading-snug text-gray-400">
           <Trans i18nKey="broadcast:preview.note" components={{ strong: <strong /> }} />
         </p>
       </section>
@@ -156,12 +156,12 @@ function StreamingTab({ ctx }: PluginComponentProps) {
           </Banner>
         )}
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+        <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-fg">{t('broadcast:form.title')}</h2>
             <div className="flex items-center gap-2">
               {state.startedAt && (
-                <span className="rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs text-gray-600 dark:text-gray-300">
+                <span className="rounded-md bg-gray-700 px-2 py-1 text-xs text-gray-300">
                   <Duration since={state.startedAt} />
                 </span>
               )}
@@ -170,10 +170,10 @@ function StreamingTab({ ctx }: PluginComponentProps) {
           </div>
 
           <div className="mt-4 space-y-4">
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40 px-4 py-3">
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-700 bg-gray-700/40 px-4 py-3">
               <div>
                 <div className="text-sm text-fg">{t('broadcast:form.audioOnly')}</div>
-                <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{t('broadcast:form.audioOnlyHint')}</div>
+                <div className="mt-0.5 text-[11px] text-gray-400">{t('broadcast:form.audioOnlyHint')}</div>
               </div>
               <Switcher
                 checked={state.audioOnly}
@@ -202,7 +202,7 @@ function StreamingTab({ ctx }: PluginComponentProps) {
               />
             </Field>
             {rtmpUrl.length > 0 && !rtmpLooksValid && (
-              <p className="-mt-2 text-[11px] text-amber-600 dark:text-amber-400">{t('broadcast:form.rtmpInvalid')}</p>
+              <p className="-mt-2 text-[11px] text-amber-400">{t('broadcast:form.rtmpInvalid')}</p>
             )}
 
             {!state.audioOnly && (
@@ -230,10 +230,10 @@ function StreamingTab({ ctx }: PluginComponentProps) {
         </div>
 
         {state.egress && (
-          <div className="flex border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 items-center justify-between rounded-2xl px-4 py-3 text-sm">
+          <div className="flex border shadow-sm border-gray-700 bg-gray-800 items-center justify-between rounded-2xl px-4 py-3 text-sm">
             <div className="min-w-0">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('broadcast:egress.label')}</p>
-              <p className="truncate font-mono text-xs text-gray-600 dark:text-gray-300">{state.egress.id}</p>
+              <p className="text-xs text-gray-400">{t('broadcast:egress.label')}</p>
+              <p className="truncate font-mono text-xs text-gray-300">{state.egress.id}</p>
             </div>
             <EgressStatus status={state.egress.status} />
           </div>
@@ -261,7 +261,7 @@ function StreamingTab({ ctx }: PluginComponentProps) {
         )}
 
         {!rtmpLooksValid && state.phase === 'idle' && (
-          <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">{t('broadcast:actions.needValidUrl')}</p>
+          <p className="text-center text-[11px] text-gray-400">{t('broadcast:actions.needValidUrl')}</p>
         )}
       </aside>
     </div>

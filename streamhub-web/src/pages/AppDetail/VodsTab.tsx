@@ -527,7 +527,7 @@ export function VodsTab({ app }: { app: string }) {
         )}
 
         {total > PAGE_SIZE && (
-          <div className="flex justify-end border-t border-gray-200 p-4 dark:border-gray-700">
+          <div className="flex justify-end border-t p-4 border-gray-700">
             <Pagination
               currentPage={page}
               pageSize={PAGE_SIZE}
@@ -548,7 +548,7 @@ export function VodsTab({ app }: { app: string }) {
           onRequestClose={() => setPlaying(null)}
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <h5 className="text-base font-semibold text-gray-100">
               {t('player.title', { id: playing.vod.id })}
             </h5>
             <Button variant="ghost" onClick={() => setPlaying(null)}>
@@ -586,12 +586,12 @@ export function VodsTab({ app }: { app: string }) {
           onRequestClose={() => !remove.isPending && setConfirmDel(null)}
         >
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h5 className="text-lg font-semibold text-gray-100">
               {t('delete.title', { id: confirmDel.id })}
             </h5>
             <Badge tone="red">{t('delete.destructive')}</Badge>
           </div>
-          <p className="mb-4 text-xs font-medium text-amber-600 dark:text-amber-300">
+          <p className="mb-4 text-xs font-medium text-amber-300">
             {t('delete.warning')}
           </p>
           {remove.isError && (
@@ -673,9 +673,9 @@ function TranscriptSection({ app, vodId }: { app: string; vodId: number }) {
     status === 'ready' ? 'green' : status === 'failed' ? 'red' : 'amber'
 
   return (
-    <div className="mt-4 border-t border-gray-200 pt-3 dark:border-gray-700">
+    <div className="mt-4 border-t pt-3 border-gray-700">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-100">
           <HiOutlineDocumentText className="text-base" />
           {t('transcript.title')}
           {data && <Badge tone={tone}>{t(`transcript.status.${status}`)}</Badge>}
@@ -735,7 +735,7 @@ function TranscriptSection({ app, vodId }: { app: string; vodId: number }) {
               })}
             </p>
           )}
-          <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs leading-5 text-slate-600 dark:bg-gray-800 dark:text-slate-300">
+          <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg p-3 text-xs leading-5 bg-gray-800 text-slate-300">
             {data?.text || t('transcript.noText')}
           </pre>
         </>

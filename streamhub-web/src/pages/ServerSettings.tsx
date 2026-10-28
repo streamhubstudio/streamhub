@@ -28,10 +28,10 @@ const EMPTY = '—'
 // --- badges (Tag-based tone pills, matching the Cluster page) ----------------
 
 const BADGE_TONE: Record<Tone | 'slate', string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  red: 'bg-red-500/20 text-red-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 function ToneBadge({ tone, children }: { tone: keyof typeof BADGE_TONE; children: ReactNode }) {
@@ -113,7 +113,7 @@ function GuidanceBlock({ items }: { items: SettingGuidance[] | undefined }) {
             <li key={g.envVar} className="rounded-lg border border-border/60 bg-surface-raised/40 p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-medium text-fg">{g.setting}</span>
-                <code className="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[11px] dark:bg-gray-600/60">
+                <code className="rounded px-1.5 py-0.5 font-mono text-[11px] bg-gray-600/60">
                   {g.envVar}
                 </code>
                 <div className="ml-auto">

@@ -1,0 +1,36 @@
+[
+  {
+    "prev": null,
+    "fields": [
+      "2026-10-27T12:00:00.000Z",
+      "system",
+      null,
+      null,
+      "auth.login",
+      null,
+      null,
+      null,
+      "success",
+      null
+    ],
+    "canonical": "[\"2026-10-27T12:00:00.000Z\",\"system\",null,null,\"auth.login\",null,null,null,\"success\",null]",
+    "hash": "53264c0697b3095afebfc9141fb28219b4b7cebe06c497fde9e0ab685eeeff7b"
+  },
+  {
+    "prev": "abc",
+    "fields": [
+      "2026-10-27T12:00:01.000Z",
+      "user",
+      "usr_1",
+      "tnt_1",
+      "token.create",
+      "token",
+      "7",
+      "203.0.113.9",
+      "failure",
+      "{\"name\":\"x<y>&\",\"note\":\"ñ \",\"n\":1}"
+    ],
+    "canonical": "[\"2026-10-27T12:00:01.000Z\",\"user\",\"usr_1\",\"tnt_1\",\"token.create\",\"token\",\"7\",\"203.0.113.9\",\"failure\",\"{\\\"name\\\":\\\"x<y>&\\\",\\\"note\\\":\\\"ñ \\\",\\\"n\\\":1}\"]",
+    "hash": "b5de0837bd5ea5ebb65b7a708e00318e68f87d26665d2abb0917840f8154952a"
+  }
+]

@@ -175,11 +175,11 @@ function PassthroughIngressDetails({ ing }: { ing: Ingress }) {
         <PassthroughLostWarning title={t('details.passthroughLostTitle')} items={lost} />
       )}
       {typeof latencyMs === 'number' && (
-        <p className="text-[11px] font-medium text-amber-600 dark:text-amber-300">
+        <p className="text-[11px] font-medium text-amber-300">
           {t('details.srtLatency', { ms: latencyMs })}
         </p>
       )}
-      <p className="text-[11px] text-gray-500 dark:text-gray-400">{t(helpKey)}</p>
+      <p className="text-[11px] text-gray-400">{t(helpKey)}</p>
     </div>
   )
 }
@@ -221,7 +221,7 @@ function IngressDetails({ ing }: { ing: Ingress }) {
               password={ing.requires_password ? pair.backup.password : undefined}
             />
           </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('details.failoverHelp')}</p>
+          <p className="text-[11px] text-gray-400">{t('details.failoverHelp')}</p>
         </>
       ) : (
         <>
@@ -252,7 +252,7 @@ function SecretField({ label, value }: { label: string; value: string }) {
   const [revealed, setRevealed] = useState(false)
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+      <span className="mb-1.5 block text-sm font-semibold text-gray-100">
         {label}
       </span>
       <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ function CredentialsDialog({ ing, onClose }: { ing: Ingress; onClose: () => void
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <h5 className="text-base font-semibold text-gray-100">
             {t('reveal.title')}
           </h5>
           {role && (
@@ -334,17 +334,17 @@ function CredentialsDialog({ ing, onClose }: { ing: Ingress; onClose: () => void
               <CopyField label={t('reveal.backupRtmpUrl')} value={backupRtmp} />
             )}
             <SecretField label={t('reveal.backupStreamKey')} value={backupKey} />
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-[11px] text-gray-400">
               {t('reveal.failoverNote')}
             </p>
           </>
         )}
         {ing.requires_password && (
-          <p className="text-[11px] font-medium text-amber-600 dark:text-amber-300">
+          <p className="text-[11px] font-medium text-amber-300">
             {t('reveal.passwordRequired')}
           </p>
         )}
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="text-[11px] text-gray-400">
           {t('reveal.help')}
         </p>
       </div>
@@ -377,7 +377,7 @@ function WsIngestDetails({ ws }: { ws: WsIngestKey }) {
           mono={false}
         />
       )}
-      <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('ws.details.help')}</p>
+      <p className="text-[11px] text-gray-400">{t('ws.details.help')}</p>
     </div>
   )
 }
@@ -400,7 +400,7 @@ function WsCredentialsDialog({
     <Dialog isOpen width={640} closable={false} onClose={onClose} onRequestClose={onClose}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <h5 className="text-base font-semibold text-gray-100">
             {t('ws.reveal.title')}
           </h5>
           <span className="truncate font-mono text-xs text-slate-400">{row.id}</span>
@@ -418,7 +418,7 @@ function WsCredentialsDialog({
           label={t('ws.details.mjpegUrl')}
           value={`${origin}/live/${encodeURIComponent(app)}/${encodeURIComponent(room)}/mjpeg`}
         />
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('ws.reveal.help')}</p>
+        <p className="text-[11px] text-gray-400">{t('ws.reveal.help')}</p>
       </div>
     </Dialog>
   )
@@ -829,12 +829,12 @@ export function IngressTab({ app }: { app: string }) {
                     {t('create.passthrough.hint')}
                   </div>
                   {isSrt && (
-                    <div className="mt-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                    <div className="mt-0.5 text-[11px] font-medium text-amber-300">
                       {t('create.passthrough.srtForced')}
                     </div>
                   )}
                   {isMpegts && (
-                    <div className="mt-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                    <div className="mt-0.5 text-[11px] font-medium text-amber-300">
                       {t('create.passthrough.mpegtsForced')}
                     </div>
                   )}
@@ -1112,7 +1112,7 @@ export function IngressTab({ app }: { app: string }) {
         )}
 
         {total > PAGE_SIZE && (
-          <div className="flex justify-end border-t border-gray-200 p-4 dark:border-gray-700">
+          <div className="flex justify-end border-t p-4 border-gray-700">
             <Pagination
               currentPage={page}
               pageSize={PAGE_SIZE}

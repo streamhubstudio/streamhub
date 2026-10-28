@@ -237,7 +237,7 @@ export function CockpitCell({
 export function CockpitEmptyCell() {
   const { t } = useTranslation('cockpit')
   return (
-    <div className="flex aspect-video flex-col items-center justify-center rounded-lg bg-gray-100 text-gray-400 ring-1 ring-dashed ring-gray-300 dark:bg-gray-900/40 dark:text-gray-600 dark:ring-gray-700">
+    <div className="flex aspect-video flex-col items-center justify-center rounded-lg ring-1 ring-dashed bg-gray-900/40 text-gray-600 ring-gray-700">
       <svg
         className="h-6 w-6"
         fill="none"

@@ -1,0 +1,342 @@
+{
+ "probes": [
+  {
+   "output": "{\"streams\":[{\"codec_type\":\"audio\",\"codec_name\":\"aac\",\"duration\":\"9.5\"},{\"codec_type\":\"video\",\"codec_name\":\"h264\",\"width\":1920,\"height\":1080,\"duration\":\"12.345\"}],\"format\":{\"duration\":\"13\",\"format_name\":\"mov,mp4\"}}",
+   "failed": false,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": 1920,
+    "height": 1080,
+    "durationS": 12.345,
+    "format": "h264"
+   }
+  },
+  {
+   "output": "{\"streams\":[{\"codec_type\":\"audio\"}],\"format\":{\"duration\":\"61.2xyz\",\"format_name\":\"mp3\"}}",
+   "failed": false,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": null,
+    "height": null,
+    "durationS": 61.2,
+    "format": "mp3"
+   }
+  },
+  {
+   "output": "{\"streams\":[{\"codec_type\":\"video\",\"width\":640}],\"format\":{}}",
+   "failed": false,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": 640,
+    "height": null,
+    "durationS": null,
+    "format": null
+   }
+  },
+  {
+   "output": "{\"format\":{\"duration\":\"N/A\"}}",
+   "failed": false,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": null,
+    "height": null,
+    "durationS": null,
+    "format": null
+   }
+  },
+  {
+   "output": "not json",
+   "failed": false,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": null,
+    "height": null,
+    "durationS": null,
+    "format": null
+   }
+  },
+  {
+   "output": null,
+   "failed": true,
+   "argv": {
+    "bin": "ffprobe",
+    "args": [
+     "-v",
+     "quiet",
+     "-print_format",
+     "json",
+     "-show_format",
+     "-show_streams",
+     "/data/apps/live/recordings/a b.mp4"
+    ]
+   },
+   "result": {
+    "width": null,
+    "height": null,
+    "durationS": null,
+    "format": null
+   }
+  }
+ ],
+ "snapshots": [
+  {
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-ss",
+    "1",
+    "-i",
+    "/in.mp4",
+    "-frames:v",
+    "1",
+    "-q:v",
+    "2",
+    "/out.jpg"
+   ]
+  },
+  {
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-ss",
+    "0",
+    "-i",
+    "/in.mp4",
+    "-frames:v",
+    "1",
+    "-q:v",
+    "2",
+    "/out.jpg"
+   ]
+  },
+  {
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-ss",
+    "2.5",
+    "-i",
+    "/in.mp4",
+    "-frames:v",
+    "1",
+    "-q:v",
+    "2",
+    "/out.jpg"
+   ]
+  }
+ ],
+ "templates": [
+  {
+   "template": "",
+   "out": ""
+  },
+  {
+   "template": "   ",
+   "out": ""
+  },
+  {
+   "template": "${app}_${room}_${streamId}",
+   "out": "live_live-room_cam-1"
+  },
+  {
+   "template": "${app}/${streamId}",
+   "out": "live-cam-1"
+  },
+  {
+   "template": "${date:yyyy-MM-dd_HHmmss}-${type}",
+   "out": "2026-01-05_070809-mp4"
+  },
+  {
+   "template": "${date:yyMMdd}",
+   "out": "260105"
+  },
+  {
+   "template": "${var.site}-${var.missing}-${ts}",
+   "out": "hq-1767596889"
+  },
+  {
+   "template": "${unknown}x${ app }",
+   "out": "xlive"
+  },
+  {
+   "template": "../../${var.evil}/../x",
+   "out": "etc-passwd-.-x"
+  },
+  {
+   "template": "${room}.${type}",
+   "out": "live-room.mp4"
+  },
+  {
+   "template": "-..weird..name--",
+   "out": "weird.name"
+  },
+  {
+   "template": "ñandú 😀 ${app}",
+   "out": "and-live"
+  },
+  {
+   "template": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.-",
+   "out": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "template": "${date:yyyy}${date:MM}",
+   "out": "202601"
+  },
+  {
+   "template": "..${var.dots}..",
+   "out": ""
+  }
+ ],
+ "now": "2026-01-05T07:08:09.000Z",
+ "downloads": [
+  {
+   "vod": {
+    "name": "cam-1.mp4",
+    "room": "r",
+    "format": "h264"
+   },
+   "out": "cam-1-42.mp4"
+  },
+  {
+   "vod": {
+    "name": "Weird \"name\"\n.MKV",
+    "room": null,
+    "format": null
+   },
+   "out": "Weird-_name_-42.mkv"
+  },
+  {
+   "vod": {
+    "name": "  ",
+    "room": "Room 1",
+    "format": "h264"
+   },
+   "out": "Room-1-42.h264"
+  },
+  {
+   "vod": {
+    "name": "",
+    "room": "",
+    "format": null
+   },
+   "out": "vod-42.mp4"
+  },
+  {
+   "vod": {
+    "name": ".hidden",
+    "room": "r",
+    "format": "mp4"
+   },
+   "out": "42.mp4"
+  },
+  {
+   "vod": {
+    "name": "a.b.c.webm",
+    "room": "r",
+    "format": null
+   },
+   "out": "a.b.c-42.webm"
+  },
+  {
+   "vod": {
+    "name": "ñandú/ünï.mov",
+    "room": "r",
+    "format": null
+   },
+   "out": "and-_-n--42.mov"
+  },
+  {
+   "vod": {
+    "name": "---",
+    "room": "r",
+    "format": null
+   },
+   "out": "42.mp4"
+  }
+ ],
+ "types": [
+  {
+   "path": "/x/a.mp4",
+   "out": "video/mp4"
+  },
+  {
+   "path": "/x/a.WEBM",
+   "out": "video/webm"
+  },
+  {
+   "path": "/x/a.mkv",
+   "out": "video/x-matroska"
+  },
+  {
+   "path": "/x/a.mov",
+   "out": "video/quicktime"
+  },
+  {
+   "path": "/x/a.ts",
+   "out": "application/octet-stream"
+  },
+  {
+   "path": "/x/.mp4",
+   "out": "application/octet-stream"
+  },
+  {
+   "path": "/x/a",
+   "out": "application/octet-stream"
+  }
+ ]
+}

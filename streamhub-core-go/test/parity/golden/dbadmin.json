@@ -1,0 +1,547 @@
+{
+  "module": "dbadmin",
+  "cases": [
+    {
+      "name": "dbhealth-app-global",
+      "fingerprint": "sha256:285653ec6a27e62a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/db/health",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "path": "{{dataDir}}/apps/live/app.db",
+          "tables": [
+            {
+              "bytes": "<masked>",
+              "name": "_streamhub_meta",
+              "rows": 1
+            },
+            {
+              "bytes": "<masked>",
+              "name": "app_plugins",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "ingress_auth",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "net_samples",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "restream_targets",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "scheduled_events",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "streams",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "tags",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "vod_variants",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "vods",
+              "rows": 0
+            }
+          ]
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbhealth-app-token",
+      "fingerprint": "sha256:45a9a562c41a6097",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/db/health",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "path": "{{dataDir}}/apps/live/app.db",
+          "tables": [
+            {
+              "bytes": "<masked>",
+              "name": "_streamhub_meta",
+              "rows": 1
+            },
+            {
+              "bytes": "<masked>",
+              "name": "app_plugins",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "ingress_auth",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "net_samples",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "restream_targets",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "scheduled_events",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "streams",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "tags",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "vod_variants",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "vods",
+              "rows": 0
+            }
+          ]
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbhealth-app-viewer",
+      "fingerprint": "sha256:34cb31db1a698be6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/db/health",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "dbhealth-app-no-auth",
+      "fingerprint": "sha256:8add16362786d3c9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/db/health"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "dbhealth-system-global",
+      "fingerprint": "sha256:79e8c7d0adf90797",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/db/health",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "path": "{{dataDir}}/data/streamhub.db"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbhealth-system-app-token",
+      "fingerprint": "sha256:7df245bd172af0aa",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/db/health",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "dbhealth-system-viewer",
+      "fingerprint": "sha256:9c0b11c2a5f5e11d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/db/health",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "dboptimize-app",
+      "fingerprint": "sha256:ad5cbb2aa583f0a5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/optimize",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "path": "{{dataDir}}/apps/live/app.db",
+          "steps": [
+            "PRAGMA optimize",
+            "ANALYZE",
+            "REINDEX",
+            "VACUUM",
+            "wal_checkpoint(TRUNCATE)"
+          ]
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dboptimize-viewer",
+      "fingerprint": "sha256:841bbc6af68ca9b6",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/optimize",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks app:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "dbpurge-empty",
+      "fingerprint": "sha256:e16b92751c86ee06",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "scope must be one of the following values: vods, logs, all",
+          "confirm must be true to authorize a purge",
+          "confirm must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "dbpurge-bad-scope",
+      "fingerprint": "sha256:e248a133a1f7c245",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "everything",
+          "confirm": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "scope must be one of the following values: vods, logs, all"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "dbpurge-confirm-false",
+      "fingerprint": "sha256:3ae6827da9434863",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "logs",
+          "confirm": false
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "confirm must be true to authorize a purge"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "dbpurge-confirm-string",
+      "fingerprint": "sha256:2ec8e6da4ed9f9c9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "logs",
+          "confirm": "true"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "confirm must be true to authorize a purge",
+          "confirm must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "dbpurge-viewer",
+      "fingerprint": "sha256:62d5ec11fb6e72a2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "viewerJwt",
+        "body": {
+          "scope": "logs",
+          "confirm": true
+        }
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks app:delete",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "dbpurge-vods",
+      "fingerprint": "sha256:a27be65f201163c7",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "vods",
+          "confirm": true
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "localDeleted": 0,
+          "logsDeleted": 0,
+          "s3Deleted": 0,
+          "scope": "vods",
+          "streamsDeleted": 0,
+          "vodsDeleted": 0
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbpurge-logs",
+      "fingerprint": "sha256:2a9bf6d6469dfe5a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "logs",
+          "confirm": true
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "localDeleted": 0,
+          "logsDeleted": "<masked>",
+          "s3Deleted": 0,
+          "scope": "logs",
+          "streamsDeleted": 0,
+          "vodsDeleted": 0
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbpurge-logs-again",
+      "fingerprint": "sha256:2a9bf6d6469dfe5a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "logs",
+          "confirm": true
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "localDeleted": 0,
+          "logsDeleted": "<masked>",
+          "s3Deleted": 0,
+          "scope": "logs",
+          "streamsDeleted": 0,
+          "vodsDeleted": 0
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "dbpurge-ghost-app",
+      "fingerprint": "sha256:09e632481f4da471",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/parity-ghost/db/purge",
+        "auth": "globalToken",
+        "body": {
+          "scope": "logs",
+          "confirm": true
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "localDeleted": 0,
+          "logsDeleted": 0,
+          "s3Deleted": 0,
+          "scope": "logs",
+          "streamsDeleted": 0,
+          "vodsDeleted": 0
+        },
+        "error": null
+      }
+    }
+  ]
+}

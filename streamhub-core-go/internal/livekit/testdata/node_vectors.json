@@ -1,0 +1,2598 @@
+{
+ "vectors": [
+  {
+   "name": "ingress-rtmp-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-rtmp-bypass-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-whip-bypass-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_2",
+     "url": "https://lk/w"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "WHIP_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "enableTranscoding": false
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_2",
+    "url": "https://lk/w",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-whip-on-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_2",
+     "url": "https://lk/w"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "WHIP_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "enableTranscoding": true
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_2",
+    "url": "https://lk/w",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-url-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_3"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "URL_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "url": "rtsp://93.184.216.34/cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_3",
+    "url": "",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-1080-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-480-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-adaptive-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-adaptive-1080-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "URL_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "url": "srt://93.184.216.34:9000"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://10.0.0.5:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-audio-livekit",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-reject-livekit",
+   "profile": "livekit",
+   "responses": [
+    {},
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": null,
+   "error": {
+    "status": 503,
+    "message": "LiveKit createIngress failed: invalid preset"
+   }
+  },
+  {
+   "name": "ingress-rtmp-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-rtmp-bypass-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-whip-bypass-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_2",
+     "url": "https://lk/w"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "WHIP_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "enableTranscoding": false
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_2",
+    "url": "https://lk/w",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-whip-on-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_2",
+     "url": "https://lk/w"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "WHIP_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      },
+      "enableTranscoding": true
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_2",
+    "url": "https://lk/w",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-url-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_3"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "URL_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      },
+      "url": "rtsp://93.184.216.34/cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_3",
+    "url": "",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-1080-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_1080P_30FPS_1_LAYER"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-480-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-adaptive-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_3_LAYERS"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-adaptive-1080-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "inputType": "URL_INPUT",
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_1080P_30FPS_3_LAYERS"
+      },
+      "url": "srt://93.184.216.34:9000"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://10.0.0.5:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-audio-efficient",
+   "profile": "efficient",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      }
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-reject-efficient",
+   "profile": "efficient",
+   "responses": [
+    {},
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam",
+      "video": {
+       "source": "CAMERA",
+       "preset": "H264_720P_30FPS_1_LAYER"
+      }
+     }
+    },
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://rtmp.example.com:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-no-public-host",
+   "profile": "livekit",
+   "responses": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://10.0.0.5:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "CreateIngress",
+     "data": {
+      "name": "live-live-ch1",
+      "roomName": "live-ch1",
+      "participantIdentity": "ingress-live",
+      "participantName": "Cam"
+     }
+    }
+   ],
+   "result": {
+    "ingressId": "IN_1",
+    "url": "rtmp://10.0.0.5:1935/x",
+    "streamKey": "SK_1",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "ingress-list",
+   "profile": "livekit",
+   "responses": [
+    {
+     "items": [
+      {
+       "ingressId": "IN_1",
+       "name": "live-ch1",
+       "url": "rtmp://10.0.0.5:1935/x",
+       "streamKey": "SK_1",
+       "roomName": "live-ch1",
+       "inputType": "RTMP_INPUT",
+       "state": {
+        "status": "ENDPOINT_PUBLISHING",
+        "startedAt": "1700000000123456789",
+        "video": {
+         "averageBitrate": 2500000,
+         "width": 1920,
+         "height": 1080
+        }
+       }
+      },
+      {
+       "ingressId": "IN_2",
+       "url": "https://lk/w",
+       "roomName": "live-ch2",
+       "inputType": "WHIP_INPUT",
+       "state": {
+        "status": "ENDPOINT_BUFFERING",
+        "startedAt": "1700000000"
+       }
+      },
+      {
+       "ingressId": "IN_3",
+       "roomName": "other",
+       "inputType": "URL_INPUT"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "ListIngress",
+     "data": {}
+    }
+   ],
+   "result": [
+    {
+     "ingressId": "IN_1",
+     "url": "rtmp://rtmp.example.com:1935/x",
+     "streamKey": "SK_1",
+     "roomName": "live-ch1",
+     "name": "live-ch1",
+     "inputType": "rtmp",
+     "status": "publishing",
+     "bitrate": 2500000,
+     "width": 1920,
+     "height": 1080,
+     "startedAt": "2023-11-14T22:13:20.123Z"
+    },
+    {
+     "ingressId": "IN_2",
+     "url": "https://lk/w",
+     "roomName": "live-ch2",
+     "inputType": "whip",
+     "status": "buffering",
+     "startedAt": "2023-11-14T22:13:20.000Z"
+    },
+    {
+     "ingressId": "IN_3",
+     "url": "",
+     "roomName": "other",
+     "inputType": "url",
+     "status": "inactive",
+     "startedAt": null
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "ingress-delete",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "Ingress",
+     "method": "DeleteIngress",
+     "data": {
+      "ingressId": "IN_1"
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "egress-room-composite",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "EG_1",
+     "status": "EGRESS_STARTING"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StartRoomCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "layout": "grid",
+      "fileOutputs": [
+       {
+        "fileType": "MP4",
+        "filepath": "/data/rec/a.mp4"
+       }
+      ],
+      "imageOutputs": [
+       {
+        "captureInterval": 10,
+        "filenamePrefix": "/data/rec/snap_",
+        "disableManifest": true
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_1",
+    "status": "EGRESS_STARTING"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-participant",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "EG_2",
+     "status": "EGRESS_ACTIVE"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StartParticipantEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "identity": "u1",
+      "fileOutputs": [
+       {
+        "fileType": "MP4",
+        "filepath": "/data/rec/b.mp4"
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_2",
+    "status": "EGRESS_ACTIVE"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-participant-missing",
+   "profile": "livekit",
+   "responses": [],
+   "requests": [],
+   "result": null,
+   "error": {
+    "status": 503,
+    "message": "LiveKit startEgress failed: participantIdentity required for participant egress"
+   }
+  },
+  {
+   "name": "egress-track",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1",
+     "sid": "PA_1",
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "VIDEO",
+       "source": "CAMERA"
+      },
+      {
+       "sid": "TR_A",
+       "type": "AUDIO",
+       "source": "MICROPHONE",
+       "muted": true
+      },
+      {
+       "sid": "TR_A2",
+       "type": "AUDIO"
+      }
+     ]
+    },
+    {
+     "egressId": "EG_3",
+     "status": "EGRESS_STARTING"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "GetParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    },
+    {
+     "service": "Egress",
+     "method": "StartTrackCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "audioTrackId": "TR_A",
+      "videoTrackId": "TR_V",
+      "fileOutputs": [
+       {
+        "fileType": "MP4",
+        "filepath": "/r.mp4"
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_3",
+    "status": "EGRESS_STARTING"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-track-audio",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1",
+     "sid": "PA_1",
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "VIDEO",
+       "source": "CAMERA"
+      },
+      {
+       "sid": "TR_A",
+       "type": "AUDIO",
+       "source": "MICROPHONE",
+       "muted": true
+      },
+      {
+       "sid": "TR_A2",
+       "type": "AUDIO"
+      }
+     ]
+    },
+    {
+     "egressId": "EG_4",
+     "status": "EGRESS_STARTING"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "GetParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    },
+    {
+     "service": "Egress",
+     "method": "StartTrackCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "audioTrackId": "TR_A",
+      "fileOutputs": [
+       {
+        "fileType": "MP4",
+        "filepath": "/r.mp4"
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_4",
+    "status": "EGRESS_STARTING"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-track-none",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "GetParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    }
+   ],
+   "result": null,
+   "error": {
+    "status": 503,
+    "message": "LiveKit startTrackCompositeEgress failed: participant 'u1' publishes no tracks"
+   }
+  },
+  {
+   "name": "egress-stream",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "EG_5",
+     "status": "EGRESS_STARTING",
+     "roomName": "live-ch1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StartRoomCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "layout": "speaker",
+      "streamOutputs": [
+       {
+        "protocol": "RTMP",
+        "urls": [
+         "rtmp://a.rtmp.youtube.com/live2/key"
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_5",
+    "status": "EGRESS_STARTING",
+    "roomName": "live-ch1",
+    "urls": [
+     "rtmp://a.rtmp.youtube.com/live2/key"
+    ]
+   },
+   "error": null
+  },
+  {
+   "name": "egress-hls",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "EG_6",
+     "status": "EGRESS_STARTING"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StartRoomCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "segmentOutputs": [
+       {
+        "protocol": "HLS_PROTOCOL",
+        "filenamePrefix": "/data/hls/live/ch1/segment_",
+        "playlistName": "/data/hls/live/ch1/index.m3u8",
+        "segmentDuration": 2,
+        "disableManifest": true
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_6",
+    "status": "EGRESS_STARTING",
+    "roomName": "live-ch1"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-hls-dvr",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "EG_7",
+     "status": "EGRESS_ACTIVE",
+     "segmentResults": [
+      {
+       "playlistLocation": "/data/hls/x/index.m3u8"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StartRoomCompositeEgress",
+     "data": {
+      "roomName": "live-ch1",
+      "segmentOutputs": [
+       {
+        "protocol": "HLS_PROTOCOL",
+        "filenamePrefix": "/data/hls/x/segment_",
+        "playlistName": "/data/hls/x/index.m3u8",
+        "segmentDuration": 4,
+        "disableManifest": true,
+        "livePlaylistName": "/data/hls/x/live.m3u8"
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "egressId": "EG_7",
+    "status": "EGRESS_ACTIVE",
+    "roomName": "live-ch1",
+    "playlistLocation": "/data/hls/x/index.m3u8"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-list-hls",
+   "profile": "livekit",
+   "responses": [
+    {
+     "items": [
+      {
+       "egressId": "E1",
+       "roomName": "live-ch1",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "roomName": "live-ch1",
+        "segmentOutputs": [
+         {
+          "playlistName": "/d/a.m3u8"
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E2",
+       "roomName": "live",
+       "status": "EGRESS_STARTING",
+       "segmentResults": [
+        {
+         "playlistName": "/d/b.m3u8"
+        }
+       ]
+      },
+      {
+       "egressId": "E3",
+       "roomName": "live-ch2",
+       "status": "EGRESS_ACTIVE",
+       "streamResults": [
+        {
+         "url": "rtmp://x/1"
+        },
+        {
+         "url": ""
+        }
+       ]
+      },
+      {
+       "egressId": "E4",
+       "roomName": "live-ch3",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "streamOutputs": [
+         {
+          "urls": [
+           "rtmp://y/1",
+           "rtmp://y/2"
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E5",
+       "roomName": "livex",
+       "status": "EGRESS_ACTIVE",
+       "segmentResults": [
+        {
+         "playlistName": "/d/c.m3u8"
+        }
+       ]
+      },
+      {
+       "egressId": "E6",
+       "roomName": "live-ch4",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "fileOutputs": [
+         {
+          "filepath": "/f.mp4"
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E7",
+       "roomName": "live-ch5",
+       "status": 99,
+       "streamResults": [
+        {
+         "url": "rtmp://z"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "ListEgress",
+     "data": {
+      "active": true
+     }
+    }
+   ],
+   "result": [
+    {
+     "egressId": "E1",
+     "status": "EGRESS_ACTIVE",
+     "roomName": "live-ch1",
+     "playlistLocation": "/d/a.m3u8"
+    },
+    {
+     "egressId": "E2",
+     "status": "EGRESS_STARTING",
+     "roomName": "live",
+     "playlistLocation": "/d/b.m3u8"
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "egress-list-stream",
+   "profile": "livekit",
+   "responses": [
+    {
+     "items": [
+      {
+       "egressId": "E1",
+       "roomName": "live-ch1",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "roomName": "live-ch1",
+        "segmentOutputs": [
+         {
+          "playlistName": "/d/a.m3u8"
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E2",
+       "roomName": "live",
+       "status": "EGRESS_STARTING",
+       "segmentResults": [
+        {
+         "playlistName": "/d/b.m3u8"
+        }
+       ]
+      },
+      {
+       "egressId": "E3",
+       "roomName": "live-ch2",
+       "status": "EGRESS_ACTIVE",
+       "streamResults": [
+        {
+         "url": "rtmp://x/1"
+        },
+        {
+         "url": ""
+        }
+       ]
+      },
+      {
+       "egressId": "E4",
+       "roomName": "live-ch3",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "streamOutputs": [
+         {
+          "urls": [
+           "rtmp://y/1",
+           "rtmp://y/2"
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E5",
+       "roomName": "livex",
+       "status": "EGRESS_ACTIVE",
+       "segmentResults": [
+        {
+         "playlistName": "/d/c.m3u8"
+        }
+       ]
+      },
+      {
+       "egressId": "E6",
+       "roomName": "live-ch4",
+       "status": "EGRESS_ACTIVE",
+       "roomComposite": {
+        "fileOutputs": [
+         {
+          "filepath": "/f.mp4"
+         }
+        ]
+       }
+      },
+      {
+       "egressId": "E7",
+       "roomName": "live-ch5",
+       "status": 99,
+       "streamResults": [
+        {
+         "url": "rtmp://z"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "ListEgress",
+     "data": {
+      "active": true
+     }
+    }
+   ],
+   "result": [
+    {
+     "egressId": "E3",
+     "status": "EGRESS_ACTIVE",
+     "roomName": "live-ch2",
+     "urls": [
+      "rtmp://x/1"
+     ]
+    },
+    {
+     "egressId": "E4",
+     "status": "EGRESS_ACTIVE",
+     "roomName": "live-ch3",
+     "urls": [
+      "rtmp://y/1",
+      "rtmp://y/2"
+     ]
+    },
+    {
+     "egressId": "E7",
+     "status": "EGRESS_UNKNOWN_99",
+     "roomName": "live-ch5",
+     "urls": [
+      "rtmp://z"
+     ]
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "egress-stop",
+   "profile": "livekit",
+   "responses": [
+    {
+     "egressId": "E1",
+     "status": "EGRESS_ENDING"
+    }
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StopEgress",
+     "data": {
+      "egressId": "E1"
+     }
+    }
+   ],
+   "result": {
+    "egressId": "E1",
+    "status": "EGRESS_ENDING"
+   },
+   "error": null
+  },
+  {
+   "name": "egress-stop-fail",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "Egress",
+     "method": "StopEgress",
+     "data": {
+      "egressId": "E9"
+     }
+    }
+   ],
+   "result": null,
+   "error": {
+    "status": 503,
+    "message": "LiveKit stopEgress failed: egress not found"
+   }
+  },
+  {
+   "name": "room-create",
+   "profile": "livekit",
+   "responses": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": "1700000000",
+     "metadata": "{\"onAir\":true}"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "CreateRoom",
+     "data": {
+      "name": "live-ch1",
+      "emptyTimeout": 86400
+     }
+    }
+   ],
+   "result": {
+    "name": "live-ch1",
+    "sid": "RM_1",
+    "numParticipants": 3,
+    "creationTime": 1700000000
+   },
+   "error": null
+  },
+  {
+   "name": "room-create-default",
+   "profile": "livekit",
+   "responses": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": "1700000000",
+     "metadata": "{\"onAir\":true}"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "CreateRoom",
+     "data": {
+      "name": "live-ch2",
+      "emptyTimeout": 300
+     }
+    }
+   ],
+   "result": {
+    "name": "live-ch1",
+    "sid": "RM_1",
+    "numParticipants": 3,
+    "creationTime": 1700000000
+   },
+   "error": null
+  },
+  {
+   "name": "room-delete",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "DeleteRoom",
+     "data": {
+      "room": "live-ch1"
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "room-list",
+   "profile": "livekit",
+   "responses": [
+    {
+     "rooms": [
+      {
+       "name": "live-ch1",
+       "sid": "RM_1",
+       "numParticipants": 3,
+       "creationTime": "1700000000",
+       "metadata": "{\"onAir\":true}"
+      },
+      {
+       "name": "x",
+       "sid": "RM_2"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListRooms",
+     "data": {}
+    }
+   ],
+   "result": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": 1700000000
+    },
+    {
+     "name": "x",
+     "sid": "RM_2",
+     "numParticipants": 0,
+     "creationTime": 0
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "room-list-names",
+   "profile": "livekit",
+   "responses": [
+    {
+     "rooms": [
+      {
+       "name": "live-ch1",
+       "sid": "RM_1",
+       "numParticipants": 3,
+       "creationTime": "1700000000",
+       "metadata": "{\"onAir\":true}"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListRooms",
+     "data": {
+      "names": [
+       "live-ch1",
+       "live-ch9"
+      ]
+     }
+    }
+   ],
+   "result": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": 1700000000
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "room-list-detailed",
+   "profile": "livekit",
+   "responses": [
+    {
+     "rooms": [
+      {
+       "name": "live-ch1",
+       "sid": "RM_1",
+       "numParticipants": 3,
+       "creationTime": "1700000000",
+       "metadata": "{\"onAir\":true}"
+      },
+      {
+       "name": "x",
+       "sid": "RM_2"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListRooms",
+     "data": {}
+    }
+   ],
+   "result": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": 1700000000,
+     "metadata": "{\"onAir\":true}"
+    },
+    {
+     "name": "x",
+     "sid": "RM_2",
+     "numParticipants": 0,
+     "creationTime": 0
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "room-get",
+   "profile": "livekit",
+   "responses": [
+    {
+     "rooms": [
+      {
+       "name": "live-ch1",
+       "sid": "RM_1",
+       "numParticipants": 3,
+       "creationTime": "1700000000",
+       "metadata": "{\"onAir\":true}"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListRooms",
+     "data": {
+      "names": [
+       "live-ch1"
+      ]
+     }
+    }
+   ],
+   "result": {
+    "name": "live-ch1",
+    "sid": "RM_1",
+    "numParticipants": 3,
+    "creationTime": 1700000000,
+    "metadata": "{\"onAir\":true}"
+   },
+   "error": null
+  },
+  {
+   "name": "room-get-missing",
+   "profile": "livekit",
+   "responses": [
+    {
+     "rooms": []
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListRooms",
+     "data": {
+      "names": [
+       "live-ch1"
+      ]
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "room-metadata",
+   "profile": "livekit",
+   "responses": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1",
+     "numParticipants": 3,
+     "creationTime": "1700000000",
+     "metadata": "{\"onAir\":true}"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "UpdateRoomMetadata",
+     "data": {
+      "room": "live-ch1",
+      "metadata": "{\"onAir\":true}"
+     }
+    }
+   ],
+   "result": {
+    "name": "live-ch1",
+    "sid": "RM_1",
+    "numParticipants": 3,
+    "creationTime": 1700000000,
+    "metadata": "{\"onAir\":true}"
+   },
+   "error": null
+  },
+  {
+   "name": "room-metadata-empty",
+   "profile": "livekit",
+   "responses": [
+    {
+     "name": "live-ch1",
+     "sid": "RM_1"
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "UpdateRoomMetadata",
+     "data": {
+      "room": "live-ch1"
+     }
+    }
+   ],
+   "result": {
+    "name": "live-ch1",
+    "sid": "RM_1",
+    "numParticipants": 0,
+    "creationTime": 0
+   },
+   "error": null
+  },
+  {
+   "name": "participants",
+   "profile": "livekit",
+   "responses": [
+    {
+     "participants": [
+      {
+       "identity": "u1",
+       "name": "U1",
+       "sid": "PA_1",
+       "metadata": "m",
+       "joinedAt": "1700000000",
+       "permission": {
+        "canPublish": true,
+        "canSubscribe": true,
+        "canPublishData": true
+       },
+       "tracks": [
+        {
+         "sid": "TR_V",
+         "type": "VIDEO",
+         "source": "CAMERA"
+        },
+        {
+         "sid": "TR_A",
+         "type": "AUDIO",
+         "source": "MICROPHONE",
+         "muted": true
+        },
+        {
+         "sid": "TR_S",
+         "type": "VIDEO",
+         "source": "SCREEN_SHARE_AUDIO"
+        }
+       ]
+      },
+      {
+       "identity": "qc",
+       "sid": "PA_2",
+       "permission": {
+        "hidden": true,
+        "canSubscribe": true
+       },
+       "joinedAtMs": "1700000000123"
+      },
+      {
+       "identity": "ingress-live",
+       "sid": "PA_3",
+       "kind": "INGRESS",
+       "joinedAt": "1700000000123",
+       "tracks": [
+        {
+         "sid": "T",
+         "type": "DATA",
+         "source": "UNKNOWN"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListParticipants",
+     "data": {
+      "room": "live-ch1"
+     }
+    }
+   ],
+   "result": [
+    {
+     "identity": "u1",
+     "name": "U1",
+     "hidden": false,
+     "isPublisher": true
+    },
+    {
+     "identity": "qc",
+     "name": "",
+     "hidden": true,
+     "isPublisher": false
+    },
+    {
+     "identity": "ingress-live",
+     "name": "",
+     "hidden": false,
+     "isPublisher": true
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "participants-detailed",
+   "profile": "livekit",
+   "responses": [
+    {
+     "participants": [
+      {
+       "identity": "u1",
+       "name": "U1",
+       "sid": "PA_1",
+       "metadata": "m",
+       "joinedAt": "1700000000",
+       "permission": {
+        "canPublish": true,
+        "canSubscribe": true,
+        "canPublishData": true
+       },
+       "tracks": [
+        {
+         "sid": "TR_V",
+         "type": "VIDEO",
+         "source": "CAMERA"
+        },
+        {
+         "sid": "TR_A",
+         "type": "AUDIO",
+         "source": "MICROPHONE",
+         "muted": true
+        },
+        {
+         "sid": "TR_S",
+         "type": "VIDEO",
+         "source": "SCREEN_SHARE_AUDIO"
+        }
+       ]
+      },
+      {
+       "identity": "qc",
+       "sid": "PA_2",
+       "permission": {
+        "hidden": true,
+        "canSubscribe": true
+       },
+       "joinedAtMs": "1700000000123"
+      },
+      {
+       "identity": "ingress-live",
+       "sid": "PA_3",
+       "kind": "INGRESS",
+       "joinedAt": "1700000000123",
+       "tracks": [
+        {
+         "sid": "T",
+         "type": "DATA",
+         "source": "UNKNOWN"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "ListParticipants",
+     "data": {
+      "room": "live-ch1"
+     }
+    }
+   ],
+   "result": [
+    {
+     "identity": "u1",
+     "name": "U1",
+     "sid": "PA_1",
+     "hidden": false,
+     "isPublisher": true,
+     "metadata": "m",
+     "joinedAt": "2023-11-14T22:13:20.000Z",
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "video",
+       "source": "camera",
+       "muted": false
+      },
+      {
+       "sid": "TR_A",
+       "type": "audio",
+       "source": "microphone",
+       "muted": true
+      },
+      {
+       "sid": "TR_S",
+       "type": "video",
+       "source": "screen_share_audio",
+       "muted": false
+      }
+     ],
+     "permission": {
+      "canPublish": true,
+      "canSubscribe": true,
+      "canPublishData": true,
+      "hidden": false
+     }
+    },
+    {
+     "identity": "qc",
+     "name": "",
+     "sid": "PA_2",
+     "hidden": true,
+     "isPublisher": false,
+     "joinedAt": null,
+     "tracks": [],
+     "permission": {
+      "canPublish": false,
+      "canSubscribe": true,
+      "canPublishData": false,
+      "hidden": true
+     }
+    },
+    {
+     "identity": "ingress-live",
+     "name": "",
+     "sid": "PA_3",
+     "hidden": false,
+     "isPublisher": true,
+     "joinedAt": "2023-11-14T22:13:20.123Z",
+     "tracks": [
+      {
+       "sid": "T",
+       "type": "data",
+       "source": "unknown",
+       "muted": false
+      }
+     ],
+     "permission": {
+      "canPublish": false,
+      "canSubscribe": false,
+      "canPublishData": false,
+      "hidden": false
+     }
+    }
+   ],
+   "error": null
+  },
+  {
+   "name": "participant-get",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1",
+     "name": "U1",
+     "sid": "PA_1",
+     "metadata": "m",
+     "joinedAt": "1700000000",
+     "permission": {
+      "canPublish": true,
+      "canSubscribe": true,
+      "canPublishData": true
+     },
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "VIDEO",
+       "source": "CAMERA"
+      },
+      {
+       "sid": "TR_A",
+       "type": "AUDIO",
+       "source": "MICROPHONE",
+       "muted": true
+      },
+      {
+       "sid": "TR_S",
+       "type": "VIDEO",
+       "source": "SCREEN_SHARE_AUDIO"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "GetParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    }
+   ],
+   "result": {
+    "identity": "u1",
+    "name": "U1",
+    "sid": "PA_1",
+    "hidden": false,
+    "isPublisher": true,
+    "metadata": "m",
+    "joinedAt": "2023-11-14T22:13:20.000Z",
+    "tracks": [
+     {
+      "sid": "TR_V",
+      "type": "video",
+      "source": "camera",
+      "muted": false
+     },
+     {
+      "sid": "TR_A",
+      "type": "audio",
+      "source": "microphone",
+      "muted": true
+     },
+     {
+      "sid": "TR_S",
+      "type": "video",
+      "source": "screen_share_audio",
+      "muted": false
+     }
+    ],
+    "permission": {
+     "canPublish": true,
+     "canSubscribe": true,
+     "canPublishData": true,
+     "hidden": false
+    }
+   },
+   "error": null
+  },
+  {
+   "name": "participant-remove",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "RemoveParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "participant-mute",
+   "profile": "livekit",
+   "responses": [
+    {
+     "track": {
+      "sid": "TR_A",
+      "muted": true
+     }
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "MutePublishedTrack",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1",
+      "trackSid": "TR_A",
+      "muted": true
+     }
+    }
+   ],
+   "result": {
+    "trackSid": "TR_A",
+    "muted": true
+   },
+   "error": null
+  },
+  {
+   "name": "participant-mute-empty",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "MutePublishedTrack",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1",
+      "trackSid": "TR_A"
+     }
+    }
+   ],
+   "result": {
+    "trackSid": "TR_A",
+    "muted": false
+   },
+   "error": null
+  },
+  {
+   "name": "participant-update",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1",
+     "name": "U1",
+     "sid": "PA_1",
+     "metadata": "m",
+     "joinedAt": "1700000000",
+     "permission": {
+      "canPublish": true,
+      "canSubscribe": true,
+      "canPublishData": true
+     },
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "VIDEO",
+       "source": "CAMERA"
+      },
+      {
+       "sid": "TR_A",
+       "type": "AUDIO",
+       "source": "MICROPHONE",
+       "muted": true
+      },
+      {
+       "sid": "TR_S",
+       "type": "VIDEO",
+       "source": "SCREEN_SHARE_AUDIO"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "UpdateParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1",
+      "metadata": "md",
+      "permission": {
+       "canSubscribe": true,
+       "canPublishData": true
+      },
+      "name": "New"
+     }
+    }
+   ],
+   "result": {
+    "identity": "u1",
+    "name": "U1",
+    "sid": "PA_1",
+    "hidden": false,
+    "isPublisher": true,
+    "metadata": "m",
+    "joinedAt": "2023-11-14T22:13:20.000Z",
+    "tracks": [
+     {
+      "sid": "TR_V",
+      "type": "video",
+      "source": "camera",
+      "muted": false
+     },
+     {
+      "sid": "TR_A",
+      "type": "audio",
+      "source": "microphone",
+      "muted": true
+     },
+     {
+      "sid": "TR_S",
+      "type": "video",
+      "source": "screen_share_audio",
+      "muted": false
+     }
+    ],
+    "permission": {
+     "canPublish": true,
+     "canSubscribe": true,
+     "canPublishData": true,
+     "hidden": false
+    }
+   },
+   "error": null
+  },
+  {
+   "name": "participant-update-meta",
+   "profile": "livekit",
+   "responses": [
+    {
+     "identity": "u1",
+     "name": "U1",
+     "sid": "PA_1",
+     "metadata": "m",
+     "joinedAt": "1700000000",
+     "permission": {
+      "canPublish": true,
+      "canSubscribe": true,
+      "canPublishData": true
+     },
+     "tracks": [
+      {
+       "sid": "TR_V",
+       "type": "VIDEO",
+       "source": "CAMERA"
+      },
+      {
+       "sid": "TR_A",
+       "type": "AUDIO",
+       "source": "MICROPHONE",
+       "muted": true
+      },
+      {
+       "sid": "TR_S",
+       "type": "VIDEO",
+       "source": "SCREEN_SHARE_AUDIO"
+      }
+     ]
+    }
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "UpdateParticipant",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1"
+     }
+    }
+   ],
+   "result": {
+    "identity": "u1",
+    "name": "U1",
+    "sid": "PA_1",
+    "hidden": false,
+    "isPublisher": true,
+    "metadata": "m",
+    "joinedAt": "2023-11-14T22:13:20.000Z",
+    "tracks": [
+     {
+      "sid": "TR_V",
+      "type": "video",
+      "source": "camera",
+      "muted": false
+     },
+     {
+      "sid": "TR_A",
+      "type": "audio",
+      "source": "microphone",
+      "muted": true
+     },
+     {
+      "sid": "TR_S",
+      "type": "video",
+      "source": "screen_share_audio",
+      "muted": false
+     }
+    ],
+    "permission": {
+     "canPublish": true,
+     "canSubscribe": true,
+     "canPublishData": true,
+     "hidden": false
+    }
+   },
+   "error": null
+  },
+  {
+   "name": "participant-subscriptions",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "UpdateSubscriptions",
+     "data": {
+      "room": "live-ch1",
+      "identity": "u1",
+      "trackSids": [
+       "TR_A",
+       "TR_V"
+      ]
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "data-send",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "SendData",
+     "data": {
+      "room": "live-ch1",
+      "data": "eyJ0b3BpYyI6ImNoYXQifQ==",
+      "topic": "chat",
+      "destinationIdentities": [
+       "u1"
+      ]
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "data-send-lossy",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "SendData",
+     "data": {
+      "room": "live-ch1",
+      "data": "eA==",
+      "kind": "LOSSY",
+      "topic": ""
+     }
+    }
+   ],
+   "result": null,
+   "error": null
+  },
+  {
+   "name": "data-send-fail",
+   "profile": "livekit",
+   "responses": [
+    {}
+   ],
+   "requests": [
+    {
+     "service": "RoomService",
+     "method": "SendData",
+     "data": {
+      "room": "live-ch1",
+      "data": "eA==",
+      "topic": "t"
+     }
+    }
+   ],
+   "result": null,
+   "error": {
+    "status": 503,
+    "message": "LiveKit sendData failed: room not found"
+   }
+  }
+ ],
+ "tokens": [
+  {
+   "name": "publisher",
+   "opts": {
+    "room": "live-ch1",
+    "identity": "u1",
+    "name": "User <1>",
+    "metadata": "{\"a\":\"<&>\"}"
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJtZXRhZGF0YSI6IntcImFcIjpcIjwmPlwifSIsIm5hbWUiOiJVc2VyIDwxPiIsInZpZGVvIjp7InJvb21Kb2luIjp0cnVlLCJyb29tIjoibGl2ZS1jaDEiLCJjYW5QdWJsaXNoIjp0cnVlLCJjYW5TdWJzY3JpYmUiOnRydWUsImNhblB1Ymxpc2hEYXRhIjp0cnVlLCJoaWRkZW4iOmZhbHNlLCJyb29tUmVjb3JkIjpmYWxzZX0sImlzcyI6IkFQSWtleSIsImV4cCI6MTc5MzE1NDMxOCwibmJmIjoxNzkzMTMyNzE4LCJzdWIiOiJ1MSJ9.vf4cyOByQV91Z5CdjsrphuxEWc2znZcJZDbrzwORBSs"
+  },
+  {
+   "name": "viewer",
+   "opts": {
+    "room": "live-ch1",
+    "identity": "viewer-1234abcd",
+    "canPublish": false,
+    "canSubscribe": true,
+    "canPublishData": false,
+    "hidden": true,
+    "ttl": "6h"
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6ImxpdmUtY2gxIiwiY2FuUHVibGlzaCI6ZmFsc2UsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOmZhbHNlLCJoaWRkZW4iOnRydWUsInJvb21SZWNvcmQiOmZhbHNlfSwiaXNzIjoiQVBJa2V5IiwiZXhwIjoxNzkzMTU0MzE4LCJuYmYiOjE3OTMxMzI3MTgsInN1YiI6InZpZXdlci0xMjM0YWJjZCJ9.VTCAselubxzoZRhmMHQHHEhigZsZVgzX3Yqcw8T47Q0"
+  },
+  {
+   "name": "listener-audio",
+   "opts": {
+    "room": "live-radio",
+    "identity": "listener-1",
+    "canPublish": false,
+    "canSubscribe": true,
+    "canPublishData": false,
+    "hidden": true,
+    "audioOnly": true,
+    "ttl": "6h"
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6ImxpdmUtcmFkaW8iLCJjYW5QdWJsaXNoIjpmYWxzZSwiY2FuU3Vic2NyaWJlIjp0cnVlLCJjYW5QdWJsaXNoRGF0YSI6ZmFsc2UsImhpZGRlbiI6dHJ1ZSwicm9vbVJlY29yZCI6ZmFsc2V9LCJpc3MiOiJBUElrZXkiLCJleHAiOjE3OTMxNTQzMTgsIm5iZiI6MTc5MzEzMjcxOCwic3ViIjoibGlzdGVuZXItMSJ9.WU_fZc54QDiUoWB9XrBiisJC02Sa1utE7DLRFNXPtKc"
+  },
+  {
+   "name": "audio-publisher",
+   "opts": {
+    "room": "live-radio",
+    "identity": "host",
+    "audioOnly": true,
+    "recorder": true,
+    "ttl": "90m"
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6ImxpdmUtcmFkaW8iLCJjYW5QdWJsaXNoIjp0cnVlLCJjYW5TdWJzY3JpYmUiOnRydWUsImNhblB1Ymxpc2hEYXRhIjp0cnVlLCJoaWRkZW4iOmZhbHNlLCJyb29tUmVjb3JkIjp0cnVlLCJjYW5QdWJsaXNoU291cmNlcyI6WyJtaWNyb3Bob25lIl19LCJpc3MiOiJBUElrZXkiLCJleHAiOjE3OTMxMzgxMTgsIm5iZiI6MTc5MzEzMjcxOCwic3ViIjoiaG9zdCJ9.H3pGFgY94dMH-z2MQMfjvH3yI1dTTj6hzKtXBP6cYzE"
+  },
+  {
+   "name": "ttl-variants",
+   "opts": {
+    "room": "r",
+    "identity": "i",
+    "ttl": "1.5 hours"
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InIiLCJjYW5QdWJsaXNoIjp0cnVlLCJjYW5TdWJzY3JpYmUiOnRydWUsImNhblB1Ymxpc2hEYXRhIjp0cnVlLCJoaWRkZW4iOmZhbHNlLCJyb29tUmVjb3JkIjpmYWxzZX0sImlzcyI6IkFQSWtleSIsImV4cCI6MTc5MzEzODExOCwibmJmIjoxNzkzMTMyNzE4LCJzdWIiOiJpIn0.ADxoTgIzlZ8_R7H0G_Tgotykd--7LMWlbfL8X6W5wpk"
+  },
+  {
+   "name": "ttl-days",
+   "opts": {
+    "room": "r",
+    "identity": "i",
+    "ttl": "2d",
+    "canSubscribe": false
+   },
+   "token": "eyJhbGciOiJIUzI1NiJ9.eyJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InIiLCJjYW5QdWJsaXNoIjp0cnVlLCJjYW5TdWJzY3JpYmUiOmZhbHNlLCJjYW5QdWJsaXNoRGF0YSI6dHJ1ZSwiaGlkZGVuIjpmYWxzZSwicm9vbVJlY29yZCI6ZmFsc2V9LCJpc3MiOiJBUElrZXkiLCJleHAiOjE3OTMzMDU1MTgsIm5iZiI6MTc5MzEzMjcxOCwic3ViIjoiaSJ9.wd-fK4WA-ii837J-cRPAs7p9VcMRJRRTDin6dTkbT3M"
+  }
+ ],
+ "badTtl": [
+  {
+   "ttl": "3600",
+   "error": "LiveKit mintToken failed: Invalid time period format"
+  },
+  {
+   "ttl": "6 parsecs",
+   "error": "LiveKit mintToken failed: Invalid time period format"
+  },
+  {
+   "ttl": "-1h ago",
+   "error": "LiveKit mintToken failed: Invalid time period format"
+  }
+ ],
+ "scrypt": [
+  {
+   "password": "pw-1",
+   "salt": "00112233445566778899aabbccddeeff",
+   "hash": "82d911438b782f4886553347ab83ac8d4996b0e7fb0a2b7ca3c47f9105da9859"
+  },
+  {
+   "password": "ünïcødé 🔑",
+   "salt": "abcdef",
+   "hash": "07fdcb5a5cc120f0cb5ac3089715f6d75c9a35d47b0b5356490df73975e61095"
+  }
+ ],
+ "hint": [
+  {
+   "raw": null,
+   "out": "{\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "",
+   "out": "{\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "{\"b\":1,\"streamhub\":\"old\",\"a\":[1,2]}",
+   "out": "{\"b\":1,\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}},\"a\":[1,2]}"
+  },
+  {
+   "raw": "[1,\"x\"]",
+   "out": "{\"0\":1,\"1\":\"x\",\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "\"str\"",
+   "out": "{\"_raw\":\"\\\"str\\\"\",\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "null",
+   "out": "{\"_raw\":\"null\",\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "7",
+   "out": "{\"_raw\":\"7\",\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "not json",
+   "out": "{\"_raw\":\"not json\",\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  },
+  {
+   "raw": "{\"2\":\"x\",\"1\":\"y\",\"z\":true}",
+   "out": "{\"1\":\"y\",\"2\":\"x\",\"z\":true,\"streamhub\":{\"simulcast\":{\"adaptiveStream\":true,\"simulcast\":true,\"layers\":[{\"name\":\"low\",\"height\":360},{\"name\":\"high\",\"height\":720}]}}}"
+  }
+ ],
+ "webhook": {
+  "body": "{\"event\":\"track_published\",\"id\":\"EV_1\",\"createdAt\":\"1700000000\",\"room\":{\"name\":\"live-ch1\",\"sid\":\"RM_1\"},\"participant\":{\"identity\":\"u1\",\"name\":\"U\",\"sid\":\"PA_1\",\"kind\":\"STANDARD\",\"permission\":{}},\"track\":{\"sid\":\"TR_1\",\"type\":\"VIDEO\",\"source\":\"CAMERA\"},\"unknownField\":1}",
+  "auth": "eyJhbGciOiJIUzI1NiJ9.eyJzaGEyNTYiOiJ6Z3diRFBlL29aY1NVVkl3OW91dFQvZm1iYmdEcE9pazNTQlpGbjhsZ2xRPSIsImlzcyI6IkFQSWtleSIsImV4cCI6MTg3OTUzMjcxOCwibmJmIjoxNzkzMTMyNzE4fQ.JzP5i-gz92Uo70f8kpRIRajxmpj05hhT7JCiPeWFY6E"
+ }
+}

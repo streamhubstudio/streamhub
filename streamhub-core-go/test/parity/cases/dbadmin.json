@@ -1,0 +1,211 @@
+{
+  "module": "dbadmin",
+  "description": "db-admin: per-app/global DB health, optimize (dedicated connection in Go), purge validation/scopes/permissions.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "dbhealth-app-global",
+      "method": "GET",
+      "path": "/api/v1/apps/live/db/health",
+      "auth": "globalToken",
+      "ignore": [
+        "data.sizeBytes",
+        "data.walSizeBytes",
+        "data.pageCount",
+        "data.freelistCount",
+        "data.fragmentationPct"
+      ],
+      "expectStatus": 200,
+      "mask": [
+        "data.tables.*.bytes"
+      ]
+    },
+    {
+      "name": "dbhealth-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/db/health",
+      "auth": "appToken",
+      "ignore": [
+        "data.sizeBytes",
+        "data.walSizeBytes",
+        "data.pageCount",
+        "data.freelistCount",
+        "data.fragmentationPct"
+      ],
+      "expectStatus": 200,
+      "mask": [
+        "data.tables.*.bytes"
+      ]
+    },
+    {
+      "name": "dbhealth-app-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/db/health",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "dbhealth-app-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/db/health",
+      "expectStatus": 401
+    },
+    {
+      "name": "dbhealth-system-global",
+      "method": "GET",
+      "path": "/api/v1/system/db/health",
+      "auth": "globalToken",
+      "ignore": [
+        "data.sizeBytes",
+        "data.walSizeBytes",
+        "data.pageCount",
+        "data.freelistCount",
+        "data.fragmentationPct",
+        "data.tables"
+      ],
+      "note": "global table set depends on which modules are ported (module-owned CREATE TABLE IF NOT EXISTS)",
+      "expectStatus": 200
+    },
+    {
+      "name": "dbhealth-system-app-token",
+      "method": "GET",
+      "path": "/api/v1/system/db/health",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "dbhealth-system-viewer",
+      "method": "GET",
+      "path": "/api/v1/system/db/health",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "dboptimize-app",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/optimize",
+      "auth": "globalToken",
+      "ignore": [
+        "data.before",
+        "data.after",
+        "data.reclaimedBytes"
+      ],
+      "expectStatus": 201
+    },
+    {
+      "name": "dboptimize-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/optimize",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "dbpurge-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "dbpurge-bad-scope",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "everything",
+        "confirm": true
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "dbpurge-confirm-false",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "logs",
+        "confirm": false
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "dbpurge-confirm-string",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "logs",
+        "confirm": "true"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "dbpurge-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "viewerJwt",
+      "body": {
+        "scope": "logs",
+        "confirm": true
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "dbpurge-vods",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "vods",
+        "confirm": true
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "dbpurge-logs",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "logs",
+        "confirm": true
+      },
+      "mask": [
+        "data.logsDeleted"
+      ],
+      "note": "count depends on which boot paths log with meta.app=live",
+      "expectStatus": 201
+    },
+    {
+      "name": "dbpurge-logs-again",
+      "method": "POST",
+      "path": "/api/v1/apps/live/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "logs",
+        "confirm": true
+      },
+      "mask": [
+        "data.logsDeleted"
+      ],
+      "expectStatus": 201
+    },
+    {
+      "name": "dbpurge-ghost-app",
+      "method": "POST",
+      "path": "/api/v1/apps/parity-ghost/db/purge",
+      "auth": "globalToken",
+      "body": {
+        "scope": "logs",
+        "confirm": true
+      },
+      "expectStatus": 201
+    }
+  ]
+}

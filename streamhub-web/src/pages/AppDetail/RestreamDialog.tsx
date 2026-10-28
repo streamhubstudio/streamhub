@@ -118,7 +118,7 @@ export function RestreamDialog({
       <div className="max-h-[80vh] overflow-y-auto">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h5 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <h5 className="text-base font-semibold text-gray-100">
               {t('title')}
               {' · '}
               <span className="font-mono">{stream.room}</span>
@@ -129,7 +129,7 @@ export function RestreamDialog({
           </Button>
         </div>
 
-        <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mb-4 text-xs text-gray-400">
           {t('subtitle')}
         </p>
 
@@ -192,7 +192,7 @@ export function RestreamDialog({
         </div>
 
         {preview && (
-          <p className="mt-2 break-all font-mono text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="mt-2 break-all font-mono text-[11px] text-gray-400">
             → {preview}
           </p>
         )}
@@ -236,7 +236,7 @@ export function RestreamDialog({
               {t('list.empty')}
             </p>
           ) : (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            <ul className="divide-y divide-gray-700">
               {targets.map((tg) => {
                 const stopping =
                   remove.isPending && remove.variables === tg.egressId
@@ -247,7 +247,7 @@ export function RestreamDialog({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <span className="text-sm font-semibold text-gray-100">
                           {tg.name || platformLabel(tg.platform)}
                         </span>
                         <Badge tone="cyan">{platformLabel(tg.platform)}</Badge>
@@ -255,12 +255,12 @@ export function RestreamDialog({
                           {t(`status.${tg.status}`, { defaultValue: tg.status })}
                         </Badge>
                         {tg.retries > 0 && (
-                          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                          <span className="text-[11px] text-gray-400">
                             {t('list.retries', { count: tg.retries })}
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 break-all font-mono text-[11px] text-gray-500 dark:text-gray-400">
+                      <p className="mt-0.5 break-all font-mono text-[11px] text-gray-400">
                         {tg.urlMasked}
                       </p>
                       {tg.error && (

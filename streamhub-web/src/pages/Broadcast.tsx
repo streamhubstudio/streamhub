@@ -76,7 +76,7 @@ export default function Broadcast() {
   return (
     <div className="flex min-h-full flex-col">
       {/* Header chrome */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white/70 px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800/70">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6 border-gray-700 bg-gray-800/70">
         <div className="flex min-w-0 items-center gap-3">
           <Link to={`/apps/${encodeURIComponent(app)}`} className="shrink-0">
             <Logo className="h-7 w-auto" />
@@ -85,7 +85,7 @@ export default function Broadcast() {
             <h1 className="truncate text-sm font-semibold text-fg">
               {t('header.title')}
             </h1>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+            <p className="truncate text-xs text-gray-400">
               {t('header.subtitle', { app })}
             </p>
           </div>
@@ -93,7 +93,7 @@ export default function Broadcast() {
         <div className="flex items-center gap-2">
           <PhaseBadge phase={state.phase} />
           {state.startedAt && (
-            <span className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+            <span className="rounded-md px-2 py-1 text-xs bg-gray-700 text-gray-200">
               <Duration since={state.startedAt} />
             </span>
           )}
@@ -108,7 +108,7 @@ export default function Broadcast() {
       <main className="mx-auto grid w-full max-w-6xl flex-1 gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_360px]">
         {/* Preview */}
         <section className="flex flex-col gap-3">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-gray-200 bg-black dark:border-gray-700">
+          <div className="relative aspect-video w-full overflow-hidden rounded-xl border bg-black border-gray-700">
             <video
               ref={videoRef}
               autoPlay
@@ -125,21 +125,21 @@ export default function Broadcast() {
             </div>
             {/* No-preview placeholder */}
             {!state.previewTrack && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-gray-500 dark:text-gray-400">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-gray-400">
                 {state.audioOnly ? (
                   <>
                     <svg className="h-10 w-10 text-primary-500" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3zM19 12a7 7 0 01-14 0M12 19v3" />
                     </svg>
                     <p className="text-sm">{t('preview.audioOnly')}</p>
-                    <p className="max-w-xs text-xs text-gray-500 dark:text-gray-400">
+                    <p className="max-w-xs text-xs text-gray-400">
                       {t('preview.audioOnlyHint')}
                     </p>
                   </>
                 ) : state.permission === 'denied' ? (
                   <>
                     <p className="text-sm">{t('preview.permissionDenied')}</p>
-                    <p className="max-w-xs text-xs text-gray-500 dark:text-gray-400">
+                    <p className="max-w-xs text-xs text-gray-400">
                       {t('preview.permissionHint')}
                     </p>
                     <span className="mt-1 inline-flex">
@@ -158,7 +158,7 @@ export default function Broadcast() {
             )}
           </div>
 
-          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+          <p className="text-[11px] leading-snug text-gray-400">
             <Trans
               i18nKey="broadcast:preview.note"
               components={{ strong: <strong /> }}
@@ -183,10 +183,10 @@ export default function Broadcast() {
             <h2 className="text-sm font-semibold text-fg">{t('form.title')}</h2>
 
             <div className="mt-4 space-y-4">
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-600 dark:bg-gray-700/40">
+              <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3 border-gray-600 bg-gray-700/40">
                 <div>
                   <div className="text-sm text-fg">{t('form.audioOnly')}</div>
-                  <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                  <div className="mt-0.5 text-[11px] text-gray-400">
                     {t('form.audioOnlyHint')}
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export default function Broadcast() {
                 />
               </Field>
               {rtmpUrl.length > 0 && !rtmpLooksValid && (
-                <p className="-mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                <p className="-mt-2 text-[11px] text-amber-400">
                   {t('form.rtmpInvalid')}
                 </p>
               )}
@@ -261,8 +261,8 @@ export default function Broadcast() {
           {state.egress && (
             <Card bordered bodyClass="flex items-center justify-between px-4 py-3 text-sm" className="rounded-2xl">
               <div className="min-w-0">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('egress.label')}</p>
-                <p className="truncate font-mono text-xs text-gray-600 dark:text-gray-300">
+                <p className="text-xs text-gray-400">{t('egress.label')}</p>
+                <p className="truncate font-mono text-xs text-gray-300">
                   {state.egress.id}
                 </p>
               </div>
@@ -295,7 +295,7 @@ export default function Broadcast() {
           )}
 
           {!rtmpLooksValid && state.phase === 'idle' && (
-            <p className="text-center text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-center text-[11px] text-gray-400">
               {t('actions.needValidUrl')}
             </p>
           )}

@@ -39,7 +39,7 @@ export function DocsHint({
       data-docs-section={section}
       className={[
         'inline-flex items-center gap-1 align-middle text-fg-subtle transition',
-        'hover:text-primary-600 dark:hover:text-primary-400',
+        'hover:text-primary-400',
         className,
       ]
         .filter(Boolean)

@@ -22,7 +22,7 @@
  *     burst + storage/events taps),
  *   - nodes: arrival flashes via CSS delays derived from the same schedule.
  *
- * Theme-aware via the semantic `--sh-*` tokens (light/dark swap live); brand
+ * Coloured via the semantic `--sh-*` tokens (dark-only console palette); brand
  * cyan→blue stays constant like the rest of the chrome. Under
  * prefers-reduced-motion everything settles into a static labelled diagram
  * (CSS media query stops the dashes/flashes, the JS hook drops the SMIL

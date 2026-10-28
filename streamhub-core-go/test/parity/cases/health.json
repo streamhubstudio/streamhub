@@ -1,0 +1,66 @@
+{
+  "module": "health",
+  "description": "Liveness, unknown-route shape, OpenAPI/Swagger presence.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "health",
+      "note": "ts is normalized to <iso-ts>; version comes from the repo VERSION copied into each cwd",
+      "method": "GET",
+      "path": "/api/v1/health",
+      "expectStatus": 200,
+      "ignore": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "health-with-bad-token-still-public",
+      "method": "GET",
+      "path": "/api/v1/health",
+      "headers": {
+        "Authorization": "Bearer sk_not_a_real_token_0000000000"
+      },
+      "expectStatus": 200,
+      "ignore": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "unknown-route-404",
+      "note": "Nest's default: {message:'Cannot GET <path>', error:'Not Found', statusCode:404}",
+      "method": "GET",
+      "path": "/api/v1/definitely-not-a-route",
+      "expectStatus": 404
+    },
+    {
+      "name": "unknown-route-404-post",
+      "method": "POST",
+      "path": "/api/v1/definitely-not-a-route",
+      "body": {},
+      "expectStatus": 404
+    },
+    {
+      "name": "openapi-json-exists",
+      "note": "the documents differ by generator; only presence + content-type are compared here (schema parity is a separate check)",
+      "method": "GET",
+      "path": "/api/v1/openapi.json",
+      "expectStatus": 200,
+      "compare": "status"
+    },
+    {
+      "name": "swagger-ui-exists",
+      "method": "GET",
+      "path": "/api/v1/docs",
+      "expectStatus": 200,
+      "compare": "status",
+      "compareHeaders": [
+        "content-type"
+      ]
+    }
+  ]
+}

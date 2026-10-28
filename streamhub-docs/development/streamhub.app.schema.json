@@ -97,7 +97,7 @@
     },
     "build": {
       "type": "object",
-      "description": "MONOREPO-ONLY glue read by scripts/apps-pack.mjs to locate scattered in-tree sources; STRIPPED from the published package. Ignored by the core.",
+      "description": "Legacy monorepo glue (the retired in-tree apps-pack flow); STRIPPED from the published package by `streamhub-core apps pack`. Ignored by the core.",
       "additionalProperties": false,
       "properties": {
         "workerSrc": { "type": "string", "description": "In-tree worker package dir → packed as worker/**." },
@@ -161,7 +161,7 @@
         },
         "workerDir": {
           "type": "string",
-          "description": "Worker source dir. Package-relative (default 'worker') or absolute; apps-pull rewrites it to the extracted absolute path."
+          "description": "Worker source dir. Package-relative (default 'worker'); required for a composed package — apps pull keeps it relative and copies the worker alongside the manifest."
         },
         "requirements": { "type": "string" },
         "placement": { "type": "string", "enum": ["local", "grid"] },

@@ -12,7 +12,7 @@
  * assertions are text-independent.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -38,7 +38,7 @@ const AGENTS = {
       version: '1.12',
       lastSeen: '2026-07-10T00:00:00.000Z',
       ageMs: 3000,
-      metrics: { cpu: 12, mem: 40, temp: 45, uptime: 7200, cameras: 3, disk: 55, relay: 'running' },
+      metrics: { cpu: 12, mem: 40, temp: 45, uptime: 7200, cameras: 3, disk: 55, battery: 64, relay: 'running' },
     },
     {
       agentId: 'a20001',
@@ -47,7 +47,7 @@ const AGENTS = {
       version: '1.11',
       lastSeen: '2026-07-09T00:00:00.000Z',
       ageMs: 999999,
-      metrics: { cpu: null, mem: null, temp: null, uptime: null, cameras: null, disk: null, relay: null },
+      metrics: { cpu: null, mem: null, temp: null, uptime: null, cameras: null, disk: null, battery: null, relay: null },
     },
   ],
   generatedAt: '2026-07-10T00:00:01.000Z',
@@ -89,6 +89,9 @@ describe('Fleet tab', () => {
       expect(screen.getByTestId('agent-card-a20001')).toBeTruthy()
     })
     expect(requestMock).toHaveBeenCalledWith('/apps/live/plugins/fleet/agents')
+    // battery only on the agent that reports one
+    expect(within(screen.getByTestId('agent-card-b09994')).getByText('metric.battery')).toBeTruthy()
+    expect(within(screen.getByTestId('agent-card-a20001')).queryByText('metric.battery')).toBeNull()
   })
 
   it('filters the grid to online agents only', async () => {

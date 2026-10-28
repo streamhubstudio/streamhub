@@ -57,7 +57,7 @@ const Input = forwardRef<ElementType | HTMLInputElement, InputProps>(
         const [prefixGutter, setPrefixGutter] = useState(0)
         const [suffixGutter, setSuffixGutter] = useState(0)
 
-        const { themeColor, controlSize, primaryColorLevel, direction } =
+        const { controlSize, direction } =
             useConfig()
         const formControlSize = useForm()?.size
         const inputGroupSize = useInputGroup()?.size
@@ -95,7 +95,7 @@ const Input = forwardRef<ElementType | HTMLInputElement, InputProps>(
 
         const inputDefaultClass = 'input'
         const inputSizeClass = `input-${inputSize} h-${CONTROL_SIZES[inputSize]}`
-        const inputFocusClass = `focus:ring-${themeColor}-${primaryColorLevel} focus-within:ring-${themeColor}-${primaryColorLevel} focus-within:border-${themeColor}-${primaryColorLevel} focus:border-${themeColor}-${primaryColorLevel}`
+        const inputFocusClass = `focus:ring-sky2/50 focus-within:ring-sky2/50 focus-within:border-sky2 focus:border-sky2` // console focus = cyan
         const inputWrapperClass = `input-wrapper ${
             prefix || suffix ? className : ''
         }`

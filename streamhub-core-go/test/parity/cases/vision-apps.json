@@ -1,0 +1,385 @@
+{
+  "module": "vision-apps",
+  "description": "Vision model apps (occupancy|counting|crowd|demography): overview/streams/events reads, per-room settings validation + resolution, model/app 404s, limit parsing.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "vision-overview-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/overview",
+      "expectStatus": 401
+    },
+    {
+      "name": "vision-overview",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/overview",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.generatedAt"
+      ]
+    },
+    {
+      "name": "vision-overview-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/overview",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "vision-overview-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/counting/overview",
+      "auth": "appToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.generatedAt"
+      ]
+    },
+    {
+      "name": "vision-overview-unknown-model",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/nope/overview",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "vision-overview-literal-plugin",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/overview",
+      "auth": "globalToken",
+      "expectStatus": 404,
+      "note": "live-control has no /overview: falls through to the vision wildcard \u2192 unknown vision model (stream-health shadowing is the documented Node bug, skipped in stream-health.json)"
+    },
+    {
+      "name": "vision-overview-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost-app/plugins/occupancy/overview",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "vision-streams",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/crowd/streams",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-streams-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/vision/streams",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "vision-settings-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-settings-put-not-object",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "config": "x"
+      }
+    },
+    {
+      "name": "vision-settings-put-bad-zones",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "config": {
+          "zones": "x"
+        }
+      }
+    },
+    {
+      "name": "vision-settings-put-bad-points",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "config": {
+          "zones": [
+            {
+              "id": "z1",
+              "points": [
+                [
+                  0,
+                  0
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "vision-settings-put-occupancy",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "body": {
+        "config": {
+          "zones": [
+            {
+              "id": " z1 ",
+              "name": "Door",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  0.5,
+                  0.123456789
+                ],
+                [
+                  1,
+                  1.5
+                ]
+              ]
+            }
+          ],
+          "extra": 1
+        }
+      },
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-get-occupancy",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-counting",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "body": {
+        "config": {
+          "lines": [
+            {
+              "id": "l1",
+              "x": 0.25,
+              "y": "0.5",
+              "length": 0.33333333,
+              "angle": -45.123456,
+              "inside": "left",
+              "tag": "  door "
+            }
+          ],
+          "fps": 3,
+          "capacity": 12.6
+        }
+      },
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-counting-bad",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "config": {
+          "lines": [
+            {
+              "id": "l1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "vision-settings-put-counting-bad-inside",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "lines": [
+            {
+              "length": 1,
+              "inside": "up"
+            }
+          ]
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "vision-settings-put-counting-fps-clamped",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "fps": 99
+        }
+      },
+      "expectStatus": 200,
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-get-counting",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-crowd",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/crowd/streams/hall/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "body": {
+        "config": {
+          "pois": [
+            {
+              "id": "p1",
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ]
+              ]
+            }
+          ],
+          "zones": []
+        }
+      },
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-demography",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/demography/streams/hall/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "body": {
+        "config": {
+          "engine": "openai",
+          "zones": []
+        }
+      },
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-demography-bad",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/demography/streams/hall/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "config": {
+          "engine": 7
+        }
+      }
+    },
+    {
+      "name": "vision-settings-put-no-body",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/crowd/streams/empty/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.updatedAt"
+      ]
+    },
+    {
+      "name": "vision-settings-put-viewer",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/crowd/streams/empty/settings",
+      "auth": "viewerJwt",
+      "expectStatus": 403,
+      "body": {}
+    },
+    {
+      "name": "vision-settings-put-unknown",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/nope/streams/empty/settings",
+      "auth": "globalToken",
+      "expectStatus": 404,
+      "body": {}
+    },
+    {
+      "name": "vision-events",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/occupancy/events",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-events-limit-junk",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/demography/events?limit=abc",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-events-limit-big",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/counting/events?limit=99999",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-events-limit-zero",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/crowd/events?limit=0",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "vision-events-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/nope/events",
+      "auth": "globalToken",
+      "expectStatus": 404
+    }
+  ]
+}

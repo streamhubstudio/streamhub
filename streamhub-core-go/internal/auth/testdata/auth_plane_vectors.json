@@ -1,0 +1,64 @@
+{
+  "master": "jwt-master-secret",
+  "ciphertexts": {
+    "totp": {
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "stored": "aesgcm$Pm0Bq7ECpiilPP0w$KDV9v9IeNNzJecBEe49Lgg$SDerCjj5tpotJ6720MHROw"
+    },
+    "smtp": {
+      "plaintext": "smtp-p4ss ✓",
+      "stored": "aesgcm$hoYkzj-duRRH7HwQ$xBiIxyqSDsLGVqDDqixTDQ$5wgPg7tbx-jMv1SA3A"
+    }
+  },
+  "totp": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "epochMs": 1793120000000,
+    "codes": {
+      "0": "724223",
+      "1": "047964",
+      "2": "348488",
+      "-2": "973771",
+      "-1": "172360"
+    },
+    "checks": [
+      {
+        "code": "973771",
+        "valid": false
+      },
+      {
+        "code": "172360",
+        "valid": true
+      },
+      {
+        "code": "724223",
+        "valid": true
+      },
+      {
+        "code": "047964",
+        "valid": true
+      },
+      {
+        "code": "348488",
+        "valid": false
+      }
+    ],
+    "keyuris": [
+      {
+        "label": "ana bé@x.com",
+        "uri": "otpauth://totp/StreamHub:ana%20b%C3%A9%40x.com?secret=JBSWY3DPEHPK3PXP&period=30&digits=6&algorithm=SHA1&issuer=StreamHub"
+      },
+      {
+        "label": "usr_1",
+        "uri": "otpauth://totp/StreamHub:usr_1?secret=JBSWY3DPEHPK3PXP&period=30&digits=6&algorithm=SHA1&issuer=StreamHub"
+      },
+      {
+        "label": "o'neil+(x)!~*@y.io",
+        "uri": "otpauth://totp/StreamHub:o'neil%2B(x)!~*%40y.io?secret=JBSWY3DPEHPK3PXP&period=30&digits=6&algorithm=SHA1&issuer=StreamHub"
+      }
+    ]
+  },
+  "tokenHash": {
+    "token": "sk_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "hash": "12576e7a680e2c3225b7d080cd3e1484262cfd95d5596652e4649a8325ac8ea8"
+  }
+}

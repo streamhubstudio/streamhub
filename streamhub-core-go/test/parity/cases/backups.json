@@ -1,0 +1,189 @@
+{
+  "module": "backups",
+  "description": "Backups: overview, on-demand run, restore validation/404s/400s and an app-live restore of a just-taken snapshot. Needs -env STREAMHUB_BACKUPS_ENABLED=false.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "backups-list-empty",
+      "method": "GET",
+      "path": "/api/v1/system/backups",
+      "auth": "globalToken",
+      "ignore": [
+        "data.databases.*.liveSizeBytes"
+      ],
+      "note": "run with -env STREAMHUB_BACKUPS_ENABLED=false: Node's BullMQ never schedules against the dead parity Redis, so neither side may run a boot catch-up",
+      "expectStatus": 200
+    },
+    {
+      "name": "backups-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/system/backups",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "backups-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/system/backups",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "backups-run-app-token",
+      "method": "POST",
+      "path": "/api/v1/system/backups",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "backups-run",
+      "method": "POST",
+      "path": "/api/v1/system/backups",
+      "auth": "globalToken",
+      "mask": [
+        "data.snapshots.*.file",
+        "data.snapshots.*.sizeBytes"
+      ],
+      "capture": {
+        "snapLive": "data.snapshots.[db=app-live].file"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "backups-list-after",
+      "method": "GET",
+      "path": "/api/v1/system/backups",
+      "auth": "globalToken",
+      "ignore": [
+        "data.databases.*.liveSizeBytes"
+      ],
+      "mask": [
+        "data.databases.*.snapshots.*.file",
+        "data.databases.*.snapshots.*.sizeBytes"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "restore-empty",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "restore-bad-types",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "../etc",
+        "snapshot": 5,
+        "confirm": "yes"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "restore-no-confirm",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "app-live",
+        "snapshot": "x.db.gz",
+        "confirm": false
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "restore-validation-before-scope",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "appToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "restore-app-token",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "appToken",
+      "body": {
+        "db": "app-live",
+        "snapshot": "{{snapLive}}",
+        "confirm": true
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "restore-unknown-db",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "app-ghost",
+        "snapshot": "2026-01-01T00-00-00-000Z.db.gz",
+        "confirm": true
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "restore-bad-name",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "app-live",
+        "snapshot": "../../streamhub.db",
+        "confirm": true
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "restore-missing-snapshot",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "app-live",
+        "snapshot": "2001-01-01T00-00-00-000Z.db.gz",
+        "confirm": true
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "restore-app-live",
+      "method": "POST",
+      "path": "/api/v1/system/backups/restore",
+      "auth": "globalToken",
+      "body": {
+        "db": "app-live",
+        "snapshot": "{{snapLive}}",
+        "confirm": true
+      },
+      "mask": [
+        "data.preRestoreSnapshot"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "backups-list-final",
+      "method": "GET",
+      "path": "/api/v1/system/backups",
+      "auth": "globalToken",
+      "ignore": [
+        "data.databases.*.liveSizeBytes"
+      ],
+      "mask": [
+        "data.databases.*.snapshots.*.file",
+        "data.databases.*.snapshots.*.sizeBytes"
+      ],
+      "expectStatus": 200
+    }
+  ]
+}

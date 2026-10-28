@@ -45,7 +45,7 @@ function field(entry: LogEntry, ...keys: (keyof LogEntry)[]): string {
 }
 
 const selectClass =
-  'input input-md h-11 max-md:w-full ltr:pr-8 rtl:pl-8 bg-white focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700'
+  'input input-md h-11 max-md:w-full ltr:pr-8 rtl:pl-8 focus:border-primary-500 focus:ring-primary-500 bg-gray-700'
 
 export default function Logs() {
   const { t } = useTranslation(['logs', 'common'])
@@ -163,13 +163,13 @@ export default function Logs() {
             {t('logs:empty')}
           </div>
         ) : (
-          <div className="max-h-[70vh] divide-y divide-gray-200 overflow-auto dark:divide-gray-700">
+          <div className="max-h-[70vh] divide-y overflow-auto divide-gray-700">
             {logs.map((entry, i) => {
               const lvl = field(entry, 'level') || 'info'
               return (
                 <div
                   key={i}
-                  className="px-4 py-2 hover:bg-gray-100/50 md:flex md:gap-3 md:py-1.5 dark:hover:bg-gray-700/40"
+                  className="px-4 py-2 md:flex md:gap-3 md:py-1.5 hover:bg-gray-700/40"
                 >
                   {/* Meta wraps inline on mobile; becomes fixed columns from md up. */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 md:contents">

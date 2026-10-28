@@ -1,0 +1,285 @@
+{
+  "module": "streams",
+  "description": "Per-app streams, snapshots, plugin opt-out and live HLS (streams.controller.ts, hls.controller.ts). No route creates a stream row (webhooks/ingest do), so row-backed paths are covered by Go unit tests.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "str-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "strEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "str-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "strViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "streams-list-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-list-admin",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams",
+      "auth": "adminJwt"
+    },
+    {
+      "name": "streams-list-ghost-app",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams"
+    },
+    {
+      "name": "streams-list-viewer-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams",
+      "auth": "strViewerJwt"
+    },
+    {
+      "name": "streams-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams",
+      "auth": "appToken"
+    },
+    {
+      "name": "streams-list-app-token-ghost",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams",
+      "auth": "appToken"
+    },
+    {
+      "name": "streams-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-get-encoded-canonical",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/live-room%2Fcam-1",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-get-ghost-app",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams/x",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-plugins-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-plugins-set-missing",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken",
+      "body": {
+        "disabled": [
+          "watermark",
+          " watermark ",
+          ""
+        ]
+      }
+    },
+    {
+      "name": "streams-plugins-set-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-plugins-set-not-array",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken",
+      "body": {
+        "disabled": "watermark"
+      }
+    },
+    {
+      "name": "streams-plugins-set-dupes",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken",
+      "body": {
+        "disabled": [
+          "a",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "streams-plugins-set-non-strings",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "globalToken",
+      "body": {
+        "disabled": [
+          1,
+          true,
+          null
+        ]
+      }
+    },
+    {
+      "name": "streams-plugins-set-viewer",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/streams/nope/plugins",
+      "auth": "strViewerJwt",
+      "body": {
+        "disabled": []
+      }
+    },
+    {
+      "name": "streams-stop-missing",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-stop-ghost-app",
+      "method": "DELETE",
+      "path": "/api/v1/apps/ghost/streams/nope",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-stop-editor-other-tenant",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/streams/nope",
+      "auth": "strEditorJwt"
+    },
+    {
+      "name": "streams-snapshot-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/snapshots",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-snapshot-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/snapshots",
+      "auth": "globalToken",
+      "body": {
+        "room": 5,
+        "participantIdentity": 7
+      }
+    },
+    {
+      "name": "streams-snapshot-empty-room",
+      "method": "POST",
+      "path": "/api/v1/apps/live/snapshots",
+      "auth": "globalToken",
+      "body": {
+        "room": ""
+      }
+    },
+    {
+      "name": "streams-snapshot-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/snapshots",
+      "auth": "globalToken",
+      "body": {
+        "room": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "participantIdentity": "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"
+      }
+    },
+    {
+      "name": "streams-snapshot-blank-room",
+      "method": "POST",
+      "path": "/api/v1/apps/live/snapshots",
+      "auth": "globalToken",
+      "body": {
+        "room": "   "
+      }
+    },
+    {
+      "name": "streams-snapshot-ghost-app",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost/snapshots",
+      "auth": "globalToken",
+      "body": {
+        "room": "lobby"
+      }
+    },
+    {
+      "name": "streams-snapshot-by-id-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/snapshot",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-snapshot-by-id-ghost",
+      "method": "POST",
+      "path": "/api/v1/apps/ghost/streams/nope/snapshot",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-hls-start-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/hls/start",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-hls-stop-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/hls/stop",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-hls-status-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/nope/hls",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-hls-status-ghost",
+      "method": "GET",
+      "path": "/api/v1/apps/ghost/streams/nope/hls",
+      "auth": "globalToken"
+    },
+    {
+      "name": "streams-hls-viewer-no-permission-gate",
+      "method": "GET",
+      "path": "/api/v1/apps/live/streams/nope/hls",
+      "auth": "strViewerJwt",
+      "note": "HlsController has no @RequirePermission: the guard lets any authed caller through"
+    },
+    {
+      "name": "streams-hls-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/hls/start"
+    }
+  ]
+}

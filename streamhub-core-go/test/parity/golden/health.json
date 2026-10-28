@@ -1,0 +1,113 @@
+{
+  "module": "health",
+  "cases": [
+    {
+      "name": "health",
+      "fingerprint": "sha256:2a9ae4cae68957bd",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/health"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "health-with-bad-token-still-public",
+      "fingerprint": "sha256:515f48152dc25016",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/health",
+        "headers": {
+          "Authorization": "Bearer sk_not_a_real_token_0000000000"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "unknown-route-404",
+      "fingerprint": "sha256:b1ffb9b85eb5c076",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/definitely-not-a-route"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/definitely-not-a-route",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "unknown-route-404-post",
+      "fingerprint": "sha256:5fa8fb7686dbaba2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/definitely-not-a-route",
+        "body": {}
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/definitely-not-a-route",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "openapi-json-exists",
+      "fingerprint": "sha256:a24a677897dff68c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/openapi.json"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "swagger-ui-exists",
+      "fingerprint": "sha256:8af4191a81f6d879",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/docs"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "text/html;charset=utf-8"
+      }
+    }
+  ]
+}

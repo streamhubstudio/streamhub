@@ -6,7 +6,7 @@
  * (media queries don't apply), so we assert on the toggle's STATE rather than on
  * computed visibility: the hamburger carries `aria-expanded`, and the Drawer
  * (react-modal) only mounts its content — including its own close button — while
- * open. The leaf chrome (theme/lang switches, version badge) is stubbed so the
+ * open. The leaf chrome (lang switch, version badge) is stubbed so the
  * test stays about the shell, not its widgets.
  */
 import { describe, it, expect, vi } from 'vitest'
@@ -32,7 +32,6 @@ vi.mock('@/auth/useAuth', () => ({
 }))
 
 // Leaf chrome widgets have their own data/context deps — stub them out.
-vi.mock('@/theme', () => ({ ThemeToggle: () => <div data-testid="theme-toggle" /> }))
 vi.mock('@/i18n', () => ({ LanguageSwitcher: () => <div data-testid="lang-switcher" /> }))
 vi.mock('@/components/VersionBadge', () => ({ VersionBadge: () => <div data-testid="version-badge" /> }))
 

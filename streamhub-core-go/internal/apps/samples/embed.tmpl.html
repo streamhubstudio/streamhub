@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StreamHub · embed · @@A&amp;@@</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+           background:#0b1020; color:#e6ecff; }
+    header { padding:14px 18px; background:#121a33; border-bottom:1px solid #1f2b4d; }
+    header b { color:#6ea8ff; }
+    main { padding:18px; max-width:960px; margin:0 auto; }
+    video { width:100%; max-height:70vh; background:#000; border-radius:10px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; }
+    button { background:#2d6cff; color:#fff; border:0; padding:9px 16px; border-radius:8px;
+             cursor:pointer; font-weight:600; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+    input { background:#0e1530; color:#e6ecff; border:1px solid #25325a; border-radius:8px;
+            padding:8px 10px; }
+    .log { margin-top:12px; padding:10px; background:#0e1530; border-radius:8px;
+           font-family:ui-monospace,monospace; font-size:12px; white-space:pre-wrap;
+           min-height:40px; }
+  </style>
+</head>
+<body>
+  <header><b>StreamHub</b> · embeddable player · app <b>@@A&amp;@@</b></header>
+  <main>
+    <p>Public URL: <a href="@@B&amp;@@/play/@@A&amp;@@/@@R&amp;@@" style="color:#6ea8ff">@@B&amp;@@/play/@@A&amp;@@/@@R&amp;@@</a></p>
+    <iframe id="player" src="@@B&amp;@@/play/@@A&amp;@@/@@R&amp;@@"
+            style="width:100%;height:60vh;border:0;border-radius:10px;background:#000"
+            allow="autoplay; camera; microphone; fullscreen"></iframe>
+    <h3>Embed snippet</h3>
+    <textarea readonly style="width:100%;height:90px;background:#0e1530;color:#e6ecff;border:1px solid #25325a;border-radius:8px;padding:10px;font-family:ui-monospace,monospace">&lt;iframe src="@@B&amp;@@/embed/@@A&amp;@@/@@R&amp;@@" width="640" height="360" frameborder="0" allow="autoplay; fullscreen" allowfullscreen&gt;&lt;/iframe&gt;</textarea>
+  </main>
+</body>
+</html>

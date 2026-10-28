@@ -1,0 +1,49 @@
+{
+  "$obj": [
+    [
+      "a",
+      {
+        "$num": "1"
+      }
+    ],
+    [
+      "u",
+      {
+        "$undefined": true
+      }
+    ],
+    [
+      "b",
+      [
+        {
+          "$num": "1"
+        },
+        {
+          "$undefined": true
+        },
+        "x"
+      ]
+    ],
+    [
+      "allu",
+      {
+        "$obj": [
+          [
+            "x",
+            {
+              "$undefined": true
+            }
+          ]
+        ]
+      }
+    ],
+    [
+      "onlyu",
+      [
+        {
+          "$undefined": true
+        }
+      ]
+    ]
+  ]
+}

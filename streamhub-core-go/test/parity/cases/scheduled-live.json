@@ -1,0 +1,422 @@
+{
+  "module": "scheduled-live",
+  "description": "Scheduled-live agenda CRUD + anonymous public listing (scheduled-live.controller.ts).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "sl-login-editor",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "slEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "sl-login-viewer",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "slViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "sl-list-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-create-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "body": {
+        "startAt": 4102444800000
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "sl-create-empty-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-create-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": "x",
+        "timezone": 5,
+        "room": 7,
+        "title": [],
+        "message": {},
+        "enabled": "yes"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-create-negative",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": -5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-create-float",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 1.5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-create-too-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 4102444800000,
+        "timezone": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "room": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "title": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "message": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-create-full",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 4102444800000,
+        "timezone": "  America/Argentina/Buenos_Aires ",
+        "room": " show ",
+        "title": "  Gran estreno ",
+        "message": "Pronto",
+        "enabled": true
+      },
+      "capture": {
+        "slId1": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "sl-create-defaults",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 4102444900000,
+        "timezone": "   ",
+        "title": "   ",
+        "room": null
+      },
+      "capture": {
+        "slId2": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "sl-create-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 4102445000000,
+        "room": "other",
+        "enabled": false
+      },
+      "capture": {
+        "slId3": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "sl-create-past",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 1000,
+        "room": "show",
+        "extra": "ignored"
+      },
+      "capture": {
+        "slId4": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "sl-create-viewer-403",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "slViewerJwt",
+      "body": {
+        "startAt": 4102444800000
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "sl-create-editor",
+      "method": "POST",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "slEditorJwt",
+      "body": {
+        "startAt": 4102445100000,
+        "room": "live-show"
+      },
+      "note": "editor belongs to the owner tenant: 'live' is outside it",
+      "expectStatus": 403
+    },
+    {
+      "name": "sl-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "slViewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "sl-public-all",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-room",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?room=show",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-room-blank",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?room=%20%20",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-since-0",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=0",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-since-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-since-nan",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=abc",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-since-hex",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=0x10",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-public-since-future",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=4102444850000&room=other",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-patch-bad-id",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/abc",
+      "auth": "globalToken",
+      "body": {
+        "enabled": false
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-patch-bad-id-bad-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/abc",
+      "auth": "globalToken",
+      "body": {
+        "startAt": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-patch-unknown",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/99999",
+      "auth": "globalToken",
+      "body": {
+        "enabled": false
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "sl-patch-invalid",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+      "auth": "globalToken",
+      "body": {
+        "startAt": 0,
+        "enabled": "no"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-patch-enabled",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+      "auth": "globalToken",
+      "body": {
+        "enabled": false,
+        "startAt": 4102444700000
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-patch-clear",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+      "auth": "globalToken",
+      "body": {
+        "room": null,
+        "title": "",
+        "message": null,
+        "timezone": ""
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-patch-start-null",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+      "auth": "globalToken",
+      "body": {
+        "startAt": null
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-patch-enabled-null",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+      "auth": "globalToken",
+      "body": {
+        "enabled": null
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-patch-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-patch-viewer-403",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+      "auth": "slViewerJwt",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "sl-delete-bad-id",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/scheduled-live/1.5",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "sl-delete-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/scheduled-live/99999",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "sl-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId3}}",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-delete-again",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId3}}",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "sl-delete-viewer-403",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+      "auth": "slViewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "sl-list-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/scheduled-live",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-unknown-app-list",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/scheduled-live",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "sl-unknown-app-public",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/scheduled-live/public",
+      "expectStatus": 200
+    }
+  ]
+}

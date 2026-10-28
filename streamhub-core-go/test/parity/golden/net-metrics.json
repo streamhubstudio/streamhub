@@ -1,0 +1,482 @@
+{
+  "module": "net-metrics",
+  "cases": [
+    {
+      "name": "net-summary-live",
+      "fingerprint": "sha256:9cd197376e15d55e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bySource": [],
+          "last24h": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "last7d": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "threshold": {
+            "exceeded": false,
+            "gbPerDay": 0,
+            "percent": null,
+            "thresholdBytes": 0,
+            "usage24hBytes": 0
+          },
+          "today": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "net-summary-global-token",
+      "fingerprint": "sha256:7c1f318e9eee27da",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bySource": [],
+          "last24h": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "last7d": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "threshold": {
+            "exceeded": false,
+            "gbPerDay": 0,
+            "percent": null,
+            "thresholdBytes": 0,
+            "usage24hBytes": 0
+          },
+          "today": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "net-summary-app-token-own-app",
+      "fingerprint": "sha256:508301991df55d30",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bySource": [],
+          "last24h": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "last7d": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "threshold": {
+            "exceeded": false,
+            "gbPerDay": 0,
+            "percent": null,
+            "thresholdBytes": 0,
+            "usage24hBytes": 0
+          },
+          "today": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "net-summary-app-token-other-app",
+      "fingerprint": "sha256:4b33fc8b4a783329",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/other-app/net",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bySource": [],
+          "last24h": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "last7d": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "threshold": {
+            "exceeded": false,
+            "gbPerDay": 0,
+            "percent": null,
+            "thresholdBytes": 0,
+            "usage24hBytes": 0
+          },
+          "today": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "net-summary-owner-cross-tenant",
+      "fingerprint": "sha256:e423d7d2f098be74",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "ownerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "net-summary-viewer",
+      "fingerprint": "sha256:856680080a148b57",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "net-summary-unknown-app",
+      "fingerprint": "sha256:7d628da3f533e02f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-net-app/net",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bySource": [],
+          "last24h": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "last7d": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          },
+          "threshold": {
+            "exceeded": false,
+            "gbPerDay": 0,
+            "percent": null,
+            "thresholdBytes": 0,
+            "usage24hBytes": 0
+          },
+          "today": {
+            "in": 0,
+            "out": 0,
+            "total": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "net-summary-no-auth-401",
+      "fingerprint": "sha256:1cc78b6cbe055344",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "net-summary-revoked-401",
+      "fingerprint": "sha256:e4d74631c1763b49",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net",
+        "auth": "revokedToken"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Invalid or revoked API token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "net-history-default",
+      "fingerprint": "sha256:fb05c142d250e216",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 48
+        }
+      }
+    },
+    {
+      "name": "net-history-hours",
+      "fingerprint": "sha256:d21727f98c941a10",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=6",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 6
+        }
+      }
+    },
+    {
+      "name": "net-history-fractional-hours-echoed",
+      "fingerprint": "sha256:792d3195e1881773",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=2.5",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 2.5
+        }
+      }
+    },
+    {
+      "name": "net-history-hex-hours",
+      "fingerprint": "sha256:1c898ea6a579b16f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=0x10",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 16
+        }
+      }
+    },
+    {
+      "name": "net-history-huge-hours-echoed-unclamped",
+      "fingerprint": "sha256:ebd7f2df57f57a80",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=100000",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 100000
+        }
+      }
+    },
+    {
+      "name": "net-history-invalid-hours-default",
+      "fingerprint": "sha256:92e1c948e6dc1ff3",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=abc",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 48
+        }
+      }
+    },
+    {
+      "name": "net-history-zero-hours-default",
+      "fingerprint": "sha256:19cd9475faff8a8c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=0",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 48
+        }
+      }
+    },
+    {
+      "name": "net-history-negative-hours-default",
+      "fingerprint": "sha256:805e48f7fac131bc",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history?hours=-3",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "buckets": [],
+          "hours": 48
+        }
+      }
+    },
+    {
+      "name": "net-history-viewer",
+      "fingerprint": "sha256:8b557503e8286847",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "net-history-no-auth-401",
+      "fingerprint": "sha256:535ab620e3d86275",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/net/history"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    }
+  ]
+}

@@ -57,7 +57,7 @@ export function KebabMenu({
           role="menu"
           aria-label={label ?? t('actions.more')}
           onClick={() => setOpen(false)}
-          className="absolute right-0 z-20 mt-1 flex w-52 flex-col gap-1 rounded-lg border border-gray-200 bg-white p-2 text-left shadow-lg dark:border-gray-600 dark:bg-gray-800"
+          className="absolute right-0 z-20 mt-1 flex w-52 flex-col gap-1 rounded-lg border p-2 text-left shadow-lg border-gray-600 bg-gray-800"
         >
           {children}
         </div>

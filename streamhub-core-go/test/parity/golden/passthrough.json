@@ -1,0 +1,427 @@
+{
+  "module": "passthrough",
+  "cases": [
+    {
+      "name": "mtx-auth-disabled",
+      "fingerprint": "sha256:e742534cb5beb2b9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth",
+        "body": {
+          "action": "publish",
+          "path": "live/ptk_x"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-auth-disabled-with-secret-header",
+      "fingerprint": "sha256:a0a2ab2b5b2ab937",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth",
+        "headers": {
+          "X-MediaMTX-Secret": "x"
+        },
+        "body": {
+          "action": "read"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-auth-disabled-query",
+      "fingerprint": "sha256:5b5c250c296198d2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth?secret=x",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-auth-no-body",
+      "fingerprint": "sha256:e9add8e3a5e86281",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-auth-bad-json",
+      "fingerprint": "sha256:d75b0a04ef980ac1",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{nope"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/internal/mediamtx/auth",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "mtx-auth-with-bearer",
+      "fingerprint": "sha256:5a61ad9f20731e31",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/auth",
+        "auth": "globalToken",
+        "body": {
+          "path": "a/b"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-ready-disabled",
+      "fingerprint": "sha256:daf79836c361ba92",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/ready",
+        "body": {
+          "path": "live/sk"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-notready-disabled",
+      "fingerprint": "sha256:11bc24c0e968afd6",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/internal/mediamtx/notready",
+        "body": {
+          "path": "live/sk"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "mediamtx hooks disabled (no secret configured)",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "mtx-get-not-routed",
+      "fingerprint": "sha256:e0e85ff6175dfedb",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/internal/mediamtx/auth",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/internal/mediamtx/auth",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "pt-ingress-create-rtmp-disabled",
+      "fingerprint": "sha256:e8d50214824a01bd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "mode": "passthrough"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "RTMP/SRT/MPEG-TS passthrough is disabled — set STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on to use it",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "pt-ingress-create-srt-disabled",
+      "fingerprint": "sha256:219d4bfa1e2ff39d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "srt",
+          "mode": "passthrough",
+          "room": "cam"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "RTMP/SRT/MPEG-TS passthrough is disabled — set STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on to use it",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-no-url",
+      "fingerprint": "sha256:6245794d83982957",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "inputType 'mpegts' requires `url` — a udp://@GROUP:PORT source",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-bad-url",
+      "fingerprint": "sha256:22f3e65bd92a43dc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough",
+          "url": "udp://@host.example:5000"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "source host must be an IPv4 address or empty (got \"host.example\")",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-ssm-unicast",
+      "fingerprint": "sha256:a1548dd1dbab86aa",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough",
+          "url": "udp://@10.0.0.1:5000",
+          "sources": "10.0.0.2"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "sources=/block= (source-specific multicast) require a multicast group host (224.0.0.0/4)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-bad-query",
+      "fingerprint": "sha256:e7959cf4e18406cc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough",
+          "url": "udp://@239.1.1.1:5000?ttl=3"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unsupported query parameter \"ttl\" — allowed: sources, block, localaddr, fifo_size, overrun_nonfatal",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-no-port",
+      "fingerprint": "sha256:43d63cc188660395",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough",
+          "url": "udp://@239.1.1.1"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "source udp:// URL must include a port (udp://@HOST:PORT)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "pt-ingress-create-mpegts-valid-disabled",
+      "fingerprint": "sha256:e2b2ffd71ecb4372",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "passthrough",
+          "url": "udp://@239.1.1.1:5000",
+          "fifoSize": 1000
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "RTMP/SRT/MPEG-TS passthrough is disabled — set STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on to use it",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "pt-ingress-delete-unknown-pti",
+      "fingerprint": "sha256:5c34b30e8956102a",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ingress/pti_abc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true,
+          "ingressId": "pti_abc",
+          "mode": "passthrough"
+        }
+      }
+    },
+    {
+      "name": "pt-ingress-delete-unknown-pti-srt",
+      "fingerprint": "sha256:6490f9784787c8eb",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ingress/pti_srt_abc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true,
+          "ingressId": "pti_srt_abc",
+          "mode": "passthrough"
+        }
+      }
+    }
+  ]
+}

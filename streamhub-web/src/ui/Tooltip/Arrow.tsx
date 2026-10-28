@@ -26,8 +26,8 @@ interface ArrowProps {
     color: string
 }
 
-const Arrow = ({ placement, color, colorDark }: ArrowProps) => {
-    const arrowDefaultClass = `absolute text-${color} dark:text-${colorDark}`
+const Arrow = ({ placement, colorDark }: ArrowProps) => {
+    const arrowDefaultClass = `absolute text-${colorDark}`
 
     const getArrow = () => {
         switch (placement) {

@@ -1,0 +1,1576 @@
+{
+  "module": "transcoding",
+  "cases": [
+    {
+      "name": "tc-setup",
+      "fingerprint": "sha256:efac30e944739835",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps",
+        "auth": "globalToken",
+        "body": {
+          "name": "par-tc",
+          "displayName": "TC"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "tc-get-no-auth",
+      "fingerprint": "sha256:c0b41cffc8c3d18d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/config"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "tc-get-live",
+      "fingerprint": "sha256:c8a91872dee2f1b0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/config",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "live",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 720,
+            "name": "high"
+          },
+          {
+            "height": 480,
+            "name": "med"
+          },
+          {
+            "height": 240,
+            "name": "low"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": false,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": false,
+          "vodRenditions": []
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-get-viewer",
+      "fingerprint": "sha256:e1437e663fd704ba",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/config",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tc-get-unknown",
+      "fingerprint": "sha256:c0db215ade1fed24",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-app/config",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app \"no-such-app\" not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tc-layers",
+      "fingerprint": "sha256:01149c14f5443fe9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/transcoding/layers",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": [
+        {
+          "height": 720,
+          "name": "high"
+        },
+        {
+          "height": 480,
+          "name": "med"
+        },
+        {
+          "height": 240,
+          "name": "low"
+        }
+      ]
+    },
+    {
+      "name": "tc-layers-unknown",
+      "fingerprint": "sha256:c925d77ddd77924b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-app/transcoding/layers",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app \"no-such-app\" not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tc-patch-empty",
+      "fingerprint": "sha256:3cbcaba703857679",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "rawBody": ""
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 720,
+            "name": "high"
+          },
+          {
+            "height": 480,
+            "name": "med"
+          },
+          {
+            "height": 240,
+            "name": "low"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": false,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": false,
+          "vodRenditions": []
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-bad",
+      "fingerprint": "sha256:8a93a038fabaca53",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "adaptive": "y",
+          "rtmpTranscode": 1,
+          "hwaccel": "tpu",
+          "transcodingEnabled": "no",
+          "encoding": "vp9",
+          "vodAdaptive": 0
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "adaptive must be a boolean value",
+          "rtmpTranscode must be a boolean value",
+          "hwaccel must be one of the following values: auto, gpu, cpu",
+          "transcodingEnabled must be a boolean value",
+          "encoding must be one of the following values: h264, h264+vp8",
+          "vodAdaptive must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-bad-layers",
+      "fingerprint": "sha256:979b37beee7ec37a",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "layers": [
+            {
+              "name": "High!",
+              "height": 0
+            },
+            5,
+            {
+              "name": "ok",
+              "height": 4321.5
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "layers.0.name must be a short lowercase slug (a-z, 0-9, _ , -)",
+          "layers.0.height must not be less than 1",
+          "layers.each value in nested property layers must be either object or array",
+          "layers.2.height must not be greater than 4320",
+          "layers.2.height must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-layers-not-array",
+      "fingerprint": "sha256:764830cd539b7b70",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "layers": "x",
+          "vodRenditions": 7
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "layers must contain no more than 8 elements",
+          "layers must be an array",
+          "each value in nested property layers must be either object or array",
+          "vodRenditions must contain no more than 8 elements",
+          "vodRenditions must be an array",
+          "each value in nested property vodRenditions must be either object or array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-too-many",
+      "fingerprint": "sha256:220f8ba609159351",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "layers": [
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            },
+            {
+              "name": "a",
+              "height": 100
+            }
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "layers must contain no more than 8 elements"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-bad-renditions",
+      "fingerprint": "sha256:4f3c451471eb3a84",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "vodRenditions": [
+            {
+              "height": 100,
+              "bitrateKbps": 60000
+            },
+            {}
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "vodRenditions.0.height must not be less than 144",
+          "vodRenditions.0.bitrateKbps must not be greater than 50000",
+          "vodRenditions.1.height must not be greater than 4320",
+          "vodRenditions.1.height must not be less than 144",
+          "vodRenditions.1.height must be an integer number",
+          "vodRenditions.1.bitrateKbps must not be greater than 50000",
+          "vodRenditions.1.bitrateKbps must not be less than 100",
+          "vodRenditions.1.bitrateKbps must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-bad-features",
+      "fingerprint": "sha256:d2c8064522de62e6",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "features": {
+            "chat": "yes",
+            "hiddenQc": 1
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "features.chat must be a boolean value",
+          "features.hiddenQc must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-features-not-object",
+      "fingerprint": "sha256:393007c307c29595",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "features": "on"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "nested property features must be either object or array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tc-patch-viewer",
+      "fingerprint": "sha256:b89dd4fdf8b2cfb1",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/config",
+        "auth": "viewerJwt",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tc-patch-ladder",
+      "fingerprint": "sha256:f850b1c6bda08a98",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "adaptive": true,
+          "layers": [
+            {
+              "name": "hd",
+              "height": 1080
+            },
+            {
+              "name": "sd",
+              "height": 480
+            }
+          ]
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": false,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": false,
+          "vodRenditions": []
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-transcoding",
+      "fingerprint": "sha256:27e6bd6ac18d9b51",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "transcodingEnabled": true,
+          "encoding": "h264+vp8",
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "height": 720,
+              "bitrateKbps": 2800
+            },
+            {
+              "height": 360,
+              "bitrateKbps": 800
+            }
+          ]
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264+vp8",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-encoding-only",
+      "fingerprint": "sha256:7107341743f2efaf",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "encoding": "h264"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-rtmp",
+      "fingerprint": "sha256:96293b6eb9a9bd59",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "rtmpTranscode": true
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": false,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": true,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-features",
+      "fingerprint": "sha256:21e766b50adb7d3b",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "features": {
+            "chat": true,
+            "publicPlayback": false
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": true,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": false,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "auto",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "hwaccel=auto and no GPU detected — CPU",
+            "requested": "auto",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-hwaccel",
+      "fingerprint": "sha256:c223b7a09e3d693f",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "hwaccel": "cpu"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": true,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": true,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": false,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 1080,
+            "name": "hd"
+          },
+          {
+            "height": 480,
+            "name": "sd"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "cpu",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "app configured hwaccel=cpu",
+            "requested": "cpu",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-patch-clear-layers",
+      "fingerprint": "sha256:bd9eab83b24c09e3",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken",
+        "body": {
+          "layers": []
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": false,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": true,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": false,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 720,
+            "name": "high"
+          },
+          {
+            "height": 480,
+            "name": "med"
+          },
+          {
+            "height": 240,
+            "name": "low"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "cpu",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "app configured hwaccel=cpu",
+            "requested": "cpu",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-get-after",
+      "fingerprint": "sha256:00044784e717e6f1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-tc/config",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "adaptive": false,
+        "app": "par-tc",
+        "features": {
+          "adaptivePlayer": true,
+          "chat": true,
+          "drm": {
+            "enabled": false,
+            "failOpen": false,
+            "fairplayCertUrl": "",
+            "keyServerTokenEnv": "",
+            "keyServerUrl": "",
+            "licenseUrls": {
+              "fairplay": "",
+              "playready": "",
+              "widevine": ""
+            },
+            "provider": "none",
+            "scheme": "cbcs",
+            "systems": [
+              "widevine",
+              "playready",
+              "fairplay"
+            ]
+          },
+          "hiddenQc": true,
+          "linear": {
+            "alwaysOnHls": false,
+            "dvr": false,
+            "dvrWindowSeconds": 3600,
+            "persistentRoom": false,
+            "roomEmptyTimeoutSeconds": 86400
+          },
+          "publicPlayback": false,
+          "reactions": false,
+          "rtmpPassword": false,
+          "viewerCounter": true,
+          "wsIngest": {
+            "enabled": true,
+            "maxCameras": 0,
+            "maxDataBytes": 16384,
+            "maxDataPerSec": 5,
+            "maxFps": 15,
+            "maxFrameKb": 256
+          }
+        },
+        "layers": [
+          {
+            "height": 720,
+            "name": "high"
+          },
+          {
+            "height": 480,
+            "name": "med"
+          },
+          {
+            "height": 240,
+            "name": "low"
+          }
+        ],
+        "recording": {
+          "enabled": true,
+          "filenameTemplate": "",
+          "retentionDays": 0,
+          "snapshotSeconds": 0,
+          "snapshotTemplate": "",
+          "splitMinutes": 0
+        },
+        "rtmp": {
+          "enabled": true,
+          "passthrough": false,
+          "transcode": true
+        },
+        "timezone": "",
+        "transcoding": {
+          "enabled": true,
+          "encoding": "h264",
+          "hwaccel": "cpu",
+          "hwaccelResolved": {
+            "effective": "cpu",
+            "reason": "app configured hwaccel=cpu",
+            "requested": "cpu",
+            "type": "none"
+          },
+          "vodAdaptive": true,
+          "vodRenditions": [
+            {
+              "bitrateKbps": 2800,
+              "height": 720
+            },
+            {
+              "bitrateKbps": 800,
+              "height": 360
+            }
+          ]
+        },
+        "variables": {}
+      }
+    },
+    {
+      "name": "tc-layers-after",
+      "fingerprint": "sha256:5c2e13a859e2858b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-tc/transcoding/layers",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": [
+        {
+          "height": 720,
+          "name": "high"
+        },
+        {
+          "height": 480,
+          "name": "med"
+        },
+        {
+          "height": 240,
+          "name": "low"
+        }
+      ]
+    },
+    {
+      "name": "tc-patch-unknown",
+      "fingerprint": "sha256:aef97a8938a0003e",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/no-such-app/config",
+        "auth": "globalToken",
+        "body": {
+          "adaptive": true
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app \"no-such-app\" not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tc-teardown",
+      "fingerprint": "sha256:e685ee24209b4bea",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-tc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    }
+  ]
+}

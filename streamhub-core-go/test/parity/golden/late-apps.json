@@ -1,0 +1,329 @@
+{
+  "module": "late-apps",
+  "cases": [
+    {
+      "name": "late-create",
+      "fingerprint": "sha256:413f7b9055dbfd09",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps",
+        "auth": "globalToken",
+        "body": {
+          "name": "par-late",
+          "displayName": "Late"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "createdAt": "<sql-ts>",
+        "displayName": "Late",
+        "id": 7,
+        "livekitRoomPrefix": "par-late",
+        "name": "par-late",
+        "settingsJson": null,
+        "updatedAt": "<sql-ts>"
+      }
+    },
+    {
+      "name": "late-put-raw-1",
+      "fingerprint": "sha256:7e6c61a67e0831ec",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/par-late/config/raw",
+        "auth": "globalToken",
+        "body": {
+          "yaml": "name: par-late\nroom_prefix: late-a\ndisplay_name: First\n"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "reloaded": true,
+          "warnings": []
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-put-raw-2",
+      "fingerprint": "sha256:7fa41633d537a80e",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/par-late/config/raw",
+        "auth": "globalToken",
+        "body": {
+          "yaml": "name: par-late\nroom_prefix: late-b\ndisplay_name: Second\nextra: {k: v}\n"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "reloaded": true,
+          "warnings": []
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-backups",
+      "fingerprint": "sha256:0ea4fe2c718f8f85",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late/config/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 55,
+            "ts": "<masked>"
+          },
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 1632,
+            "ts": "<masked>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "late-backup-oldest",
+      "fingerprint": "sha256:f2b276f3c0bb24bd",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late/config/backups/{{lateOldest}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "yaml": "name: par-late\ndisplay_name: Late\nroom_prefix: par-late\ntimezone: ''\nrecording:\n  enabled: true\n  mode: room-composite\n  layout: grid\n  local_dir: recordings\n  delete_local_after_upload: true\n  split_minutes: 0\n  snapshot_seconds: 0\n  filename_template: ''\n  snapshot_template: ''\n  retention_days: 0\ns3:\n  provider: wasabi\n  bucket: ''\n  region: us-east-1\n  endpoint: https://s3.us-east-1.wasabisys.com\n  force_path_style: false\n  prefix: streamhub/par-late\n  public_url: ''\n  access_key_env: APP_PAR_LATE_S3_KEY\n  secret_key_env: APP_PAR_LATE_S3_SECRET\nwebrtc:\n  adaptive: true\n  layers:\n    - name: high\n      height: 720\n    - name: med\n      height: 480\n    - name: low\n      height: 240\n  transcode_max_height: 720\nrtmp:\n  enabled: true\n  transcode: true\n  passthrough: false\ntranscoding:\n  enabled: false\n  encoding: h264\n  vod_adaptive: false\n  vod_renditions: []\ncallbacks:\n  url: ''\n  secret: ''\nmqtt:\n  enabled: false\n  url: ''\n  username: ''\n  password_env: APP_PAR_LATE_MQTT_PASSWORD\n  topic_prefix: streamhub/par-late\n  qos: 0\n  tls: false\n  events:\n    - all\n  logs:\n    enabled: false\n    level: info\nlatency_alert:\n  enabled: false\n  threshold_ms: 1000\n  cooldown_seconds: 60\n  interval_seconds: 10\nsmtp:\n  enabled: false\n  host: ''\n  port: 587\n  user: ''\n  from: ''\n  pass_env: APP_PAR_LATE_SMTP_PASS\nfeatures:\n  rtmp_password: false\n  viewer_counter: true\n  chat: false\n  reactions: false\n  hidden_qc: true\n  adaptive_player: true\n  public_playback: true\n  linear:\n    persistent_room: false\n    room_empty_timeout_seconds: 86400\n    always_on_hls: false\n    dvr: false\n    dvr_window_seconds: 3600\nvariables: {}\n"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-revert-oldest",
+      "fingerprint": "sha256:c54be23e43228328",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-late/config/backups/{{lateOldest}}/revert",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "reloaded": true,
+          "warnings": []
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-raw-after-revert",
+      "fingerprint": "sha256:cd1637130728ad6d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late/config/raw",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "yaml": "name: par-late\ndisplay_name: Late\nroom_prefix: par-late\ntimezone: ''\nrecording:\n  enabled: true\n  mode: room-composite\n  layout: grid\n  local_dir: recordings\n  delete_local_after_upload: true\n  split_minutes: 0\n  snapshot_seconds: 0\n  filename_template: ''\n  snapshot_template: ''\n  retention_days: 0\ns3:\n  provider: wasabi\n  bucket: ''\n  region: us-east-1\n  endpoint: https://s3.us-east-1.wasabisys.com\n  force_path_style: false\n  prefix: streamhub/par-late\n  public_url: ''\n  access_key_env: APP_PAR_LATE_S3_KEY\n  secret_key_env: APP_PAR_LATE_S3_SECRET\nwebrtc:\n  adaptive: true\n  layers:\n    - name: high\n      height: 720\n    - name: med\n      height: 480\n    - name: low\n      height: 240\n  transcode_max_height: 720\nrtmp:\n  enabled: true\n  transcode: true\n  passthrough: false\ntranscoding:\n  enabled: false\n  encoding: h264\n  vod_adaptive: false\n  vod_renditions: []\ncallbacks:\n  url: ''\n  secret: ''\nmqtt:\n  enabled: false\n  url: ''\n  username: ''\n  password_env: APP_PAR_LATE_MQTT_PASSWORD\n  topic_prefix: streamhub/par-late\n  qos: 0\n  tls: false\n  events:\n    - all\n  logs:\n    enabled: false\n    level: info\nlatency_alert:\n  enabled: false\n  threshold_ms: 1000\n  cooldown_seconds: 60\n  interval_seconds: 10\nsmtp:\n  enabled: false\n  host: ''\n  port: 587\n  user: ''\n  from: ''\n  pass_env: APP_PAR_LATE_SMTP_PASS\nfeatures:\n  rtmp_password: false\n  viewer_counter: true\n  chat: false\n  reactions: false\n  hidden_qc: true\n  adaptive_player: true\n  public_playback: true\n  linear:\n    persistent_room: false\n    room_empty_timeout_seconds: 86400\n    always_on_hls: false\n    dvr: false\n    dvr_window_seconds: 3600\nvariables: {}\n"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-get-after-revert",
+      "fingerprint": "sha256:5f24c7b83a22dae2",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "createdAt": "<sql-ts>",
+        "displayName": "Late",
+        "id": 7,
+        "livekitRoomPrefix": "par-late",
+        "name": "par-late",
+        "settingsJson": null,
+        "updatedAt": "<sql-ts>"
+      }
+    },
+    {
+      "name": "late-revert-newest",
+      "fingerprint": "sha256:df5196d2b1a76e06",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-late/config/backups/{{lateNewest}}/revert",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "reloaded": true,
+          "warnings": []
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-raw-after-revert-2",
+      "fingerprint": "sha256:cd1637130728ad6d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late/config/raw",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "yaml": "name: par-late\nroom_prefix: late-a\ndisplay_name: First\n"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "late-backups-after",
+      "fingerprint": "sha256:a110f4995511a74d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-late/config/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 1632,
+            "ts": "<masked>"
+          },
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 70,
+            "ts": "<masked>"
+          },
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 55,
+            "ts": "<masked>"
+          },
+          {
+            "createdAt": "<masked>",
+            "file": "<masked>",
+            "sizeBytes": 1632,
+            "ts": "<masked>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "late-revert-cross-app-token",
+      "fingerprint": "sha256:bd8842de59a9c156",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-late/config/backups/{{lateNewest}}/revert",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'par-late' is outside this credential's app scope",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "late-delete",
+      "fingerprint": "sha256:4dd8ad209fa07bc0",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-late?deleteVods=true",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "deleted": true,
+        "name": "par-late"
+      }
+    }
+  ]
+}

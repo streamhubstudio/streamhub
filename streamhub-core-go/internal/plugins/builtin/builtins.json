@@ -1,0 +1,870 @@
+[
+  {
+    "id": "cameras",
+    "name": "Cameras — OpenCam Console",
+    "description": "Fleet console for OpenCam cameras (Thingino) over MQTT: inventory from hello/state, online/offline, event log, and remote control — PTZ pad with deadman, stream start/stop and HD, snapshot, voice test and reboot — plus the microSD config.ini for provisioning.",
+    "category": "tool",
+    "ui": "app-tab",
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "cameras.db"
+    },
+    "icon": "camera",
+    "configSchema": [
+      {
+        "key": "baseTopic",
+        "type": "string",
+        "label": "MQTT base topic",
+        "default": "opencam",
+        "placeholder": "opencam",
+        "help": "Topic root of the cameras: must match the firmware's mqtt.base_topic (opencam/%device)."
+      },
+      {
+        "key": "offlineAfterSec",
+        "type": "number",
+        "label": "Offline after (seconds)",
+        "default": 180,
+        "min": 30,
+        "max": 3600,
+        "help": "Mark a camera offline when no live traffic arrives within this window (a backstop beyond the MQTT LWT). Should be ~3 state intervals."
+      },
+      {
+        "key": "commandExpSec",
+        "type": "number",
+        "label": "Command expiry (seconds)",
+        "default": 30,
+        "min": 5,
+        "max": 600,
+        "help": "`exp` sent with every command: a camera drops a command that arrives later (code expired). StreamHub times it out after exp + 10 s without an answer."
+      },
+      {
+        "key": "longCommandTimeoutSec",
+        "type": "number",
+        "label": "Long command timeout (seconds)",
+        "default": 900,
+        "min": 60,
+        "max": 7200,
+        "help": "How long an accepted long command (reboot, firmware upgrade, ini reset) may stay in progress before it is marked timeout."
+      },
+      {
+        "key": "historyPoints",
+        "type": "number",
+        "label": "State history points per camera",
+        "default": 120,
+        "min": 10,
+        "max": 5000,
+        "help": "How many recent state samples (RSSI, memory, load, queue, SD) to keep per camera for the charts."
+      },
+      {
+        "key": "eventsPerCamera",
+        "type": "number",
+        "label": "Events kept per camera",
+        "default": 2000,
+        "min": 100,
+        "max": 100000,
+        "help": "Size of the per-camera event log ring."
+      },
+      {
+        "key": "hdRevertMin",
+        "type": "number",
+        "label": "HD revert (minutes)",
+        "default": 5,
+        "min": 1,
+        "max": 240,
+        "help": "The HD button switches the camera to its main stream; it goes back to the sub-stream after this many minutes."
+      },
+      {
+        "key": "brokerPublicUrl",
+        "type": "string",
+        "label": "Broker URL for cameras",
+        "default": "",
+        "placeholder": "mqtts://mqtt.example.com:8883",
+        "help": "What the cameras dial (written into config.ini). Empty = the app's mqtt.url."
+      },
+      {
+        "key": "rtmpPublicUrl",
+        "type": "string",
+        "label": "Default RTMP URL for cameras",
+        "default": "",
+        "placeholder": "rtmp://media.example.com:1935/live",
+        "help": "Stream URL written into config.ini when a camera has none of its own."
+      },
+      {
+        "key": "iniUseAppBrokerCredentials",
+        "type": "boolean",
+        "label": "config.ini uses the app's broker credentials",
+        "default": false,
+        "help": "Lab setups only: write the app's own MQTT user/password into config.ini instead of the per-camera credential."
+      }
+    ]
+  },
+  {
+    "id": "cockpit",
+    "name": "Cockpit",
+    "description": "CCTV-style surveillance board: a paginated, drag-and-drop grid of every live stream in the app.",
+    "category": "panel",
+    "ui": "panel",
+    "version": "1.0.0",
+    "kind": "app",
+    "icon": "grid",
+    "configSchema": [
+      {
+        "key": "gridSize",
+        "type": "select",
+        "label": "Grid size",
+        "default": "4x3",
+        "options": [
+          {
+            "value": "1x1",
+            "label": "1 × 1"
+          },
+          {
+            "value": "2x2",
+            "label": "2 × 2 (4)"
+          },
+          {
+            "value": "3x3",
+            "label": "3 × 3 (9)"
+          },
+          {
+            "value": "4x3",
+            "label": "4 × 3 (12)"
+          }
+        ]
+      },
+      {
+        "key": "autoPlay",
+        "type": "boolean",
+        "label": "Auto-play cameras",
+        "default": true
+      },
+      {
+        "key": "showLabels",
+        "type": "boolean",
+        "label": "Show stream labels",
+        "default": true
+      },
+      {
+        "key": "refreshSeconds",
+        "type": "number",
+        "label": "Auto-refresh (seconds)",
+        "default": 10,
+        "min": 3,
+        "max": 300
+      }
+    ]
+  },
+  {
+    "id": "fleet",
+    "name": "Fleet — Agent Management",
+    "description": "Connect to the StreamHub Agents in this app over MQTT: live health (CPU/RAM/temp/uptime/cameras/disk/battery), online/offline status, a configurable battery-low alert, and remote control — restart, OTA update, config push and ping.",
+    "category": "tool",
+    "ui": "app-tab",
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "fleet.db"
+    },
+    "icon": "server",
+    "configSchema": [
+      {
+        "key": "offlineAfterSec",
+        "type": "number",
+        "label": "Offline after (seconds)",
+        "default": 90,
+        "min": 10,
+        "max": 3600,
+        "help": "Mark an agent offline when no telemetry arrives within this window (a backstop beyond the MQTT LWT). Should be a few telemetry intervals."
+      },
+      {
+        "key": "historyPoints",
+        "type": "number",
+        "label": "History points per agent",
+        "default": 120,
+        "min": 10,
+        "max": 1000,
+        "help": "How many recent telemetry samples to keep per agent for the charts."
+      },
+      {
+        "key": "commandTimeoutSec",
+        "type": "number",
+        "label": "Command timeout (seconds)",
+        "default": 30,
+        "min": 5,
+        "max": 600,
+        "help": "How long a command stays \"pending\" before the UI treats it as timed out (the agent still reports late results if it recovers)."
+      },
+      {
+        "key": "batteryLowPercent",
+        "type": "number",
+        "label": "Battery-low alert threshold (percent)",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "help": "0 disables the alert. Most fleet hosts run on mains and never report a battery at all — they are silently skipped, not treated as 0%. Fires fleet.battery_low / fleet.battery_recovered (10 points of hysteresis) through the same callback/MQTT/notifier funnel as every other alert family."
+      }
+    ]
+  },
+  {
+    "id": "live-control",
+    "name": "Live Control",
+    "description": "Pause, resume or finish an already-live stream: viewers see a configured cover (image, looping video or text card) with audio muted until you resume.",
+    "category": "tool",
+    "ui": "app-tab",
+    "version": "1.0.0",
+    "icon": "pause",
+    "kind": "app",
+    "storage": {
+      "db": "live-control.db"
+    },
+    "events": [
+      "livecontrol.paused",
+      "livecontrol.resumed",
+      "livecontrol.finished"
+    ],
+    "configSchema": [
+      {
+        "key": "defaultMode",
+        "type": "select",
+        "label": "Default cover mode",
+        "default": "text",
+        "options": [
+          {
+            "value": "image",
+            "label": "Image"
+          },
+          {
+            "value": "video",
+            "label": "Looping video"
+          },
+          {
+            "value": "text",
+            "label": "Text card"
+          }
+        ],
+        "help": "What a paused/finished stream shows when no per-stream override is given."
+      },
+      {
+        "key": "defaultCardTitle",
+        "type": "string",
+        "label": "Text-card headline",
+        "default": "We will be right back"
+      },
+      {
+        "key": "defaultCardText",
+        "type": "string",
+        "label": "Text-card body",
+        "default": "The live stream is paused."
+      },
+      {
+        "key": "defaultCardColor",
+        "type": "string",
+        "label": "Text-card background",
+        "default": "#0b0b0f",
+        "placeholder": "#RRGGBB"
+      },
+      {
+        "key": "muteAudioServerSide",
+        "type": "boolean",
+        "label": "Mute audio server-side while paused",
+        "default": true,
+        "help": "Also mute the publisher audio in LiveKit (best-effort), not just in our players."
+      },
+      {
+        "key": "pollSeconds",
+        "type": "number",
+        "label": "Overlay poll interval (seconds)",
+        "default": 5,
+        "min": 2,
+        "max": 60,
+        "help": "How often the viewer overlay re-checks the public state (a data-channel push is instant)."
+      }
+    ]
+  },
+  {
+    "id": "live-control-overlay",
+    "name": "Live Control Overlay",
+    "description": "Shows the Live Control cover (image, looping video or text card) to viewers while a stream is paused or finished. Pairs with the Live Control console.",
+    "category": "tool",
+    "ui": "player-overlay",
+    "version": "1.0.0",
+    "icon": "pause",
+    "configSchema": [
+      {
+        "key": "fit",
+        "type": "select",
+        "label": "Image/video fit",
+        "default": "cover",
+        "options": [
+          {
+            "value": "cover",
+            "label": "Cover (fill, may crop)"
+          },
+          {
+            "value": "contain",
+            "label": "Contain (letterbox)"
+          }
+        ]
+      },
+      {
+        "key": "showFinishedBadge",
+        "type": "boolean",
+        "label": "Show a \"finished\" badge on the final card",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "quality",
+    "name": "Quality / Stream Health",
+    "description": "Measure the client↔server connection quality: a download/upload bandwidth test plus latency/jitter, distilled into a green/amber/red traffic light against configurable thresholds.",
+    "category": "tool",
+    "ui": "panel",
+    "version": "1.0.0",
+    "icon": "signal",
+    "configSchema": [
+      {
+        "key": "green_min_mbps",
+        "type": "number",
+        "label": "Green: min download (Mbps)",
+        "default": 5,
+        "min": 0,
+        "max": 10000,
+        "help": "At or above this download speed the light is green (optimal)."
+      },
+      {
+        "key": "yellow_min_mbps",
+        "type": "number",
+        "label": "Amber: min download (Mbps)",
+        "default": 1,
+        "min": 0,
+        "max": 10000,
+        "help": "Between amber and green thresholds the light is amber; below it, red."
+      },
+      {
+        "key": "target_bitrate_kbps",
+        "type": "number",
+        "label": "Target stream bitrate (kbps)",
+        "default": 2500,
+        "min": 0,
+        "max": 100000,
+        "help": "Expected outbound/received stream bitrate. The measured reception bitrate is graded against this (green ≥ target, amber ≥ half)."
+      },
+      {
+        "key": "max_green_rtt_ms",
+        "type": "number",
+        "label": "Green: max latency (ms)",
+        "default": 120,
+        "min": 0,
+        "max": 10000,
+        "help": "Round-trip time (and derived jitter) at or below this stays green."
+      },
+      {
+        "key": "download_url",
+        "type": "string",
+        "label": "Download test URL",
+        "default": "/apple-touch-icon.png",
+        "placeholder": "/apple-touch-icon.png",
+        "help": "Same-origin asset re-fetched (cache-busted) to measure download throughput. Point at a larger static file for steadier numbers."
+      },
+      {
+        "key": "download_target_mb",
+        "type": "number",
+        "label": "Download test size (MB)",
+        "default": 6,
+        "min": 1,
+        "max": 200,
+        "help": "Total bytes to pull before computing the download speed."
+      },
+      {
+        "key": "upload_url",
+        "type": "string",
+        "label": "Upload test URL (optional)",
+        "default": "",
+        "placeholder": "https://…/upload",
+        "help": "Optional endpoint that ACCEPTS a POST body (e.g. an S3 presigned URL). Leave blank to skip the upload leg — no browser-only test can measure upload without a server that reads the body."
+      }
+    ]
+  },
+  {
+    "id": "radio",
+    "name": "Radio",
+    "description": "Audio-only WebRTC radio inside the app: go on air from the mic, watch the live listener count and hand out subscribe-only listen tokens.",
+    "category": "panel",
+    "ui": "app-tab",
+    "version": "1.0.0",
+    "icon": "radio",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room name",
+        "default": "radio",
+        "placeholder": "radio",
+        "help": "LiveKit room the máster publishes to and listeners subscribe from."
+      },
+      {
+        "key": "listenTokenTtlSeconds",
+        "type": "number",
+        "label": "Listen token TTL (seconds)",
+        "default": 3600,
+        "min": 60,
+        "max": 86400,
+        "help": "Lifetime of generated subscribe-only listener tokens."
+      },
+      {
+        "key": "autoStartMonitor",
+        "type": "boolean",
+        "label": "Auto-start listener monitor",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "scheduled-live",
+    "name": "Scheduled Live",
+    "description": "Schedule live premieres: viewers see a countdown until the start time, then the stream is revealed.",
+    "category": "tool",
+    "ui": "player-overlay",
+    "version": "1.0.0",
+    "icon": "clock",
+    "configSchema": [
+      {
+        "key": "mode",
+        "type": "select",
+        "label": "Display mode",
+        "default": "cover",
+        "options": [
+          {
+            "value": "cover",
+            "label": "Full cover (hide stream until start)"
+          },
+          {
+            "value": "badge",
+            "label": "Corner badge only"
+          }
+        ]
+      },
+      {
+        "key": "accent",
+        "type": "string",
+        "label": "Accent colour",
+        "default": "#2f7bff",
+        "placeholder": "#RRGGBB"
+      },
+      {
+        "key": "headline",
+        "type": "string",
+        "label": "Headline",
+        "default": "The live stream starts soon"
+      },
+      {
+        "key": "revealAnimation",
+        "type": "select",
+        "label": "Reveal animation",
+        "default": "fade",
+        "options": [
+          {
+            "value": "fade",
+            "label": "Fade"
+          },
+          {
+            "value": "zoom",
+            "label": "Zoom"
+          },
+          {
+            "value": "none",
+            "label": "None"
+          }
+        ]
+      },
+      {
+        "key": "muteUntilStart",
+        "type": "boolean",
+        "label": "Mute stream until start",
+        "default": true
+      },
+      {
+        "key": "showViewerLocalTime",
+        "type": "boolean",
+        "label": "Show viewer's local start time",
+        "default": true
+      },
+      {
+        "key": "autoHideAfterStartSec",
+        "type": "number",
+        "label": "Keep reveal animation (seconds)",
+        "default": 5,
+        "min": 0,
+        "max": 60
+      }
+    ]
+  },
+  {
+    "id": "stream-health",
+    "name": "Stream Health Monitor",
+    "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
+    "category": "processor",
+    "ui": "app-tab",
+    "needsWorker": true,
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "stream-health.db"
+    },
+    "icon": "activity",
+    "events": [
+      "health.degraded",
+      "health.recovered",
+      "health.audio_lost",
+      "health.audio_recovered",
+      "health.av_desync",
+      "health.stalled",
+      "health.discontinuity"
+    ],
+    "configSchema": [
+      {
+        "key": "sample_interval_sec",
+        "type": "number",
+        "label": "Sample interval (s)",
+        "default": 10,
+        "min": 2,
+        "max": 300,
+        "help": "How often each stream is probed. Cost per stream per sample is one ffprobe + one audio-only decode of a single segment (<1% of a core at the default)."
+      },
+      {
+        "key": "silence_db",
+        "type": "number",
+        "label": "Silence threshold (dBFS)",
+        "default": -50,
+        "min": -120,
+        "max": 0,
+        "help": "Mean segment volume at or below this counts as silent."
+      },
+      {
+        "key": "silence_duration_sec",
+        "type": "number",
+        "label": "Silence duration (s)",
+        "default": 15,
+        "min": 1,
+        "max": 600,
+        "help": "Continuous silence longer than this fires health.audio_lost."
+      },
+      {
+        "key": "desync_ms",
+        "type": "number",
+        "label": "A/V desync threshold (ms)",
+        "default": 200,
+        "min": 10,
+        "max": 10000,
+        "help": "Audio-vs-video timestamp drift beyond this fires health.av_desync."
+      },
+      {
+        "key": "stall_sec",
+        "type": "number",
+        "label": "Stall threshold (s)",
+        "default": 20,
+        "min": 2,
+        "max": 600,
+        "help": "No new HLS segment for this long fires health.stalled (critical)."
+      },
+      {
+        "key": "bitrate_drop_pct",
+        "type": "number",
+        "label": "Bitrate drop (%)",
+        "default": 50,
+        "min": 0,
+        "max": 95,
+        "help": "Measured bitrate falling below this percentage of the rolling baseline marks the stream degraded. 0 disables the check."
+      },
+      {
+        "key": "recover_samples",
+        "type": "number",
+        "label": "Recovery samples",
+        "default": 2,
+        "min": 1,
+        "max": 10,
+        "help": "Consecutive clean samples required before health.recovered fires (hysteresis against flapping)."
+      }
+    ],
+    "worker": {
+      "spawn": "stream-health"
+    }
+  },
+  {
+    "id": "streamflow",
+    "name": "Streamflow — Workflow Engine",
+    "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
+    "category": "tool",
+    "ui": "app-tab",
+    "version": "0.1.0",
+    "kind": "app",
+    "needsWorker": false,
+    "storage": {
+      "db": "streamflow.db"
+    },
+    "icon": "workflow",
+    "events": [
+      "streamflow.run_started",
+      "streamflow.run_finished",
+      "streamflow.run_failed",
+      "streamflow.output"
+    ],
+    "configSchema": [
+      {
+        "key": "ai_provider",
+        "type": "select",
+        "label": "AI provider",
+        "default": "openai",
+        "options": [
+          {
+            "value": "openai",
+            "label": "OpenAI"
+          },
+          {
+            "value": "deepseek",
+            "label": "DeepSeek"
+          }
+        ],
+        "help": "OpenAI-compatible /v1/chat/completions provider used by action.ai boxes."
+      },
+      {
+        "key": "ai_api_key",
+        "type": "secret",
+        "label": "AI API key",
+        "default": "",
+        "help": "API key for the selected provider. Stored as a secret, never returned in clear. Falls back to the SecretsStore ref of the same name."
+      },
+      {
+        "key": "ai_model",
+        "type": "string",
+        "label": "AI model",
+        "default": "gpt-4o-mini",
+        "help": "Model id, e.g. gpt-4o-mini (OpenAI) or deepseek-chat (DeepSeek)."
+      },
+      {
+        "key": "ai_budget_monthly_usd",
+        "type": "number",
+        "label": "Monthly AI budget (USD)",
+        "default": 20,
+        "min": 0,
+        "max": 100000,
+        "help": "Hard cap on estimated AI spend per calendar month for this app. When reached, action.ai boxes fail closed until the next month."
+      },
+      {
+        "key": "max_runs_per_min",
+        "type": "number",
+        "label": "Max runs / minute",
+        "default": 60,
+        "min": 1,
+        "max": 100000,
+        "help": "Per-app rate limit so a hot event cannot flood the engine. Extra triggers within the window are dropped (logged)."
+      },
+      {
+        "key": "dangerousNodes",
+        "type": "boolean",
+        "label": "Enable execution nodes (code / ssh / shell / db)",
+        "default": false,
+        "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators."
+      }
+    ]
+  },
+  {
+    "id": "streaming",
+    "name": "Video Streaming",
+    "description": "Go live with your webcam + mic and forward the composed room to an RTMP destination (YouTube, Twitch, …) via server egress.",
+    "category": "tool",
+    "ui": "app-tab",
+    "version": "1.0.0",
+    "icon": "video",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room name",
+        "default": "studio",
+        "placeholder": "studio",
+        "help": "LiveKit room the webcam publishes to and the egress composes."
+      },
+      {
+        "key": "defaultRtmpUrl",
+        "type": "string",
+        "label": "Default RTMP URL",
+        "default": "",
+        "placeholder": "rtmp://a.rtmp.youtube.com/live2/<stream-key>",
+        "help": "Optional. Pre-fills the destination field (rtmp:// or rtmps://)."
+      },
+      {
+        "key": "audioOnly",
+        "type": "boolean",
+        "label": "Audio-only by default",
+        "default": false
+      }
+    ]
+  },
+  {
+    "id": "timestamp",
+    "name": "Timestamp CCTV",
+    "description": "Overlay a live CCTV-style date/time stamp (with the camera name) on the player. Configure format, corner, colour and whether to show the name.",
+    "category": "tool",
+    "ui": "player-overlay",
+    "version": "1.0.0",
+    "icon": "clock",
+    "configSchema": [
+      {
+        "key": "format",
+        "type": "select",
+        "label": "Time format",
+        "default": "datetime-24h",
+        "options": [
+          {
+            "value": "datetime-24h",
+            "label": "YYYY-MM-DD HH:mm:ss"
+          },
+          {
+            "value": "datetime-12h",
+            "label": "YYYY-MM-DD hh:mm:ss AM/PM"
+          },
+          {
+            "value": "time-24h",
+            "label": "HH:mm:ss"
+          },
+          {
+            "value": "time-12h",
+            "label": "hh:mm:ss AM/PM"
+          },
+          {
+            "value": "date-us",
+            "label": "MM/DD/YYYY HH:mm:ss"
+          }
+        ]
+      },
+      {
+        "key": "position",
+        "type": "select",
+        "label": "Position",
+        "default": "bottom-right",
+        "options": [
+          {
+            "value": "top-left",
+            "label": "Top left"
+          },
+          {
+            "value": "top-right",
+            "label": "Top right"
+          },
+          {
+            "value": "bottom-left",
+            "label": "Bottom left"
+          },
+          {
+            "value": "bottom-right",
+            "label": "Bottom right"
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "type": "string",
+        "label": "Text colour",
+        "default": "#00e5ff",
+        "placeholder": "#RRGGBB",
+        "help": "Hex colour for the overlay text (e.g. #ffffff, #00e5ff)."
+      },
+      {
+        "key": "showName",
+        "type": "boolean",
+        "label": "Show camera / stream name",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "vidstack",
+    "name": "Vidstack Player",
+    "description": "Swap the built-in video.js HLS + VOD player for an advanced, skinned Vidstack player (hls.js). Sub-second WebRTC live is unaffected.",
+    "category": "tool",
+    "ui": "player",
+    "version": "1.0.0",
+    "icon": "play",
+    "configSchema": [
+      {
+        "key": "theme",
+        "type": "select",
+        "label": "Player theme",
+        "default": "auto",
+        "options": [
+          {
+            "value": "auto",
+            "label": "Match dashboard (auto)"
+          },
+          {
+            "value": "dark",
+            "label": "Dark"
+          },
+          {
+            "value": "light",
+            "label": "Light"
+          }
+        ]
+      },
+      {
+        "key": "autoplay",
+        "type": "boolean",
+        "label": "Autoplay on load",
+        "default": true,
+        "help": "Muted autoplay to satisfy browser policies; viewers can unmute."
+      }
+    ]
+  },
+  {
+    "id": "watermark",
+    "name": "Watermark",
+    "description": "Overlay a text watermark on the player.",
+    "category": "tool",
+    "ui": "player-overlay",
+    "version": "1.0.0",
+    "icon": "stamp",
+    "configSchema": [
+      {
+        "key": "text",
+        "type": "string",
+        "label": "Watermark text",
+        "default": "StreamHub"
+      },
+      {
+        "key": "position",
+        "type": "select",
+        "label": "Position",
+        "default": "bottom-right",
+        "options": [
+          {
+            "value": "top-left",
+            "label": "Top left"
+          },
+          {
+            "value": "top-right",
+            "label": "Top right"
+          },
+          {
+            "value": "bottom-left",
+            "label": "Bottom left"
+          },
+          {
+            "value": "bottom-right",
+            "label": "Bottom right"
+          }
+        ]
+      },
+      {
+        "key": "opacity",
+        "type": "number",
+        "label": "Opacity",
+        "default": 0.6,
+        "min": 0,
+        "max": 1
+      }
+    ]
+  }
+]

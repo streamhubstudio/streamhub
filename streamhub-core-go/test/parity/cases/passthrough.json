@@ -1,0 +1,201 @@
+{
+  "module": "passthrough",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "mtx-auth-disabled",
+      "note": "no STREAMHUB_MEDIAMTX_HOOK_SECRET → routes disabled (403), public (no bearer)",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "body": {
+        "action": "publish",
+        "path": "live/ptk_x"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-auth-disabled-with-secret-header",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "headers": {
+        "X-MediaMTX-Secret": "x"
+      },
+      "body": {
+        "action": "read"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-auth-disabled-query",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth?secret=x",
+      "body": {},
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-auth-no-body",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-auth-bad-json",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "rawBody": "{nope",
+      "expectStatus": 404
+    },
+    {
+      "name": "mtx-auth-with-bearer",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "auth": "globalToken",
+      "body": {
+        "path": "a/b"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-ready-disabled",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/ready",
+      "body": {
+        "path": "live/sk"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-notready-disabled",
+      "method": "POST",
+      "path": "/api/v1/internal/mediamtx/notready",
+      "body": {
+        "path": "live/sk"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "mtx-get-not-routed",
+      "method": "GET",
+      "path": "/api/v1/internal/mediamtx/auth",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "pt-ingress-create-rtmp-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "mode": "passthrough"
+      },
+      "expectStatus": 503
+    },
+    {
+      "name": "pt-ingress-create-srt-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "srt",
+        "mode": "passthrough",
+        "room": "cam"
+      },
+      "expectStatus": 503
+    },
+    {
+      "name": "pt-ingress-create-mpegts-no-url",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pt-ingress-create-mpegts-bad-url",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough",
+        "url": "udp://@host.example:5000"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pt-ingress-create-mpegts-ssm-unicast",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough",
+        "url": "udp://@10.0.0.1:5000",
+        "sources": "10.0.0.2"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pt-ingress-create-mpegts-bad-query",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough",
+        "url": "udp://@239.1.1.1:5000?ttl=3"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pt-ingress-create-mpegts-no-port",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough",
+        "url": "udp://@239.1.1.1"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pt-ingress-create-mpegts-valid-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "passthrough",
+        "url": "udp://@239.1.1.1:5000",
+        "fifoSize": 1000
+      },
+      "expectStatus": 503
+    },
+    {
+      "name": "pt-ingress-delete-unknown-pti",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ingress/pti_abc",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "pt-ingress-delete-unknown-pti-srt",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ingress/pti_srt_abc",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

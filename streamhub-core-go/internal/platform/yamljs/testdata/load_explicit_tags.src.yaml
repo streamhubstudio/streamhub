@@ -1,0 +1,11 @@
+a: !!str 12
+b: !!int "12"
+c: !!float 1
+d: !!bool "true"
+f: !!str
+g: !!timestamp 2020-01-01
+h: !!map {x: 1}
+i: !!seq [1]
+j: !!null
+k: !!map
+l: !!str true

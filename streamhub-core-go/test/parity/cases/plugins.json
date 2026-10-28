@@ -1,0 +1,965 @@
+{
+  "module": "plugins",
+  "description": "Plugin framework: marketplace list/get (in-tree + vendored catalog), install/patch/remove + config validation, public overlays, live-data/event channels (token gate), worker hook error paths (no worker is ever spawned), logs, export guards, per-app version pin/rollback, appstore superadmin routes (multipart guards, bundle download) and the grid agent's cluster-token gate. Installs are removed at the end.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "expectStatus": 401
+    },
+    {
+      "name": "list-global",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "auth": "viewerJwt",
+      "expectStatus": 403,
+      "note": "viewer outside the platform tenant"
+    },
+    {
+      "name": "list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "list-scoped",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins?stream=nope&room=lobby",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "list-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/plugins",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "public-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/public",
+      "expectStatus": 200
+    },
+    {
+      "name": "public-missing-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/plugins/public",
+      "expectStatus": 404
+    },
+    {
+      "name": "get-cockpit",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "get-vendored-lpr",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "get-stream-health",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "get-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/nope",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "get-app-token-other-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/plugins/cockpit",
+      "auth": "appToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "install-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/watermark/install",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "install-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/nope/install",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "install-watermark",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/watermark/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "install-watermark-again",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/watermark/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "patch-not-installed",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/timestamp",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-bad-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "body": {
+        "enabled": "yes",
+        "config": [
+          1
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-unknown-key",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "nope": 1
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-bad-type",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "text": 5
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-enable",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true,
+        "config": {
+          "text": "Parity",
+          "position": "top-left"
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "install-timestamp",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/timestamp/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "patch-timestamp",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/timestamp",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "install-vidstack",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/vidstack/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "patch-vidstack",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/vidstack",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "install-cockpit",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/cockpit/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "patch-cockpit-select",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/cockpit",
+      "auth": "globalToken",
+      "body": {
+        "enabled": true,
+        "config": {
+          "gridSize": "9x9"
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-cockpit-select-ok",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/cockpit",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "gridSize": "2x2"
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "public-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/public",
+      "expectStatus": 200
+    },
+    {
+      "name": "public-scoped",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/public?room=lobby",
+      "expectStatus": 200
+    },
+    {
+      "name": "list-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "live-public-watermark",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/watermark/live?room=main",
+      "expectStatus": 200
+    },
+    {
+      "name": "live-public-not-overlay",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit/live",
+      "expectStatus": 404
+    },
+    {
+      "name": "live-public-not-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/scheduled-live/live",
+      "expectStatus": 404
+    },
+    {
+      "name": "data-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit/data?room=main",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "data-not-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/radio/data",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "live-state-not-worker",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit/live/state",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "ingest-live-no-worker",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/watermark/live",
+      "body": {
+        "room": "main"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "ingest-live-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/live",
+      "expectStatus": 401,
+      "note": "no body validates as {}: the token gate answers first"
+    },
+    {
+      "name": "ingest-event-no-worker",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/cockpit/events",
+      "body": {
+        "event": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "install-lpr",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "install-stream-health",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/stream-health/install",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "ingest-live-bad-token",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/live",
+      "body": {
+        "room": "main"
+      },
+      "expectStatus": 401,
+      "headers": {
+        "x-plugin-ingest-token": "nope"
+      }
+    },
+    {
+      "name": "ingest-event-no-token",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/events",
+      "body": {
+        "event": "plate.detected"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "live-state-disabled",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/live/state",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "worker-start-no-worker",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/cockpit/worker/start",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "worker-start-not-installed",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/deface/worker/start",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "worker-start-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/worker/start",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "worker-stop-idle",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/worker/stop",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "worker-status",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/worker/status",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "worker-status-no-worker",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit/worker/status",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "get-lpr-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-lpr-config",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/lpr",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "confidence": "0.6",
+          "fps": 2
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-lpr-out-of-range",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/plugins/lpr",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "confidence": 7
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-watermark",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/watermark/logs",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.persisted.*.id"
+      ]
+    },
+    {
+      "name": "logs-lpr-limit",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/logs?limit=2",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.persisted.*.id"
+      ]
+    },
+    {
+      "name": "logs-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/nope/logs",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "export-not-exportable",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/cockpit/export",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "export-not-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/deface/export",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "export-viewer-denied",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/export",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "export-lpr",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/export",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "compare": "status",
+      "compareHeaders": [
+        "content-type",
+        "content-disposition"
+      ],
+      "note": "tar bytes locked by Go tests (gzip framing differs)"
+    },
+    {
+      "name": "versions-lpr",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "capture": {
+        "lprBuiltin": "data.available.builtinVersion",
+        "lprBundleSha": "data.available.versions.0.sha256"
+      },
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ],
+      "note": "gzip bytes are irreproducible across runtimes (planning/GO-DIVERGENCES.md: plugins export): the size is masked and the sha256 is pinned by consistency — captured here, every later occurrence must equal it"
+    },
+    {
+      "name": "versions-not-installed",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/deface/versions",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "capture": {
+        "defaceBundleSha": "data.available.versions.0.sha256"
+      },
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ],
+      "note": "gzip bytes are irreproducible across runtimes (planning/GO-DIVERGENCES.md: plugins export): the size is masked and the sha256 is pinned by consistency — captured here, every later occurrence must equal it"
+    },
+    {
+      "name": "pin-missing-version",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/lpr/version",
+      "auth": "globalToken",
+      "body": {
+        "version": "9.9.9"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "pin-bad-body",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/lpr/version",
+      "auth": "globalToken",
+      "body": {
+        "version": 5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "pin-not-installed",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/deface/version",
+      "auth": "globalToken",
+      "body": {
+        "version": null
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "rollback-no-history",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/version/rollback",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "pin-builtin",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/lpr/version",
+      "auth": "globalToken",
+      "body": {
+        "version": "{{lprBuiltin}}"
+      },
+      "expectStatus": 200,
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "pin-builtin-again",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/lpr/version",
+      "auth": "globalToken",
+      "body": {
+        "version": "{{lprBuiltin}}"
+      },
+      "expectStatus": 200,
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "rollback",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/version/rollback",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "rollback-again",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/lpr/version/rollback",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "unpin",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/lpr/version",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200,
+      "mask": [
+        "data.available.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "store-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions",
+      "expectStatus": 401
+    },
+    {
+      "name": "store-list-owner",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "store-list",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.versions.*.bundleBytes"
+      ]
+    },
+    {
+      "name": "store-list-unknown",
+      "method": "GET",
+      "path": "/api/v1/plugins/nope/versions",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "store-upload-no-version",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"notes\"\r\n\r\nx\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-no-auth",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "expectStatus": 401,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0.0\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-no-file",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0.0\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-not-gzip",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0.0\r\n------parityBoundary\r\nContent-Disposition: form-data; name=\"bundle\"; filename=\"b.tar.gz\"\r\nContent-Type: application/gzip\r\n\r\nhello\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-bad-version",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\nv1\r\n------parityBoundary\r\nContent-Disposition: form-data; name=\"bundle\"; filename=\"b.tar.gz\"\r\nContent-Type: application/gzip\r\n\r\nhello\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-builtin-reserved",
+      "method": "POST",
+      "path": "/api/v1/plugins/lpr/versions",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\nbuiltin-1\r\n------parityBoundary\r\nContent-Disposition: form-data; name=\"bundle\"; filename=\"b.tar.gz\"\r\nContent-Type: application/gzip\r\n\r\nhello\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-not-versionable",
+      "method": "POST",
+      "path": "/api/v1/plugins/cockpit/versions",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0.0\r\n------parityBoundary\r\nContent-Disposition: form-data; name=\"bundle\"; filename=\"b.tar.gz\"\r\nContent-Type: application/gzip\r\n\r\nhello\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-upload-unknown",
+      "method": "POST",
+      "path": "/api/v1/plugins/nope/versions",
+      "auth": "globalToken",
+      "expectStatus": 404,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0.0\r\n------parityBoundary\r\nContent-Disposition: form-data; name=\"bundle\"; filename=\"b.tar.gz\"\r\nContent-Type: application/gzip\r\n\r\nhello\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "store-bundle-no-auth",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions/{{lprBuiltin}}/bundle",
+      "expectStatus": 401
+    },
+    {
+      "name": "store-bundle-cluster-disabled",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions/{{lprBuiltin}}/bundle",
+      "expectStatus": 503,
+      "headers": {
+        "x-cluster-token": "x"
+      }
+    },
+    {
+      "name": "store-bundle",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions/{{lprBuiltin}}/bundle",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "compare": "status",
+      "compareHeaders": [
+        "content-type",
+        "content-disposition",
+        "x-bundle-sha256",
+        "content-length"
+      ],
+      "maskHeaders": [
+        "content-length"
+      ],
+      "note": "x-bundle-sha256 must equal the sha256 the version listing advertised ({{lprBundleSha}}); content-length is gzip-framing dependent"
+    },
+    {
+      "name": "store-bundle-missing",
+      "method": "GET",
+      "path": "/api/v1/plugins/lpr/versions/9.9.9/bundle",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "store-delete-builtin",
+      "method": "DELETE",
+      "path": "/api/v1/plugins/lpr/versions/{{lprBuiltin}}",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "store-delete-missing",
+      "method": "DELETE",
+      "path": "/api/v1/plugins/lpr/versions/9.9.9",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "store-delete-unknown-plugin",
+      "method": "DELETE",
+      "path": "/api/v1/plugins/nope/versions/1.0.0",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "store-delete-owner",
+      "method": "DELETE",
+      "path": "/api/v1/plugins/lpr/versions/9.9.9",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "grid-create-invalid",
+      "method": "POST",
+      "path": "/api/v1/grid/workers",
+      "body": {
+        "pluginId": "",
+        "command": 5,
+        "args": "x",
+        "env": [
+          1
+        ],
+        "ingestToken": 3
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "grid-create-empty",
+      "method": "POST",
+      "path": "/api/v1/grid/workers",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "grid-create-no-body",
+      "method": "POST",
+      "path": "/api/v1/grid/workers",
+      "expectStatus": 400
+    },
+    {
+      "name": "grid-create-disabled",
+      "method": "POST",
+      "path": "/api/v1/grid/workers",
+      "body": {
+        "pluginId": "lpr",
+        "appName": "live",
+        "command": "python3",
+        "args": [
+          "-m",
+          "x"
+        ],
+        "env": {
+          "A": "1"
+        }
+      },
+      "expectStatus": 503
+    },
+    {
+      "name": "grid-status-disabled",
+      "method": "GET",
+      "path": "/api/v1/grid/workers/abc/status",
+      "expectStatus": 503
+    },
+    {
+      "name": "grid-stop-disabled",
+      "method": "POST",
+      "path": "/api/v1/grid/workers/abc/stop",
+      "expectStatus": 503
+    },
+    {
+      "name": "grid-logs-disabled",
+      "method": "GET",
+      "path": "/api/v1/grid/workers/abc/logs?limit=5",
+      "expectStatus": 503
+    },
+    {
+      "name": "remove-watermark",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/watermark",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-timestamp",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/timestamp",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-vidstack",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/vidstack",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-cockpit",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/cockpit",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-lpr",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/lpr",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-stream-health",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/stream-health",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-not-installed",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/radio",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "remove-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/nope",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "list-final",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

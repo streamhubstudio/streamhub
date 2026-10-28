@@ -1,0 +1,1214 @@
+[
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":null}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"\"}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"a\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"ab\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":null}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"\"}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"a\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"ab\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 1 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 1 and shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": []
+ },
+ {
+  "min": 1,
+  "max": 64,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 64 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":null}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"a\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"ab\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":null}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"a\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"ab\"}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 3 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": [
+   "v must be longer than or equal to 3 and shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 3,
+  "max": 10,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 10 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":null}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"a\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"ab\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": false,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":null}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"a\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"ab\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"abc\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghij\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"abcdefghijk\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":0}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":5}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":true}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":false}",
+  "messages": [
+   "v must be longer than or equal to 0 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":[]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":[\"a\"]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":[\"a\",\"b\",\"c\",\"d\"]}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":[\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\",\"z\"]}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":{}}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":{\"length\":3}}",
+  "messages": [
+   "v must be longer than or equal to 0 and shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"😀😀\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"a️b\"}",
+  "messages": []
+ },
+ {
+  "min": 0,
+  "max": 5,
+  "optional": true,
+  "body": "{\"v\":\"😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀\"}",
+  "messages": [
+   "v must be shorter than or equal to 5 characters"
+  ]
+ }
+]

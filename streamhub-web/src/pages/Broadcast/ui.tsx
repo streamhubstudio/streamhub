@@ -52,13 +52,13 @@ export function PhaseBadge({ phase }: { phase: Phase }) {
   }
   if (phase === 'stopping') {
     return (
-      <span className="rounded-full bg-gray-200 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+      <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide bg-gray-700 text-gray-200">
         {t('phase.stopping')}
       </span>
     )
   }
   return (
-    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-700/70 dark:text-gray-400">
+    <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide bg-gray-700/70 text-gray-400">
       {t('phase.idle')}
     </span>
   )
@@ -69,10 +69,10 @@ export function EgressStatus({ status }: { status: string }) {
   const ok = /ACTIVE|STARTING|EGRESS_ACTIVE/i.test(status)
   const bad = /FAILED|ABORTED/i.test(status)
   const tone = bad
-    ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-200'
+    ? 'bg-red-500/20 text-red-200'
     : ok
-      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-200'
-      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+      ? 'bg-emerald-500/20 text-emerald-200'
+      : 'bg-gray-700 text-gray-300'
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[11px] font-semibold ${tone}`}
@@ -94,12 +94,12 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold text-gray-700 dark:text-gray-100">
+      <span className="block text-sm font-semibold text-gray-100">
         {label}
       </span>
       <div className="mt-1.5">{children}</div>
       {hint && (
-        <p className="mt-1 text-xs leading-snug text-gray-500 dark:text-gray-400">{hint}</p>
+        <p className="mt-1 text-xs leading-snug text-gray-400">{hint}</p>
       )}
     </label>
   )
@@ -107,7 +107,7 @@ export function Field({
 
 // Elstar `.input` look, brand-focused + a solid surface so it reads on cards.
 const fieldClass =
-  'input text-sm bg-white dark:bg-gray-700 focus:ring-primary-500 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50'
+  'input text-sm bg-gray-700 focus:ring-primary-500 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50'
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={fieldClass} />

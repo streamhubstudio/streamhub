@@ -1,0 +1,1523 @@
+{
+  "module": "tags",
+  "cases": [
+    {
+      "name": "tag-login-editor",
+      "fingerprint": "sha256:4a21f24b2aeb2501",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{editorEmail}}",
+          "password": "{{editorPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{tagEditorJwt}}"
+        }
+      }
+    },
+    {
+      "name": "tag-login-viewer",
+      "fingerprint": "sha256:e8b59c95d2103fbb",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{tagViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "tags-list-empty",
+      "fingerprint": "sha256:f69db35562ade481",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "tags-create-ordered-config",
+      "fingerprint": "sha256:49c49bb3d75e2507",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{\"slug\":\"store-a\",\"label\":\"  Store A  \",\"kind\":\"store\",\"config_json\":{\"b\":1,\"2\":\"x\",\"10\":true,\"a\":{\"z\":1.50,\"y\":[1e2,-0.0,\"<&>\"]},\"b\":2},\"extra\":1}"
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {
+            "10": true,
+            "2": "x",
+            "a": {
+              "y": [
+                100,
+                0,
+                "<&>"
+              ],
+              "z": 1.5
+            },
+            "b": 2
+          },
+          "createdAt": "<sql-ts>",
+          "kind": "store",
+          "label": "Store A",
+          "slug": "store-a",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-create-defaults",
+      "fingerprint": "sha256:298395a04d0263dd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "zone-1",
+          "label": "Zone"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-create-empty-kind",
+      "fingerprint": "sha256:436c6b3f3d8ee73b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "zone-2",
+          "label": "Zone 2",
+          "kind": "   "
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone 2",
+          "slug": "zone-2",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-create-duplicate",
+      "fingerprint": "sha256:caecf3232595b310",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "store-a",
+          "label": "Again"
+        }
+      },
+      "status": 409,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Conflict",
+        "message": "tag 'store-a' already exists",
+        "statusCode": 409
+      }
+    },
+    {
+      "name": "tags-create-no-body",
+      "fingerprint": "sha256:7498d798ddd5a24f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)",
+          "slug must be shorter than or equal to 64 characters",
+          "slug must be longer than or equal to 1 characters",
+          "slug must be a string",
+          "label must be shorter than or equal to 200 characters",
+          "label must be longer than or equal to 1 characters",
+          "label must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-create-bad-slug",
+      "fingerprint": "sha256:f432fe43b550982e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "Bad Slug",
+          "label": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-create-long",
+      "fingerprint": "sha256:b726ecda6dcb8cec",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "label": "lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll",
+          "kind": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be shorter than or equal to 64 characters",
+          "label must be shorter than or equal to 200 characters",
+          "kind must be shorter than or equal to 64 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-create-bad-types",
+      "fingerprint": "sha256:462f552df1309178",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": 5,
+          "label": true,
+          "kind": 3,
+          "config_json": [
+            1
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)",
+          "slug must be shorter than or equal to 64 characters",
+          "slug must be longer than or equal to 1 characters",
+          "slug must be a string",
+          "label must be shorter than or equal to 200 characters",
+          "label must be longer than or equal to 1 characters",
+          "label must be a string",
+          "kind must be shorter than or equal to 64 characters",
+          "kind must be a string",
+          "config_json must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-create-config-null",
+      "fingerprint": "sha256:465487d23ace187d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "zone-3",
+          "label": "Z3",
+          "config_json": null
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Z3",
+          "slug": "zone-3",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-create-blank-label",
+      "fingerprint": "sha256:fe801a311572a935",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "zone-4",
+          "label": "   "
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "label is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-create-slug-trailing-space",
+      "fingerprint": "sha256:a5a1bddf4f560541",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "zone-5 ",
+          "label": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-list-all",
+      "fingerprint": "sha256:f69db35562ade481",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Z3",
+            "slug": "zone-3",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone 2",
+            "slug": "zone-2",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone",
+            "slug": "zone-1",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {
+              "10": true,
+              "2": "x",
+              "a": {
+                "y": [
+                  100,
+                  0,
+                  "<&>"
+                ],
+                "z": 1.5
+              },
+              "b": 2
+            },
+            "createdAt": "<sql-ts>",
+            "kind": "store",
+            "label": "Store A",
+            "slug": "store-a",
+            "updatedAt": "<sql-ts>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tags-list-kind",
+      "fingerprint": "sha256:ce04f959696b206d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags?kind=store",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "config_json": {
+              "10": true,
+              "2": "x",
+              "a": {
+                "y": [
+                  100,
+                  0,
+                  "<&>"
+                ],
+                "z": 1.5
+              },
+              "b": 2
+            },
+            "createdAt": "<sql-ts>",
+            "kind": "store",
+            "label": "Store A",
+            "slug": "store-a",
+            "updatedAt": "<sql-ts>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tags-list-kind-blank",
+      "fingerprint": "sha256:2eea233067f47e1f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags?kind=%20%20",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Z3",
+            "slug": "zone-3",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone 2",
+            "slug": "zone-2",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone",
+            "slug": "zone-1",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {
+              "10": true,
+              "2": "x",
+              "a": {
+                "y": [
+                  100,
+                  0,
+                  "<&>"
+                ],
+                "z": 1.5
+              },
+              "b": 2
+            },
+            "createdAt": "<sql-ts>",
+            "kind": "store",
+            "label": "Store A",
+            "slug": "store-a",
+            "updatedAt": "<sql-ts>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tags-list-kind-none",
+      "fingerprint": "sha256:ee7dd28205f4db6e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags?kind=nothing",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "tags-get",
+      "fingerprint": "sha256:42113760f9acc738",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags/store-a",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {
+            "10": true,
+            "2": "x",
+            "a": {
+              "y": [
+                100,
+                0,
+                "<&>"
+              ],
+              "z": 1.5
+            },
+            "b": 2
+          },
+          "createdAt": "<sql-ts>",
+          "kind": "store",
+          "label": "Store A",
+          "slug": "store-a",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-get-missing",
+      "fingerprint": "sha256:e44d4e481f16d198",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags/nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "tag 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-update-label",
+      "fingerprint": "sha256:f3f30581d5e92d1d",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "body": {
+          "label": " Zone One "
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone One",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-update-kind-blank",
+      "fingerprint": "sha256:bd94a84c14c8843d",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "body": {
+          "kind": "  "
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone One",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-update-config",
+      "fingerprint": "sha256:6dad903d0d09a998",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "rawBody": "{\"config_json\":{\"z\":1,\"1\":2,\"nested\":{\"k\":[{\"a\":1}]}}}"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {
+            "1": 2,
+            "nested": {
+              "k": [
+                {
+                  "a": 1
+                }
+              ]
+            },
+            "z": 1
+          },
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone One",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-update-empty",
+      "fingerprint": "sha256:669b98bd30ab9524",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {
+            "1": 2,
+            "nested": {
+              "k": [
+                {
+                  "a": 1
+                }
+              ]
+            },
+            "z": 1
+          },
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone One",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-update-blank-label",
+      "fingerprint": "sha256:d1e1a65df96d0154",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "body": {
+          "label": "   "
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "label cannot be empty",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-update-bad-types",
+      "fingerprint": "sha256:bb7f095954f45453",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken",
+        "body": {
+          "label": "",
+          "kind": 5,
+          "config_json": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "label must be longer than or equal to 1 characters",
+          "kind must be shorter than or equal to 64 characters",
+          "kind must be a string",
+          "config_json must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-update-missing",
+      "fingerprint": "sha256:5cd5819b6dded07e",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/nope",
+        "auth": "globalToken",
+        "body": {
+          "label": "x"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "tag 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-update-no-body",
+      "fingerprint": "sha256:2e88037f331ea601",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {
+            "1": 2,
+            "nested": {
+              "k": [
+                {
+                  "a": 1
+                }
+              ]
+            },
+            "z": 1
+          },
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Zone One",
+          "slug": "zone-1",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "tags-room-apply-no-rows",
+      "fingerprint": "sha256:9fddbd202ffe7ab9",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken",
+        "body": {
+          "tags": [
+            " store-a",
+            "zone-1",
+            "store-a",
+            ""
+          ]
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "room": "lobby",
+          "tags": [
+            "store-a",
+            "zone-1"
+          ],
+          "updated": 0
+        }
+      }
+    },
+    {
+      "name": "tags-room-apply-unknown",
+      "fingerprint": "sha256:f7c70c9f2137d6e5",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken",
+        "body": {
+          "tags": [
+            "store-a",
+            "ghost-1",
+            "ghost-2"
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unknown tag slug(s): ghost-1, ghost-2",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-room-apply-dupes",
+      "fingerprint": "sha256:f90a9f3fcf9dbdc5",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken",
+        "body": {
+          "tags": [
+            "a",
+            "a"
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All tags's elements must be unique"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-room-apply-not-array",
+      "fingerprint": "sha256:31212cc7adb6b01d",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken",
+        "body": {
+          "tags": "store-a"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All tags's elements must be unique",
+          "tags must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-room-apply-no-body",
+      "fingerprint": "sha256:93e27979ced93c43",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All tags's elements must be unique",
+          "each value in tags must be a string",
+          "tags must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-room-apply-empty",
+      "fingerprint": "sha256:aee69a8c11f12d2a",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room/lobby",
+        "auth": "globalToken",
+        "body": {
+          "tags": []
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "room": "lobby",
+          "tags": [],
+          "updated": 0
+        }
+      }
+    },
+    {
+      "name": "tags-patch-slug-room",
+      "fingerprint": "sha256:d0d79b7fa43bb649",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/room",
+        "auth": "globalToken",
+        "body": {
+          "label": "x"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "tag 'room' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-stream-get-missing",
+      "fingerprint": "sha256:5edceb2845609465",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/nope/tags",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-stream-set-missing",
+      "fingerprint": "sha256:c3ecc23be9169dcb",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/tags",
+        "auth": "globalToken",
+        "body": {
+          "tags": [
+            "store-a"
+          ]
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-stream-set-unknown-first",
+      "fingerprint": "sha256:7a5bdf8949000fe9",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/tags",
+        "auth": "globalToken",
+        "body": {
+          "tags": [
+            "ghost"
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unknown tag slug(s): ghost",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-stream-set-no-body",
+      "fingerprint": "sha256:abb09818a326838c",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/tags",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All tags's elements must be unique",
+          "each value in tags must be a string",
+          "tags must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tags-viewer-list-other-tenant",
+      "fingerprint": "sha256:7e0f71f2ea6dbab4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "tagViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tags-editor-create-other-tenant",
+      "fingerprint": "sha256:643fafcfce519419",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "tagEditorJwt",
+        "body": {
+          "slug": "x",
+          "label": "x"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tags-viewer-stream-tags",
+      "fingerprint": "sha256:da164bd25c1c1b38",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/tags",
+        "auth": "tagViewerJwt",
+        "body": {
+          "tags": []
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks stream:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tags-app-token-list",
+      "fingerprint": "sha256:45cfaa4d436a709f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Z3",
+            "slug": "zone-3",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {},
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone 2",
+            "slug": "zone-2",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {
+              "1": 2,
+              "nested": {
+                "k": [
+                  {
+                    "a": 1
+                  }
+                ]
+              },
+              "z": 1
+            },
+            "createdAt": "<sql-ts>",
+            "kind": "custom",
+            "label": "Zone One",
+            "slug": "zone-1",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "config_json": {
+              "10": true,
+              "2": "x",
+              "a": {
+                "y": [
+                  100,
+                  0,
+                  "<&>"
+                ],
+                "z": 1.5
+              },
+              "b": 2
+            },
+            "createdAt": "<sql-ts>",
+            "kind": "store",
+            "label": "Store A",
+            "slug": "store-a",
+            "updatedAt": "<sql-ts>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tags-no-auth",
+      "fingerprint": "sha256:2b4a30f4e6113239",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "tags-ghost-list",
+      "fingerprint": "sha256:7bc6c57c63c49a26",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/tags",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-create",
+      "fingerprint": "sha256:caa7bc8c898b964c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost/tags",
+        "auth": "globalToken",
+        "body": {
+          "slug": "a",
+          "label": "b"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-get",
+      "fingerprint": "sha256:7b8c7ada31cebcf9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/tags/a",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-update",
+      "fingerprint": "sha256:89f01262af57d3f9",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/ghost/tags/a",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-delete",
+      "fingerprint": "sha256:837abc775afb1b42",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/ghost/tags/a",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-room",
+      "fingerprint": "sha256:3018b981b2b765ca",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/ghost/tags/room/r",
+        "auth": "globalToken",
+        "body": {
+          "tags": []
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-stream-get",
+      "fingerprint": "sha256:30acd3c6ed876a48",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams/s/tags",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-ghost-stream-set",
+      "fingerprint": "sha256:7f616685f2dbb233",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/ghost/streams/s/tags",
+        "auth": "globalToken",
+        "body": {
+          "tags": []
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-delete",
+      "fingerprint": "sha256:a9b3d46457976e85",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/store-a",
+        "auth": "globalToken"
+      },
+      "status": 204,
+      "headers": {
+        "content-type": null
+      }
+    },
+    {
+      "name": "tags-delete-again",
+      "fingerprint": "sha256:2e88074d7e43f4c6",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/store-a",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "tag 'store-a' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tags-delete-rest-1",
+      "fingerprint": "sha256:939880c446a14e37",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/zone-1",
+        "auth": "globalToken"
+      },
+      "status": 204,
+      "headers": {
+        "content-type": null
+      }
+    },
+    {
+      "name": "tags-delete-rest-2",
+      "fingerprint": "sha256:a06f1d6af7c594e9",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/zone-2",
+        "auth": "globalToken"
+      },
+      "status": 204,
+      "headers": {
+        "content-type": null
+      }
+    },
+    {
+      "name": "tags-delete-rest-3",
+      "fingerprint": "sha256:6812e42ffb99ba58",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/zone-3",
+        "auth": "globalToken"
+      },
+      "status": 204,
+      "headers": {
+        "content-type": null
+      }
+    },
+    {
+      "name": "tags-list-after-delete",
+      "fingerprint": "sha256:f69db35562ade481",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    }
+  ]
+}

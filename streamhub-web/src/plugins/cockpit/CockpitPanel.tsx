@@ -148,11 +148,11 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
   const streamsError = streamsQuery.isError ? streamsQuery.error : null
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-xl border p-4 shadow-sm border-gray-700 bg-gray-800">
       {/* Controls */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {appNames.length > 1 && (
-          <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <label className="flex items-center gap-1.5 text-xs text-gray-400">
             <span className="max-sm:sr-only">{t('controls.app')}</span>
             <Select
               value={app}
@@ -168,7 +168,7 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
           </label>
         )}
 
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <label className="flex items-center gap-1.5 text-xs text-gray-400">
           <span className="max-sm:sr-only">{t('controls.grid')}</span>
           <Select
             value={settings.gridSize}
@@ -184,7 +184,7 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
           </Select>
         </label>
 
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <label className="flex items-center gap-1.5 text-xs text-gray-400">
           <Toggle
             checked={settings.autoPlay}
             onChange={(v) => updateSettings({ autoPlay: v })}
@@ -192,7 +192,7 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
           {t('controls.autoPlay')}
         </label>
 
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <label className="flex items-center gap-1.5 text-xs text-gray-400">
           <Toggle
             checked={settings.showLabels}
             onChange={(v) => updateSettings({ showLabels: v })}
@@ -265,7 +265,7 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
               >
                 {t('pager.prev')}
               </Button>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-gray-400">
                 {t('pager.status', { page: safePage + 1, total })}
               </span>
               <Button
@@ -285,9 +285,9 @@ export function CockpitPanel({ ctx }: PluginComponentProps) {
 
 function Empty({ label, hint }: { label: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-5 py-14 text-center dark:border-gray-700 dark:bg-gray-900/40">
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      {hint && <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
+    <div className="rounded-lg border border-dashed px-5 py-14 text-center border-gray-700 bg-gray-900/40">
+      <p className="text-sm text-gray-400">{label}</p>
+      {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   )
 }

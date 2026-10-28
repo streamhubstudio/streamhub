@@ -25,10 +25,10 @@ export function PassthroughLostWarning({
       role="note"
       className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3"
     >
-      <div className="text-sm font-semibold text-amber-700 dark:text-amber-200">
+      <div className="text-sm font-semibold text-amber-200">
         {title}
       </div>
-      <ul className="list-disc space-y-1 pl-5 text-[11px] text-amber-700 dark:text-amber-200/90">
+      <ul className="list-disc space-y-1 pl-5 text-[11px] text-amber-200/90">
         {items.map((line, i) => (
           <li key={i}>{line}</li>
         ))}

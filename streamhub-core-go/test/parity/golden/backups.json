@@ -1,0 +1,509 @@
+{
+  "module": "backups",
+  "cases": [
+    {
+      "name": "backups-list-empty",
+      "fingerprint": "sha256:bf9bf85e543e81e3",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "backupDir": "{{dataDir}}/backups",
+          "databases": [
+            {
+              "db": "streamhub",
+              "dbPath": "{{dataDir}}/data/streamhub.db",
+              "kind": "global",
+              "orphaned": false,
+              "snapshots": []
+            },
+            {
+              "app": "live",
+              "db": "app-live",
+              "dbPath": "{{dataDir}}/apps/live/app.db",
+              "kind": "app",
+              "orphaned": false,
+              "snapshots": []
+            }
+          ],
+          "enabled": false,
+          "retentionDays": 7,
+          "schedule": "30 3 * * *"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "backups-list-app-token",
+      "fingerprint": "sha256:42bac91b47f8af41",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/backups",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "backups-list-viewer",
+      "fingerprint": "sha256:3eb91118d43569c8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/backups",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "backups-run-app-token",
+      "fingerprint": "sha256:84e271c882022e2a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "backups-run",
+      "fingerprint": "sha256:e6b30c94de1ae56c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "errors": [],
+          "prunedCount": 0,
+          "ranAt": "<iso-ts>",
+          "reason": "manual",
+          "snapshots": [
+            {
+              "createdAt": "<iso-ts>",
+              "db": "streamhub",
+              "file": "<masked>",
+              "preRestore": false,
+              "sizeBytes": "<masked>"
+            },
+            {
+              "createdAt": "<iso-ts>",
+              "db": "app-live",
+              "file": "<masked>",
+              "preRestore": false,
+              "sizeBytes": "<masked>"
+            }
+          ]
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "backups-list-after",
+      "fingerprint": "sha256:9d335abfb808663d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "backupDir": "{{dataDir}}/backups",
+          "databases": [
+            {
+              "db": "streamhub",
+              "dbPath": "{{dataDir}}/data/streamhub.db",
+              "kind": "global",
+              "orphaned": false,
+              "snapshots": [
+                {
+                  "createdAt": "<iso-ts>",
+                  "db": "streamhub",
+                  "file": "<masked>",
+                  "preRestore": false,
+                  "sizeBytes": "<masked>"
+                }
+              ]
+            },
+            {
+              "app": "live",
+              "db": "app-live",
+              "dbPath": "{{dataDir}}/apps/live/app.db",
+              "kind": "app",
+              "orphaned": false,
+              "snapshots": [
+                {
+                  "createdAt": "<iso-ts>",
+                  "db": "app-live",
+                  "file": "<masked>",
+                  "preRestore": false,
+                  "sizeBytes": "<masked>"
+                }
+              ]
+            }
+          ],
+          "enabled": false,
+          "retentionDays": 7,
+          "schedule": "30 3 * * *"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "restore-empty",
+      "fingerprint": "sha256:534972c3cc0a8472",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "db must be a database id (streamhub | app-<name>)",
+          "db must be a string",
+          "snapshot must be a string",
+          "confirm must be true to authorize a restore",
+          "confirm must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "restore-bad-types",
+      "fingerprint": "sha256:efaa749dab0be617",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "../etc",
+          "snapshot": 5,
+          "confirm": "yes"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "db must be a database id (streamhub | app-<name>)",
+          "snapshot must be a string",
+          "confirm must be true to authorize a restore",
+          "confirm must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "restore-no-confirm",
+      "fingerprint": "sha256:d85a6435a6e1ee5b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "app-live",
+          "snapshot": "x.db.gz",
+          "confirm": false
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "confirm must be true to authorize a restore"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "restore-validation-before-scope",
+      "fingerprint": "sha256:5184348c361a0937",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "appToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "db must be a database id (streamhub | app-<name>)",
+          "db must be a string",
+          "snapshot must be a string",
+          "confirm must be true to authorize a restore",
+          "confirm must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "restore-app-token",
+      "fingerprint": "sha256:f75d2f2726dc4cf6",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "appToken",
+        "body": {
+          "db": "app-live",
+          "snapshot": "{{snapLive}}",
+          "confirm": true
+        }
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "restore-unknown-db",
+      "fingerprint": "sha256:bf33bd24fe1ce2dc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "app-ghost",
+          "snapshot": "2026-01-01T00-00-00-000Z.db.gz",
+          "confirm": true
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown database 'app-ghost' — restore only targets the global registry ('streamhub') or a registered app ('app-<name>')",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "restore-bad-name",
+      "fingerprint": "sha256:32a558367bf29fcc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "app-live",
+          "snapshot": "../../streamhub.db",
+          "confirm": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "invalid snapshot name '../../streamhub.db'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "restore-missing-snapshot",
+      "fingerprint": "sha256:0c61eb456112b85b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "app-live",
+          "snapshot": "2001-01-01T00-00-00-000Z.db.gz",
+          "confirm": true
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "snapshot '2001-01-01T00-00-00-000Z.db.gz' not found for 'app-live'",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "restore-app-live",
+      "fingerprint": "sha256:13a15f1b60044da0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/backups/restore",
+        "auth": "globalToken",
+        "body": {
+          "db": "app-live",
+          "snapshot": "{{snapLive}}",
+          "confirm": true
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "db": "app-live",
+          "integrity": "ok",
+          "preRestoreSnapshot": "<masked>",
+          "restartRecommended": false,
+          "restored": true,
+          "snapshot": "{{snapLive}}"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "backups-list-final",
+      "fingerprint": "sha256:9d335abfb808663d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/backups",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "backupDir": "{{dataDir}}/backups",
+          "databases": [
+            {
+              "db": "streamhub",
+              "dbPath": "{{dataDir}}/data/streamhub.db",
+              "kind": "global",
+              "orphaned": false,
+              "snapshots": [
+                {
+                  "createdAt": "<iso-ts>",
+                  "db": "streamhub",
+                  "file": "<masked>",
+                  "preRestore": false,
+                  "sizeBytes": "<masked>"
+                }
+              ]
+            },
+            {
+              "app": "live",
+              "db": "app-live",
+              "dbPath": "{{dataDir}}/apps/live/app.db",
+              "kind": "app",
+              "orphaned": false,
+              "snapshots": [
+                {
+                  "createdAt": "<iso-ts>",
+                  "db": "app-live",
+                  "file": "<masked>",
+                  "preRestore": true,
+                  "sizeBytes": "<masked>"
+                },
+                {
+                  "createdAt": "<iso-ts>",
+                  "db": "app-live",
+                  "file": "<masked>",
+                  "preRestore": false,
+                  "sizeBytes": "<masked>"
+                }
+              ]
+            }
+          ],
+          "enabled": false,
+          "retentionDays": 7,
+          "schedule": "30 3 * * *"
+        },
+        "error": null
+      }
+    }
+  ]
+}

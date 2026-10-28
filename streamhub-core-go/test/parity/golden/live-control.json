@@ -1,0 +1,767 @@
+{
+  "module": "live-control",
+  "cases": [
+    {
+      "name": "lc-public-anon",
+      "fingerprint": "sha256:0435c7286967a28f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/public"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": null,
+          "room": null,
+          "since": null,
+          "state": "live",
+          "streamId": ""
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-public-room",
+      "fingerprint": "sha256:315f10078d82f7a2",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/public?room=lobby"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": null,
+          "room": "lobby",
+          "since": null,
+          "state": "live",
+          "streamId": ""
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-public-stream",
+      "fingerprint": "sha256:bb756cf51b518cee",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/public?stream=s-parity"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": null,
+          "room": null,
+          "since": null,
+          "state": "live",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-streams-no-auth",
+      "fingerprint": "sha256:873c3e8dec8b0ea1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/streams"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "lc-streams",
+      "fingerprint": "sha256:5268b1eb501bf505",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/streams",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "generatedAt": "<masked>",
+          "streams": []
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-streams-viewer",
+      "fingerprint": "sha256:0e63220d8734dcf6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/streams",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "lc-stream-unknown",
+      "fingerprint": "sha256:291a10d3c02dbf5e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": null,
+          "room": null,
+          "since": null,
+          "state": "live",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-pause-bad-mode",
+      "fingerprint": "sha256:654b1660294ba6a8",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+        "auth": "globalToken",
+        "body": {
+          "mode": "gif"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "mode must be one of the following values: image, video, text"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-pause-bad-types",
+      "fingerprint": "sha256:7e6d6047588ef753",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+        "auth": "globalToken",
+        "body": {
+          "assetId": "1",
+          "cardTitle": 5,
+          "cardColor": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "assetId must be an integer number",
+          "cardTitle must be shorter than or equal to 200 characters",
+          "cardTitle must be a string",
+          "cardColor must be shorter than or equal to 32 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-pause-missing-asset",
+      "fingerprint": "sha256:602ba02244a88ba0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+        "auth": "globalToken",
+        "body": {
+          "assetId": 999
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "asset '999' not found",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-pause",
+      "fingerprint": "sha256:c87524f21c7810eb",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+        "auth": "globalToken",
+        "body": {
+          "mode": "text",
+          "cardTitle": "Brb",
+          "cardColor": "#112233"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#112233",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "Brb",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "paused",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-pause-again",
+      "fingerprint": "sha256:091c2c357f9d5e7c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+        "auth": "globalToken",
+        "body": {
+          "mode": "image"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#112233",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "Brb",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "paused",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-stream-paused",
+      "fingerprint": "sha256:d709748acdcb95ee",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#112233",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "Brb",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "paused",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-public-paused",
+      "fingerprint": "sha256:c79e10183a3a5209",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/public?stream=s-parity"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#112233",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "Brb",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "paused",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-finish",
+      "fingerprint": "sha256:67d82ee1e7d7f319",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/finish",
+        "auth": "globalToken",
+        "body": {
+          "cardText": null
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#112233",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "Brb",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "finished",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-resume",
+      "fingerprint": "sha256:7d8ff85bfc401c1d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/resume",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": null,
+          "room": null,
+          "since": "<masked>",
+          "state": "live",
+          "streamId": "s-parity"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-pause-no-body",
+      "fingerprint": "sha256:d703571c5bc3919c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-other/pause",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "cover": {
+            "assetId": null,
+            "assetUrl": null,
+            "cardColor": "#0b0b0f",
+            "cardText": "The live stream is paused.",
+            "cardTitle": "We will be right back",
+            "mode": "text"
+          },
+          "room": null,
+          "since": "<masked>",
+          "state": "paused",
+          "streamId": "s-other"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-pause-viewer",
+      "fingerprint": "sha256:1921172e085afe62",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/streams/s-other/pause",
+        "auth": "viewerJwt",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "lc-assets",
+      "fingerprint": "sha256:cb0a99baf8eb04d5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/assets",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "lc-upload-no-storage",
+      "fingerprint": "sha256:20760c2b6361d82c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/plugins/live-control/assets",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+        },
+        "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.png\"\r\nContent-Type: image/png\r\n\r\nPNG\r\n------parityBoundary--\r\n"
+      },
+      "status": 409,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "app": "live",
+        "error": "storage_not_configured",
+        "message": "app 'live' has no S3 storage bucket configured; cover assets cannot be uploaded"
+      }
+    },
+    {
+      "name": "lc-asset-url-bad-id",
+      "fingerprint": "sha256:f6cdaf0e69f5053f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/assets/abc/url",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-asset-url-missing",
+      "fingerprint": "sha256:aa07496412221be8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/assets/999/url",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "asset '999' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "lc-asset-delete-missing",
+      "fingerprint": "sha256:d4a3796fe716c0bb",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/live-control/assets/999",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "asset '999' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "lc-asset-delete-bad-id",
+      "fingerprint": "sha256:eade00a6e6893c73",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/plugins/live-control/assets/1.5",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-asset-url-exp-id",
+      "fingerprint": "sha256:2920ce1df6dda769",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/assets/2e2/url",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "asset '200' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "lc-settings",
+      "fingerprint": "sha256:a274fc4d826b9b42",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "defaultCardColor": "#0b0b0f",
+          "defaultCardText": "The live stream is paused.",
+          "defaultCardTitle": "We will be right back",
+          "defaultFinishAssetId": null,
+          "defaultMode": "text",
+          "defaultPauseAssetId": null,
+          "muteAudioServerSide": true,
+          "pollSeconds": 5
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-settings-bad",
+      "fingerprint": "sha256:a4124be29aec2798",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/live-control/settings",
+        "auth": "globalToken",
+        "body": {
+          "defaultPauseAssetId": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "defaultPauseAssetId must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-settings-missing-asset",
+      "fingerprint": "sha256:5cb8239e274eca48",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/live-control/settings",
+        "auth": "globalToken",
+        "body": {
+          "defaultFinishAssetId": 42
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "asset '42' not found",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "lc-settings-clear",
+      "fingerprint": "sha256:321f1bf6b6991956",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/live-control/settings",
+        "auth": "globalToken",
+        "body": {
+          "defaultPauseAssetId": null
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "defaultCardColor": "#0b0b0f",
+          "defaultCardText": "The live stream is paused.",
+          "defaultCardTitle": "We will be right back",
+          "defaultFinishAssetId": null,
+          "defaultMode": "text",
+          "defaultPauseAssetId": null,
+          "muteAudioServerSide": true,
+          "pollSeconds": 5
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "lc-settings-empty",
+      "fingerprint": "sha256:2619089638685700",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/live-control/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "defaultCardColor": "#0b0b0f",
+          "defaultCardText": "The live stream is paused.",
+          "defaultCardTitle": "We will be right back",
+          "defaultFinishAssetId": null,
+          "defaultMode": "text",
+          "defaultPauseAssetId": null,
+          "muteAudioServerSide": true,
+          "pollSeconds": 5
+        },
+        "error": null
+      }
+    }
+  ]
+}

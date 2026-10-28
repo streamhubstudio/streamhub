@@ -1,0 +1,263 @@
+{
+  "module": "transcription",
+  "cases": [
+    {
+      "name": "tr-transcribe-no-auth",
+      "fingerprint": "sha256:1e47b9bb592bf1e1",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/vods/1/transcribe"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "tr-transcribe-bad-id",
+      "fingerprint": "sha256:af41accc2ce03257",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/vods/abc/transcribe",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tr-transcribe",
+      "fingerprint": "sha256:2d4d8433d1980ebc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/vods/987654/transcribe",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "plugin 'transcription' is not installed in app 'live'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tr-transcribe-viewer",
+      "fingerprint": "sha256:1c3de3a77e831730",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/vods/1/transcribe",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks vod:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tr-transcribe-missing-app",
+      "fingerprint": "sha256:90a273ffddbddd99",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost-app/vods/1/transcribe",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tr-transcript-missing",
+      "fingerprint": "sha256:698e3d6b2ad43eb4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/987654/transcript",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 987654 has no transcript — trigger one with POST /vods/987654/transcribe",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tr-transcript-bad-id",
+      "fingerprint": "sha256:88fc8b7d5d6103bd",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/x/transcript",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tr-transcript-missing-app",
+      "fingerprint": "sha256:67fee0bf2b0d892f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost-app/vods/1/transcript",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tr-srt-missing",
+      "fingerprint": "sha256:46f9ecc21d57b9f3",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/987654/transcript.srt",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 987654 has no transcript",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tr-srt-exp-id",
+      "fingerprint": "sha256:1a717529057929c1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/1e3/transcript.srt",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 1000 has no transcript",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "tr-srt-no-auth",
+      "fingerprint": "sha256:a4d3b83d35103435",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/1/transcript.srt"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "tr-transcript-frac-id",
+      "fingerprint": "sha256:2bab06349e193960",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/1.5/transcript",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tr-transcript-hex-id",
+      "fingerprint": "sha256:6928fd2b8d204854",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/vods/0x10/transcript",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "vod 16 has no transcript — trigger one with POST /vods/16/transcribe",
+        "statusCode": 404
+      }
+    }
+  ]
+}

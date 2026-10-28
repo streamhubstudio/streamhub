@@ -47,10 +47,10 @@ const SNAPSHOTS_PAGE_SIZE = 10
 type Tone = 'green' | 'amber' | 'red' | 'slate'
 
 const BADGE_TONE: Record<Tone, string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  red: 'bg-red-500/20 text-red-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 function ToneBadge({ tone, children }: { tone: Tone; children: ReactNode }) {
@@ -262,7 +262,7 @@ function RestoreDialog({
     <Dialog isOpen width={520} closable={false} onClose={onClose} onRequestClose={onClose}>
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h5 className="text-lg font-semibold text-gray-100">
             {t('backups:restore.title')}
           </h5>
           <ToneBadge tone="red">{t('backups:restore.destructive')}</ToneBadge>
@@ -292,7 +292,7 @@ function RestoreDialog({
             <p className="text-sm text-fg">
               {t('backups:restore.summary', { db: dbLabel, file: snap.file })}
             </p>
-            <ul className="list-disc space-y-1 pl-5 text-xs text-amber-600 dark:text-amber-300">
+            <ul className="list-disc space-y-1 pl-5 text-xs text-amber-300">
               <li>{t('backups:restore.warnOverwrite')}</li>
               <li>{t('backups:restore.warnSafety')}</li>
               <li>{t('backups:restore.warnIntegrity')}</li>

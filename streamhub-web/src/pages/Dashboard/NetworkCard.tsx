@@ -80,7 +80,7 @@ export function NetworkCard() {
           data-testid="net-scope"
           value={scope}
           onChange={(e) => setScope(e.target.value)}
-          className="rounded-md border border-gray-300 bg-transparent px-2 py-1 text-xs text-fg dark:border-gray-700"
+          className="rounded-md border bg-transparent px-2 py-1 text-xs text-fg border-gray-700"
         >
           <option value={ALL}>{t('net.allApps')}</option>
           {appNames.map((name) => (
@@ -139,7 +139,7 @@ export function NetworkCard() {
                   className={
                     tone === 'crit'
                       ? 'stroke-red-400'
-                      : 'stroke-sky-400 dark:stroke-sky-500'
+                      : 'stroke-sky-500'
                   }
                   vectorEffect="non-scaling-stroke"
                 />

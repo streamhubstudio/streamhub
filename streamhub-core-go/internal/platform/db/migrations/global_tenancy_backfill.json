@@ -1,0 +1,7 @@
+[
+  "UPDATE apps SET tenant_id = 'platform' WHERE tenant_id IS NULL;",
+  "UPDATE api_tokens SET tenant_id = 'platform' WHERE tenant_id IS NULL;",
+  "UPDATE api_tokens\n      SET tenant_id = (SELECT a.tenant_id FROM apps a WHERE a.id = api_tokens.app_id)\n    WHERE scope = 'app' AND app_id IS NOT NULL\n      AND (SELECT a.tenant_id FROM apps a WHERE a.id = api_tokens.app_id) IS NOT NULL;",
+  "CREATE INDEX IF NOT EXISTS idx_apps_tenant ON apps(tenant_id);",
+  "CREATE INDEX IF NOT EXISTS idx_api_tokens_tenant ON api_tokens(tenant_id);"
+]

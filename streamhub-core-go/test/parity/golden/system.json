@@ -1,0 +1,740 @@
+{
+  "module": "system",
+  "cases": [
+    {
+      "name": "gpu-no-auth",
+      "fingerprint": "sha256:b1818a6ea020c188",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/gpu"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "gpu-global",
+      "fingerprint": "sha256:b3e9721d2fdde670",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/gpu",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "available": false,
+        "checkedAt": "<iso-ts>",
+        "detail": "no NVIDIA (nvidia-smi) and no VAAPI (/dev/dri render node)",
+        "devices": [],
+        "type": "none"
+      }
+    },
+    {
+      "name": "gpu-refresh-query",
+      "fingerprint": "sha256:23e86c0b721bf686",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/gpu?refresh=1",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "available": false,
+        "checkedAt": "<iso-ts>",
+        "detail": "no NVIDIA (nvidia-smi) and no VAAPI (/dev/dri render node)",
+        "devices": [],
+        "type": "none"
+      }
+    },
+    {
+      "name": "gpu-refresh-post",
+      "fingerprint": "sha256:b37f7a80b7af2094",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/system/gpu/refresh",
+        "auth": "globalToken"
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "available": false,
+        "checkedAt": "<iso-ts>",
+        "detail": "no NVIDIA (nvidia-smi) and no VAAPI (/dev/dri render node)",
+        "devices": [],
+        "type": "none"
+      }
+    },
+    {
+      "name": "gpu-viewer",
+      "fingerprint": "sha256:540e201ac781eb98",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/gpu",
+        "auth": "viewerJwt"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "available": false,
+        "checkedAt": "<iso-ts>",
+        "detail": "no NVIDIA (nvidia-smi) and no VAAPI (/dev/dri render node)",
+        "devices": [],
+        "type": "none"
+      }
+    },
+    {
+      "name": "gpu-app-token",
+      "fingerprint": "sha256:8d7a9b200db42dbe",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/gpu",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "available": false,
+        "checkedAt": "<iso-ts>",
+        "detail": "no NVIDIA (nvidia-smi) and no VAAPI (/dev/dri render node)",
+        "devices": [],
+        "type": "none"
+      }
+    },
+    {
+      "name": "settings-global",
+      "fingerprint": "sha256:146d9a358820006d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "auth": {
+            "adminPassSet": true,
+            "adminUser": "admin",
+            "jwtSecretSet": true,
+            "smtpConfigured": false,
+            "superadminEmail": "info@streamhub.studio"
+          },
+          "cluster": {
+            "enabled": false,
+            "redisConfigured": false
+          },
+          "core": {
+            "authzEnforce": "on",
+            "dataDir": "{{dataDir}}",
+            "host": "127.0.0.1",
+            "logLevel": "info",
+            "logRetentionDays": 30,
+            "nodeEnv": "production",
+            "publicBaseUrl": "",
+            "publicWsUrl": "",
+            "redisUrl": "127.0.0.1:63999",
+            "rtmpPublicHost": ""
+          },
+          "guidance": {
+            "auth": [
+              {
+                "envVar": "ADMIN_USER",
+                "howToChange": "Login de emergencia del panel. Editá `ADMIN_USER` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Usuario admin (break-glass)"
+              },
+              {
+                "envVar": "ADMIN_PASS",
+                "howToChange": "Secreto: solo se informa si está seteado. Editá `ADMIN_PASS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Contraseña admin (break-glass)"
+              },
+              {
+                "envVar": "STREAMHUB_JWT_SECRET",
+                "howToChange": "Firma los JWT del panel. Secreto: solo se informa si está seteado. Editá `STREAMHUB_JWT_SECRET` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Secreto JWT de sesión"
+              },
+              {
+                "envVar": "STREAMHUB_SUPERADMIN_EMAIL",
+                "howToChange": "El magic-link a esta dirección obtiene rol superadmin. Editá `STREAMHUB_SUPERADMIN_EMAIL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Email de superadmin"
+              },
+              {
+                "envVar": "STREAMHUB_SMTP_PASS",
+                "howToChange": "Requiere host + password. La contraseña nunca se muestra. Editá `STREAMHUB_SMTP_PASS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "SMTP (envío de mails)"
+              }
+            ],
+            "cluster": [
+              {
+                "envVar": "STREAMHUB_CLUSTER_TOKEN",
+                "howToChange": "Habilita el join de nodos edge. Secreto: solo se informa si está seteado. Editá `STREAMHUB_CLUSTER_TOKEN` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Token de cluster"
+              },
+              {
+                "envVar": "STREAMHUB_CLUSTER_REDIS_URL",
+                "howToChange": "Redis compartido que se entrega a los nodos que se unen. Editá `STREAMHUB_CLUSTER_REDIS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Redis del cluster"
+              }
+            ],
+            "core": [
+              {
+                "envVar": "PORT",
+                "howToChange": "El core escucha en 127.0.0.1:PORT detrás de Caddy/nginx. Editá `PORT` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Puerto / host de bind"
+              },
+              {
+                "envVar": "PUBLIC_BASE_URL",
+                "howToChange": "Base absoluta para armar URLs de HLS/reproducción. Editá `PUBLIC_BASE_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL pública base"
+              },
+              {
+                "envVar": "PUBLIC_WS_URL",
+                "howToChange": "wss:// público de LiveKit que reciben los clientes. Editá `PUBLIC_WS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL pública de WebSocket"
+              },
+              {
+                "envVar": "RTMP_PUBLIC_HOST",
+                "howToChange": "Host que se publica para ingesta RTMP. Editá `RTMP_PUBLIC_HOST` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Host público de RTMP"
+              },
+              {
+                "envVar": "LOG_LEVEL",
+                "howToChange": "Verbosidad del logger (trace|debug|info|warn|error). Editá `LOG_LEVEL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Nivel de log"
+              },
+              {
+                "envVar": "LOG_RETENTION_DAYS",
+                "howToChange": "0 desactiva la purga por antigüedad. Editá `LOG_RETENTION_DAYS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Retención de logs (días)"
+              },
+              {
+                "envVar": "STREAMHUB_AUTHZ_ENFORCE",
+                "howToChange": "off = sin checks; log = solo audita; on = aplica RBAC/quotas. Poné `on` en producción. Editá `STREAMHUB_AUTHZ_ENFORCE` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Enforcement de permisos"
+              },
+              {
+                "envVar": "REDIS_URL",
+                "howToChange": "Coordinación de LiveKit/colas. La contraseña nunca se muestra acá. Editá `REDIS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL de Redis"
+              },
+              {
+                "envVar": "DATA_DIR",
+                "howToChange": "Raíz de data/streamhub.db, apps/<name>/ y logs/. Editá `DATA_DIR` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Directorio de datos"
+              }
+            ],
+            "livekit": [
+              {
+                "envVar": "LIVEKIT_URL",
+                "howToChange": "ws:// del SFU LiveKit que usa el core. Editá `LIVEKIT_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL de LiveKit"
+              },
+              {
+                "envVar": "LIVEKIT_API_KEY",
+                "howToChange": "Identificador de credencial (se muestra enmascarado). Editá `LIVEKIT_API_KEY` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "API key de LiveKit"
+              },
+              {
+                "envVar": "LIVEKIT_API_SECRET",
+                "howToChange": "Secreto: nunca se devuelve, solo si está seteado. Editá `LIVEKIT_API_SECRET` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "API secret de LiveKit"
+              }
+            ],
+            "metrics": [
+              {
+                "envVar": "METRICS_TOKEN",
+                "howToChange": "Protege el endpoint Prometheus. Secreto: solo se informa si está seteado. Editá `METRICS_TOKEN` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Token de /metrics"
+              }
+            ],
+            "storage": [
+              {
+                "envVar": "DATA_DIR",
+                "howToChange": "Cambia dónde viven las DBs, grabaciones y snapshots. Editá `DATA_DIR` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Directorio de datos"
+              }
+            ]
+          },
+          "livekit": {
+            "apiKeyMasked": "",
+            "apiKeySet": false,
+            "url": "ws://127.0.0.1:7880"
+          },
+          "metrics": {
+            "tokenSet": false
+          },
+          "ports": {
+            "livekitSignaling": 7880,
+            "livekitTcp": 7881,
+            "livekitUdp": 7882,
+            "rtmp": 1935,
+            "whip": 8080
+          },
+          "storage": {
+            "appsCount": 1,
+            "dataDir": "{{dataDir}}"
+          },
+          "versions": {
+            "core": "{{appVersion}}"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "settings-admin",
+      "fingerprint": "sha256:bd79c1f70766f657",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/settings",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "auth": {
+            "adminPassSet": true,
+            "adminUser": "admin",
+            "jwtSecretSet": true,
+            "smtpConfigured": false,
+            "superadminEmail": "info@streamhub.studio"
+          },
+          "cluster": {
+            "enabled": false,
+            "redisConfigured": false
+          },
+          "core": {
+            "authzEnforce": "on",
+            "dataDir": "{{dataDir}}",
+            "host": "127.0.0.1",
+            "logLevel": "info",
+            "logRetentionDays": 30,
+            "nodeEnv": "production",
+            "publicBaseUrl": "",
+            "publicWsUrl": "",
+            "redisUrl": "127.0.0.1:63999",
+            "rtmpPublicHost": ""
+          },
+          "guidance": {
+            "auth": [
+              {
+                "envVar": "ADMIN_USER",
+                "howToChange": "Login de emergencia del panel. Editá `ADMIN_USER` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Usuario admin (break-glass)"
+              },
+              {
+                "envVar": "ADMIN_PASS",
+                "howToChange": "Secreto: solo se informa si está seteado. Editá `ADMIN_PASS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Contraseña admin (break-glass)"
+              },
+              {
+                "envVar": "STREAMHUB_JWT_SECRET",
+                "howToChange": "Firma los JWT del panel. Secreto: solo se informa si está seteado. Editá `STREAMHUB_JWT_SECRET` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Secreto JWT de sesión"
+              },
+              {
+                "envVar": "STREAMHUB_SUPERADMIN_EMAIL",
+                "howToChange": "El magic-link a esta dirección obtiene rol superadmin. Editá `STREAMHUB_SUPERADMIN_EMAIL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Email de superadmin"
+              },
+              {
+                "envVar": "STREAMHUB_SMTP_PASS",
+                "howToChange": "Requiere host + password. La contraseña nunca se muestra. Editá `STREAMHUB_SMTP_PASS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "SMTP (envío de mails)"
+              }
+            ],
+            "cluster": [
+              {
+                "envVar": "STREAMHUB_CLUSTER_TOKEN",
+                "howToChange": "Habilita el join de nodos edge. Secreto: solo se informa si está seteado. Editá `STREAMHUB_CLUSTER_TOKEN` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Token de cluster"
+              },
+              {
+                "envVar": "STREAMHUB_CLUSTER_REDIS_URL",
+                "howToChange": "Redis compartido que se entrega a los nodos que se unen. Editá `STREAMHUB_CLUSTER_REDIS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Redis del cluster"
+              }
+            ],
+            "core": [
+              {
+                "envVar": "PORT",
+                "howToChange": "El core escucha en 127.0.0.1:PORT detrás de Caddy/nginx. Editá `PORT` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Puerto / host de bind"
+              },
+              {
+                "envVar": "PUBLIC_BASE_URL",
+                "howToChange": "Base absoluta para armar URLs de HLS/reproducción. Editá `PUBLIC_BASE_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL pública base"
+              },
+              {
+                "envVar": "PUBLIC_WS_URL",
+                "howToChange": "wss:// público de LiveKit que reciben los clientes. Editá `PUBLIC_WS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL pública de WebSocket"
+              },
+              {
+                "envVar": "RTMP_PUBLIC_HOST",
+                "howToChange": "Host que se publica para ingesta RTMP. Editá `RTMP_PUBLIC_HOST` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Host público de RTMP"
+              },
+              {
+                "envVar": "LOG_LEVEL",
+                "howToChange": "Verbosidad del logger (trace|debug|info|warn|error). Editá `LOG_LEVEL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Nivel de log"
+              },
+              {
+                "envVar": "LOG_RETENTION_DAYS",
+                "howToChange": "0 desactiva la purga por antigüedad. Editá `LOG_RETENTION_DAYS` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Retención de logs (días)"
+              },
+              {
+                "envVar": "STREAMHUB_AUTHZ_ENFORCE",
+                "howToChange": "off = sin checks; log = solo audita; on = aplica RBAC/quotas. Poné `on` en producción. Editá `STREAMHUB_AUTHZ_ENFORCE` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Enforcement de permisos"
+              },
+              {
+                "envVar": "REDIS_URL",
+                "howToChange": "Coordinación de LiveKit/colas. La contraseña nunca se muestra acá. Editá `REDIS_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL de Redis"
+              },
+              {
+                "envVar": "DATA_DIR",
+                "howToChange": "Raíz de data/streamhub.db, apps/<name>/ y logs/. Editá `DATA_DIR` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Directorio de datos"
+              }
+            ],
+            "livekit": [
+              {
+                "envVar": "LIVEKIT_URL",
+                "howToChange": "ws:// del SFU LiveKit que usa el core. Editá `LIVEKIT_URL` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "URL de LiveKit"
+              },
+              {
+                "envVar": "LIVEKIT_API_KEY",
+                "howToChange": "Identificador de credencial (se muestra enmascarado). Editá `LIVEKIT_API_KEY` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "API key de LiveKit"
+              },
+              {
+                "envVar": "LIVEKIT_API_SECRET",
+                "howToChange": "Secreto: nunca se devuelve, solo si está seteado. Editá `LIVEKIT_API_SECRET` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "API secret de LiveKit"
+              }
+            ],
+            "metrics": [
+              {
+                "envVar": "METRICS_TOKEN",
+                "howToChange": "Protege el endpoint Prometheus. Secreto: solo se informa si está seteado. Editá `METRICS_TOKEN` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Token de /metrics"
+              }
+            ],
+            "storage": [
+              {
+                "envVar": "DATA_DIR",
+                "howToChange": "Cambia dónde viven las DBs, grabaciones y snapshots. Editá `DATA_DIR` en el archivo `.env` del server (p. ej. `/home/ploi/skyline-core/.env`) y reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`).",
+                "setting": "Directorio de datos"
+              }
+            ]
+          },
+          "livekit": {
+            "apiKeyMasked": "",
+            "apiKeySet": false,
+            "url": "ws://127.0.0.1:7880"
+          },
+          "metrics": {
+            "tokenSet": false
+          },
+          "ports": {
+            "livekitSignaling": 7880,
+            "livekitTcp": 7881,
+            "livekitUdp": 7882,
+            "rtmp": 1935,
+            "whip": 8080
+          },
+          "storage": {
+            "appsCount": 1,
+            "dataDir": "{{dataDir}}"
+          },
+          "versions": {
+            "core": "{{appVersion}}"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "settings-app-token",
+      "fingerprint": "sha256:92bf4ce4e048ec5e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/settings",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "settings-viewer",
+      "fingerprint": "sha256:81496a1b28a9cc01",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/settings",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "settings-no-auth",
+      "fingerprint": "sha256:f33f738b163a79b4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/settings"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "os-tuning-global",
+      "fingerprint": "sha256:97e3fc3b8e61c303",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/os-tuning",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "checkedAt": "<iso-ts>",
+          "knobs": [
+            {
+              "current": null,
+              "id": "net.core.rmem_max",
+              "key": "net.core.rmem_max",
+              "label": "UDP receive buffer max",
+              "optional": false,
+              "recommended": "≥ 16777216 (16 MiB)",
+              "remedy": "sysctl -w net.core.rmem_max=16777216   # persist in /etc/sysctl.d/99-streamhub-webrtc.conf",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "WebRTC/RTP media arrives over UDP; the ~208 KB default drops packets when several publishers/subscribers saturate the socket. install.sh raises this to 16 MiB."
+            },
+            {
+              "current": null,
+              "id": "net.core.wmem_max",
+              "key": "net.core.wmem_max",
+              "label": "UDP send buffer max",
+              "optional": false,
+              "recommended": "≥ 16777216 (16 MiB)",
+              "remedy": "sysctl -w net.core.wmem_max=16777216   # persist in /etc/sysctl.d/99-streamhub-webrtc.conf",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "Send-side counterpart of rmem_max: a small default throttles outbound RTP to subscribers under load. install.sh raises this to 16 MiB."
+            },
+            {
+              "current": null,
+              "id": "net.core.somaxconn",
+              "key": "net.core.somaxconn",
+              "label": "Listen backlog (somaxconn)",
+              "optional": false,
+              "recommended": "≥ 1024",
+              "remedy": "sysctl -w net.core.somaxconn=1024",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "Caps the accept() queue for TCP signalling/HLS/API. A low backlog drops connections during viewer surges (joins after a broadcast starts)."
+            },
+            {
+              "current": null,
+              "id": "net.ipv4.udp_mem",
+              "key": "net.ipv4.udp_mem",
+              "label": "UDP memory ceiling (udp_mem max)",
+              "optional": false,
+              "recommended": "max ≥ 262144 pages (~1 GiB)",
+              "remedy": "sysctl -w net.ipv4.udp_mem=\"65536 131072 262144\"",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "System-wide UDP memory pressure thresholds (min/pressure/max, in pages). A low max column throttles all UDP once media load grows."
+            },
+            {
+              "current": null,
+              "id": "net.ipv4.ip_local_port_range",
+              "key": "net.ipv4.ip_local_port_range",
+              "label": "Ephemeral port range",
+              "optional": false,
+              "recommended": "1024 65535 (wide range)",
+              "remedy": "sysctl -w net.ipv4.ip_local_port_range=\"1024 65535\"",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "A media server holds many relay/outbound sockets; a narrow ephemeral range exhausts ports and refuses new connections."
+            },
+            {
+              "current": null,
+              "id": "fs.file-max",
+              "key": "fs.file-max",
+              "label": "System-wide file-descriptor cap",
+              "optional": false,
+              "recommended": "≥ 1000000",
+              "remedy": "sysctl -w fs.file-max=1000000",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "Every socket, HLS segment and recording is a file descriptor. A low system cap makes the kernel refuse new fds server-wide under load."
+            },
+            {
+              "current": null,
+              "id": "nofile",
+              "key": "Max open files",
+              "label": "Process open-files limit (ulimit -n)",
+              "optional": false,
+              "recommended": "≥ 65535 (units set LimitNOFILE 200000/500000)",
+              "remedy": "LimitNOFILE=200000 in the systemd unit   # or: ulimit -n 65535",
+              "source": "limits",
+              "status": "unknown",
+              "why": "Per-process fd ceiling for the core/LiveKit. Too low and the process hits EMFILE under many concurrent viewers. deploy/*.service set LimitNOFILE high."
+            },
+            {
+              "current": null,
+              "id": "vm.swappiness",
+              "key": "vm.swappiness",
+              "label": "Swappiness",
+              "optional": false,
+              "recommended": "≤ 10",
+              "remedy": "sysctl -w vm.swappiness=10",
+              "source": "sysctl",
+              "status": "unknown",
+              "why": "High swappiness lets the kernel swap out hot media/jitter buffers, spiking latency and stalls. Keep the media path in RAM."
+            },
+            {
+              "current": null,
+              "id": "transparent_hugepage",
+              "key": "/sys/kernel/mm/transparent_hugepage/enabled",
+              "label": "Transparent hugepages",
+              "optional": true,
+              "recommended": "madvise or never (not always)",
+              "remedy": "echo madvise > /sys/kernel/mm/transparent_hugepage/enabled",
+              "source": "sys",
+              "status": "unknown",
+              "why": "THP=always causes latency spikes from background compaction — bad for real-time media. `madvise`/`never` avoids the stalls. Optional."
+            }
+          ],
+          "note": "Non-Linux host: /proc tuning is not inspectable here. These knobs apply on the production Linux host, where install.sh sets them.",
+          "platform": "darwin",
+          "summary": {
+            "applied": 0,
+            "notApplied": 0,
+            "unknown": 9
+          },
+          "supported": false
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "os-tuning-app-token",
+      "fingerprint": "sha256:f261af1bf9a48f4d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/os-tuning",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "os-tuning-owner",
+      "fingerprint": "sha256:5ae8b4dfe3b6a613",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/os-tuning",
+        "auth": "ownerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    }
+  ]
+}

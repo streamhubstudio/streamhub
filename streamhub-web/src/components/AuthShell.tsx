@@ -2,14 +2,13 @@
  * Auth screen chrome — the StreamHub re-skin of Elstar's "SignInCover" layout.
  *
  * Wraps every auth form in the ported `<Cover>` (split screen: brand gradient
- * panel on the left ≥lg, form panel on the right). Adds the theme toggle and a
+ * panel on the left ≥lg, form panel on the right). Adds the language switch and a
  * mobile-only logo (the brand panel — and its logo — is hidden below lg). It is
  * pure chrome: it owns no auth logic, it just frames whatever form you pass in.
  */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Cover } from '@/layout/AuthLayout'
-import { ThemeToggle } from '@/theme'
 import { LanguageSwitcher } from '@/i18n/LanguageSwitcher'
 import { Logo } from '@/components/Logo'
 
@@ -19,7 +18,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <div className="relative min-h-dvh">
       <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
         <LanguageSwitcher />
-        <ThemeToggle />
       </div>
       <Cover
         className="min-h-dvh"

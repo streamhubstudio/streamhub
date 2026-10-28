@@ -1,0 +1,223 @@
+{
+  "module": "email",
+  "cases": [
+    {
+      "name": "smtp-test-no-auth",
+      "fingerprint": "sha256:88915b1a56d3d18b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "body": {
+          "to": "ops@example.com"
+        }
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "smtp-test-empty",
+      "fingerprint": "sha256:84efdd3b034cdc56",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "to must be shorter than or equal to 200 characters",
+          "to must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "smtp-test-bad-email",
+      "fingerprint": "sha256:b65c58a5f9b75ea9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "globalToken",
+        "body": {
+          "to": "not-an-email"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "to must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "smtp-test-too-long",
+      "fingerprint": "sha256:e6bb5ed843991c54",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "globalToken",
+        "body": {
+          "to": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "to must be shorter than or equal to 200 characters",
+          "to must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "smtp-test-ghost",
+      "fingerprint": "sha256:3ed5d91cdad665b4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/parity-ghost/smtp/test",
+        "auth": "globalToken",
+        "body": {
+          "to": "ops@example.com"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app \"parity-ghost\" not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "smtp-test-unconfigured",
+      "fingerprint": "sha256:b9d8e10b621bc623",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "globalToken",
+        "body": {
+          "to": "ops@example.com"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "error": "smtp_not_configured",
+          "ok": false,
+          "skipped": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "smtp-test-app-token",
+      "fingerprint": "sha256:53f19ea540c51233",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "appToken",
+        "body": {
+          "to": "ops@example.com"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "error": "smtp_not_configured",
+          "ok": false,
+          "skipped": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "smtp-test-viewer",
+      "fingerprint": "sha256:756573d491746a85",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/smtp/test",
+        "auth": "viewerJwt",
+        "body": {
+          "to": "ops@example.com"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "smtp-test-viewer-ghost",
+      "fingerprint": "sha256:26a2d9a26bfc1546",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/parity-ghost/smtp/test",
+        "auth": "viewerJwt",
+        "body": {
+          "to": "bad"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    }
+  ]
+}

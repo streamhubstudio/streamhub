@@ -29,7 +29,9 @@ import {
   useSetPluginActive,
 } from '@/plugins'
 import type { PluginView } from '@/plugins'
-import { findView, resolveSection, sectionsOf, studioAppPath } from '@/plugins/state'
+import { useQuery } from '@tanstack/react-query'
+import { pluginsApi } from '@/plugins/api'
+import { findView, resolveSection, sectionsOf, studioAppPath, workerBadge } from '@/plugins/state'
 import { getBlurb } from '@/plugins/blurbs'
 import { Badge, Button, PluginIcon, Toggle, errMessage } from '@/plugins/ui'
 import { Card } from '@/ui'
@@ -130,6 +132,16 @@ function StudioApp({
   const setActive = useSetPluginActive(app)
   const [tab, setTab] = useState<SecondaryTab>('overview')
 
+  // The worker badge reflects the PROCESS state, polled — not the enabled flag
+  // (an enabled app whose worker crashed must not read "running").
+  const workerQ = useQuery({
+    queryKey: ['plugins', app, view.id, 'worker-status'],
+    queryFn: ({ signal }) => pluginsApi.workerStatus(app, view.id, signal),
+    enabled: Boolean(view.needsWorker && view.installed),
+    refetchInterval: 5000,
+  })
+  const badge = workerBadge(workerQ.data?.status)
+
   // Bind the plugin surface's section to the URL: switching a section navigates
   // to its deep link (replace → in-page tabbing doesn't stack history), and the
   // active section flows down through ctx so the surface renders it. Only wired
@@ -195,8 +207,11 @@ function StudioApp({
             <Badge tone="slate">{view.category}</Badge>
             {view.version && <Badge tone="slate">v{view.version}</Badge>}
             {view.needsWorker && (
-              <Badge tone={view.active ? 'green' : 'slate'}>
-                {view.active ? t('studio.worker.running') : t('studio.worker.stopped')}
+              <Badge tone={badge.tone}>
+                {t(`studio.worker.${badge.key}`)}
+                {badge.key === 'crashed' && workerQ.data?.exitCode != null
+                  ? ` (exit ${workerQ.data.exitCode})`
+                  : ''}
               </Badge>
             )}
           </div>
@@ -215,7 +230,7 @@ function StudioApp({
       </div>
 
       {setActive.error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+        <div className="mb-4 rounded-lg px-4 py-3 text-sm font-medium bg-red-500/15 text-red-100">
           {errMessage(setActive.error, t('page.actionError'))}
         </div>
       )}
@@ -330,7 +345,7 @@ function StudioApp({
             <li>{t('export.contents.license')}</li>
           </ul>
           {exportError && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+            <div className="rounded-lg px-4 py-3 text-sm font-medium bg-red-500/15 text-red-100">
               {exportError}
             </div>
           )}

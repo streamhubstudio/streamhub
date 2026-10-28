@@ -1,0 +1,14 @@
+{
+  "title": "Recent VOD transcripts",
+  "refresh": "Refresh",
+  "empty": "No recordings yet — transcripts appear here once the app records VODs.",
+  "col": {
+    "room": "Room",
+    "started": "Recorded",
+    "status": "Status",
+    "language": "Language"
+  },
+  "status": {
+    "none": "not transcribed"
+  }
+}

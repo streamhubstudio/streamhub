@@ -26,6 +26,7 @@ import {
   PhaseBadge,
 } from '@/pages/Broadcast/ui'
 import { useRadioMaster } from '@/pages/Radio/useRadioMaster'
+import { useSamplesOrigin } from '@/lib/useSamplesOrigin'
 import { definePlugin } from '../types.ts'
 import type { PluginComponentProps } from '../types.ts'
 import { buildEmbed, buildListenerUrl, resolveRoom } from './logic.ts'
@@ -41,15 +42,13 @@ function CopyRow({ label, value, mono = true }: { label: string; value: string; 
   }
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-gray-400">{label}</span>
       <div className="flex items-center gap-2">
         <input
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className={`w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-fg ${
-            mono ? 'font-mono text-xs' : ''
-          }`}
+          className={`w-full rounded-lg border border-gray-700 bg-gray-700 px-3 py-2 text-sm text-fg ${ mono ? 'font-mono text-xs' : '' }`}
         />
         <Button variant="default" size="sm" onClick={copy} className="shrink-0">
           {copied ? t('actions.copied') : t('actions.copy')}
@@ -70,17 +69,17 @@ function RadioTab({ ctx }: PluginComponentProps) {
   const listenToken = useMutation({
     mutationFn: () => api.apps.radioListenToken(app, room),
   })
+  const samples = useSamplesOrigin()
 
   if (!app) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-6 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('invalid.message')}</p>
+      <div className="rounded-xl border shadow-sm border-gray-700 bg-gray-800 p-6 text-center">
+        <p className="text-sm text-gray-400">{t('invalid.message')}</p>
       </div>
     )
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const listenerUrl = buildListenerUrl(origin, app, room)
+  const listenerUrl = buildListenerUrl(samples.origin, app, room)
   const embed = buildEmbed(listenerUrl)
 
   const isLive = state.phase === 'live'
@@ -90,16 +89,16 @@ function RadioTab({ ctx }: PluginComponentProps) {
     <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
       {/* Máster + monitor */}
       <section className="flex flex-col gap-5">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+        <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-fg">{t('master.title')}</h2>
-              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-0.5 truncate text-xs text-gray-400">
                 {t('header.title', { room })}
               </p>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 ring-1 ring-gray-200 dark:ring-gray-700">
-              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'animate-pulse bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-700 px-3 py-1 text-xs font-medium text-gray-200 ring-1 ring-gray-700">
+              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? 'animate-pulse bg-primary-500' : 'bg-gray-600'}`} />
               {t('master.listeners', { count: state.listeners })}
             </span>
           </div>
@@ -147,25 +146,25 @@ function RadioTab({ ctx }: PluginComponentProps) {
                 </Button>
               )}
               {state.startedAt && (
-                <span className="rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs text-gray-600 dark:text-gray-300">
+                <span className="rounded-md bg-gray-700 px-2 py-1 text-xs text-gray-300">
                   <Duration since={state.startedAt} />
                 </span>
               )}
               <PhaseBadge phase={state.phase} />
             </div>
             {state.permission === 'denied' && (
-              <p className="text-center text-[11px] text-amber-600 dark:text-amber-400">
+              <p className="text-center text-[11px] text-amber-400">
                 {t('master.permissionDenied')}
               </p>
             )}
           </div>
-          <p className="mt-4 text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+          <p className="mt-4 text-[11px] leading-snug text-gray-400">
             <Trans i18nKey="radio:master.note" components={{ strong: <strong /> }} />
           </p>
         </div>
 
         {/* Listener monitor — counts as one oyente while abierto. */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+        <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
           <h2 className="mb-3 text-sm font-semibold text-fg">{t('monitor.title')}</h2>
           {showMonitor ? (
             <>
@@ -176,7 +175,7 @@ function RadioTab({ ctx }: PluginComponentProps) {
                 audioLabel={t('monitor.audioLabel', { room })}
                 addons={{ viewers: true }}
               />
-              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">{t('monitor.note')}</p>
+              <p className="mt-2 text-[11px] text-gray-400">{t('monitor.note')}</p>
             </>
           ) : (
             <Button variant="default" block onClick={() => setShowMonitor(true)}>
@@ -188,20 +187,20 @@ function RadioTab({ ctx }: PluginComponentProps) {
 
       {/* Share / embed / token */}
       <aside className="flex flex-col gap-4">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+        <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
           <h2 className="text-sm font-semibold text-fg">{t('share.title')}</h2>
           <div className="mt-4 space-y-4">
             <CopyRow label={t('share.listenerLink')} value={listenerUrl} mono={false} />
             <CopyRow label={t('share.embed')} value={embed} />
-            <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+            <p className="text-[11px] leading-snug text-gray-400">
               <Trans i18nKey="radio:share.note" components={{ strong: <strong /> }} />
             </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 p-4 sm:p-5">
+        <div className="rounded-2xl border shadow-sm border-gray-700 bg-gray-800 p-4 sm:p-5">
           <h2 className="text-sm font-semibold text-fg">{t('token.title')}</h2>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-[11px] text-gray-400">
             <Trans i18nKey="radio:token.subtitle" components={{ strong: <strong /> }} />
           </p>
           <Button
@@ -214,7 +213,7 @@ function RadioTab({ ctx }: PluginComponentProps) {
             {listenToken.isPending ? t('token.generating') : t('token.generate')}
           </Button>
           {listenToken.isError && (
-            <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">{t('token.error')}</p>
+            <p className="mt-2 text-[11px] text-amber-400">{t('token.error')}</p>
           )}
           {listenToken.data && (
             <div className="mt-3 space-y-3">

@@ -4,6 +4,8 @@
  *
  * A freshly-created app ships with adaptive delivery ON (3-layer ladder). We
  * turn it OFF, save, and confirm GET /apps/:app/config reports adaptive:false.
+ * The adaptive switch lives under the Config tab's "Transcoding configuration"
+ * sub-tab (the Config tab opens on "Config presets").
  */
 import { test, expect, uniqueApp, bearer, createApp, apiGet } from './helpers'
 
@@ -19,6 +21,7 @@ test('config tab: toggle adaptive off, save, verify via API', async ({ page, req
   expect(before.adaptive).toBe(true)
 
   await page.goto(`/apps/${app}?tab=config`)
+  await page.getByRole('tab', { name: 'Transcoding configuration' }).click()
 
   // The Switcher hides its checkbox and styles the wrapping <label>, so target
   // that for both the state assertion and the click.

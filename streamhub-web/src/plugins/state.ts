@@ -144,6 +144,20 @@ export function openTargetFor(view: PluginView): 'page' | 'modal' {
 }
 
 /**
+ * The Studio header's worker badge, from the worker's REAL process state
+ * (GET …/worker/status) — never from the plugin's enabled flag: an enabled app
+ * whose worker crashed must not read "running". Unknown/loading → stopped.
+ */
+export function workerBadge(status: string | null | undefined): {
+  key: 'running' | 'crashed' | 'stopped'
+  tone: 'green' | 'red' | 'slate'
+} {
+  if (status === 'running' || status === 'starting') return { key: 'running', tone: 'green' }
+  if (status === 'crashed' || status === 'error' || status === 'failed') return { key: 'crashed', tone: 'red' }
+  return { key: 'stopped', tone: 'slate' }
+}
+
+/**
  * Convenience: the full-page Studio route for an app's Studio App, optionally
  * deep-linked to one of its declared sections (`…/studio/:id/:section`). Passing
  * no section yields the canonical section-less URL (back-compat), whose section

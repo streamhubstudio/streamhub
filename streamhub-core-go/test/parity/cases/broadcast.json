@@ -1,0 +1,180 @@
+{
+  "module": "broadcast",
+  "description": "RTMP stream egress (broadcast.controller.ts); LiveKit is unconfigured so start/stop hit the guarded error paths.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "bc-login-viewer",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "bcViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "bc-login-owner",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{ownerEmail}}",
+        "password": "{{ownerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "bcOwnerJwt": "data.token"
+      }
+    },
+    {
+      "name": "bc-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/broadcast",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "bc-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/broadcast",
+      "expectStatus": 401
+    },
+    {
+      "name": "bc-list-owner-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/broadcast",
+      "auth": "bcOwnerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "bc-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/broadcast",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "bc-list-unknown-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/broadcast",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "bc-start-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": 5,
+        "rtmpUrl": 7,
+        "layout": []
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-bad-url",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": "r1",
+        "rtmpUrl": "http://x/y"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-too-long",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "rtmpUrl": "rtmp://a/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+        "layout": "lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-blank-room",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": "   ",
+        "rtmpUrl": "rtmp://a/live/k"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-url-spaces",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": "r1",
+        "rtmpUrl": " rtmp://a/live/k"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-start-livekit-down",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "globalToken",
+      "body": {
+        "roomName": "r1",
+        "rtmpUrl": "rtmp://a.rtmp.youtube.com/live2/xxxx",
+        "layout": "grid"
+      },
+      "expectStatus": 500
+    },
+    {
+      "name": "bc-start-viewer-403",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/start",
+      "auth": "bcViewerJwt",
+      "body": {
+        "roomName": "r1",
+        "rtmpUrl": "rtmp://a/k"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "bc-stop-livekit-down",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/EG_abc/stop",
+      "auth": "globalToken",
+      "expectStatus": 500
+    },
+    {
+      "name": "bc-stop-blank",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/%20/stop",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "bc-stop-viewer-403",
+      "method": "POST",
+      "path": "/api/v1/apps/live/broadcast/EG_abc/stop",
+      "auth": "bcViewerJwt",
+      "expectStatus": 403
+    }
+  ]
+}

@@ -40,7 +40,8 @@
     "publicUrl": "Public URL",
     "embedIframe": "Embed iframe",
     "previewLabel": "Preview",
-    "previewHelp": "Isolated preview (iframe <0>sandbox</0> without <1>allow-same-origin</1>): the sample cannot access the panel session. It loads the <2>saved</2> version, not unsaved changes."
+    "previewHelp": "Isolated preview (iframe <0>sandbox</0> without <1>allow-same-origin</1>): the sample cannot access the panel session. It loads the <2>saved</2> version, not unsaved changes.",
+    "previewHelpIsolated": "Preview served from the separate samples origin <0>{{origin}}</0>: the sample cannot access the panel session, and camera/mic work here too. It loads the <2>saved</2> version, not unsaved changes."
   },
   "embed": {
     "title": "Embed & link",

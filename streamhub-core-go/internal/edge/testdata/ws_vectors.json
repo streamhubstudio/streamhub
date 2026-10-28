@@ -1,0 +1,97 @@
+{
+  "generator": "internal/edge/testdata/record-node-ws.js",
+  "token": "ws-vector-token",
+  "steps": [
+    {
+      "step": "reject-no-token",
+      "response": "HTTP/1.1 401 invalid cluster token\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "step": "reject-bad-token",
+      "response": "HTTP/1.1 401 invalid cluster token\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "step": "reject-no-node",
+      "response": "HTTP/1.1 400 nodeId required\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "step": "reject-unknown-node",
+      "response": "HTTP/1.1 404 unknown node\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+    },
+    {
+      "step": "schedule-http",
+      "response": "{\"status\":201,\"body\":{\"data\":{\"id\":\"{{asg1}}\",\"nodeId\":\"{{nodeId}}\",\"app\":\"live\",\"pluginId\":\"wsplug\",\"streamId\":\"cam1\",\"config\":{\"room\":\"cam1\",\"z\":1,\"a\":{\"b\":[1,2.5,\"x\"]}},\"status\":\"offered\",\"detail\":null,\"createdAt\":\"<sql-ts>\",\"updatedAt\":\"<sql-ts>\"},\"error\":null}}"
+    },
+    {
+      "step": "schedule-frame",
+      "frame": "{\"type\":\"assign\",\"assignment\":{\"id\":\"{{asg1}}\",\"app\":\"live\",\"pluginId\":\"wsplug\",\"streamId\":\"cam1\",\"config\":{\"room\":\"cam1\",\"z\":1,\"a\":{\"b\":[1,2.5,\"x\"]}},\"spawn\":{\"command\":\"\",\"args\":[],\"env\":{}}}}"
+    },
+    {
+      "step": "after-status",
+      "response": "{\"status\":200,\"body\":{\"data\":[{\"id\":\"{{asg1}}\",\"nodeId\":\"{{nodeId}}\",\"app\":\"live\",\"pluginId\":\"wsplug\",\"streamId\":\"cam1\",\"config\":{\"room\":\"cam1\",\"z\":1,\"a\":{\"b\":[1,2.5,\"x\"]}},\"status\":\"running\",\"detail\":\"pid 42\",\"createdAt\":\"<sql-ts>\",\"updatedAt\":\"<sql-ts>\"}],\"error\":null}}"
+    },
+    {
+      "step": "after-telemetry",
+      "response": "{\"id\":\"{{nodeId}}\",\"name\":\"ws-edge\",\"url\":\"192.0.2.10\",\"region\":null,\"type\":\"edge\",\"weight\":100,\"status\":\"active\",\"connected\":true,\"stale\":false,\"createdAt\":\"<sql-ts>\",\"lastSeenAt\":\"<sql-ts>\",\"stats\":{\"cpu\":0.5,\"grid\":{\"gpu\":true,\"vramFreeMb\":3000},\"z\":[1]}}"
+    },
+    {
+      "step": "cmd-frame",
+      "frame": "{\"type\":\"cmd\",\"cmdId\":\"{{cmdId}}\",\"command\":\"restart\",\"args\":{\"soft\":true,\"n\":1}}"
+    },
+    {
+      "step": "cmd-http",
+      "response": "{\"status\":201,\"body\":{\"data\":{\"ok\":true,\"output\":\"restarted\"},\"error\":null}}"
+    },
+    {
+      "step": "logtail-frame",
+      "frame": "{\"type\":\"log_tail\",\"reqId\":\"{{reqId}}\",\"lines\":5}"
+    },
+    {
+      "step": "logtail-http",
+      "response": "{\"status\":200,\"body\":{\"data\":{\"lines\":[\"a\",\"b\"]},\"error\":null}}"
+    },
+    {
+      "step": "cmd2-frame",
+      "frame": "{\"type\":\"cmd\",\"cmdId\":\"{{cmdId2}}\",\"command\":\"ping\"}"
+    },
+    {
+      "step": "cmd-timeout-http",
+      "response": "{\"status\":504,\"body\":{\"error\":\"edge did not respond in time\"}}"
+    },
+    {
+      "step": "ping-frame",
+      "frame": "{\"type\":\"ping\"}"
+    },
+    {
+      "step": "revoke-http",
+      "response": "{\"status\":200,\"body\":{\"data\":{\"id\":\"{{asg1}}\",\"revoked\":true},\"error\":null}}"
+    },
+    {
+      "step": "revoke-frame",
+      "frame": "{\"type\":\"revoke\",\"id\":\"{{asg1}}\"}"
+    },
+    {
+      "step": "schedule2-frame",
+      "frame": "{\"type\":\"assign\",\"assignment\":{\"id\":\"{{asg2}}\",\"app\":\"live\",\"pluginId\":\"wsplug2\",\"streamId\":null,\"config\":{},\"spawn\":{\"command\":\"\",\"args\":[],\"env\":{}}}}"
+    },
+    {
+      "step": "replaced-close",
+      "close": {
+        "code": 4409,
+        "reason": "replaced by newer connection"
+      }
+    },
+    {
+      "step": "reoffer-frame",
+      "frame": "{\"type\":\"assign\",\"assignment\":{\"id\":\"{{asg2}}\",\"app\":\"live\",\"pluginId\":\"wsplug2\",\"streamId\":null,\"config\":{},\"spawn\":{\"command\":\"\",\"args\":[],\"env\":{}}}}"
+    },
+    {
+      "step": "after-reoffer",
+      "response": "{\"status\":200,\"body\":{\"data\":[{\"id\":\"{{asg2}}\",\"nodeId\":\"{{nodeId}}\",\"app\":\"live\",\"pluginId\":\"wsplug2\",\"streamId\":null,\"config\":{},\"status\":\"offered\",\"detail\":null,\"createdAt\":\"<sql-ts>\",\"updatedAt\":\"<sql-ts>\"},{\"id\":\"{{asg1}}\",\"nodeId\":\"{{nodeId}}\",\"app\":\"live\",\"pluginId\":\"wsplug\",\"streamId\":\"cam1\",\"config\":{\"room\":\"cam1\",\"z\":1,\"a\":{\"b\":[1,2.5,\"x\"]}},\"status\":\"revoked\",\"detail\":null,\"createdAt\":\"<sql-ts>\",\"updatedAt\":\"<sql-ts>\"}],\"error\":null}}"
+    },
+    {
+      "step": "after-close",
+      "response": "{\"id\":\"{{nodeId}}\",\"name\":\"ws-edge\",\"url\":\"192.0.2.10\",\"region\":null,\"type\":\"edge\",\"weight\":100,\"status\":\"active\",\"connected\":false,\"stale\":false,\"createdAt\":\"<sql-ts>\",\"lastSeenAt\":\"<sql-ts>\",\"stats\":{\"cpu\":0.5,\"grid\":{\"gpu\":true,\"vramFreeMb\":3000},\"z\":[1]}}"
+    }
+  ]
+}

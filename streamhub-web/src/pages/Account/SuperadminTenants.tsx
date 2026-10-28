@@ -48,7 +48,7 @@ function QuotaEditor({ tenant }: { tenant: Tenant }) {
   })
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/40">
+    <div className="rounded-lg border p-4 border-gray-600 bg-gray-700/40">
       <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Field label={t('platform.plan')}>
           <TextInput value={plan} onChange={(e) => setPlan(e.target.value)} />
@@ -120,14 +120,14 @@ export function SuperadminTenants({
                   'rounded-lg border px-4 py-3 transition',
                   isSel
                     ? 'border-primary-500/40 bg-primary-500/5'
-                    : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700/30',
+                    : 'border-gray-600 bg-gray-700/30',
                 ].join(' ')}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm text-fg">{tenant.name}</span>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600 dark:bg-gray-600/60 dark:text-gray-100">
+                      <span className="rounded-full px-2 py-0.5 text-[10px] bg-gray-600/60 text-gray-100">
                         {tenant.plan}
                       </span>
                       {typeof tenant.appCount === 'number' && (

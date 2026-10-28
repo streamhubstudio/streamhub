@@ -1,0 +1,132 @@
+{
+  "module": "late-apps",
+  "description": "Config backup revert (apps.controller.ts). Kept apart from apps.json and named to sort AFTER auth.json: a revert audits {backup: <ts>}, a wall-clock token that differs per side, and auth.json's full audit-trail listing would otherwise diff on it.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "late-create",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "auth": "globalToken",
+      "body": {
+        "name": "par-late",
+        "displayName": "Late"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "late-put-raw-1",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-late/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-late\nroom_prefix: late-a\ndisplay_name: First\n"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "late-put-raw-2",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-late/config/raw",
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-late\nroom_prefix: late-b\ndisplay_name: Second\nextra: {k: v}\n"
+      },
+      "expectStatus": 200,
+      "sleepMs": 5,
+      "note": "sleepMs: backups are ms-stamped; Go can answer both PUTs inside one millisecond and the second backup would overwrite the first"
+    },
+    {
+      "name": "late-backups",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.*.ts",
+        "data.*.file",
+        "data.*.createdAt"
+      ],
+      "capture": {
+        "lateNewest": "data.0.ts",
+        "lateOldest": "data.1.ts"
+      }
+    },
+    {
+      "name": "late-backup-oldest",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late/config/backups/{{lateOldest}}",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "note": "the scaffold written on create"
+    },
+    {
+      "name": "late-revert-oldest",
+      "method": "POST",
+      "path": "/api/v1/apps/par-late/config/backups/{{lateOldest}}/revert",
+      "auth": "globalToken",
+      "expectStatus": 201
+    },
+    {
+      "name": "late-raw-after-revert",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "late-get-after-revert",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "note": "registry row re-synced by the reload"
+    },
+    {
+      "name": "late-revert-newest",
+      "method": "POST",
+      "path": "/api/v1/apps/par-late/config/backups/{{lateNewest}}/revert",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "note": "a revert is itself reversible"
+    },
+    {
+      "name": "late-raw-after-revert-2",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late/config/raw",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "late-backups-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-late/config/backups",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.*.ts",
+        "data.*.file",
+        "data.*.createdAt"
+      ]
+    },
+    {
+      "name": "late-revert-cross-app-token",
+      "method": "POST",
+      "path": "/api/v1/apps/par-late/config/backups/{{lateNewest}}/revert",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "late-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-late?deleteVods=true",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

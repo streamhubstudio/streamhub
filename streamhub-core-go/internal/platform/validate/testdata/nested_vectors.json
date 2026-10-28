@@ -1,0 +1,188 @@
+[
+ {
+  "body": {},
+  "messages": []
+ },
+ {
+  "body": {
+   "items": [
+    {
+     "name": "abcd",
+     "n": 0
+    },
+    5,
+    {
+     "name": "ok",
+     "n": 2
+    }
+   ]
+  },
+  "messages": [
+   "items.0.name must be shorter than or equal to 3 characters",
+   "items.0.n must not be less than 1",
+   "items.each value in nested property items must be either object or array"
+  ]
+ },
+ {
+  "body": {
+   "items": "x"
+  },
+  "messages": [
+   "items must contain no more than 2 elements",
+   "items must be an array",
+   "each value in nested property items must be either object or array"
+  ]
+ },
+ {
+  "body": {
+   "items": 7,
+   "obj": "y",
+   "plain": 3,
+   "flag": "z"
+  },
+  "messages": [
+   "items must contain no more than 2 elements",
+   "items must be an array",
+   "each value in nested property items must be either object or array",
+   "nested property obj must be either object or array",
+   "nested property plain must be either object or array",
+   "flag must be a boolean value"
+  ]
+ },
+ {
+  "body": {
+   "items": [
+    {
+     "name": "a",
+     "n": 1
+    },
+    {
+     "name": "b",
+     "n": 1
+    },
+    {
+     "name": "c",
+     "n": 1
+    }
+   ]
+  },
+  "messages": [
+   "items must contain no more than 2 elements"
+  ]
+ },
+ {
+  "body": {
+   "items": [
+    [
+     1,
+     {
+      "name": 5
+     }
+    ],
+    "q"
+   ]
+  },
+  "messages": [
+   "items.0.each value in nested property items must be either object or array",
+   "items.0.1.name must be shorter than or equal to 3 characters",
+   "items.0.1.name must be a string",
+   "items.0.1.n must not be less than 1",
+   "items.0.1.n must be an integer number",
+   "items.each value in nested property items must be either object or array"
+  ]
+ },
+ {
+  "body": {
+   "items": {
+    "name": 7
+   }
+  },
+  "messages": [
+   "items.name must be shorter than or equal to 3 characters",
+   "items.name must be a string",
+   "items.n must not be less than 1",
+   "items.n must be an integer number"
+  ]
+ },
+ {
+  "body": {
+   "items": {
+    "name": "a",
+    "n": 1
+   }
+  },
+  "messages": [
+   "items must contain no more than 2 elements",
+   "items must be an array"
+  ]
+ },
+ {
+  "body": {
+   "items": []
+  },
+  "messages": []
+ },
+ {
+  "body": {
+   "obj": {
+    "name": "long",
+    "n": 1.5
+   }
+  },
+  "messages": [
+   "obj.name must be shorter than or equal to 3 characters",
+   "obj.n must be an integer number"
+  ]
+ },
+ {
+  "body": {
+   "obj": [
+    {
+     "name": 1
+    },
+    2
+   ]
+  },
+  "messages": [
+   "obj.0.name must be shorter than or equal to 3 characters",
+   "obj.0.name must be a string",
+   "obj.0.n must not be less than 1",
+   "obj.0.n must be an integer number",
+   "obj.nested property obj must be either object or array"
+  ]
+ },
+ {
+  "body": {
+   "plain": [
+    3,
+    [
+     4
+    ]
+   ]
+  },
+  "messages": [
+   "plain.nested property plain must be either object or array",
+   "plain.1.nested property plain must be either object or array"
+  ]
+ },
+ {
+  "body": {
+   "obj": null,
+   "items": null
+  },
+  "messages": []
+ },
+ {
+  "body": {
+   "flag": 1,
+   "obj": {}
+  },
+  "messages": [
+   "obj.name must be shorter than or equal to 3 characters",
+   "obj.name must be a string",
+   "obj.n must not be less than 1",
+   "obj.n must be an integer number",
+   "flag must be a boolean value"
+  ]
+ }
+]

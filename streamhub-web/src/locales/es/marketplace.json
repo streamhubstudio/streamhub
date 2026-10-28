@@ -105,7 +105,8 @@
     "noSurface": "Este app no tiene una interfaz de página completa en esta versión.",
     "worker": {
       "running": "Worker activo",
-      "stopped": "Worker detenido"
+      "stopped": "Worker detenido",
+      "crashed": "Worker caído"
     },
     "tabs": {
       "overview": "Resumen",

@@ -1,0 +1,756 @@
+{
+  "module": "streams",
+  "cases": [
+    {
+      "name": "str-login-editor",
+      "fingerprint": "sha256:19606459aa85b49e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{editorEmail}}",
+          "password": "{{editorPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{strEditorJwt}}"
+        }
+      }
+    },
+    {
+      "name": "str-login-viewer",
+      "fingerprint": "sha256:3c765878d61bd44d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{strViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "streams-list-empty",
+      "fingerprint": "sha256:9cf9448857649841",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "streams-list-admin",
+      "fingerprint": "sha256:3275974c25dcad75",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "streams-list-ghost-app",
+      "fingerprint": "sha256:57256cf526029536",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-list-no-auth",
+      "fingerprint": "sha256:f2cf19c3c629180c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "streams-list-viewer-other-tenant",
+      "fingerprint": "sha256:04f71f787196a801",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams",
+        "auth": "strViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "streams-list-app-token",
+      "fingerprint": "sha256:79118d18c1875c63",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "streams-list-app-token-ghost",
+      "fingerprint": "sha256:adecbcd101e6bb87",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams",
+        "auth": "appToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-get-missing",
+      "fingerprint": "sha256:df56f4bc4a5f6bef",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-get-encoded-canonical",
+      "fingerprint": "sha256:01993f423624551d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/live-room%2Fcam-1",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'live-room/cam-1' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-get-ghost-app",
+      "fingerprint": "sha256:f0e4effaad0eb3ec",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams/x",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-plugins-get-missing",
+      "fingerprint": "sha256:8fea3ff1194cefcf",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-plugins-set-missing",
+      "fingerprint": "sha256:7fe17db303a8e26e",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken",
+        "body": {
+          "disabled": [
+            "watermark",
+            " watermark ",
+            ""
+          ]
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-plugins-set-no-body",
+      "fingerprint": "sha256:65d42dc58967ab74",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All disabled's elements must be unique",
+          "each value in disabled must be a string",
+          "disabled must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-plugins-set-not-array",
+      "fingerprint": "sha256:78c3855e7dc66246",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken",
+        "body": {
+          "disabled": "watermark"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All disabled's elements must be unique",
+          "disabled must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-plugins-set-dupes",
+      "fingerprint": "sha256:2fa7e3a60c59b338",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken",
+        "body": {
+          "disabled": [
+            "a",
+            "a"
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "All disabled's elements must be unique"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-plugins-set-non-strings",
+      "fingerprint": "sha256:d58ebf85b694c9a5",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "globalToken",
+        "body": {
+          "disabled": [
+            1,
+            true,
+            null
+          ]
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "each value in disabled must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-plugins-set-viewer",
+      "fingerprint": "sha256:3e3a3eec19243cee",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/streams/nope/plugins",
+        "auth": "strViewerJwt",
+        "body": {
+          "disabled": []
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks stream:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "streams-stop-missing",
+      "fingerprint": "sha256:566c41434793ac21",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-stop-ghost-app",
+      "fingerprint": "sha256:e6593c3e195a4578",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/ghost/streams/nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-stop-editor-other-tenant",
+      "fingerprint": "sha256:0cab20eec82f56b1",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/streams/nope",
+        "auth": "strEditorJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "streams-snapshot-no-body",
+      "fingerprint": "sha256:b6ef3639b85c5e45",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/snapshots",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 256 characters",
+          "room must be longer than or equal to 1 characters",
+          "room must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-snapshot-bad-types",
+      "fingerprint": "sha256:af815cc81af87839",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/snapshots",
+        "auth": "globalToken",
+        "body": {
+          "room": 5,
+          "participantIdentity": 7
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 256 characters",
+          "room must be longer than or equal to 1 characters",
+          "room must be a string",
+          "participantIdentity must be shorter than or equal to 256 characters",
+          "participantIdentity must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-snapshot-empty-room",
+      "fingerprint": "sha256:6b4e34aaaedb873e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/snapshots",
+        "auth": "globalToken",
+        "body": {
+          "room": ""
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be longer than or equal to 1 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-snapshot-long",
+      "fingerprint": "sha256:218473159ec7c0c2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/snapshots",
+        "auth": "globalToken",
+        "body": {
+          "room": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+          "participantIdentity": "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 256 characters",
+          "participantIdentity must be shorter than or equal to 256 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-snapshot-blank-room",
+      "fingerprint": "sha256:c92790d76954760c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/snapshots",
+        "auth": "globalToken",
+        "body": {
+          "room": "   "
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "roomName is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "streams-snapshot-ghost-app",
+      "fingerprint": "sha256:15230816310315e8",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost/snapshots",
+        "auth": "globalToken",
+        "body": {
+          "room": "lobby"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-snapshot-by-id-missing",
+      "fingerprint": "sha256:7630964c267c3ad2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/snapshot",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-snapshot-by-id-ghost",
+      "fingerprint": "sha256:3cbe7c26f593a512",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost/streams/nope/snapshot",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-start-missing",
+      "fingerprint": "sha256:bb7db82b25185651",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/hls/start",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-stop-missing",
+      "fingerprint": "sha256:c97d3ce93eef7890",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/hls/stop",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-status-missing",
+      "fingerprint": "sha256:d7b9823910d7bd41",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/nope/hls",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-status-ghost",
+      "fingerprint": "sha256:2c01ff1ad3f92a60",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/streams/nope/hls",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-viewer-no-permission-gate",
+      "fingerprint": "sha256:b64975b04665c1a9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/streams/nope/hls",
+        "auth": "strViewerJwt"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "stream 'nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "streams-hls-no-auth",
+      "fingerprint": "sha256:d181d1c2a1d31037",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/nope/hls/start"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    }
+  ]
+}

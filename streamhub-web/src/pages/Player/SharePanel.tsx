@@ -50,7 +50,7 @@ export function SharePanel({ app, room, playerUrl, embedIframe }: SharePanelProp
         href={publicUrl}
         target="_blank"
         rel="noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 transition hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+        className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium transition text-primary-400 hover:text-primary-300"
       >
         {t('share.openNewTab')}
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">

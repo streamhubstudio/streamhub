@@ -738,7 +738,7 @@ function TranscodingCard({ app }: { app: string }) {
             {save.isPending ? t('common:state.saving') : t('transcoding.saveChanges')}
           </Button>
           {passthrough ? (
-            <span className="text-[11px] text-amber-600 dark:text-amber-300">
+            <span className="text-[11px] text-amber-300">
               {t('passthrough.transcodeDisabledNote')}
             </span>
           ) : save.isSuccess && !save.isPending ? (
@@ -920,7 +920,7 @@ export function RecordingStorageCard({ app }: { app: string }) {
         </Field>
 
         <div>
-          <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+          <span className="mb-1.5 block text-sm font-semibold text-gray-100">
             {t('recordingStorage.variables.label')}
           </span>
           <p className="mb-2 text-[11px] text-slate-500">

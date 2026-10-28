@@ -1,0 +1,339 @@
+{
+  "module": "transcoding",
+  "description": "Transcoding config (transcoding.controller.ts, 3 routes): view, ladder, PATCH validation + mapping onto the app config (incl. hwaccel sidecar). App par-tc is created and deleted here.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "tc-setup",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "body": {
+        "name": "par-tc",
+        "displayName": "TC"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "tc-get-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/config",
+      "expectStatus": 401
+    },
+    {
+      "name": "tc-get-live",
+      "method": "GET",
+      "path": "/api/v1/apps/live/config",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-get-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/config",
+      "expectStatus": null,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "tc-get-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-app/config",
+      "expectStatus": null,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-layers",
+      "method": "GET",
+      "path": "/api/v1/apps/live/transcoding/layers",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-layers-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-app/transcoding/layers",
+      "expectStatus": null,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-patch-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "rawBody": ""
+    },
+    {
+      "name": "tc-patch-bad",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "adaptive": "y",
+        "rtmpTranscode": 1,
+        "hwaccel": "tpu",
+        "transcodingEnabled": "no",
+        "encoding": "vp9",
+        "vodAdaptive": 0
+      }
+    },
+    {
+      "name": "tc-patch-bad-layers",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "layers": [
+          {
+            "name": "High!",
+            "height": 0
+          },
+          5,
+          {
+            "name": "ok",
+            "height": 4321.5
+          }
+        ]
+      }
+    },
+    {
+      "name": "tc-patch-layers-not-array",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "layers": "x",
+        "vodRenditions": 7
+      }
+    },
+    {
+      "name": "tc-patch-too-many",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "layers": [
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          },
+          {
+            "name": "a",
+            "height": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "tc-patch-bad-renditions",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "vodRenditions": [
+          {
+            "height": 100,
+            "bitrateKbps": 60000
+          },
+          {}
+        ]
+      }
+    },
+    {
+      "name": "tc-patch-bad-features",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "features": {
+          "chat": "yes",
+          "hiddenQc": 1
+        }
+      }
+    },
+    {
+      "name": "tc-patch-features-not-object",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "features": "on"
+      }
+    },
+    {
+      "name": "tc-patch-viewer",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/config",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {}
+    },
+    {
+      "name": "tc-patch-ladder",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "hd",
+            "height": 1080
+          },
+          {
+            "name": "sd",
+            "height": 480
+          }
+        ]
+      }
+    },
+    {
+      "name": "tc-patch-transcoding",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "transcodingEnabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 720,
+            "bitrateKbps": 2800
+          },
+          {
+            "height": 360,
+            "bitrateKbps": 800
+          }
+        ]
+      }
+    },
+    {
+      "name": "tc-patch-encoding-only",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "encoding": "h264"
+      }
+    },
+    {
+      "name": "tc-patch-rtmp",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "rtmpTranscode": true
+      }
+    },
+    {
+      "name": "tc-patch-features",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "features": {
+          "chat": true,
+          "publicPlayback": false
+        }
+      }
+    },
+    {
+      "name": "tc-patch-hwaccel",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "hwaccel": "cpu"
+      }
+    },
+    {
+      "name": "tc-patch-clear-layers",
+      "method": "PATCH",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "layers": []
+      }
+    },
+    {
+      "name": "tc-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-tc/config",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-layers-after",
+      "method": "GET",
+      "path": "/api/v1/apps/par-tc/transcoding/layers",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "tc-patch-unknown",
+      "method": "PATCH",
+      "path": "/api/v1/apps/no-such-app/config",
+      "expectStatus": null,
+      "auth": "globalToken",
+      "body": {
+        "adaptive": true
+      }
+    },
+    {
+      "name": "tc-teardown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-tc",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "compare": "status"
+    }
+  ]
+}

@@ -1,0 +1,1124 @@
+{
+ "argv": [
+  {
+   "name": "hls-720",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:720",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "2800k",
+    "-maxrate",
+    "2996k",
+    "-bufsize",
+    "5600k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "4",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/720p/seg_%04d.ts",
+    "/W/720p/index.m3u8"
+   ]
+  },
+  {
+   "name": "hls6-720",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:720",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "2800k",
+    "-maxrate",
+    "2996k",
+    "-bufsize",
+    "5600k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "6",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/720p/seg_%04d.ts",
+    "/W/720p/index.m3u8"
+   ]
+  },
+  {
+   "name": "mp4-720",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:720",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "2800k",
+    "-maxrate",
+    "2996k",
+    "-bufsize",
+    "5600k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    "/W/mezz/720p.mp4"
+   ]
+  },
+  {
+   "name": "hls-1080",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:1080",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "5000k",
+    "-maxrate",
+    "5350k",
+    "-bufsize",
+    "10000k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "4",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/1080p/seg_%04d.ts",
+    "/W/1080p/index.m3u8"
+   ]
+  },
+  {
+   "name": "hls6-1080",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:1080",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "5000k",
+    "-maxrate",
+    "5350k",
+    "-bufsize",
+    "10000k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "6",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/1080p/seg_%04d.ts",
+    "/W/1080p/index.m3u8"
+   ]
+  },
+  {
+   "name": "mp4-1080",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:1080",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "5000k",
+    "-maxrate",
+    "5350k",
+    "-bufsize",
+    "10000k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    "/W/mezz/1080p.mp4"
+   ]
+  },
+  {
+   "name": "hls-361",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:361",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "1263.5k",
+    "-maxrate",
+    "1352k",
+    "-bufsize",
+    "2527k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "4",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/361p/seg_%04d.ts",
+    "/W/361p/index.m3u8"
+   ]
+  },
+  {
+   "name": "hls6-361",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:361",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "1263.5k",
+    "-maxrate",
+    "1352k",
+    "-bufsize",
+    "2527k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "6",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/361p/seg_%04d.ts",
+    "/W/361p/index.m3u8"
+   ]
+  },
+  {
+   "name": "mp4-361",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:361",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "1263.5k",
+    "-maxrate",
+    "1352k",
+    "-bufsize",
+    "2527k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    "/W/mezz/361p.mp4"
+   ]
+  },
+  {
+   "name": "hls-144",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:144",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "250k",
+    "-maxrate",
+    "268k",
+    "-bufsize",
+    "500k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "4",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/144p/seg_%04d.ts",
+    "/W/144p/index.m3u8"
+   ]
+  },
+  {
+   "name": "hls6-144",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:144",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "250k",
+    "-maxrate",
+    "268k",
+    "-bufsize",
+    "500k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-hls_time",
+    "6",
+    "-hls_playlist_type",
+    "vod",
+    "-hls_list_size",
+    "0",
+    "-hls_segment_filename",
+    "/W/144p/seg_%04d.ts",
+    "/W/144p/index.m3u8"
+   ]
+  },
+  {
+   "name": "mp4-144",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-vf",
+    "scale=-2:144",
+    "-c:v",
+    "libx264",
+    "-profile:v",
+    "main",
+    "-preset",
+    "veryfast",
+    "-b:v",
+    "250k",
+    "-maxrate",
+    "268k",
+    "-bufsize",
+    "500k",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-ac",
+    "2",
+    "-movflags",
+    "+faststart",
+    "/W/mezz/144p.mp4"
+   ]
+  },
+  {
+   "name": "webm-default",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-c:v",
+    "libvpx",
+    "-b:v",
+    "2500k",
+    "-deadline",
+    "good",
+    "-cpu-used",
+    "2",
+    "-c:a",
+    "libopus",
+    "-b:a",
+    "128k",
+    "/W/a.webm"
+   ]
+  },
+  {
+   "name": "webm-1400",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-c:v",
+    "libvpx",
+    "-b:v",
+    "1400k",
+    "-deadline",
+    "good",
+    "-cpu-used",
+    "2",
+    "-c:a",
+    "libopus",
+    "-b:a",
+    "128k",
+    "/W/a.webm"
+   ]
+  },
+  {
+   "name": "webm-frac",
+   "bin": "ffmpeg",
+   "args": [
+    "-y",
+    "-i",
+    "/W/src.mp4",
+    "-c:v",
+    "libvpx",
+    "-b:v",
+    "3782.5k",
+    "-deadline",
+    "good",
+    "-cpu-used",
+    "2",
+    "-c:a",
+    "libopus",
+    "-b:a",
+    "128k",
+    "/W/a.webm"
+   ]
+  }
+ ],
+ "ladders": [
+  {
+   "name": "explicit",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": [
+      {
+       "height": 1080,
+       "bitrateKbps": 5000
+      },
+      {
+       "height": 480,
+       "bitrateKbps": 1400
+      }
+     ]
+    },
+    "webrtc": {
+     "layers": []
+    }
+   },
+   "out": [
+    {
+     "height": 1080,
+     "bitrateKbps": 5000
+    },
+    {
+     "height": 480,
+     "bitrateKbps": 1400
+    }
+   ]
+  },
+  {
+   "name": "layers",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": []
+    },
+    "webrtc": {
+     "layers": [
+      {
+       "name": "h",
+       "height": 720
+      },
+      {
+       "name": "m",
+       "height": 480
+      },
+      {
+       "name": "l",
+       "height": 240
+      }
+     ]
+    }
+   },
+   "out": [
+    {
+     "height": 720,
+     "bitrateKbps": 2800
+    },
+    {
+     "height": 480,
+     "bitrateKbps": 1400
+    },
+    {
+     "height": 240,
+     "bitrateKbps": 500
+    }
+   ]
+  },
+  {
+   "name": "odd",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": [
+      {
+       "height": 1080.7,
+       "bitrateKbps": 5000.9
+      },
+      {
+       "height": 100,
+       "bitrateKbps": 300
+      },
+      {
+       "height": 5000,
+       "bitrateKbps": 1
+      },
+      {
+       "height": 720,
+       "bitrateKbps": 0
+      },
+      {
+       "height": 1080,
+       "bitrateKbps": 1
+      },
+      {
+       "height": 360,
+       "bitrateKbps": 800
+      }
+     ]
+    },
+    "webrtc": {
+     "layers": []
+    }
+   },
+   "out": [
+    {
+     "height": 1080,
+     "bitrateKbps": 5000
+    },
+    {
+     "height": 360,
+     "bitrateKbps": 800
+    }
+   ]
+  },
+  {
+   "name": "layers-odd",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": []
+    },
+    "webrtc": {
+     "layers": [
+      {
+       "name": "a",
+       "height": 1080.7
+      },
+      {
+       "name": "b",
+       "height": 1000
+      },
+      {
+       "name": "c",
+       "height": 130
+      },
+      {
+       "name": "d",
+       "height": 1000
+      }
+     ]
+    }
+   },
+   "out": [
+    {
+     "height": 1080,
+     "bitrateKbps": 3782
+    },
+    {
+     "height": 1000,
+     "bitrateKbps": 3500
+    }
+   ]
+  },
+  {
+   "name": "cap5",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": [
+      {
+       "height": 144,
+       "bitrateKbps": 288
+      },
+      {
+       "height": 240,
+       "bitrateKbps": 480
+      },
+      {
+       "height": 360,
+       "bitrateKbps": 720
+      },
+      {
+       "height": 480,
+       "bitrateKbps": 960
+      },
+      {
+       "height": 720,
+       "bitrateKbps": 1440
+      },
+      {
+       "height": 1080,
+       "bitrateKbps": 2160
+      },
+      {
+       "height": 1440,
+       "bitrateKbps": 2880
+      }
+     ]
+    },
+    "webrtc": {
+     "layers": []
+    }
+   },
+   "out": [
+    {
+     "height": 1440,
+     "bitrateKbps": 2880
+    },
+    {
+     "height": 1080,
+     "bitrateKbps": 2160
+    },
+    {
+     "height": 720,
+     "bitrateKbps": 1440
+    },
+    {
+     "height": 480,
+     "bitrateKbps": 960
+    },
+    {
+     "height": 360,
+     "bitrateKbps": 720
+    }
+   ]
+  },
+  {
+   "name": "empty",
+   "cfg": {
+    "transcoding": {
+     "vodRenditions": []
+    },
+    "webrtc": {
+     "layers": []
+    }
+   },
+   "out": []
+  }
+ ],
+ "bitrates": [
+  {
+   "h": 2160,
+   "out": 12000
+  },
+  {
+   "h": 1440,
+   "out": 8000
+  },
+  {
+   "h": 1080,
+   "out": 5000
+  },
+  {
+   "h": 720,
+   "out": 2800
+  },
+  {
+   "h": 480,
+   "out": 1400
+  },
+  {
+   "h": 360,
+   "out": 800
+  },
+  {
+   "h": 240,
+   "out": 500
+  },
+  {
+   "h": 144,
+   "out": 250
+  },
+  {
+   "h": 1000,
+   "out": 3500
+  },
+  {
+   "h": 50,
+   "out": 200
+  },
+  {
+   "h": 1080.7,
+   "out": 3782
+  },
+  {
+   "h": 333,
+   "out": 1166
+  }
+ ],
+ "widths": [
+  {
+   "h": 720,
+   "w": null,
+   "sh": null,
+   "out": 1280
+  },
+  {
+   "h": 480,
+   "w": null,
+   "sh": null,
+   "out": 854
+  },
+  {
+   "h": 1080,
+   "w": 1920,
+   "sh": 1080,
+   "out": 1920
+  },
+  {
+   "h": 720,
+   "w": 1080,
+   "sh": 1920,
+   "out": 406
+  },
+  {
+   "h": 480,
+   "w": 640,
+   "sh": 480,
+   "out": 640
+  },
+  {
+   "h": 361,
+   "w": 1920,
+   "sh": 1080,
+   "out": 642
+  },
+  {
+   "h": 240,
+   "w": 0,
+   "sh": 0,
+   "out": 426
+  },
+  {
+   "h": 720,
+   "w": 1440,
+   "sh": 0,
+   "out": 1280
+  }
+ ],
+ "masters": [
+  {
+   "name": "two",
+   "entries": [
+    {
+     "uri": "720p/index.m3u8",
+     "height": 720,
+     "bitrateKbps": 2800,
+     "width": 1280
+    },
+    {
+     "uri": "480p/index.m3u8",
+     "height": 480,
+     "bitrateKbps": 1400
+    }
+   ],
+   "out": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=2928000,RESOLUTION=1280x720,CODECS=\"avc1.4d401f,mp4a.40.2\"\n720p/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1528000,RESOLUTION=854x480,CODECS=\"avc1.4d401f,mp4a.40.2\"\n480p/index.m3u8\n"
+  },
+  {
+   "name": "none",
+   "entries": [],
+   "out": "#EXTM3U\n#EXT-X-VERSION:3\n"
+  },
+  {
+   "name": "frac",
+   "entries": [
+    {
+     "uri": "x.m3u8",
+     "height": 361,
+     "bitrateKbps": 1263.5
+    }
+   ],
+   "out": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=1391500,RESOLUTION=642x361,CODECS=\"avc1.4d401f,mp4a.40.2\"\nx.m3u8\n"
+  }
+ ],
+ "rawKeys": [
+  {
+   "name": "single",
+   "keys": {
+    "assetId": "a",
+    "keys": [
+     {
+      "keyId": "0123456789abcdef0123456789abcdef",
+      "key": "fedcba9876543210fedcba9876543210"
+     }
+    ]
+   },
+   "scheme": "cbcs",
+   "out": [
+    "--enable_raw_key_encryption",
+    "--protection_scheme",
+    "cbcs",
+    "--clear_lead",
+    "0",
+    "--keys",
+    "label=:key_id=0123456789abcdef0123456789abcdef:key=fedcba9876543210fedcba9876543210"
+   ]
+  },
+  {
+   "name": "iv-cenc",
+   "keys": {
+    "assetId": "a",
+    "keys": [
+     {
+      "keyId": "0123456789abcdef0123456789abcdef",
+      "key": "fedcba9876543210fedcba9876543210",
+      "iv": "fedcba9876543210fedcba9876543210"
+     }
+    ]
+   },
+   "scheme": "cenc",
+   "out": [
+    "--enable_raw_key_encryption",
+    "--protection_scheme",
+    "cenc",
+    "--clear_lead",
+    "0",
+    "--keys",
+    "label=:key_id=0123456789abcdef0123456789abcdef:key=fedcba9876543210fedcba9876543210:iv=fedcba9876543210fedcba9876543210"
+   ]
+  },
+  {
+   "name": "multi-pssh-uri",
+   "keys": {
+    "assetId": "a",
+    "keys": [
+     {
+      "keyId": "0123456789abcdef0123456789abcdef",
+      "key": "fedcba9876543210fedcba9876543210"
+     },
+     {
+      "keyId": "fedcba9876543210fedcba9876543210",
+      "key": "0123456789abcdef0123456789abcdef"
+     }
+    ],
+    "pssh": [
+     {
+      "system": "widevine",
+      "boxBase64": "AAAAMHBzc2g="
+     },
+     {
+      "system": "playready",
+      "boxBase64": "UFI"
+     },
+     {
+      "system": "fairplay",
+      "boxBase64": "a-b_c"
+     }
+    ],
+    "hlsKeyUri": "skd://asset-a"
+   },
+   "scheme": "cbcs",
+   "out": [
+    "--enable_raw_key_encryption",
+    "--protection_scheme",
+    "cbcs",
+    "--clear_lead",
+    "0",
+    "--keys",
+    "label=:key_id=0123456789abcdef0123456789abcdef:key=fedcba9876543210fedcba9876543210,label=key1:key_id=fedcba9876543210fedcba9876543210:key=0123456789abcdef0123456789abcdef",
+    "--pssh",
+    "000000307073736850526be6ff",
+    "--hls_key_uri",
+    "skd://asset-a"
+   ]
+  }
+ ],
+ "shakaJobs": [
+  {
+   "name": "two",
+   "job": {
+    "renditions": [
+     {
+      "height": 720,
+      "mp4Path": "/w/720p.mp4"
+     },
+     {
+      "height": 480,
+      "mp4Path": "/w/480p.mp4"
+     }
+    ],
+    "audioSourcePath": "/w/source.mp4",
+    "outDir": "/w/out",
+    "keyArgs": [
+     "--enable_raw_key_encryption"
+    ]
+   },
+   "out": [
+    "in=/w/720p.mp4,stream=video,output=/w/out/720p.mp4,playlist_name=720p.m3u8",
+    "in=/w/480p.mp4,stream=video,output=/w/out/480p.mp4,playlist_name=480p.m3u8",
+    "in=/w/source.mp4,stream=audio,output=/w/out/audio.mp4,playlist_name=audio.m3u8,hls_group_id=audio,hls_name=default",
+    "--segment_duration",
+    "4",
+    "--hls_master_playlist_output",
+    "/w/out/master.m3u8",
+    "--enable_raw_key_encryption"
+   ]
+  },
+  {
+   "name": "seg6",
+   "job": {
+    "renditions": [
+     {
+      "height": 720,
+      "mp4Path": "/w/720p.mp4"
+     }
+    ],
+    "audioSourcePath": "/w/s.mp4",
+    "outDir": "/w/out/",
+    "segmentSeconds": 6,
+    "keyArgs": []
+   },
+   "out": [
+    "in=/w/720p.mp4,stream=video,output=/w/out/720p.mp4,playlist_name=720p.m3u8",
+    "in=/w/s.mp4,stream=audio,output=/w/out/audio.mp4,playlist_name=audio.m3u8,hls_group_id=audio,hls_name=default",
+    "--segment_duration",
+    "6",
+    "--hls_master_playlist_output",
+    "/w/out/master.m3u8"
+   ]
+  }
+ ],
+ "drm": [
+  {
+   "disk": null,
+   "out": {
+    "enabled": false,
+    "provider": "none",
+    "systems": [
+     "widevine",
+     "playready",
+     "fairplay"
+    ],
+    "scheme": "cbcs",
+    "keyServerUrl": "",
+    "keyServerTokenEnv": "",
+    "licenseUrls": {
+     "widevine": "",
+     "playready": "",
+     "fairplay": ""
+    },
+    "fairplayCertUrl": "",
+    "failOpen": false
+   }
+  },
+  {
+   "disk": {},
+   "out": {
+    "enabled": false,
+    "provider": "none",
+    "systems": [
+     "widevine",
+     "playready",
+     "fairplay"
+    ],
+    "scheme": "cbcs",
+    "keyServerUrl": "",
+    "keyServerTokenEnv": "",
+    "licenseUrls": {
+     "widevine": "",
+     "playready": "",
+     "fairplay": ""
+    },
+    "fairplayCertUrl": "",
+    "failOpen": false
+   }
+  },
+  {
+   "disk": {
+    "enabled": true,
+    "provider": "EXTERNAL",
+    "systems": [
+     "Widevine",
+     "nope",
+     "widevine",
+     "FairPlay"
+    ],
+    "scheme": "CENC",
+    "key_server_url": " https://k ",
+    "key_server_token_env": "TOK",
+    "license_urls": {
+     "widevine": " u ",
+     "playready": 5
+    },
+    "fairplay_cert_url": "c",
+    "fail_open": true
+   },
+   "out": {
+    "enabled": true,
+    "provider": "external",
+    "systems": [
+     "widevine",
+     "fairplay"
+    ],
+    "scheme": "cenc",
+    "keyServerUrl": "https://k",
+    "keyServerTokenEnv": "TOK",
+    "licenseUrls": {
+     "widevine": "u",
+     "playready": "",
+     "fairplay": ""
+    },
+    "fairplayCertUrl": "c",
+    "failOpen": true
+   }
+  },
+  {
+   "disk": {
+    "enabled": "true",
+    "fail_open": 1,
+    "systems": "widevine",
+    "scheme": "sample-aes"
+   },
+   "out": {
+    "enabled": false,
+    "provider": "none",
+    "systems": [
+     "widevine",
+     "playready",
+     "fairplay"
+    ],
+    "scheme": "cbcs",
+    "keyServerUrl": "",
+    "keyServerTokenEnv": "",
+    "licenseUrls": {
+     "widevine": "",
+     "playready": "",
+     "fairplay": ""
+    },
+    "fairplayCertUrl": "",
+    "failOpen": false
+   }
+  }
+ ]
+}

@@ -1,0 +1,694 @@
+{
+ "dtos": {
+  "LoginDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "user must be shorter than or equal to 200 characters",
+     "user must be longer than or equal to 1 characters",
+     "user must be a string",
+     "password must be shorter than or equal to 200 characters",
+     "password must be longer than or equal to 1 characters",
+     "password must be a string"
+    ]
+   },
+   {
+    "body": {
+     "user": "a",
+     "password": "b"
+    },
+    "ok": true,
+    "value": {
+     "user": "a",
+     "password": "b"
+    }
+   },
+   {
+    "body": {
+     "user": "",
+     "password": ""
+    },
+    "ok": false,
+    "messages": [
+     "user must be longer than or equal to 1 characters",
+     "password must be longer than or equal to 1 characters"
+    ]
+   },
+   {
+    "body": {
+     "user": 1,
+     "password": true
+    },
+    "ok": false,
+    "messages": [
+     "user must be shorter than or equal to 200 characters",
+     "user must be longer than or equal to 1 characters",
+     "user must be a string",
+     "password must be shorter than or equal to 200 characters",
+     "password must be longer than or equal to 1 characters",
+     "password must be a string"
+    ]
+   },
+   {
+    "body": {
+     "user": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "password": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "code": "aaaaaaaaaaa"
+    },
+    "ok": false,
+    "messages": [
+     "user must be shorter than or equal to 200 characters",
+     "password must be shorter than or equal to 200 characters",
+     "code must be shorter than or equal to 10 characters"
+    ]
+   },
+   {
+    "body": {
+     "user": "a",
+     "password": "b",
+     "code": 5
+    },
+    "ok": false,
+    "messages": [
+     "code must be shorter than or equal to 10 characters",
+     "code must be a string"
+    ]
+   }
+  ],
+  "SignupDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "email must be shorter than or equal to 200 characters",
+     "email must be an email",
+     "password must be shorter than or equal to 200 characters",
+     "password must be longer than or equal to 8 characters",
+     "password must be a string"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co",
+     "password": "longenough"
+    },
+    "ok": true,
+    "value": {
+     "email": "a@b.co",
+     "password": "longenough"
+    }
+   },
+   {
+    "body": {
+     "email": "nope",
+     "password": "short"
+    },
+    "ok": false,
+    "messages": [
+     "email must be an email",
+     "password must be longer than or equal to 8 characters"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co",
+     "password": "longenough",
+     "teamName": 5
+    },
+    "ok": false,
+    "messages": [
+     "teamName must be shorter than or equal to 200 characters",
+     "teamName must be a string"
+    ]
+   },
+   {
+    "body": {
+     "email": 5,
+     "password": 5,
+     "teamName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": false,
+    "messages": [
+     "email must be shorter than or equal to 200 characters",
+     "email must be an email",
+     "password must be shorter than or equal to 200 characters",
+     "password must be longer than or equal to 8 characters",
+     "password must be a string",
+     "teamName must be shorter than or equal to 200 characters"
+    ]
+   }
+  ],
+  "CreateTokenDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "name must be shorter than or equal to 100 characters",
+     "name must be a string",
+     "scope must be one of the following values: global, app"
+    ]
+   },
+   {
+    "body": {
+     "name": "x",
+     "scope": "global"
+    },
+    "ok": true,
+    "value": {
+     "name": "x",
+     "scope": "global"
+    }
+   },
+   {
+    "body": {
+     "name": "x",
+     "scope": "nope",
+     "appId": "5"
+    },
+    "ok": false,
+    "messages": [
+     "scope must be one of the following values: global, app",
+     "appId must be an integer number"
+    ]
+   },
+   {
+    "body": {
+     "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "scope": "app",
+     "appId": 1.5,
+     "allowedIps": "x"
+    },
+    "ok": false,
+    "messages": [
+     "name must be shorter than or equal to 100 characters",
+     "appId must be an integer number",
+     "allowedIps must be an array"
+    ]
+   },
+   {
+    "body": {
+     "name": "x",
+     "scope": "app",
+     "appId": 3,
+     "allowedIps": [
+      "1.2.3.4",
+      5
+     ]
+    },
+    "ok": false,
+    "messages": [
+     "each value in allowedIps must be a string"
+    ]
+   },
+   {
+    "body": {
+     "name": "x",
+     "scope": "global",
+     "allowedIps": null,
+     "appId": null
+    },
+    "ok": true,
+    "value": {
+     "name": "x",
+     "scope": "global",
+     "allowedIps": null,
+     "appId": null
+    }
+   }
+  ],
+  "InviteMemberDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "email must be shorter than or equal to 200 characters",
+     "email must be an email"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co"
+    },
+    "ok": true,
+    "value": {
+     "email": "a@b.co"
+    }
+   },
+   {
+    "body": {
+     "email": "bad",
+     "role": "admin"
+    },
+    "ok": false,
+    "messages": [
+     "email must be an email",
+     "role must be one of the following values: owner, editor, viewer"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co",
+     "role": "editor"
+    },
+    "ok": true,
+    "value": {
+     "email": "a@b.co",
+     "role": "editor"
+    }
+   }
+  ],
+  "MagicLinkRequestDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "email must be shorter than or equal to 200 characters",
+     "email must be an email"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co"
+    },
+    "ok": true,
+    "value": {
+     "email": "a@b.co"
+    }
+   },
+   {
+    "body": {
+     "email": "not-an-email"
+    },
+    "ok": false,
+    "messages": [
+     "email must be an email"
+    ]
+   },
+   {
+    "body": {
+     "email": 7
+    },
+    "ok": false,
+    "messages": [
+     "email must be shorter than or equal to 200 characters",
+     "email must be an email"
+    ]
+   }
+  ],
+  "MagicVerifyDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "token must be shorter than or equal to 512 characters",
+     "token must be longer than or equal to 10 characters",
+     "token must be a string"
+    ]
+   },
+   {
+    "body": {
+     "token": "short"
+    },
+    "ok": false,
+    "messages": [
+     "token must be longer than or equal to 10 characters"
+    ]
+   },
+   {
+    "body": {
+     "token": "aaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": true,
+    "value": {
+     "token": "aaaaaaaaaaaaaaaaaaaa"
+    }
+   },
+   {
+    "body": {
+     "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "code": "aaaaaaaaaaa"
+    },
+    "ok": false,
+    "messages": [
+     "token must be shorter than or equal to 512 characters",
+     "code must be shorter than or equal to 10 characters"
+    ]
+   },
+   {
+    "body": {
+     "token": 5
+    },
+    "ok": false,
+    "messages": [
+     "token must be shorter than or equal to 512 characters",
+     "token must be longer than or equal to 10 characters",
+     "token must be a string"
+    ]
+   }
+  ],
+  "UpdateAccountDto": [
+   {
+    "body": {},
+    "ok": true,
+    "value": {}
+   },
+   {
+    "body": {
+     "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "email": "x"
+    },
+    "ok": false,
+    "messages": [
+     "name must be shorter than or equal to 120 characters",
+     "email must be an email"
+    ]
+   },
+   {
+    "body": {
+     "name": 5
+    },
+    "ok": false,
+    "messages": [
+     "name must be shorter than or equal to 120 characters",
+     "name must be a string"
+    ]
+   },
+   {
+    "body": {
+     "email": "a@b.co"
+    },
+    "ok": true,
+    "value": {
+     "email": "a@b.co"
+    }
+   }
+  ],
+  "ChangePasswordDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "currentPassword must be shorter than or equal to 200 characters",
+     "currentPassword must be a string",
+     "newPassword must be shorter than or equal to 200 characters",
+     "newPassword must be longer than or equal to 8 characters",
+     "newPassword must be a string"
+    ]
+   },
+   {
+    "body": {
+     "currentPassword": "a",
+     "newPassword": "short"
+    },
+    "ok": false,
+    "messages": [
+     "newPassword must be longer than or equal to 8 characters"
+    ]
+   },
+   {
+    "body": {
+     "currentPassword": 1,
+     "newPassword": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": false,
+    "messages": [
+     "currentPassword must be shorter than or equal to 200 characters",
+     "currentPassword must be a string",
+     "newPassword must be shorter than or equal to 200 characters"
+    ]
+   }
+  ],
+  "TwoFaCodeDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "code must be a 6-digit number",
+     "code must be a string"
+    ]
+   },
+   {
+    "body": {
+     "code": "123456"
+    },
+    "ok": true,
+    "value": {
+     "code": "123456"
+    }
+   },
+   {
+    "body": {
+     "code": " 123456 "
+    },
+    "ok": true,
+    "value": {
+     "code": " 123456 "
+    }
+   },
+   {
+    "body": {
+     "code": "12345"
+    },
+    "ok": false,
+    "messages": [
+     "code must be a 6-digit number"
+    ]
+   },
+   {
+    "body": {
+     "code": 123456
+    },
+    "ok": false,
+    "messages": [
+     "code must be a 6-digit number",
+     "code must be a string"
+    ]
+   }
+  ],
+  "SetAccountSmtpDto": [
+   {
+    "body": {},
+    "ok": true,
+    "value": {}
+   },
+   {
+    "body": {
+     "enabled": "yes",
+     "port": 0
+    },
+    "ok": false,
+    "messages": [
+     "enabled must be a boolean value",
+     "port must not be less than 1"
+    ]
+   },
+   {
+    "body": {
+     "port": 70000,
+     "host": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "pass": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "from": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "user": 5
+    },
+    "ok": false,
+    "messages": [
+     "host must be shorter than or equal to 255 characters",
+     "port must not be greater than 65535",
+     "user must be shorter than or equal to 255 characters",
+     "user must be a string",
+     "pass must be shorter than or equal to 512 characters",
+     "from must be shorter than or equal to 255 characters"
+    ]
+   },
+   {
+    "body": {
+     "port": 1.5
+    },
+    "ok": false,
+    "messages": [
+     "port must be an integer number"
+    ]
+   },
+   {
+    "body": {
+     "enabled": true,
+     "host": "h",
+     "port": 587,
+     "user": "u",
+     "pass": "p",
+     "from": "f"
+    },
+    "ok": true,
+    "value": {
+     "enabled": true,
+     "host": "h",
+     "port": 587,
+     "user": "u",
+     "pass": "p",
+     "from": "f"
+    }
+   }
+  ],
+  "TestSmtpDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "to must be shorter than or equal to 200 characters",
+     "to must be an email"
+    ]
+   },
+   {
+    "body": {
+     "to": "a@b.co"
+    },
+    "ok": true,
+    "value": {
+     "to": "a@b.co"
+    }
+   },
+   {
+    "body": {
+     "to": "bad"
+    },
+    "ok": false,
+    "messages": [
+     "to must be an email"
+    ]
+   }
+  ],
+  "CreateIpRuleDto": [
+   {
+    "body": {},
+    "ok": false,
+    "messages": [
+     "cidr must be shorter than or equal to 64 characters",
+     "cidr must be a string",
+     "action must be one of the following values: allow, block"
+    ]
+   },
+   {
+    "body": {
+     "cidr": "1.2.3.4",
+     "action": "allow"
+    },
+    "ok": true,
+    "value": {
+     "cidr": "1.2.3.4",
+     "action": "allow"
+    }
+   },
+   {
+    "body": {
+     "cidr": 5,
+     "action": "deny",
+     "note": 5
+    },
+    "ok": false,
+    "messages": [
+     "cidr must be shorter than or equal to 64 characters",
+     "cidr must be a string",
+     "action must be one of the following values: allow, block",
+     "note must be shorter than or equal to 300 characters",
+     "note must be a string"
+    ]
+   },
+   {
+    "body": {
+     "cidr": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "action": "block",
+     "note": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": false,
+    "messages": [
+     "cidr must be shorter than or equal to 64 characters",
+     "note must be shorter than or equal to 300 characters"
+    ]
+   }
+  ],
+  "UpdateQuotasDto": [
+   {
+    "body": {},
+    "ok": true,
+    "value": {}
+   },
+   {
+    "body": {
+     "plan": "pro",
+     "maxApps": -1
+    },
+    "ok": true,
+    "value": {
+     "plan": "pro",
+     "maxApps": -1
+    }
+   },
+   {
+    "body": {
+     "plan": "",
+     "maxApps": -2,
+     "maxConcurrentStreams": 1.5,
+     "maxStorageGb": "3"
+    },
+    "ok": false,
+    "messages": [
+     "plan must be longer than or equal to 1 characters",
+     "maxApps must not be less than -1",
+     "maxConcurrentStreams must be an integer number",
+     "maxStorageGb must not be less than -1",
+     "maxStorageGb must be an integer number"
+    ]
+   },
+   {
+    "body": {
+     "plan": 5
+    },
+    "ok": false,
+    "messages": [
+     "plan must be longer than or equal to 1 and shorter than or equal to 64 characters",
+     "plan must be a string"
+    ]
+   },
+   {
+    "body": {
+     "plan": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "maxEgressGbMonth": null,
+     "maxRecordingMinutesMonth": true
+    },
+    "ok": false,
+    "messages": [
+     "plan must be shorter than or equal to 64 characters",
+     "maxRecordingMinutesMonth must not be less than -1",
+     "maxRecordingMinutesMonth must be an integer number"
+    ]
+   }
+  ]
+ },
+ "isEmail": {
+  "a@b.co": true,
+  "a@b.c": false,
+  "a@b": false,
+  "a.b@c.io": true,
+  "a..b@c.io": false,
+  ".a@c.io": false,
+  "a@-b.io": false,
+  "a@b-.io": false,
+  "a+tag@x.com": true,
+  "ñandú@x.com": true,
+  "a b@x.com": false,
+  "\"a b\"@x.com": true,
+  "a@b.123": false,
+  "a@b.xn--p1ai": true,
+  "a@b_c.io": false,
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com": false,
+  "x@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com": false,
+  "a@@b.com": false,
+  "a@b.co ": false,
+  "A@B.CO": true,
+  "": false,
+  "user@[1.2.3.4]": false,
+  "a@localhost": false,
+  "a@1.2.3.4": false
+ }
+}

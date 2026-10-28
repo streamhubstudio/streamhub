@@ -1,0 +1,236 @@
+{
+  "module": "metrics-history",
+  "cases": [
+    {
+      "name": "history-default-all-series",
+      "fingerprint": "sha256:55e0b6848efff550",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bucketMs": 3600000,
+          "range": "30d",
+          "retentionDays": 30,
+          "series": {
+            "cpu": "<masked>",
+            "disk": "<masked>",
+            "mem": "<masked>",
+            "net": "<masked>"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "history-global-token",
+      "fingerprint": "sha256:b104aea10267dab7",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history?range=24h",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bucketMs": 3600000,
+          "range": "24h",
+          "retentionDays": 30,
+          "series": {
+            "cpu": "<masked>",
+            "disk": "<masked>",
+            "mem": "<masked>",
+            "net": "<masked>"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "history-metric-filter",
+      "fingerprint": "sha256:b9771348900e62ca",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history?range=7d&metric=net",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bucketMs": 3600000,
+          "range": "7d",
+          "retentionDays": 30,
+          "series": {
+            "net": "<masked>"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "history-unknown-metric-and-range-fall-back",
+      "fingerprint": "sha256:c5d7d10a85292cd9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history?range=1y&metric=gpu",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bucketMs": 3600000,
+          "range": "30d",
+          "retentionDays": 30,
+          "series": {
+            "cpu": "<masked>",
+            "disk": "<masked>",
+            "mem": "<masked>",
+            "net": "<masked>"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "history-empty-range-defaults",
+      "fingerprint": "sha256:584bf69ecdf1eef0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history?range=&metric=",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "bucketMs": 3600000,
+          "range": "30d",
+          "retentionDays": 30,
+          "series": {
+            "cpu": "<masked>",
+            "disk": "<masked>",
+            "mem": "<masked>",
+            "net": "<masked>"
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "history-app-token-403",
+      "fingerprint": "sha256:ac73abae722757d4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history",
+        "auth": "appToken"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "history-owner-user-403",
+      "fingerprint": "sha256:2bd4a4dd551b3b65",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history",
+        "auth": "ownerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "history-viewer-403",
+      "fingerprint": "sha256:208eb48c8ecb8c80",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "this endpoint requires a global-scope credential",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "history-revoked-401",
+      "fingerprint": "sha256:4c40daf454543d6e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history",
+        "auth": "revokedToken"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Invalid or revoked API token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "history-no-auth-401",
+      "fingerprint": "sha256:59c4ecb4b9eb4197",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/system/metrics/history"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    }
+  ]
+}

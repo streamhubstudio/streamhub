@@ -1,0 +1,29 @@
+# operator notes
+notifications:
+  email: ops@example.com
+name: gold-b
+recording:
+  split_minutes: '15'
+  extra_knob: 3
+webrtc:
+  transcode_max_height: 200
+  junk: 1
+mqtt:
+  events: []
+  qos: 3
+  logs: {level: loud}
+smtp:
+  port: 99999
+  pass: inline
+quotas:
+  max_concurrent_streams: '4'
+  max_viewers_per_stream: -2
+features:
+  linear: {dvr: true, dvr_window_seconds: 0}
+  ws_ingest: {max_fps: 0, max_cameras: -1}
+variables:
+  zeta: 1
+  '7': seven
+  alpha: [a, b]
+cluster:
+  role: edge

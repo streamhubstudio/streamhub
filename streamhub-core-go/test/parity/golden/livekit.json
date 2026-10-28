@@ -1,0 +1,2396 @@
+{
+  "module": "livekit",
+  "cases": [
+    {
+      "name": "lk-setup-app",
+      "fingerprint": "sha256:438a1d703e9af0da",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps",
+        "auth": "globalToken",
+        "body": {
+          "name": "par-lk",
+          "displayName": "LK"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "lk-setup-config",
+      "fingerprint": "sha256:93c733c8aa943355",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/par-lk/config/raw",
+        "auth": "globalToken",
+        "body": {
+          "yaml": "name: par-lk\nroom_prefix: lkp\ndisplay_name: LK\nwebrtc:\n  adaptive: true\n  transcode_max_height: 1080\n  layers:\n    - {name: low, height: 360}\n    - {name: high, height: 720}\nfeatures:\n  public_playback: false\n  chat: false\n  reactions: true\n  hidden_qc: false\n  adaptive_player: true\n  rtmp_password: true\n"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    },
+    {
+      "name": "tokens-no-auth",
+      "fingerprint": "sha256:988e623a7b798d71",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "body": {}
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "tokens-viewer-denied",
+      "fingerprint": "sha256:4afb50a97f047039",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "viewerJwt",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks stream:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tokens-owner-cross-tenant",
+      "fingerprint": "sha256:52f92701d7470fb4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "ownerJwt",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "tokens-validation",
+      "fingerprint": "sha256:7e769b12a0ddabe0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "globalToken",
+        "body": {
+          "room": "bad room!",
+          "identity": 5,
+          "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "canPublish": "yes",
+          "canSubscribe": 1,
+          "ttl": "yyyyyyyyyyyyyyyyyyyyy",
+          "metadata": 7,
+          "hidden": "no",
+          "recorder": 0,
+          "audioOnly": "t"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room may only contain letters, numbers, dot, underscore, hyphen",
+          "identity must be shorter than or equal to 120 characters",
+          "identity must be a string",
+          "name must be shorter than or equal to 120 characters",
+          "canPublish must be a boolean value",
+          "canSubscribe must be a boolean value",
+          "ttl must be shorter than or equal to 20 characters",
+          "metadata must be shorter than or equal to 2000 characters",
+          "metadata must be a string",
+          "hidden must be a boolean value",
+          "recorder must be a boolean value",
+          "audioOnly must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tokens-room-pattern",
+      "fingerprint": "sha256:3fa38e610fe7e1af",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "globalToken",
+        "body": {
+          "room": "a/b"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room may only contain letters, numbers, dot, underscore, hyphen"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tokens-no-livekit-creds",
+      "fingerprint": "sha256:d9ae533d90a6a8dd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "globalToken",
+        "body": {
+          "room": "demo",
+          "identity": "u1"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "tokens-app-token",
+      "fingerprint": "sha256:0f295f5103f49d6b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tokens",
+        "auth": "appToken",
+        "body": {
+          "hidden": true,
+          "recorder": true
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "tokens-adaptive-app",
+      "fingerprint": "sha256:8652c1f362b373c4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/tokens",
+        "auth": "globalToken",
+        "body": {
+          "metadata": "{\"a\":1}"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "tokens-unknown-app",
+      "fingerprint": "sha256:9b4769c013008533",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/no-such-app/tokens",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "play-token-public-app",
+      "fingerprint": "sha256:3636860da28f0028",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/play-token/demo"
+      },
+      "status": 503,
+      "headers": {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "play-token-private-no-sig",
+      "fingerprint": "sha256:37670813ae81f4e0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo"
+      },
+      "status": 403,
+      "headers": {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "playback for this app requires a valid signed URL",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "play-token-private-bad-sig",
+      "fingerprint": "sha256:40fe721b8e048311",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo?exp=9999999999&sig=0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "status": 403,
+      "headers": {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "playback for this app requires a valid signed URL",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "play-token-private-malformed",
+      "fingerprint": "sha256:a01cdeb948c9f874",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo?exp=abc&sig=zz"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "playback for this app requires a valid signed URL",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "play-token-private-expired",
+      "fingerprint": "sha256:81e2da61438656a8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo?exp=1000000000&sig=b57717af0ad3b80f932b2b0398d6946fa6ad2ce2ebeb50e7859e336fece0a5d8"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "signed playback URL expired",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "play-token-unknown-app",
+      "fingerprint": "sha256:6bbf78d298f4c0f8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/no-such-app/play-token/demo"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "listen-token-public-app",
+      "fingerprint": "sha256:56db7203c768533a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/radio/demo/listen-token"
+      },
+      "status": 503,
+      "headers": {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "listen-token-private-no-sig",
+      "fingerprint": "sha256:aab857d970433d7a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/radio/demo/listen-token"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "playback for this app requires a valid signed URL",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sign-no-auth",
+      "fingerprint": "sha256:4f20ffe644507548",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "body": {}
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "sign-validation-low",
+      "fingerprint": "sha256:342d9140dda260b5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "auth": "globalToken",
+        "body": {
+          "ttlSeconds": 5
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "ttlSeconds must not be less than 30"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sign-validation-types",
+      "fingerprint": "sha256:f33bd2464f5b21bc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "auth": "globalToken",
+        "body": {
+          "ttlSeconds": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "ttlSeconds must not be greater than 86400",
+          "ttlSeconds must not be less than 30",
+          "ttlSeconds must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sign-validation-high",
+      "fingerprint": "sha256:74e4a911a984820a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "auth": "globalToken",
+        "body": {
+          "ttlSeconds": 86401.5
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "ttlSeconds must not be greater than 86400",
+          "ttlSeconds must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sign-ok",
+      "fingerprint": "sha256:bae40a694d98fa18",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "auth": "globalToken",
+        "body": {
+          "ttlSeconds": 120
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "app": "par-lk",
+          "embedUrl": "<masked>",
+          "exp": "<masked>",
+          "iframe": "<masked>",
+          "playUrl": "<masked>",
+          "room": "demo",
+          "sig": "{{lkSig}}",
+          "tokenUrl": "<masked>",
+          "ttlSeconds": 120
+        }
+      }
+    },
+    {
+      "name": "sign-default-ttl",
+      "fingerprint": "sha256:e3637ac83ca7abbb",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+        "auth": "globalToken",
+        "rawBody": ""
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "app": "par-lk",
+          "embedUrl": "<masked>",
+          "exp": "<masked>",
+          "iframe": "<masked>",
+          "playUrl": "<masked>",
+          "room": "demo",
+          "sig": "<masked>",
+          "tokenUrl": "<masked>",
+          "ttlSeconds": 300
+        }
+      }
+    },
+    {
+      "name": "play-token-private-signed",
+      "fingerprint": "sha256:11673ae2e2dfba0d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo?exp={{lkExp}}&sig={{lkSig}}"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "play-token-private-signed-uppercase",
+      "fingerprint": "sha256:cba74421cba6224f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/demo?exp={{lkExp}}&sig=%20{{lkSig}}%20"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "play-token-private-other-room",
+      "fingerprint": "sha256:7514a03339268d50",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/play-token/other?exp={{lkExp}}&sig={{lkSig}}"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "playback for this app requires a valid signed URL",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "listen-token-private-signed",
+      "fingerprint": "sha256:cf19cc308c59fa63",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/par-lk/radio/demo/listen-token?exp={{lkExp}}&sig={{lkSig}}"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit API credentials not configured",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-create-no-auth",
+      "fingerprint": "sha256:0b426cd4659613d5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "body": {}
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "ingress-create-viewer",
+      "fingerprint": "sha256:5c89e7c1800f5e05",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "viewerJwt",
+        "body": {
+          "inputType": "rtmp"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks ingress:create",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "ingress-create-empty",
+      "fingerprint": "sha256:751144b88b5b2a7d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "rawBody": ""
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "inputType must be one of the following values: rtmp, whip, url, srt, mpegts"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-bad-enum",
+      "fingerprint": "sha256:5f10e825928112f0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "udp",
+          "mode": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "inputType must be one of the following values: rtmp, whip, url, srt, mpegts",
+          "mode must be one of the following values: transcode, passthrough"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-srt-no-mode",
+      "fingerprint": "sha256:303797a87c8a85f5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "srt",
+          "room": "ch1"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "inputType 'srt' requires mode 'passthrough' — the LiveKit transcode path has no SRT input type (to pull a remote SRT source, use inputType 'url' with an srt:// url)"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-mpegts-transcode",
+      "fingerprint": "sha256:a0f7d985e1dcc1d4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "mpegts",
+          "mode": "transcode"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "inputType 'mpegts' requires mode 'passthrough' — MPEG-TS/UDP multicast is a remux-only PULL ingest (there is no LiveKit transcode input for it)"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-bad-fields",
+      "fingerprint": "sha256:59f518afd26d6321",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "room": "a b",
+          "participantIdentity": 1,
+          "url": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+          "sources": 2,
+          "localaddr": "1111111111111111111111111111111111111111111111",
+          "fifoSize": 0,
+          "overrunNonfatal": "y",
+          "enableTranscoding": 1,
+          "audioOnly": "n",
+          "backup": "b"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room may only contain letters, numbers, dot, underscore, hyphen",
+          "participantIdentity must be shorter than or equal to 120 characters",
+          "participantIdentity must be a string",
+          "url must be shorter than or equal to 500 characters",
+          "sources must be shorter than or equal to 300 characters",
+          "sources must be a string",
+          "localaddr must be shorter than or equal to 45 characters",
+          "fifoSize must not be less than 1",
+          "overrunNonfatal must be a boolean value",
+          "enableTranscoding must be a boolean value",
+          "audioOnly must be a boolean value",
+          "backup must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-fifo-float",
+      "fingerprint": "sha256:c1dcfc271ff80387",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "fifoSize": 1500000000.0
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "fifoSize must not be greater than 100000000"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-rtmp",
+      "fingerprint": "sha256:3bc5a7617956b592",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "room": "ch1",
+          "backup": true
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit createIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-create-whip",
+      "fingerprint": "sha256:b5b87719fa434c2c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "whip",
+          "enableTranscoding": false
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit createIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-create-url-missing",
+      "fingerprint": "sha256:6ac7e242aeece78e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "createIngress: url is required for inputType \"url\"",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-create-url-private",
+      "fingerprint": "sha256:b6ca1ffcde9e2f61",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "rtsp://10.0.0.1/cam"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "ingress pull url points at a private/loopback/link-local address",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-url-metadata",
+      "fingerprint": "sha256:b4b715f9b73459b5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "http://169.254.169.254/latest"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "ingress pull url points at a private/loopback/link-local address",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-url-loopback-srt",
+      "fingerprint": "sha256:a0be14159671bf94",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "srt://127.0.0.1:9000"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "ingress pull url points at a private/loopback/link-local address",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-url-scheme",
+      "fingerprint": "sha256:e86b176ac5d5c2c3",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "file:///etc/passwd"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "ingress pull url scheme 'file' is not allowed (allowed: http, https, rtsp, rtsps, rtmp, rtmps, srt)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-url-invalid",
+      "fingerprint": "sha256:1d9b5fb1e3171d30",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "not a url"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "invalid ingress pull url: 'not a url'",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-url-public-ip",
+      "fingerprint": "sha256:3fb527aa01266268",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "url",
+          "url": "rtsp://93.184.216.34/live"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit createIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-whip",
+      "fingerprint": "sha256:bf3464b3701a26e1",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "whip",
+          "mode": "passthrough"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "passthrough ingress requires inputType=rtmp, inputType=srt or inputType=mpegts",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-transcode",
+      "fingerprint": "sha256:4c3a9f584efde8ed",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "mode": "passthrough",
+          "enableTranscoding": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "passthrough (remux) cannot be combined with transcoding — pick one mode",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-backup",
+      "fingerprint": "sha256:05db535ab167fdb3",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "srt",
+          "mode": "passthrough",
+          "backup": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "passthrough does not support a backup/failover key",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-audio",
+      "fingerprint": "sha256:cab4ec77df759bf5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "mode": "passthrough",
+          "audioOnly": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "passthrough does not support audio-only (there is no transcode to drop video)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-rtmp",
+      "fingerprint": "sha256:e8d50214824a01bd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken",
+        "body": {
+          "inputType": "rtmp",
+          "mode": "passthrough"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "RTMP/SRT/MPEG-TS passthrough is disabled — set STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on to use it",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-list-no-auth",
+      "fingerprint": "sha256:f5b9e0811b90e670",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "ingress-list",
+      "fingerprint": "sha256:310c0d110980123e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-list-viewer",
+      "fingerprint": "sha256:d07ba0a1171cca7c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "ingress-list-bad-limit",
+      "fingerprint": "sha256:7af89b0ad66e79d7",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress?limit=abc&offset=1.5",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must be an integer number",
+          "offset must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-list-array-room",
+      "fingerprint": "sha256:b72a9638b79c509b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress?room=a&room=b&q=x",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be shorter than or equal to 200 characters",
+          "room must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-list-long-q",
+      "fingerprint": "sha256:1deb865931569a89",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress?q=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "q must be shorter than or equal to 200 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-list-ok-params",
+      "fingerprint": "sha256:6f995352cacf6a6a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress?limit=&offset=0x10&room=ch1",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-get",
+      "fingerprint": "sha256:70c686dda9f33564",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ingress/IN_abc",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-validate-empty",
+      "fingerprint": "sha256:ae61638fce84852e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "password must be shorter than or equal to 256 characters",
+          "password must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "ingress-validate-unknown",
+      "fingerprint": "sha256:dce3ba54cd8eacaa",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+        "auth": "globalToken",
+        "body": {
+          "password": "x"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "ingress IN_abc not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "ingress-validate-viewer",
+      "fingerprint": "sha256:a8fa8c14b71b161b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+        "auth": "viewerJwt",
+        "body": {
+          "password": "x"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks ingress:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "ingress-delete",
+      "fingerprint": "sha256:1c83e5f46e962723",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ingress/IN_abc",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit deleteIngress failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "ingress-delete-passthrough",
+      "fingerprint": "sha256:5c34b30e8956102a",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ingress/pti_abc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true,
+          "ingressId": "pti_abc",
+          "mode": "passthrough"
+        }
+      }
+    },
+    {
+      "name": "ingress-delete-viewer",
+      "fingerprint": "sha256:da8e1ffec0cc7337",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ingress/IN_abc",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks ingress:delete",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "stream-data-empty",
+      "fingerprint": "sha256:a0d744cdad0c93a1",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/data",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "topic must be shorter than or equal to 64 characters",
+          "topic must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "stream-data-types",
+      "fingerprint": "sha256:71cb0eef627636ae",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+          "message": 1,
+          "reaction": 2,
+          "payload": 3,
+          "from": 4,
+          "destinationIdentities": [
+            1,
+            "a"
+          ],
+          "reliable": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "topic must be shorter than or equal to 64 characters",
+          "message must be shorter than or equal to 4000 characters",
+          "message must be a string",
+          "reaction must be shorter than or equal to 64 characters",
+          "reaction must be a string",
+          "payload must be shorter than or equal to 8000 characters",
+          "payload must be a string",
+          "from must be shorter than or equal to 120 characters",
+          "from must be a string",
+          "each value in destinationIdentities must be a string",
+          "reliable must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "stream-data-dest-not-array",
+      "fingerprint": "sha256:a8e44fd88131e33e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "x",
+          "destinationIdentities": "a"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "destinationIdentities must be an array"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "stream-data-chat-disabled",
+      "fingerprint": "sha256:91d63272a320f144",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/streams/s1/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "chat",
+          "message": "hi"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "chat is disabled for this app",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stream-data-reaction",
+      "fingerprint": "sha256:0158cd98b4fa9fd1",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/streams/s1/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "reaction",
+          "reaction": "👍"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit sendData failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "stream-data-live",
+      "fingerprint": "sha256:30b6f4fcb64b6d75",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "custom",
+          "payload": "raw"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit sendData failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "stream-data-viewer",
+      "fingerprint": "sha256:406e0e2c2bbc59fc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/streams/s1/data",
+        "auth": "viewerJwt",
+        "body": {
+          "topic": "x"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks stream:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rooms-list-no-auth",
+      "fingerprint": "sha256:9bdb6ce6a3490d67",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/rooms"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "rooms-list",
+      "fingerprint": "sha256:a0f2867a04466a63",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/rooms",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listRooms failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-list-viewer",
+      "fingerprint": "sha256:9b1afbf8cec71203",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/rooms",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rooms-get",
+      "fingerprint": "sha256:e06c3e322fa01aca",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/rooms/demo",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listRooms failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-metadata-empty",
+      "fingerprint": "sha256:97a618dd7b1a4fca",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/rooms/demo/metadata",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "metadata must be shorter than or equal to 10000 characters",
+          "metadata must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-metadata-long",
+      "fingerprint": "sha256:c9fc29709f69c2e6",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/rooms/demo/metadata",
+        "auth": "globalToken",
+        "body": {
+          "metadata": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "metadata must be shorter than or equal to 10000 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-metadata",
+      "fingerprint": "sha256:b975ef648fa13cc4",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/rooms/demo/metadata",
+        "auth": "globalToken",
+        "body": {
+          "metadata": "{}"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit updateRoomMetadata failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-participants",
+      "fingerprint": "sha256:01d53ce2a47c299c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/rooms/demo/participants",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit listParticipants failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-kick",
+      "fingerprint": "sha256:13e7a3cd63b7a84d",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+        "auth": "globalToken"
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit removeParticipant failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-kick-viewer",
+      "fingerprint": "sha256:a4257e036d23c608",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks stream:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "rooms-mute-bad",
+      "fingerprint": "sha256:6a895111dfef11dd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+        "auth": "globalToken",
+        "body": {
+          "trackSid": 1,
+          "kind": "screen",
+          "muted": "y"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "trackSid must be shorter than or equal to 120 characters",
+          "trackSid must be a string",
+          "kind must be one of the following values: audio, video, all",
+          "muted must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-mute-sid",
+      "fingerprint": "sha256:329f79772581ccf4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+        "auth": "globalToken",
+        "body": {
+          "trackSid": "TR_1"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit mutePublishedTrack failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-mute-kind",
+      "fingerprint": "sha256:9a070a57f208e462",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+        "auth": "globalToken",
+        "body": {
+          "kind": "audio",
+          "muted": false
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit getParticipant failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-participant-bad",
+      "fingerprint": "sha256:b5477904b8864f87",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+        "auth": "globalToken",
+        "body": {
+          "metadata": 1,
+          "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+          "canPublish": "x",
+          "canSubscribe": 0,
+          "canPublishData": []
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "metadata must be shorter than or equal to 10000 characters",
+          "metadata must be a string",
+          "name must be shorter than or equal to 120 characters",
+          "canPublish must be a boolean value",
+          "canSubscribe must be a boolean value",
+          "canPublishData must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-participant-perm",
+      "fingerprint": "sha256:04e355bb2fda4e8e",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+        "auth": "globalToken",
+        "body": {
+          "canPublish": false,
+          "name": "N"
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit updateParticipant failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-subs-empty",
+      "fingerprint": "sha256:0ca99ff94b558a8d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "each value in trackSids must be a string",
+          "trackSids must contain no more than 100 elements",
+          "trackSids must be an array",
+          "subscribe must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-subs-too-many",
+      "fingerprint": "sha256:22e02fe2aaaf3d30",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+        "auth": "globalToken",
+        "body": {
+          "trackSids": [
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t",
+            "t"
+          ],
+          "subscribe": true
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "trackSids must contain no more than 100 elements"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "rooms-subs",
+      "fingerprint": "sha256:7443236e1cc2d60c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+        "auth": "globalToken",
+        "body": {
+          "trackSids": [
+            "TR_1"
+          ],
+          "subscribe": false
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit updateSubscriptions failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-data-chat-disabled",
+      "fingerprint": "sha256:1edd862c3d556325",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/rooms/demo/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "chat"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "chat is disabled for this app",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "rooms-data",
+      "fingerprint": "sha256:6b422cc945d87ff5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/par-lk/rooms/demo/data",
+        "auth": "globalToken",
+        "body": {
+          "topic": "reaction",
+          "reaction": "x",
+          "destinationIdentities": [
+            "a"
+          ],
+          "reliable": false
+        }
+      },
+      "status": 503,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Service Unavailable",
+        "message": "LiveKit sendData failed: api-key and api-secret must be set",
+        "statusCode": 503
+      }
+    },
+    {
+      "name": "rooms-data-empty",
+      "fingerprint": "sha256:404c3b1d5c3560e8",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/rooms/demo/data",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "topic must be shorter than or equal to 64 characters",
+          "topic must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "webhook-unsigned",
+      "fingerprint": "sha256:563d1dcb652a354a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/webhooks/livekit",
+        "body": {
+          "event": "room_started",
+          "room": {
+            "name": "live-demo"
+          }
+        }
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "invalid LiveKit webhook signature",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "webhook-garbage-auth",
+      "fingerprint": "sha256:4e657fcb38a362fa",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/webhooks/livekit",
+        "headers": {
+          "Authorization": "not-a-jwt",
+          "Content-Type": "application/webhook+json"
+        },
+        "rawBody": "{\"event\":\"room_started\"}"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "invalid LiveKit webhook signature",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "webhook-forged-empty-secret",
+      "fingerprint": "sha256:a364d7a4404c7f69",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/webhooks/livekit",
+        "headers": {
+          "Authorization": "Bearer x.y.z"
+        },
+        "rawBody": ""
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "invalid LiveKit webhook signature",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "webhook-get",
+      "fingerprint": "sha256:821e707494104fb1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/webhooks/livekit"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/webhooks/livekit",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "stats-no-auth",
+      "fingerprint": "sha256:c0b4f4939f6647d5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/stats"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "stats",
+      "fingerprint": "sha256:9c64cf479190e276",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/stats",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "counts": {
+          "activeStreams": 0,
+          "apps": 2,
+          "rooms": 0
+        },
+        "egress": {
+          "active": 0,
+          "reachable": false,
+          "total": 0
+        },
+        "ingress": {
+          "active": 0,
+          "reachable": false,
+          "total": 0
+        },
+        "livekitReachable": false,
+        "storage": {
+          "vodCount": 0,
+          "vodTotalBytes": 0
+        }
+      }
+    },
+    {
+      "name": "stats-viewer",
+      "fingerprint": "sha256:5e11dcee7d8775a1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/stats",
+        "auth": "viewerJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "counts": {
+          "activeStreams": 0,
+          "apps": 2,
+          "rooms": 0
+        },
+        "egress": {
+          "active": 0,
+          "reachable": false,
+          "total": 0
+        },
+        "ingress": {
+          "active": 0,
+          "reachable": false,
+          "total": 0
+        },
+        "livekitReachable": false,
+        "storage": {
+          "vodCount": 0,
+          "vodTotalBytes": 0
+        }
+      }
+    },
+    {
+      "name": "lk-teardown-app",
+      "fingerprint": "sha256:c340b125e52e9d88",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/par-lk",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      }
+    }
+  ]
+}

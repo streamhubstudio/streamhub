@@ -1,0 +1,186 @@
+{
+  "collect": {
+    "worker": {
+      "names": [
+        "worker/__init__.py",
+        "worker/_sdk.py",
+        "worker/.hidden",
+        "worker/a b",
+        "worker/a_b",
+        "worker/a-b",
+        "worker/a.b",
+        "worker/a.txt",
+        "worker/a~b",
+        "worker/a1",
+        "worker/a10",
+        "worker/a2",
+        "worker/ab",
+        "worker/B.txt",
+        "worker/comp.test.tsx",
+        "worker/deep/directory-name-that-is-fairly-long/another-quite-long-segment-name/and-one-more-for-good-measure/file-with-a-long-name.py",
+        "worker/Dockerfile",
+        "worker/e.txt",
+        "worker/é.txt",
+        "worker/exactly512.bin",
+        "worker/index.spec.ts",
+        "worker/max5mib.bin",
+        "worker/notes.dbx",
+        "worker/over512.bin",
+        "worker/pkg/__init__.py",
+        "worker/pkg/Main.py",
+        "worker/pkg/migrations/001_init.sql",
+        "worker/pkg_extra/z.py",
+        "worker/pkg-dash/y.py",
+        "worker/pkg.dot/x.py",
+        "worker/README.md",
+        "worker/requirements.txt",
+        "worker/spec.ts",
+        "worker/Zeta.md",
+        "worker/zz.md"
+      ],
+      "sha256": "20a6c294cc0d3940ab3c18ba262544dafac9bb453eea94ec6052c4fee6dfb5c8"
+    },
+    "frontend": {
+      "names": [
+        "frontend/__init__.py",
+        "frontend/_sdk.py",
+        "frontend/.hidden",
+        "frontend/a b",
+        "frontend/a_b",
+        "frontend/a-b",
+        "frontend/a.b",
+        "frontend/a.txt",
+        "frontend/a~b",
+        "frontend/a1",
+        "frontend/a10",
+        "frontend/a2",
+        "frontend/ab",
+        "frontend/B.txt",
+        "frontend/deep/directory-name-that-is-fairly-long/another-quite-long-segment-name/and-one-more-for-good-measure/file-with-a-long-name.py",
+        "frontend/Dockerfile",
+        "frontend/e.txt",
+        "frontend/é.txt",
+        "frontend/exactly512.bin",
+        "frontend/max5mib.bin",
+        "frontend/notes.dbx",
+        "frontend/over512.bin",
+        "frontend/pkg/__init__.py",
+        "frontend/pkg/Main.py",
+        "frontend/pkg/migrations/001_init.sql",
+        "frontend/pkg_extra/z.py",
+        "frontend/pkg-dash/y.py",
+        "frontend/pkg.dot/x.py",
+        "frontend/README.md",
+        "frontend/requirements.txt",
+        "frontend/spec.ts",
+        "frontend/Zeta.md",
+        "frontend/zz.md"
+      ],
+      "sha256": "f120384244ec29b950e331e0946afc2df91140a90c49550a97018e8eaef0f1be"
+    },
+    "none": {
+      "names": [
+        "none/__init__.py",
+        "none/_sdk.py",
+        "none/.DS_Store",
+        "none/.hidden",
+        "none/a b",
+        "none/a_b",
+        "none/a-b",
+        "none/a.b",
+        "none/a.txt",
+        "none/a~b",
+        "none/a1",
+        "none/a10",
+        "none/a2",
+        "none/ab",
+        "none/B.txt",
+        "none/comp.test.tsx",
+        "none/deep/directory-name-that-is-fairly-long/another-quite-long-segment-name/and-one-more-for-good-measure/file-with-a-long-name.py",
+        "none/Dockerfile",
+        "none/e.txt",
+        "none/é.txt",
+        "none/exactly512.bin",
+        "none/index.spec.ts",
+        "none/m.pyc",
+        "none/m.pyo",
+        "none/max5mib.bin",
+        "none/notes.dbx",
+        "none/over512.bin",
+        "none/pkg/__init__.py",
+        "none/pkg/Main.py",
+        "none/pkg/migrations/001_init.sql",
+        "none/pkg_extra/z.py",
+        "none/pkg-dash/y.py",
+        "none/pkg.dot/x.py",
+        "none/README.md",
+        "none/requirements.txt",
+        "none/spec.ts",
+        "none/state.db",
+        "none/state.db-journal",
+        "none/state.db-wal",
+        "none/Zeta.md",
+        "none/zz.md"
+      ],
+      "sha256": "b0e158ae898e2fa4b43667feb7e6a14530b3297e57226986ea0655da6a6bcf79"
+    }
+  },
+  "imports": [
+    {
+      "in": "import x from '../shared/x'",
+      "out": "import x from '../../plugins/shared/x'"
+    },
+    {
+      "in": "import { y } from \"../../lib/y\"",
+      "out": "import { y } from \"../../lib/y\""
+    },
+    {
+      "in": "export * from '../vision-shared'",
+      "out": "export * from '../../plugins/vision-shared'"
+    },
+    {
+      "in": "const m = await import( '../lazy' )",
+      "out": "const m = await import( '../../plugins/lazy' )"
+    },
+    {
+      "in": "import '../side-effect.css'",
+      "out": "import '../../plugins/side-effect.css'"
+    },
+    {
+      "in": "import './local'",
+      "out": "import './local'"
+    },
+    {
+      "in": "import z from '../..'",
+      "out": "import z from '../..'"
+    },
+    {
+      "in": "importfrom '../no'",
+      "out": "importfrom '../no'"
+    },
+    {
+      "in": "reimport x from '../no-word-boundary-ok'",
+      "out": "reimport x from '../../plugins/no-word-boundary-ok'"
+    },
+    {
+      "in": "from\t\n'../tabs'",
+      "out": "from\t\n'../../plugins/tabs'"
+    },
+    {
+      "in": "import(\"../a\"); import(\"../../b\"); from '../c'",
+      "out": "import(\"../../plugins/a\"); import(\"../../b\"); from '../../plugins/c'"
+    },
+    {
+      "in": "from '../../../three'",
+      "out": "from '../../../three'"
+    },
+    {
+      "in": "from '..'",
+      "out": "from '..'"
+    },
+    {
+      "in": "from '../'",
+      "out": "from '../../plugins/'"
+    }
+  ]
+}

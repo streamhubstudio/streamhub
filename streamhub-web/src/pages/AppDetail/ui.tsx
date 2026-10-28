@@ -22,6 +22,7 @@ import {
   Switcher,
   Input,
 } from '@/ui'
+import { EmptyState } from '@/components/EmptyState'
 
 // --- error helper -----------------------------------------------------------
 
@@ -49,16 +50,12 @@ export function Loading({ label }: { label?: string }) {
 
 export function Empty({ label }: { label?: string }) {
   const { t } = useTranslation('appDetail')
-  return (
-    <div className="px-5 py-10 text-center text-sm text-fg-subtle">
-      {label ?? t('state.emptyDefault')}
-    </div>
-  )
+  return <EmptyState label={label ?? t('state.emptyDefault')} />
 }
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm font-medium text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-100">
+    <div role="alert" className="rounded-control border border-warn/30 bg-warn/10 px-4 py-3 text-sm font-medium text-warn">
       {message}
     </div>
   )
@@ -89,11 +86,11 @@ export function SectionTitle({
   return (
     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm font-semibold text-fg">
           {title}
         </h3>
         {subtitle && (
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-0.5 text-xs text-fg-muted">
             {subtitle}
           </p>
         )}
@@ -114,12 +111,12 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+      <span className="mb-1.5 block text-sm font-semibold text-gray-100">
         {label}
       </span>
       {children}
       {hint && (
-        <span className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400">
+        <span className="mt-1 block text-[11px] text-gray-400">
           {hint}
         </span>
       )}
@@ -136,7 +133,7 @@ export function Field({
 // Mirrors the Elstar `.input` look but WITHOUT `appearance-none`, so the native
 // select keeps its dropdown arrow.
 const selectClass =
-  'h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition duration-150 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:border-gray-600 dark:bg-transparent dark:text-gray-100'
+  'h-9 w-full rounded-md border px-3 py-2 text-sm transition duration-150 ease-in-out focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 border-gray-600 bg-transparent text-gray-100'
 
 export function TextInput(
   props: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'>,
@@ -200,10 +197,10 @@ export function RTable({
   return (
     <div className="md:overflow-x-auto">
       <table className="w-full min-w-full text-left text-sm max-md:block">
-        <thead className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 dark:bg-gray-700 dark:text-gray-100 max-md:hidden">
+        <thead className="text-[11px] uppercase tracking-wider bg-gray-700 text-gray-100 max-md:hidden">
           {head}
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 max-md:block max-md:space-y-3 max-md:divide-none max-md:p-1">
+        <tbody className="divide-y divide-gray-700 max-md:block max-md:space-y-3 max-md:divide-none max-md:p-1">
           {children}
         </tbody>
       </table>
@@ -232,7 +229,7 @@ export function RTr({
 }) {
   return (
     <tr
-      className={`max-md:block max-md:rounded-lg max-md:border max-md:border-gray-200 max-md:bg-gray-50 max-md:p-4 max-md:dark:border-gray-600 max-md:dark:bg-gray-700/40 md:hover:bg-gray-100/50 md:dark:hover:bg-gray-700/40 ${className}`}
+      className={`max-md:block max-md:rounded-lg max-md:border max-md:p-4 max-md:border-gray-600 max-md:bg-gray-700/40 md:hover:bg-gray-700/40 ${className}`}
     >
       {children}
     </tr>
@@ -259,10 +256,10 @@ export function RTd({
         'px-4 py-3 align-middle',
         'max-md:flex max-md:min-w-0 max-md:items-center max-md:gap-3 max-md:px-0 max-md:py-1.5',
         label
-          ? 'max-md:justify-between max-md:before:shrink-0 max-md:before:text-[11px] max-md:before:font-semibold max-md:before:uppercase max-md:before:tracking-wider max-md:before:text-gray-500 max-md:before:content-[attr(data-label)] max-md:dark:before:text-gray-400'
+          ? 'max-md:justify-between max-md:before:shrink-0 max-md:before:text-[11px] max-md:before:font-semibold max-md:before:uppercase max-md:before:tracking-wider max-md:before:content-[attr(data-label)] max-md:before:text-gray-400'
           : '',
         actions
-          ? 'max-md:mt-1 max-md:justify-end max-md:border-t max-md:border-gray-200 max-md:pt-3 max-md:dark:border-gray-600'
+          ? 'max-md:mt-1 max-md:justify-end max-md:border-t max-md:pt-3 max-md:border-gray-600'
           : '',
         className,
       ].join(' ')}
@@ -314,13 +311,13 @@ export function Badge({
 }) {
   const tones: Record<string, string> = {
     slate:
-      'border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+      'border-transparent bg-gray-600/60 text-gray-100',
     green:
-      'border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-    red: 'border-transparent bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-    cyan: 'border-transparent bg-primary-50 text-primary-600 dark:bg-primary-500/20 dark:text-primary-100',
+      'border-transparent bg-emerald-500/20 text-emerald-100',
+    red: 'border-transparent bg-red-500/20 text-red-100',
+    cyan: 'border-transparent bg-primary-500/20 text-primary-100',
     amber:
-      'border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
+      'border-transparent bg-amber-500/20 text-amber-100',
   }
   return <Tag className={`py-0.5 ${tones[tone]}`}>{children}</Tag>
 }
@@ -371,7 +368,7 @@ export function CopyField({
 }) {
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+      <span className="mb-1.5 block text-sm font-semibold text-gray-100">
         {label}
       </span>
       <div className="flex items-center gap-2">

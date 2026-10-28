@@ -1,0 +1,29 @@
+plain: hello world
+sq: 'it''s'
+dq: "tab\there\u00e9\x41\U0001F600"
+folded: >
+  a
+  b
+
+  c
+literal: |
+  x
+  y
+strip: |-
+  x
+keep: |+
+  x
+
+
+indicator: |2
+    lead
+  x
+multi: a
+  b
+  c
+colon_in: a:b
+hash_in: a#b
+url: http://x:1/y
+tpl: ${app}_${room}
+emoji: 🎥
+unicode_esc: "\u2028"

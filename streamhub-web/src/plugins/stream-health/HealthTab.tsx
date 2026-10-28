@@ -95,7 +95,7 @@ function ReasonBadges({ reasons }: { reasons: string[] }) {
       {reasons.map((r) => (
         <span
           key={r}
-          className="rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400"
+          className="rounded bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-400"
         >
           {t(`reason.${r}`, r)}
         </span>
@@ -158,11 +158,11 @@ function ThresholdEditor({ app, room }: { app: string; room: string }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-gray-500 dark:text-gray-400">{t('thresholds.hint')}</p>
+      <p className="text-xs text-gray-400">{t('thresholds.hint')}</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {THRESHOLD_KEYS.map((key) => (
           <label key={key} className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-medium text-gray-400">
               {t(`thresholds.${key}`)}
             </span>
             <input
@@ -174,7 +174,7 @@ function ThresholdEditor({ app, room }: { app: string; room: string }) {
               onChange={(e) =>
                 setForm((f) => ({ ...f, [key]: e.target.value }))
               }
-              className="rounded-lg border border-gray-200 bg-transparent px-2 py-1.5 text-sm text-fg dark:border-gray-700"
+              className="rounded-lg border bg-transparent px-2 py-1.5 text-sm text-fg border-gray-700"
             />
           </label>
         ))}
@@ -243,15 +243,15 @@ function EventsTable({ app, room }: { app: string; room?: string }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t border-gray-100 dark:border-gray-800">
-              <td className="whitespace-nowrap py-1.5 pr-4 text-gray-500 dark:text-gray-400">
+            <tr key={r.id} className="border-t border-gray-800">
+              <td className="whitespace-nowrap py-1.5 pr-4 text-gray-400">
                 {new Date(r.ts).toLocaleString()}
               </td>
               {!room && <td className="py-1.5 pr-4 font-mono text-xs">{r.room}</td>}
               <td className="py-1.5 pr-4">
                 <span className="font-mono text-xs">{r.event}</span>
               </td>
-              <td className="py-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <td className="py-1.5 text-xs text-gray-400">
                 {r.reasons ?? (typeof r.data.reason === 'string' ? r.data.reason : '')}
               </td>
             </tr>
@@ -279,7 +279,7 @@ function StreamCard({
       type="button"
       onClick={onClick}
       data-testid={`health-card-${snap.room}`}
-      className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-emerald-400 dark:border-gray-700"
+      className="flex flex-col gap-3 rounded-xl border p-4 text-left transition hover:border-emerald-400 border-gray-700"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-mono text-sm font-semibold text-fg">{snap.room}</span>
@@ -324,7 +324,7 @@ function DrillDown({
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs text-gray-500 hover:border-emerald-400 dark:border-gray-700 dark:text-gray-400"
+          className="rounded-lg border px-2.5 py-1 text-xs hover:border-emerald-400 border-gray-700 text-gray-400"
         >
           ← {t('actions.back')}
         </button>
@@ -358,11 +358,11 @@ function DrillDown({
           value={formatAgo(snap.metrics.secondsSinceAdvance)}
         />
       </div>
-      <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+      <section className="rounded-xl border p-4 border-gray-700">
         <h3 className="mb-3 text-sm font-semibold text-fg">{t('thresholds.title')}</h3>
         <ThresholdEditor app={app} room={snap.room} />
       </section>
-      <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+      <section className="rounded-xl border p-4 border-gray-700">
         <h3 className="mb-3 text-sm font-semibold text-fg">{t('events.roomTitle')}</h3>
         <EventsTable app={app} room={snap.room} />
       </section>
@@ -423,7 +423,7 @@ export function HealthTab({ ctx }: PluginComponentProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
-        <nav className="flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+        <nav className="flex gap-1 rounded-lg p-1 bg-gray-800">
           {SECTIONS.map((s) => (
             <button
               key={s}
@@ -434,19 +434,19 @@ export function HealthTab({ ctx }: PluginComponentProps) {
               }}
               className={`rounded-md px-3 py-1 text-sm font-medium ${
                 section === s
-                  ? 'bg-white text-fg shadow dark:bg-gray-900'
-                  : 'text-gray-500 dark:text-gray-400'
+                  ? 'bg-gray-900 text-fg shadow'
+                  : 'text-gray-400'
               }`}
             >
               {t(`section.${s}`)}
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-4 text-xs text-gray-400">
           {today !== null && <span>{t('tiles.today', { count: today })}</span>}
           <span>{t('tiles.tracked', { count: streams.length })}</span>
           {stale && (
-            <span className="rounded bg-amber-500/15 px-2 py-0.5 font-medium text-amber-600 dark:text-amber-400">
+            <span className="rounded bg-amber-500/15 px-2 py-0.5 font-medium text-amber-400">
               {t('tiles.stale')}
             </span>
           )}
@@ -458,7 +458,7 @@ export function HealthTab({ ctx }: PluginComponentProps) {
       ) : current ? (
         <DrillDown app={app} snap={current} onBack={() => setSelected(null)} />
       ) : streams.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400 dark:border-gray-700">
+        <div className="rounded-xl border border-dashed p-8 text-center text-sm text-gray-400 border-gray-700">
           {stale ? t('noFeed') : t('noStreams')}
         </div>
       ) : (

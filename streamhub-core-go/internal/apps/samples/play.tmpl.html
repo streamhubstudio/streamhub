@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StreamHub · play · @@A&amp;@@</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+           background:#0b1020; color:#e6ecff; }
+    header { padding:14px 18px; background:#121a33; border-bottom:1px solid #1f2b4d; }
+    header b { color:#6ea8ff; }
+    main { padding:18px; max-width:960px; margin:0 auto; }
+    video { width:100%; max-height:70vh; background:#000; border-radius:10px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; }
+    button { background:#2d6cff; color:#fff; border:0; padding:9px 16px; border-radius:8px;
+             cursor:pointer; font-weight:600; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+    input { background:#0e1530; color:#e6ecff; border:1px solid #25325a; border-radius:8px;
+            padding:8px 10px; }
+    .log { margin-top:12px; padding:10px; background:#0e1530; border-radius:8px;
+           font-family:ui-monospace,monospace; font-size:12px; white-space:pre-wrap;
+           min-height:40px; }
+  </style>
+</head>
+<body>
+  <header><b>StreamHub</b> · play · app <b>@@A&amp;@@</b> · room <b>@@R&amp;@@</b></header>
+  <main>
+    <div class="row"><button id="go">Play live</button></div>
+    <div class="grid" id="remotes"></div>
+    <div class="log" id="log">idle</div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <script>
+    const WS_URL = '@@W&amp;@@';
+    const log = (m) => { document.getElementById('log').textContent = String(m); };
+    
+    async function getToken(canPublish) {
+      const identity = (canPublish ? 'publisher-' : 'viewer-') + Math.random().toString(36).slice(2, 8);
+      const res = await fetch('@@P&amp;@@/apps/@@A&amp;@@/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: '@@R&amp;@@', identity, canPublish, canSubscribe: true })
+      });
+      if (!res.ok) throw new Error('token request failed: ' + res.status);
+      const body = await res.json();
+      return (body && body.data ? (body.data.token || body.data) : body.token) || body;
+    }
+    function attach(track) {
+      if (track.kind === 'video' || track.kind === 'audio') {
+        const el = track.attach();
+        if (track.kind === 'video') {
+          el.autoplay = true; el.playsInline = true; el.style.width = '100%';
+          el.style.borderRadius = '10px';
+          document.getElementById('remotes').appendChild(el);
+        } else { el.autoplay = true; document.body.appendChild(el); }
+      }
+    }
+    document.getElementById('go').onclick = async () => {
+      try {
+        log('requesting token...');
+        const token = await getToken(false);
+        const room = new LivekitClient.Room({ adaptiveStream: true });
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => attach(track));
+        await room.connect(WS_URL, token);
+        log('connected — waiting for tracks in room @@R&amp;@@');
+        room.remoteParticipants.forEach((p) =>
+          p.trackPublications.forEach((pub) => { if (pub.track) attach(pub.track); }));
+      } catch (e) { log('error: ' + (e && e.message ? e.message : e)); }
+    };
+  </script>
+</body>
+</html>

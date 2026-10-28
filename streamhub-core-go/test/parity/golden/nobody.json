@@ -1,0 +1,305 @@
+{
+  "module": "nobody",
+  "cases": [
+    {
+      "name": "tokens-create-no-body",
+      "fingerprint": "sha256:0d2e24151f7bdcce",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tokens",
+        "auth": "adminJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "name must be shorter than or equal to 100 characters",
+          "name must be a string",
+          "scope must be one of the following values: global, app"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "auth-login-no-body",
+      "fingerprint": "sha256:bd1a57eec613ec35",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "user must be shorter than or equal to 200 characters",
+          "user must be longer than or equal to 1 characters",
+          "user must be a string",
+          "password must be shorter than or equal to 200 characters",
+          "password must be longer than or equal to 1 characters",
+          "password must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "auth-signup-no-body",
+      "fingerprint": "sha256:1c9d0a2e63b53eb5",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/signup"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "email must be shorter than or equal to 200 characters",
+          "email must be an email",
+          "password must be shorter than or equal to 200 characters",
+          "password must be longer than or equal to 8 characters",
+          "password must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "auth-magic-link-no-body",
+      "fingerprint": "sha256:1c05a9f2064277fb",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/magic-link"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "email must be shorter than or equal to 200 characters",
+          "email must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "auth-magic-verify-no-body",
+      "fingerprint": "sha256:81687c0dd8985b4b",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/magic/verify"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "token must be shorter than or equal to 512 characters",
+          "token must be longer than or equal to 10 characters",
+          "token must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "account-update-no-body",
+      "fingerprint": "sha256:e4cadd4f5d452f12",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/account",
+        "auth": "ownerJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "tenant": {
+            "id": "{{ownerTenantId}}",
+            "name": "Parity Team",
+            "plan": "pro",
+            "role": "owner"
+          },
+          "user": {
+            "createdAt": "<sql-ts>",
+            "email": "{{ownerEmail}}",
+            "hasPassword": true,
+            "id": "{{ownerUserId}}",
+            "isSuperadmin": false,
+            "name": null,
+            "status": "active",
+            "twoFactorEnabled": false
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "account-password-no-body",
+      "fingerprint": "sha256:084543b8776b84df",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/account/password",
+        "auth": "ownerJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "currentPassword must be shorter than or equal to 200 characters",
+          "currentPassword must be a string",
+          "newPassword must be shorter than or equal to 200 characters",
+          "newPassword must be longer than or equal to 8 characters",
+          "newPassword must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "account-smtp-set-no-body",
+      "fingerprint": "sha256:45235415e0ebb752",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/account/smtp",
+        "auth": "ownerJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "configured": false,
+          "enabled": false,
+          "from": "Parity <u@parity.test>",
+          "hasPass": true,
+          "host": "smtp.parity.test",
+          "pass": "s3***et",
+          "port": 587,
+          "user": "u@parity.test"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "teams-invite-no-body",
+      "fingerprint": "sha256:874396d32062259e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/teams/mine/members",
+        "auth": "ownerJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "email must be shorter than or equal to 200 characters",
+          "email must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tenant-invite-no-body",
+      "fingerprint": "sha256:5766532eea870c70",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tenant/invites",
+        "auth": "ownerJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "email must be shorter than or equal to 200 characters",
+          "email must be an email"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "tenant-quotas-update-no-body",
+      "fingerprint": "sha256:5835091b88f57f33",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/tenants/{{ownerTenantId}}/quotas",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "appCount": 0,
+          "createdAt": "<sql-ts>",
+          "id": "{{ownerTenantId}}",
+          "name": "Parity Team",
+          "plan": "pro",
+          "quotas": {
+            "maxApps": 10,
+            "maxConcurrentStreams": -1,
+            "maxEgressGbMonth": 5,
+            "maxRecordingMinutesMonth": 300,
+            "maxStorageGb": 5
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "security-ip-rule-add-no-body",
+      "fingerprint": "sha256:df470793a789ad38",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/security/ip-rules",
+        "auth": "adminJwt"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "cidr must be shorter than or equal to 64 characters",
+          "cidr must be a string",
+          "action must be one of the following values: allow, block"
+        ],
+        "statusCode": 400
+      }
+    }
+  ]
+}

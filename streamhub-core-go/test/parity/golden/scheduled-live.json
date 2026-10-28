@@ -1,0 +1,1299 @@
+{
+  "module": "scheduled-live",
+  "cases": [
+    {
+      "name": "sl-login-editor",
+      "fingerprint": "sha256:bef1c5006a5a2785",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{editorEmail}}",
+          "password": "{{editorPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{slEditorJwt}}"
+        }
+      }
+    },
+    {
+      "name": "sl-login-viewer",
+      "fingerprint": "sha256:f51e09ea4bcc5cca",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{slViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "sl-list-empty",
+      "fingerprint": "sha256:43408c84bdb9d69d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-empty",
+      "fingerprint": "sha256:9eeffbc265ec526a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-create-no-auth",
+      "fingerprint": "sha256:af19417589b4cdd3",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "body": {
+          "startAt": 4102444800000
+        }
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "sl-create-empty-body",
+      "fingerprint": "sha256:b0b46e2085ac923d",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be a positive number",
+          "startAt must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-create-bad-types",
+      "fingerprint": "sha256:2e28d10074dfbfbb",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": "x",
+          "timezone": 5,
+          "room": 7,
+          "title": [],
+          "message": {},
+          "enabled": "yes"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be a positive number",
+          "startAt must be an integer number",
+          "timezone must be shorter than or equal to 64 characters",
+          "timezone must be a string",
+          "room must be shorter than or equal to 200 characters",
+          "room must be a string",
+          "title must be shorter than or equal to 200 characters",
+          "title must be a string",
+          "message must be shorter than or equal to 500 characters",
+          "message must be a string",
+          "enabled must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-create-negative",
+      "fingerprint": "sha256:b2fe9c38e8b41b11",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": -5
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be a positive number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-create-float",
+      "fingerprint": "sha256:481f5342c305dc29",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 1.5
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-create-too-long",
+      "fingerprint": "sha256:7e20194d6c88d77a",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 4102444800000,
+          "timezone": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "room": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+          "title": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+          "message": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "timezone must be shorter than or equal to 64 characters",
+          "room must be shorter than or equal to 200 characters",
+          "title must be shorter than or equal to 200 characters",
+          "message must be shorter than or equal to 500 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-create-full",
+      "fingerprint": "sha256:6734bcf524e7c485",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 4102444800000,
+          "timezone": "  America/Argentina/Buenos_Aires ",
+          "room": " show ",
+          "title": "  Gran estreno ",
+          "message": "Pronto",
+          "enabled": true
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "id": 1,
+          "message": "Pronto",
+          "room": "show",
+          "startAt": 4102444800000,
+          "timezone": "America/Argentina/Buenos_Aires",
+          "title": "Gran estreno",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-create-defaults",
+      "fingerprint": "sha256:c5bd13d3fb723b92",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 4102444900000,
+          "timezone": "   ",
+          "title": "   ",
+          "room": null
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "id": 2,
+          "message": null,
+          "room": null,
+          "startAt": 4102444900000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-create-disabled",
+      "fingerprint": "sha256:4c87bc8423cb9d24",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 4102445000000,
+          "room": "other",
+          "enabled": false
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "id": 3,
+          "message": null,
+          "room": "other",
+          "startAt": 4102445000000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-create-past",
+      "fingerprint": "sha256:6f230999876e11a9",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 1000,
+          "room": "show",
+          "extra": "ignored"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": true,
+          "id": 4,
+          "message": null,
+          "room": "show",
+          "startAt": 1000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-create-viewer-403",
+      "fingerprint": "sha256:dce53c602ab9e1c0",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "slViewerJwt",
+        "body": {
+          "startAt": 4102444800000
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sl-create-editor",
+      "fingerprint": "sha256:2f6bc5147d3a60bd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "slEditorJwt",
+        "body": {
+          "startAt": 4102445100000,
+          "room": "live-show"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sl-list",
+      "fingerprint": "sha256:43408c84bdb9d69d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 4,
+            "message": null,
+            "room": "show",
+            "startAt": 1000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "id": 3,
+            "message": null,
+            "room": "other",
+            "startAt": 4102445000000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-list-viewer",
+      "fingerprint": "sha256:71c0bd8817a28f24",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "slViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sl-public-all",
+      "fingerprint": "sha256:9eeffbc265ec526a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-room",
+      "fingerprint": "sha256:d207abc3dc6f4f3c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?room=show"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-room-blank",
+      "fingerprint": "sha256:9a2cf0b2048d3fdb",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?room=%20%20"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-since-0",
+      "fingerprint": "sha256:35d31c7b1361766c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=0"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 4,
+            "message": null,
+            "room": "show",
+            "startAt": 1000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-since-empty",
+      "fingerprint": "sha256:dc428aa18e436e00",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?sinceMs="
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 4,
+            "message": null,
+            "room": "show",
+            "startAt": 1000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-since-nan",
+      "fingerprint": "sha256:86c9b9dafc2d38f9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=abc"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-since-hex",
+      "fingerprint": "sha256:73ce2f2e5dc7fc5d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=0x10"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 4,
+            "message": null,
+            "room": "show",
+            "startAt": 1000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 1,
+            "message": "Pronto",
+            "room": "show",
+            "startAt": 4102444800000,
+            "timezone": "America/Argentina/Buenos_Aires",
+            "title": "Gran estreno",
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-public-since-future",
+      "fingerprint": "sha256:4e5b5305c2527a18",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live/public?sinceMs=4102444850000&room=other"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-patch-bad-id",
+      "fingerprint": "sha256:43f1cee004f23b8a",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/abc",
+        "auth": "globalToken",
+        "body": {
+          "enabled": false
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-patch-bad-id-bad-body",
+      "fingerprint": "sha256:ea7b1e1357c8e41c",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/abc",
+        "auth": "globalToken",
+        "body": {
+          "startAt": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be a positive number",
+          "startAt must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-patch-unknown",
+      "fingerprint": "sha256:1ca443a78cfc5b03",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/99999",
+        "auth": "globalToken",
+        "body": {
+          "enabled": false
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "scheduled event '99999' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "sl-patch-invalid",
+      "fingerprint": "sha256:4639525cfb8d5589",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+        "auth": "globalToken",
+        "body": {
+          "startAt": 0,
+          "enabled": "no"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "startAt must be a positive number",
+          "enabled must be a boolean value"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-patch-enabled",
+      "fingerprint": "sha256:26737e50bfe16abe",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+        "auth": "globalToken",
+        "body": {
+          "enabled": false,
+          "startAt": 4102444700000
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "id": 1,
+          "message": "Pronto",
+          "room": "show",
+          "startAt": 4102444700000,
+          "timezone": "America/Argentina/Buenos_Aires",
+          "title": "Gran estreno",
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-patch-clear",
+      "fingerprint": "sha256:a71a1b9e04d5ef79",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+        "auth": "globalToken",
+        "body": {
+          "room": null,
+          "title": "",
+          "message": null,
+          "timezone": ""
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "id": 1,
+          "message": null,
+          "room": null,
+          "startAt": 4102444700000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-patch-start-null",
+      "fingerprint": "sha256:f55dd714b883f93a",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId1}}",
+        "auth": "globalToken",
+        "body": {
+          "startAt": null
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "startAt must be a positive integer (unix epoch ms, UTC)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-patch-enabled-null",
+      "fingerprint": "sha256:87948641d7682618",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+        "auth": "globalToken",
+        "body": {
+          "enabled": null
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "id": 2,
+          "message": null,
+          "room": null,
+          "startAt": 4102444900000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-patch-empty",
+      "fingerprint": "sha256:edcd485a1a3d2664",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "createdAt": "<sql-ts>",
+          "enabled": false,
+          "id": 2,
+          "message": null,
+          "room": null,
+          "startAt": 4102444900000,
+          "timezone": "UTC",
+          "title": null,
+          "updatedAt": "<sql-ts>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-patch-viewer-403",
+      "fingerprint": "sha256:882a29fd6061fb59",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+        "auth": "slViewerJwt",
+        "body": {
+          "enabled": true
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sl-delete-bad-id",
+      "fingerprint": "sha256:97dd07afd15a77c3",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/scheduled-live/1.5",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "Validation failed (numeric string is expected)",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "sl-delete-unknown",
+      "fingerprint": "sha256:2108105dadc8e237",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/scheduled-live/99999",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "scheduled event '99999' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "sl-delete",
+      "fingerprint": "sha256:51a4e4bb02844210",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId3}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "removed": true
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "sl-delete-again",
+      "fingerprint": "sha256:51a4e4bb02844210",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId3}}",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "scheduled event '3' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "sl-delete-viewer-403",
+      "fingerprint": "sha256:63213ea34c05455e",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/scheduled-live/{{slId2}}",
+        "auth": "slViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "sl-list-after",
+      "fingerprint": "sha256:43408c84bdb9d69d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/scheduled-live",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": true,
+            "id": 4,
+            "message": null,
+            "room": "show",
+            "startAt": 1000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "id": 1,
+            "message": null,
+            "room": null,
+            "startAt": 4102444700000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          },
+          {
+            "createdAt": "<sql-ts>",
+            "enabled": false,
+            "id": 2,
+            "message": null,
+            "room": null,
+            "startAt": 4102444900000,
+            "timezone": "UTC",
+            "title": null,
+            "updatedAt": "<sql-ts>"
+          }
+        ],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-unknown-app-list",
+      "fingerprint": "sha256:3173841e553f583e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/nope-app/scheduled-live",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "sl-unknown-app-public",
+      "fingerprint": "sha256:28c43d295cfe6ce6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/nope-app/scheduled-live/public"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    }
+  ]
+}

@@ -26,23 +26,16 @@ __pycache__/
 .pytest_cache/
 
 # builds
-streamhub-core/dist/
 streamhub-web/dist/
 streamhub-adaptor/dist/
-streamhub-core/web/
 
 # release artifacts (make-release-artifact.sh / CI release stage)
 /dist/
 
-# app composition scratch (scripts/apps-pull.mjs). The composed Studio Apps
-# under */src/plugins-vendor/ ARE committed in this public tree.
+# app composition scratch (streamhub-core apps pull). The composed Studio Apps
+# under plugins-vendor/ and streamhub-web/src/plugins-vendor/ ARE committed in
+# this public tree.
 /vendor/
-
-# datos runtime del core (DB global + per-app apps/<app>/)
-streamhub-core/data/
-streamhub-core/apps/
-streamhub-core/logs/
-streamhub-core/coverage/
 
 # workspace de agentes (worktrees temporales de Claude Code)
 .claude/worktrees/

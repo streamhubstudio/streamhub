@@ -1,0 +1,403 @@
+{
+  "module": "broadcast",
+  "cases": [
+    {
+      "name": "bc-login-viewer",
+      "fingerprint": "sha256:b9c3a97ddbdd9579",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{bcViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "bc-login-owner",
+      "fingerprint": "sha256:00c0a4022aa6b57e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{ownerEmail}}",
+          "password": "{{ownerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{bcOwnerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "bc-list",
+      "fingerprint": "sha256:e4757dce07d34b44",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/broadcast",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "bc-list-no-auth",
+      "fingerprint": "sha256:f0ed6a651ea3f2f8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/broadcast"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "bc-list-owner-other-tenant",
+      "fingerprint": "sha256:b2929e7d667f15c6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/broadcast",
+        "auth": "bcOwnerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "bc-list-app-token",
+      "fingerprint": "sha256:756816f0847816c5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/broadcast",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "bc-list-unknown-app",
+      "fingerprint": "sha256:b6450b159aa151cb",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/nope-app/broadcast",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "bc-start-empty",
+      "fingerprint": "sha256:5994f07140e401d2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "roomName must be shorter than or equal to 200 characters",
+          "roomName must be a string",
+          "rtmpUrl must start with rtmp:// or rtmps://",
+          "rtmpUrl must be shorter than or equal to 2000 characters",
+          "rtmpUrl must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-bad-types",
+      "fingerprint": "sha256:5557e7c7392b3e6c",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": 5,
+          "rtmpUrl": 7,
+          "layout": []
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "roomName must be shorter than or equal to 200 characters",
+          "roomName must be a string",
+          "rtmpUrl must start with rtmp:// or rtmps://",
+          "rtmpUrl must be shorter than or equal to 2000 characters",
+          "rtmpUrl must be a string",
+          "layout must be shorter than or equal to 100 characters",
+          "layout must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-bad-url",
+      "fingerprint": "sha256:73eacf010f22faff",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "r1",
+          "rtmpUrl": "http://x/y"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "rtmpUrl must start with rtmp:// or rtmps://"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-too-long",
+      "fingerprint": "sha256:62e0c675a949eba4",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+          "rtmpUrl": "rtmp://a/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+          "layout": "lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "roomName must be shorter than or equal to 200 characters",
+          "rtmpUrl must be shorter than or equal to 2000 characters",
+          "layout must be shorter than or equal to 100 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-blank-room",
+      "fingerprint": "sha256:3ac0f3445d11a5ab",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "   ",
+          "rtmpUrl": "rtmp://a/live/k"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "roomName is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-url-spaces",
+      "fingerprint": "sha256:80474e78b6ca5439",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "r1",
+          "rtmpUrl": " rtmp://a/live/k"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "rtmpUrl must start with rtmp:// or rtmps://"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-start-livekit-down",
+      "fingerprint": "sha256:06220103083522cc",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "globalToken",
+        "body": {
+          "roomName": "r1",
+          "rtmpUrl": "rtmp://a.rtmp.youtube.com/live2/xxxx",
+          "layout": "grid"
+        }
+      },
+      "status": 500,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Internal Server Error",
+        "message": "failed to start broadcast: LiveKit startStreamEgress failed: api-key and api-secret must be set",
+        "statusCode": 500
+      }
+    },
+    {
+      "name": "bc-start-viewer-403",
+      "fingerprint": "sha256:dc6ac62be1d42e94",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/start",
+        "auth": "bcViewerJwt",
+        "body": {
+          "roomName": "r1",
+          "rtmpUrl": "rtmp://a/k"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks broadcast:start",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "bc-stop-livekit-down",
+      "fingerprint": "sha256:4cc0931a3d97b461",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/EG_abc/stop",
+        "auth": "globalToken"
+      },
+      "status": 500,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Internal Server Error",
+        "message": "failed to stop broadcast: LiveKit stopEgress failed: api-key and api-secret must be set",
+        "statusCode": 500
+      }
+    },
+    {
+      "name": "bc-stop-blank",
+      "fingerprint": "sha256:29a2dda0b6add1c7",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/%20/stop",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "egress id is required",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "bc-stop-viewer-403",
+      "fingerprint": "sha256:8282a89088203e74",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/broadcast/EG_abc/stop",
+        "auth": "bcViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks broadcast:stop",
+        "statusCode": 403
+      }
+    }
+  ]
+}

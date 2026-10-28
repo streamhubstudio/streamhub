@@ -12,5 +12,9 @@ data/
 **/*.log
 **/recordings/
 **/*.mp4
-streamhub-core/web/
 legacy/
+# Go core: local build outputs never enter the context (the image compiles its own)
+streamhub-core-go/bin/
+streamhub-core-go/streamhub
+streamhub-core-go/logs/
+streamhub-core-go/sdk/

@@ -184,10 +184,10 @@ export default function AppDetail() {
           </div>
           {sizes && (
             <div className="flex flex-wrap items-center gap-2 max-md:w-full">
-              <Tag className="gap-1.5 border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100">
+              <Tag className="gap-1.5 border-transparent bg-gray-600/60 text-gray-100">
                 <span
                   title={t('sizes.dbTitle')}
-                  className="uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                  className="uppercase tracking-wider text-gray-400"
                 >
                   {t('sizes.db')}
                 </span>
@@ -195,10 +195,10 @@ export default function AppDetail() {
                   {formatBytes(sizes.dbSizeBytes)}
                 </span>
               </Tag>
-              <Tag className="gap-1.5 border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100">
+              <Tag className="gap-1.5 border-transparent bg-gray-600/60 text-gray-100">
                 <span
                   title={t('sizes.vodsTitle')}
-                  className="uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                  className="uppercase tracking-wider text-gray-400"
                 >
                   {t('sizes.vods')}
                 </span>

@@ -1,0 +1,663 @@
+{
+  "module": "ws-ingest",
+  "cases": [
+    {
+      "name": "wsi-login-editor",
+      "fingerprint": "sha256:741575b839b27472",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{editorEmail}}",
+          "password": "{{editorPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{wsiEditorJwt}}"
+        }
+      }
+    },
+    {
+      "name": "wsi-login-viewer",
+      "fingerprint": "sha256:d6bb5f6b4d3ad7ed",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{wsiViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "wsi-list-empty",
+      "fingerprint": "sha256:e32ccfa05c706578",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "wsi-create",
+      "fingerprint": "sha256:9316828376d71ffd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken",
+        "body": {
+          "room": "cam1"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "embedUrl": "/embed/live/live-cam1",
+          "frameUrl": "/live/live/live-cam1/frame.jpg",
+          "id": "<masked>",
+          "identity": "<masked>",
+          "mjpegUrl": "/live/live/live-cam1/mjpeg",
+          "playerUrl": "/play/live/live-cam1",
+          "room": "live-cam1",
+          "streamKey": "<masked>",
+          "viewerWsUrl": "/live/ws?app=live&room=cam1",
+          "wsUrl": "/ingest/ws?app=live&room=cam1"
+        }
+      }
+    },
+    {
+      "name": "wsi-create-identity",
+      "fingerprint": "sha256:b26e3cf1360864ca",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken",
+        "body": {
+          "room": "live-cam2",
+          "identity": "porton-norte"
+        }
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "embedUrl": "/embed/live/live-cam2",
+          "frameUrl": "/live/live/live-cam2/frame.jpg",
+          "id": "<masked>",
+          "identity": "porton-norte",
+          "mjpegUrl": "/live/live/live-cam2/mjpeg",
+          "playerUrl": "/play/live/live-cam2",
+          "room": "live-cam2",
+          "streamKey": "<masked>",
+          "viewerWsUrl": "/live/ws?app=live&room=live-cam2",
+          "wsUrl": "/ingest/ws?app=live&room=live-cam2"
+        }
+      }
+    },
+    {
+      "name": "wsi-create-no-body",
+      "fingerprint": "sha256:6152894fb06d7cdd",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be alphanumeric with dashes/underscores",
+          "room must be shorter than or equal to 64 characters",
+          "room must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "wsi-create-bad",
+      "fingerprint": "sha256:2c5c1739c206e432",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken",
+        "body": {
+          "room": "bad room!",
+          "identity": "x y"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be alphanumeric with dashes/underscores",
+          "identity must be alphanumeric with dashes/underscores"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "wsi-create-types",
+      "fingerprint": "sha256:a0fa832e332cca52",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken",
+        "body": {
+          "room": 5,
+          "identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "room must be alphanumeric with dashes/underscores",
+          "room must be shorter than or equal to 64 characters",
+          "room must be a string",
+          "identity must be shorter than or equal to 64 characters"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "wsi-create-ghost",
+      "fingerprint": "sha256:3817b5b1736f9709",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/ghost/ws-ingest",
+        "auth": "globalToken",
+        "body": {
+          "room": "cam1"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-create-viewer",
+      "fingerprint": "sha256:4bb061b948a24a26",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "wsiViewerJwt",
+        "body": {
+          "room": "cam1"
+        }
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks ingress:create",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "wsi-list",
+      "fingerprint": "sha256:69258b46ea935a3b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "active": false,
+            "createdAt": "<sql-ts>",
+            "id": "<masked>",
+            "room": "live-cam1",
+            "streamKey": "<masked>"
+          },
+          {
+            "active": false,
+            "createdAt": "<sql-ts>",
+            "id": "<masked>",
+            "room": "live-cam2",
+            "streamKey": "<masked>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wsi-list-app-token",
+      "fingerprint": "sha256:92539997c6b23c16",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "active": false,
+            "createdAt": "<sql-ts>",
+            "id": "<masked>",
+            "room": "live-cam1",
+            "streamKey": "<masked>"
+          },
+          {
+            "active": false,
+            "createdAt": "<sql-ts>",
+            "id": "<masked>",
+            "room": "live-cam2",
+            "streamKey": "<masked>"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wsi-list-ghost",
+      "fingerprint": "sha256:867c78912cc0eada",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/ws-ingest",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-list-editor-other-tenant",
+      "fingerprint": "sha256:c2a798e67030c17a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "wsiEditorJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "wsi-live-info-public",
+      "fingerprint": "sha256:d07084239f733099",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest/live/cam1"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "active": false,
+          "room": "live-cam1",
+          "type": null
+        }
+      }
+    },
+    {
+      "name": "wsi-live-info-namespaced",
+      "fingerprint": "sha256:1c5079d701cd5590",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest/live/live-cam1"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "active": false,
+          "room": "live-cam1",
+          "type": null
+        }
+      }
+    },
+    {
+      "name": "wsi-live-info-ghost",
+      "fingerprint": "sha256:c402007534fbe7ae",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost/ws-ingest/live/cam1"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-delete",
+      "fingerprint": "sha256:7a640bc7b12ab00d",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ws-ingest/{{wsiKey1}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true,
+          "id": "{{wsiKey1}}"
+        }
+      }
+    },
+    {
+      "name": "wsi-delete-again",
+      "fingerprint": "sha256:7a640bc7b12ab00d",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ws-ingest/{{wsiKey1}}",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "ws-ingest key '{{wsiKey1}}' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-delete-unknown",
+      "fingerprint": "sha256:1bdc94f8471bb0eb",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ws-ingest/wsi_nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "ws-ingest key 'wsi_nope' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-delete-ghost",
+      "fingerprint": "sha256:383dba8e5dadb478",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/ghost/ws-ingest/wsi_nope",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "wsi-delete-viewer",
+      "fingerprint": "sha256:17849c452e6491fc",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ws-ingest/{{wsiKey2}}",
+        "auth": "wsiViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks ingress:delete",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "wsi-delete-2",
+      "fingerprint": "sha256:6a244e35c2b1b4bd",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/ws-ingest/{{wsiKey2}}",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "deleted": true,
+          "id": "{{wsiKey2}}"
+        }
+      }
+    },
+    {
+      "name": "wsi-list-after",
+      "fingerprint": "sha256:e32ccfa05c706578",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/ws-ingest",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": []
+      }
+    },
+    {
+      "name": "live-frame-no-frame",
+      "fingerprint": "sha256:ce174fc59eca69fa",
+      "request": {
+        "method": "GET",
+        "path": "/live/live/cam1/frame.jpg"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    },
+    {
+      "name": "live-mjpeg-ghost",
+      "fingerprint": "sha256:c4deca2d4c4f7796",
+      "request": {
+        "method": "GET",
+        "path": "/live/ghost/cam1/mjpeg"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    },
+    {
+      "name": "live-bad-shape",
+      "fingerprint": "sha256:8ae28ecb392529e1",
+      "request": {
+        "method": "GET",
+        "path": "/live/live/cam1"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    },
+    {
+      "name": "live-root",
+      "fingerprint": "sha256:968c9cbaac13cf27",
+      "request": {
+        "method": "GET",
+        "path": "/live"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    },
+    {
+      "name": "live-post",
+      "fingerprint": "sha256:cc8b3445e63196a8",
+      "request": {
+        "method": "POST",
+        "path": "/live/live/cam1/frame.jpg"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    },
+    {
+      "name": "live-ws-no-upgrade",
+      "fingerprint": "sha256:60dc21407d6ecd08",
+      "request": {
+        "method": "GET",
+        "path": "/live/ws?app=live&room=cam1"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": null,
+        "error": {
+          "code": "not_found",
+          "message": "live resource not found"
+        }
+      }
+    }
+  ]
+}

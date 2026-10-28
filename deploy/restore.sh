@@ -139,7 +139,15 @@ fi
 EXTRACT="$STAGING/extract"
 mkdir -p "$EXTRACT"
 tar -xzf "$ARCHIVE" -C "$EXTRACT" || die "failed to extract $ARCHIVE" 4
-[ -f "$EXTRACT/data/streamhub.db" ] || die "archive has no data/streamhub.db — not a StreamHub backup?" 4
+# Archive layouts: current = data/data/streamhub.db (+ data/data/secrets.json),
+# old flat = data/streamhub.db (+ data/secrets.json). Either way they restore
+# into the core's real layout: <TARGET>/data/streamhub.db, <TARGET>/data/secrets.json.
+SRC_GLOBAL=""; SRC_SECRETS=""
+for rel in data/data data; do
+  if [ -z "$SRC_GLOBAL" ] && [ -f "$EXTRACT/$rel/streamhub.db" ]; then SRC_GLOBAL="$EXTRACT/$rel/streamhub.db"; fi
+  if [ -z "$SRC_SECRETS" ] && [ -f "$EXTRACT/$rel/secrets.json" ]; then SRC_SECRETS="$EXTRACT/$rel/secrets.json"; fi
+done
+[ -n "$SRC_GLOBAL" ] || die "archive has no data/data/streamhub.db (nor the old data/streamhub.db) — not a StreamHub backup?" 4
 
 log "verifying integrity of DBs in the archive"
 verify_fail=0
@@ -156,7 +164,7 @@ done < <(find "$EXTRACT/data" -type f -name '*.db' -print0)
 
 # --- confirm -----------------------------------------------------------------
 log "about to restore into TARGET: $TARGET_DIR"
-warn "this OVERWRITES streamhub.db, apps/*/app.db and secrets.json in the target."
+warn "this OVERWRITES data/streamhub.db, apps/*/app.db and data/secrets.json in the target."
 warn "make sure the core is STOPPED first (docker compose stop core | systemctl stop skyline-core)."
 if [ "$ASSUME_YES" != "1" ]; then
   if [ ! -t 0 ]; then die "refusing to restore without a TTY; pass --yes to force" 5; fi
@@ -166,22 +174,29 @@ if [ "$ASSUME_YES" != "1" ]; then
 fi
 
 # --- snapshot current target (reversible restore) ----------------------------
-mkdir -p "$TARGET_DIR"
-if [ -f "$TARGET_DIR/streamhub.db" ] || [ -d "$TARGET_DIR/apps" ]; then
+mkdir -p "$TARGET_DIR/data"
+if [ -f "$TARGET_DIR/data/streamhub.db" ] || [ -d "$TARGET_DIR/apps" ]; then
   PRE="$TARGET_DIR/pre-restore-$(date -u +%Y%m%dT%H%M%SZ)"
-  mkdir -p "$PRE"
-  [ -f "$TARGET_DIR/streamhub.db" ] && cp -p "$TARGET_DIR/streamhub.db" "$PRE/" || true
-  [ -f "$TARGET_DIR/secrets.json" ] && cp -p "$TARGET_DIR/secrets.json" "$PRE/" || true
+  mkdir -p "$PRE/data"
+  for f in streamhub.db streamhub.db-wal streamhub.db-shm secrets.json; do
+    if [ -f "$TARGET_DIR/data/$f" ]; then cp -p "$TARGET_DIR/data/$f" "$PRE/data/"; fi
+  done
   if [ -d "$TARGET_DIR/apps" ]; then
-    ( cd "$TARGET_DIR" && find apps -name 'app.db' -print0 \
+    ( cd "$TARGET_DIR" && find apps -name 'app.db*' -print0 \
         | while IFS= read -r -d '' f; do mkdir -p "$PRE/$(dirname "$f")"; cp -p "$f" "$PRE/$f"; done )
   fi
   log "snapshotted current target into $PRE"
 fi
 
 # --- apply -------------------------------------------------------------------
-cp -p "$EXTRACT/data/streamhub.db" "$TARGET_DIR/streamhub.db"
-log "restored streamhub.db"
+# A stale -wal/-shm next to a replaced DB would be replayed over the restored
+# file on the next open — drop them (the core is stopped; the snapshot above
+# kept copies).
+drop_wal() { rm -f "$1-wal" "$1-shm"; }
+
+cp -p "$SRC_GLOBAL" "$TARGET_DIR/data/streamhub.db"
+drop_wal "$TARGET_DIR/data/streamhub.db"
+log "restored data/streamhub.db"
 
 restored_apps=0
 if [ -d "$EXTRACT/data/apps" ]; then
@@ -189,15 +204,16 @@ if [ -d "$EXTRACT/data/apps" ]; then
     rel="${f#"$EXTRACT"/data/}"           # apps/<app>/app.db
     mkdir -p "$TARGET_DIR/$(dirname "$rel")"
     cp -p "$f" "$TARGET_DIR/$rel"
+    drop_wal "$TARGET_DIR/$rel"
     restored_apps=$((restored_apps + 1))
   done < <(find "$EXTRACT/data/apps" -type f -name 'app.db' -print0)
 fi
 log "restored $restored_apps per-app DB(s)"
 
-if [ -f "$EXTRACT/data/secrets.json" ]; then
-  cp -p "$EXTRACT/data/secrets.json" "$TARGET_DIR/secrets.json"
-  chmod 600 "$TARGET_DIR/secrets.json"
-  log "restored secrets.json"
+if [ -n "$SRC_SECRETS" ]; then
+  cp -p "$SRC_SECRETS" "$TARGET_DIR/data/secrets.json"
+  chmod 600 "$TARGET_DIR/data/secrets.json"
+  log "restored data/secrets.json"
 fi
 
 log "restore OK — now start the core and confirm /api/v1/health"

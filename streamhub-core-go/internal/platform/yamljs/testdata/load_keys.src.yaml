@@ -1,0 +1,14 @@
+1: int
+true: bool
+~: null
+1.5: float
+0x10: hex
+[a, b]: seq
+{a: 1}: map
+.nan: nan
+-0: negzero
+2020-01-01: date-key-as-string
+"quoted": q
+'single': s
+? complex
+: explicit

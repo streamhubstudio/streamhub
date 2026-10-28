@@ -1,0 +1,5 @@
+x: &v hello
+y: *v
+n: &n 42
+m: *n
+list: [*v, *n]

@@ -105,7 +105,8 @@
     "noSurface": "This app has no full-page surface in this build.",
     "worker": {
       "running": "Worker running",
-      "stopped": "Worker stopped"
+      "stopped": "Worker stopped",
+      "crashed": "Worker crashed"
     },
     "tabs": {
       "overview": "Overview",

@@ -40,7 +40,8 @@
     "publicUrl": "URL pública",
     "embedIframe": "Embed iframe",
     "previewLabel": "Preview",
-    "previewHelp": "Preview aislado (iframe <0>sandbox</0> sin <1>allow-same-origin</1>): el sample no puede acceder a la sesión del panel. Carga la versión <2>guardada</2>, no los cambios sin guardar."
+    "previewHelp": "Preview aislado (iframe <0>sandbox</0> sin <1>allow-same-origin</1>): el sample no puede acceder a la sesión del panel. Carga la versión <2>guardada</2>, no los cambios sin guardar.",
+    "previewHelpIsolated": "Preview servido desde el origen propio de samples <0>{{origin}}</0>: el sample no puede acceder a la sesión del panel, y cámara/mic funcionan también acá. Carga la versión <2>guardada</2>, no los cambios sin guardar."
   },
   "embed": {
     "title": "Embeber & enlazar",

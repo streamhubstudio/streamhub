@@ -1,0 +1,8 @@
+nan: .nan
+inf: .inf
+ninf: -.inf
+negzero: -0.0
+list:
+  - .nan
+  - -0.0
+  - -.inf

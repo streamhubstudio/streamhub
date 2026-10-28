@@ -1,0 +1,56 @@
+{
+  "$obj": [
+    [
+      "0",
+      "negzero"
+    ],
+    [
+      "1",
+      "int"
+    ],
+    [
+      "16",
+      "hex"
+    ],
+    [
+      "true",
+      "bool"
+    ],
+    [
+      "null",
+      null
+    ],
+    [
+      "1.5",
+      "float"
+    ],
+    [
+      "a,b",
+      "seq"
+    ],
+    [
+      "[object Object]",
+      "map"
+    ],
+    [
+      "NaN",
+      "nan"
+    ],
+    [
+      "Wed Jan 01 2020 00:00:00 GMT+0000 (Coordinated Universal Time)",
+      "date-key-as-string"
+    ],
+    [
+      "quoted",
+      "q"
+    ],
+    [
+      "single",
+      "s"
+    ],
+    [
+      "complex",
+      "explicit"
+    ]
+  ]
+}

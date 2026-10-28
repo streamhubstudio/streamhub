@@ -1,0 +1,682 @@
+{
+  "module": "logs",
+  "cases": [
+    {
+      "name": "logs-no-auth",
+      "fingerprint": "sha256:7a6ffdc8cb20142c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "logs-empty-source",
+      "fingerprint": "sha256:8c5edadb4767e093",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=parity-none",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-paging-echo",
+      "fingerprint": "sha256:38f67803d72aaaaa",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=parity-none&limit=5&offset=2",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 5,
+        "offset": 2,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-ready-rows",
+      "fingerprint": "sha256:c80ef3f62a1986c2",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=logs&q=LogsService%20ready",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "appId": null,
+            "id": "<masked>",
+            "level": "info",
+            "message": "LogsService ready",
+            "metaJson": "{\"dir\":\"{{dataDir}}/logs\",\"retentionDays\":30}",
+            "source": "logs",
+            "ts": "<iso-ts>"
+          },
+          {
+            "appId": null,
+            "id": "<masked>",
+            "level": "info",
+            "message": "LogsService ready",
+            "metaJson": "<masked>",
+            "source": "logs",
+            "ts": "<iso-ts>"
+          }
+        ],
+        "limit": 100,
+        "offset": 0,
+        "total": 2
+      }
+    },
+    {
+      "name": "logs-ready-rows-level",
+      "fingerprint": "sha256:21a980021c3e405a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=logs&q=LogsService&level=info&limit=1",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [
+          {
+            "appId": null,
+            "id": "<masked>",
+            "level": "info",
+            "message": "LogsService ready",
+            "metaJson": "{\"dir\":\"{{dataDir}}/logs\",\"retentionDays\":30}",
+            "source": "logs",
+            "ts": "<iso-ts>"
+          }
+        ],
+        "limit": 1,
+        "offset": 0,
+        "total": 2
+      }
+    },
+    {
+      "name": "logs-like-escape",
+      "fingerprint": "sha256:1e7dabfa367a5e70",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=logs&q=%25_",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-since-until",
+      "fingerprint": "sha256:2ed6c37e0e0a1391",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=logs&q=LogsService%20ready&since=2000-01-01T00:00:00Z&until=2000-01-02",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-app-unknown",
+      "fingerprint": "sha256:112386a4bce0b6a1",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?app=parity-ghost",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-bad-level",
+      "fingerprint": "sha256:a67bdc6367a01a39",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?level=loud",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "level must be one of the following values: trace, debug, info, warn, error, fatal"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-empty-level",
+      "fingerprint": "sha256:03bf49b8a5aa0d38",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?level=",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "level must be one of the following values: trace, debug, info, warn, error, fatal"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-limit-zero",
+      "fingerprint": "sha256:76468e5c5bf71d50",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?limit=0",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must not be less than 1"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-limit-big",
+      "fingerprint": "sha256:d528d8ef4738e22b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?limit=1001",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must not be greater than 1000"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-limit-nan",
+      "fingerprint": "sha256:956e39a792af6d4d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?limit=abc",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must not be greater than 1000",
+          "limit must not be less than 1",
+          "limit must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-limit-float",
+      "fingerprint": "sha256:d98896ee112e317c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?limit=2.5",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-limit-repeat",
+      "fingerprint": "sha256:29eb984b0bc43fb4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?limit=3&limit=4",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "limit must not be greater than 1000",
+          "limit must not be less than 1",
+          "limit must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-offset",
+      "fingerprint": "sha256:2a7f9e4aae985314",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?offset=-1",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "offset must not be less than 0"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-bad-dates",
+      "fingerprint": "sha256:1e901518868a865a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?since=yesterday&until=2026-13-01",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "since must be a valid ISO 8601 date string",
+          "until must be a valid ISO 8601 date string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-many-errors",
+      "fingerprint": "sha256:ba67e50f4822bb0c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?app=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&level=x&source=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&q=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq&limit=x&offset=x",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "app must be shorter than or equal to 64 characters",
+          "level must be one of the following values: trace, debug, info, warn, error, fatal",
+          "source must be shorter than or equal to 64 characters",
+          "q must be shorter than or equal to 200 characters",
+          "limit must not be greater than 1000",
+          "limit must not be less than 1",
+          "limit must be an integer number",
+          "offset must not be less than 0",
+          "offset must be an integer number"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-level-repeat",
+      "fingerprint": "sha256:38d97664234ec1b5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?level=info&level=warn",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "level must be one of the following values: trace, debug, info, warn, error, fatal"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "logs-viewer",
+      "fingerprint": "sha256:6b7a7fa56e030e08",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=parity-none",
+        "auth": "viewerJwt"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "logs-app-token",
+      "fingerprint": "sha256:4df67a7f0cb446a4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/logs?source=parity-none",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "applogs-no-auth",
+      "fingerprint": "sha256:a00948fd8f756529",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "applogs-global",
+      "fingerprint": "sha256:25ad6364341457fd",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?source=parity-none",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "applogs-admin",
+      "fingerprint": "sha256:83926f086ca7982c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?source=parity-none&limit=7",
+        "auth": "adminJwt"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 7,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "applogs-app-token",
+      "fingerprint": "sha256:bf65590aabd8a9e5",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?source=parity-none",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "applogs-app-ignored",
+      "fingerprint": "sha256:165a7326fb8b736a",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?source=parity-none&app=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "limit": 100,
+        "offset": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "applogs-viewer-denied",
+      "fingerprint": "sha256:31e5f9d63c74854f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "applogs-owner-denied",
+      "fingerprint": "sha256:c9e8f498a98ecbe3",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs",
+        "auth": "ownerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "applogs-bad-level",
+      "fingerprint": "sha256:99d6a971c7150a22",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?level=nope",
+        "auth": "globalToken"
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "level must be one of the following values: trace, debug, info, warn, error, fatal"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "applogs-denied-before-validation",
+      "fingerprint": "sha256:dc49640bf6965111",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/logs?level=nope",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    }
+  ]
+}

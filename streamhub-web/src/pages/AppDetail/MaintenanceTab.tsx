@@ -270,13 +270,13 @@ function PurgeModal({
     <Dialog isOpen width={460} closable={false} onClose={onClose} onRequestClose={onClose}>
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h5 className="text-lg font-semibold text-gray-100">
             {t('purge.title')}
           </h5>
           <Badge tone="red">{t('purge.destructive')}</Badge>
         </div>
 
-        <p className="mb-4 text-xs font-medium text-amber-600 dark:text-amber-300">
+        <p className="mb-4 text-xs font-medium text-amber-300">
           {t('purge.warning')}
         </p>
 

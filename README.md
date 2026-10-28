@@ -12,14 +12,14 @@ Everything runs from one `docker compose up`.
                     https://streamhub.example.com   (Caddy, auto-TLS, 1 cert)
    ┌──────────────────────────────────────────────────────────────────────────┐
    │  /rtc  → LiveKit signaling (wss / WebRTC)                                  │
-   │  /*    → streamhub-core (NestJS): REST API + React SPA + HLS + browser SDK │
+   │  /*    → streamhub-core (Go):     REST API + React SPA + HLS + browser SDK │
    └──────────────────────────────────────────────────────────────────────────┘
         WebRTC media (UDP 7882) and RTMP (1935) go straight to the server IP
    ┌──────────────────────────────────────────────────────────────────────────┐
    │ livekit-server   SFU · signaling 7880 · tcp 7881 · media 7882/udp         │
    │ livekit/ingress  RTMP 1935 · WHIP 8080                                     │
    │ livekit/egress   room-composite recording → <DATA_DIR> → S3               │
-   │ redis            coordinates ingress/egress + BullMQ job queues           │
+   │ redis            coordinates LiveKit ingress/egress                        │
    │ streamhub-core   API + serves the SPA + JWT login + SQLite + S3 + jobs     │
    └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -63,11 +63,11 @@ Full reference: **[operations/INSTALL-NODE](https://streamhub.studio/docs/operat
 
 ```bash
 git clone https://github.com/streamhubstudio/streamhub.git
-cd vision-media-server
+cd streamhub
 cp .env.example .env          # edit: STREAMHUB_DOMAIN, ACME_EMAIL, secrets...
 docker compose up -d --build
 # seed the first global API token once core is healthy:
-docker compose exec -T core node deploy/seed-token.js "$(grep '^STREAMHUB_API_TOKEN=' .env | cut -d= -f2)"
+grep '^STREAMHUB_API_TOKEN=' .env | cut -d= -f2 | docker compose exec -T core streamhub-core seed-token - bootstrap
 ```
 
 Then open `https://<your-domain>/` (dashboard), `/api/v1/docs` (Swagger), and check
@@ -100,12 +100,12 @@ Per-app S3 credentials are set in `data/secrets.json` (chmod 600) referenced fro
 |---|---|---|
 | `docker-compose.yml` | Compose | brings up core + LiveKit + ingress + egress + redis + Caddy |
 | `install.sh` | Bash | quick-install: secrets → build → up → seed token |
-| `deploy/` | Dockerfile, Caddyfile, entrypoint, seeder (+ bare-metal systemd/nginx units) |
-| `streamhub-core/` | Node 24 + **NestJS** | REST API + serves the React SPA + JWT login + S3 + jobs + SQLite |
+| `deploy/` | Dockerfile, Caddyfile, entrypoint (+ bare-metal core bundle, systemd/nginx units) |
+| `streamhub-core-go/` | **Go** (one static binary) | the core: REST API + serves the React SPA + JWT login + S3 + jobs + SQLite |
 | `streamhub-web/` | **React + Vite + Tailwind** | dashboard SPA (built into the core image) |
 | `streamhub-adaptor/` | TypeScript | browser SDK (`WebRTCAdaptor` shim over `livekit-client`) |
-| `streamhub-core/src/plugins-vendor/`, `streamhub-web/src/plugins-vendor/` | Python + TS | the 12 worker-backed Studio Apps, pre-composed |
-| `mcp-server/` | TypeScript | MCP server exposing the REST API to AI clients |
+| `plugins-vendor/`, `streamhub-web/src/plugins-vendor/` | Python + TS | the 12 worker-backed Studio Apps, pre-composed |
+| `streamhub-core-go/cmd/streamhub-mcp/` | Go | MCP server exposing the REST API to AI clients (`streamhub-mcp`) |
 
 ## Documentation
 
@@ -123,12 +123,12 @@ Everything lives on the website: **[streamhub.studio/docs](https://streamhub.stu
 ## License
 
 StreamHub follows an **open-core** model: the self-hosted core in this repository — everything
-under `streamhub-core/`, `streamhub-web/`, `deploy/` and this Compose stack — is open source
+under `streamhub-core-go/`, `streamhub-web/`, `deploy/` and this Compose stack — is open source
 under **AGPL-3.0-only** (see [`LICENSE`](LICENSE)). Copyright © 2026 digitalhub / Cubiq Digital.
 The worker-backed Studio Apps (`yolo`, `deface`, `lpr`, `perimeter`, `presence`,
 `people-counter`, `safety-ppe`, `transcription`, `occupancy`, `counting`, `crowd`, `demography`)
 are developed in their own AGPL-3.0 repos and ship **pre-composed** in this repository
-(`*/src/plugins-vendor/`), so a clone builds the complete product.
+(`plugins-vendor/` and `streamhub-web/src/plugins-vendor/`), so a clone builds the complete product.
 Commercial **Enterprise Edition (EE)** modules are distributed and licensed
 separately and are not part of this repo. The browser SDK
 [`streamhub-adaptor/`](streamhub-adaptor/) is intentionally **MIT** so it can be embedded

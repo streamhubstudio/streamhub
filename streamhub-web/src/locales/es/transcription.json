@@ -1,0 +1,14 @@
+{
+  "title": "Transcripciones de VODs recientes",
+  "refresh": "Actualizar",
+  "empty": "Todavía no hay grabaciones: las transcripciones aparecen acá cuando la app graba VODs.",
+  "col": {
+    "room": "Sala",
+    "started": "Grabado",
+    "status": "Estado",
+    "language": "Idioma"
+  },
+  "status": {
+    "none": "sin transcribir"
+  }
+}

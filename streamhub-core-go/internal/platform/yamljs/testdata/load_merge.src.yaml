@@ -1,0 +1,18 @@
+base: &base
+  a: 1
+  b: 2
+other: &other
+  b: 20
+  c: 30
+merged:
+  <<: *base
+  b: 99
+multi:
+  <<: [*base, *other]
+  d: 4
+over:
+  x: 0
+  <<: *base
+flow: {<<: *other, c: 3}
+quoted_merge:
+  "<<": literal

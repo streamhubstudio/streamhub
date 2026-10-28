@@ -66,6 +66,12 @@ DOMAIN="$DOMAIN_OVERRIDE"
 if [ -z "$DOMAIN" ] && [ -f "$INSTALL_DIR/.env" ]; then
   DOMAIN="$(grep -E '^STREAMHUB_DOMAIN=' "$INSTALL_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)"
 fi
+# Samples origin vhost (install.sh --samples-domain), if any.
+SAMPLES_HOST=""
+if [ -f "$INSTALL_DIR/.env" ]; then
+  SAMPLES_HOST="$(grep -E '^STREAMHUB_SAMPLES_URL=' "$INSTALL_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+  SAMPLES_HOST="${SAMPLES_HOST#*://}"; SAMPLES_HOST="${SAMPLES_HOST%%/*}"
+fi
 
 echo
 warn "About to REMOVE StreamHub from this machine:"
@@ -96,6 +102,8 @@ if command -v docker >/dev/null 2>&1; then
   fi
   # Belt-and-suspenders: kill any lingering streamhub-named containers.
   LINGER="$(docker ps -aq --filter 'name=streamhub' 2>/dev/null || true)"
+  # LINGER is a whitespace-separated id list: word splitting is intended.
+  # shellcheck disable=SC2086
   [ -n "$LINGER" ] && { log "removing lingering streamhub containers"; docker rm -f $LINGER >/dev/null 2>&1 || true; }
   if [ "$PURGE" = 1 ]; then
     log "pruning docker build cache + dangling images (fresh rebuild next time)"
@@ -122,7 +130,12 @@ if [ "$PURGE" = 1 ] && [ -n "$DOMAIN" ] && [ "$DOMAIN" != "localhost" ] && comma
   if [ -f "/etc/nginx/sites-available/$DOMAIN" ] || [ -L "/etc/nginx/sites-enabled/$DOMAIN" ]; then
     log "removing nginx server block for $DOMAIN"
     rm -f "/etc/nginx/sites-enabled/$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
-    nginx -t >/dev/null 2>&1 && systemctl reload nginx >/dev/null 2>&1 || warn "nginx reload skipped"
+    if nginx -t >/dev/null 2>&1 && systemctl reload nginx >/dev/null 2>&1; then :; else warn "nginx reload skipped"; fi
+  fi
+  if [ -n "$SAMPLES_HOST" ] && { [ -f "/etc/nginx/sites-available/$SAMPLES_HOST" ] || [ -L "/etc/nginx/sites-enabled/$SAMPLES_HOST" ]; }; then
+    log "removing nginx server block for the samples origin $SAMPLES_HOST"
+    rm -f "/etc/nginx/sites-enabled/$SAMPLES_HOST" "/etc/nginx/sites-available/$SAMPLES_HOST"
+    if nginx -t >/dev/null 2>&1 && systemctl reload nginx >/dev/null 2>&1; then :; else warn "nginx reload skipped"; fi
   fi
 fi
 

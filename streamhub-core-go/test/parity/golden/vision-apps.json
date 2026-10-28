@@ -1,0 +1,948 @@
+{
+  "module": "vision-apps",
+  "cases": [
+    {
+      "name": "vision-overview-no-auth",
+      "fingerprint": "sha256:5d0abe797a3f9183",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/overview"
+      },
+      "status": 401,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "vision-overview",
+      "fingerprint": "sha256:d0d5a2ea8b69e22c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/overview",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "activeStreams": 0,
+          "assignments": 0,
+          "enabled": false,
+          "generatedAt": "<masked>",
+          "model": "occupancy",
+          "today": 0
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-overview-viewer",
+      "fingerprint": "sha256:5d79f7bafa39ff6f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/overview",
+        "auth": "viewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "vision-overview-app-token",
+      "fingerprint": "sha256:3cb67ccecbb4e8fe",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/counting/overview",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "activeStreams": 0,
+          "assignments": 0,
+          "enabled": false,
+          "generatedAt": "<masked>",
+          "model": "counting",
+          "today": 0
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-overview-unknown-model",
+      "fingerprint": "sha256:a8e00381e22a0921",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/nope/overview",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown vision model 'nope' (occupancy|counting|crowd|demography)",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vision-overview-literal-plugin",
+      "fingerprint": "sha256:b5f755704940d4f8",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/live-control/overview",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown vision model 'live-control' (occupancy|counting|crowd|demography)",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vision-overview-missing-app",
+      "fingerprint": "sha256:45bda18f826abceb",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/ghost-app/plugins/occupancy/overview",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'ghost-app' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vision-streams",
+      "fingerprint": "sha256:7a784e2486205097",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/crowd/streams",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "vision-streams-unknown",
+      "fingerprint": "sha256:edc133ea7867026b",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/vision/streams",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown vision model 'vision' (occupancy|counting|crowd|demography)",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vision-settings-empty",
+      "fingerprint": "sha256:1be51f61c4f67e73",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {},
+          "model": "occupancy",
+          "resolved": {
+            "zones": []
+          },
+          "room": "lobby",
+          "updatedAt": null
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-not-object",
+      "fingerprint": "sha256:2a91cbef7380387c",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": "x"
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "config must be an object"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-bad-zones",
+      "fingerprint": "sha256:e608e782549ed9ed",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "zones": "x"
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "zones must be an array",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-bad-points",
+      "fingerprint": "sha256:07c8ae1dc50b6e3f",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "zones": [
+              {
+                "id": "z1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ]
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "zone[0] needs at least 3 points",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-occupancy",
+      "fingerprint": "sha256:c0b2a9403a68540e",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "zones": [
+              {
+                "id": " z1 ",
+                "name": "Door",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.123456789
+                  ],
+                  [
+                    1,
+                    1.5
+                  ]
+                ]
+              }
+            ],
+            "extra": 1
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "zones": [
+              {
+                "detect": "personas",
+                "id": "z1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.1235
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ],
+                "tag": ""
+              }
+            ]
+          },
+          "model": "occupancy",
+          "resolved": {
+            "zones": [
+              {
+                "detect": "personas",
+                "id": "z1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.1235
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ],
+                "tag": ""
+              }
+            ]
+          },
+          "room": "lobby",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-get-occupancy",
+      "fingerprint": "sha256:87bea644330c5c5f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/streams/lobby/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "zones": [
+              {
+                "detect": "personas",
+                "id": "z1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.1235
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ],
+                "tag": ""
+              }
+            ]
+          },
+          "model": "occupancy",
+          "resolved": {
+            "zones": [
+              {
+                "detect": "personas",
+                "id": "z1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0.1235
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ],
+                "tag": ""
+              }
+            ]
+          },
+          "room": "lobby",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-counting",
+      "fingerprint": "sha256:598ac633b12208aa",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "lines": [
+              {
+                "id": "l1",
+                "x": 0.25,
+                "y": "0.5",
+                "length": 0.33333333,
+                "angle": -45.123456,
+                "inside": "left",
+                "tag": "  door "
+              }
+            ],
+            "fps": 3,
+            "capacity": 12.6
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "capacity": 13,
+            "fps": 3,
+            "lines": [
+              {
+                "angle": -45.1235,
+                "id": "l1",
+                "inside": "left",
+                "length": 0.3333,
+                "tag": "door",
+                "x": 0.25,
+                "y": 0.5
+              }
+            ]
+          },
+          "model": "counting",
+          "resolved": {
+            "capacity": 13,
+            "fps": 3,
+            "lines": [
+              {
+                "angle": -45.1235,
+                "id": "l1",
+                "inside": "left",
+                "length": 0.3333,
+                "tag": "door",
+                "x": 0.25,
+                "y": 0.5
+              }
+            ]
+          },
+          "room": "lobby",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-counting-bad",
+      "fingerprint": "sha256:d9c90ce302bce46c",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "lines": [
+              {
+                "id": "l1"
+              }
+            ]
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "line[0] needs a positive length",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-counting-bad-inside",
+      "fingerprint": "sha256:0731c2f419939b44",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "lines": [
+              {
+                "length": 1,
+                "inside": "up"
+              }
+            ]
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "line[0].inside must be top|bottom|left|right",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-counting-fps-clamped",
+      "fingerprint": "sha256:4fad79e8899030c5",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "fps": 99
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "fps": 30,
+            "lines": []
+          },
+          "model": "counting",
+          "resolved": {
+            "fps": 30,
+            "lines": []
+          },
+          "room": "lobby",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-get-counting",
+      "fingerprint": "sha256:077e537746861b86",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/counting/streams/lobby/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "fps": 30,
+            "lines": []
+          },
+          "model": "counting",
+          "resolved": {
+            "fps": 30,
+            "lines": []
+          },
+          "room": "lobby",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-crowd",
+      "fingerprint": "sha256:3a982aa625ec726b",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/crowd/streams/hall/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "pois": [
+              {
+                "id": "p1",
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    1,
+                    0
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              }
+            ],
+            "zones": []
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "zones": []
+          },
+          "model": "crowd",
+          "resolved": {
+            "zones": []
+          },
+          "room": "hall",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-demography",
+      "fingerprint": "sha256:7f9e234b7f0324ae",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/demography/streams/hall/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "engine": "openai",
+            "zones": []
+          }
+        }
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "engine": "openai",
+            "intervalSec": 120
+          },
+          "model": "demography",
+          "resolved": {
+            "engine": "openai",
+            "intervalSec": 120
+          },
+          "room": "hall",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-demography-bad",
+      "fingerprint": "sha256:968c537e9d5dfd38",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/demography/streams/hall/settings",
+        "auth": "globalToken",
+        "body": {
+          "config": {
+            "engine": 7
+          }
+        }
+      },
+      "status": 400,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "engine must be local|openai|deepseek",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "vision-settings-put-no-body",
+      "fingerprint": "sha256:52631783f7a37f73",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/crowd/streams/empty/settings",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config": {
+            "zones": []
+          },
+          "model": "crowd",
+          "resolved": {
+            "zones": []
+          },
+          "room": "empty",
+          "updatedAt": "<masked>"
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "vision-settings-put-viewer",
+      "fingerprint": "sha256:c3e3baad1b002ced",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/crowd/streams/empty/settings",
+        "auth": "viewerJwt",
+        "body": {}
+      },
+      "status": 403,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "role 'viewer' lacks config:write",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "vision-settings-put-unknown",
+      "fingerprint": "sha256:60d439ffc23afa17",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/nope/streams/empty/settings",
+        "auth": "globalToken",
+        "body": {}
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown vision model 'nope' (occupancy|counting|crowd|demography)",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "vision-events",
+      "fingerprint": "sha256:622d9e2c487dcef4",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/occupancy/events",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "vision-events-limit-junk",
+      "fingerprint": "sha256:c91cb4b80dc2f828",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/demography/events?limit=abc",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "vision-events-limit-big",
+      "fingerprint": "sha256:d5fbcf607045d5e6",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/counting/events?limit=99999",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "vision-events-limit-zero",
+      "fingerprint": "sha256:80eda5a79f8fc97f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/crowd/events?limit=0",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": [],
+        "error": null
+      }
+    },
+    {
+      "name": "vision-events-unknown",
+      "fingerprint": "sha256:dbdcaf1e5c84a74d",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/plugins/nope/events",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "unknown vision model 'nope' (occupancy|counting|crowd|demography)",
+        "statusCode": 404
+      }
+    }
+  ]
+}

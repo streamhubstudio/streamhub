@@ -1,13 +1,18 @@
 [Unit]
-Description=StreamHub Core (NestJS) - LiveKit management API
+Description=StreamHub Core (Go) - LiveKit management API
 After=network-online.target redis-server.service livekit.service
 Wants=network-online.target
 
+# Plain-server (non-Docker) shape. APP_DIR=/home/ploi/streamhub-core holds the
+# bundle installed by deploy/deploy-core.sh (streamhub-core binary, web/,
+# plugins-vendor/) plus the operator's .env.
 [Service]
 Type=simple
 WorkingDirectory=/home/ploi/streamhub-core
 EnvironmentFile=/home/ploi/streamhub-core/.env
-ExecStart=/usr/bin/node dist/main.js
+ExecStart=/home/ploi/streamhub-core/streamhub-core
+# core + the egress worker share DATA_DIR: group-writable files/dirs
+UMask=0002
 Restart=on-failure
 RestartSec=3
 User=ploi

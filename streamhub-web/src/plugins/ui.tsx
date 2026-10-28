@@ -24,7 +24,7 @@ export function errMessage(error: unknown, fallback: string): string {
 
 // Elstar `.input` look, brand-focused + a solid surface so it reads on cards.
 const inputClass =
-  'input text-sm bg-white dark:bg-gray-700 focus:ring-primary-500 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50'
+  'input text-sm bg-gray-700 focus:ring-primary-500 focus:border-primary-500 disabled:cursor-not-allowed disabled:opacity-50'
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const { className = '', ...rest } = props
@@ -54,7 +54,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-100">
+      <span className="mb-1.5 block text-sm font-semibold text-gray-100">
         {label}
       </span>
       {children}
@@ -62,7 +62,7 @@ export function Field({
         <span className="mt-1 block text-xs text-red-500">{error}</span>
       ) : (
         hint && (
-          <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">{hint}</span>
+          <span className="mt-1 block text-xs text-gray-400">{hint}</span>
         )
       )}
     </label>
@@ -126,12 +126,12 @@ export function Badge({
   tone?: 'slate' | 'green' | 'red' | 'cyan' | 'amber' | 'violet'
 }) {
   const tones: Record<string, string> = {
-    slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/50 dark:text-gray-200',
-    green: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    red: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
-    cyan: 'bg-primary-50 text-primary-600 dark:bg-primary-500/20 dark:text-primary-200',
-    amber: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
-    violet: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-100',
+    slate: 'bg-gray-600/50 text-gray-200',
+    green: 'bg-emerald-500/20 text-emerald-100',
+    red: 'bg-red-500/20 text-red-100',
+    cyan: 'bg-primary-500/20 text-primary-200',
+    amber: 'bg-amber-500/20 text-amber-100',
+    violet: 'bg-violet-500/20 text-violet-100',
   }
   return (
     <span

@@ -28,9 +28,9 @@ const POLL_MS = 60_000
 // --- badges + tiles ----------------------------------------------------------
 
 const BADGE_TONE: Record<TuningTone, string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 const STATUS_ICON: Record<OsTuningKnob['status'], string> = {
@@ -52,8 +52,8 @@ function StatusBadge({ status }: { status: OsTuningKnob['status'] }) {
 }
 
 const TILE_TONE: Record<TuningTone, string> = {
-  green: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-300',
-  amber: 'border-amber-500/30 text-amber-600 dark:text-amber-300',
+  green: 'border-emerald-500/30 text-emerald-300',
+  amber: 'border-amber-500/30 text-amber-300',
   slate: 'border-border/60 text-fg-muted',
 }
 
@@ -177,7 +177,7 @@ function Loaded({ report }: { report: OsTuningReport }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-fg">{k.label}</span>
                     {k.optional && (
-                      <Tag className="border-transparent bg-gray-100 py-0 text-[10px] text-gray-500 dark:bg-gray-600/60 dark:text-gray-300">
+                      <Tag className="border-transparent py-0 text-[10px] bg-gray-600/60 text-gray-300">
                         {t('optionalTag')}
                       </Tag>
                     )}
@@ -196,7 +196,7 @@ function Loaded({ report }: { report: OsTuningReport }) {
                 </Td>
                 <Td>
                   <div className="flex items-start gap-2">
-                    <code className="min-w-0 rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[11px] break-all dark:bg-gray-600/60">
+                    <code className="min-w-0 rounded px-1.5 py-0.5 font-mono text-[11px] break-all bg-gray-600/60">
                       {k.remedy}
                     </code>
                     <CopyButton value={k.remedy} />

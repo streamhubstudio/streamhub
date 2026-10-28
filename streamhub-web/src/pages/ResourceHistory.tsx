@@ -262,7 +262,7 @@ function RangeSwitcher({
           className={[
             'rounded-md px-3 py-1.5 text-xs font-medium transition',
             r === range
-              ? 'bg-primary-500/10 text-primary-600 ring-1 ring-primary-500/30 dark:text-primary-400'
+              ? 'bg-primary-500/10 ring-1 ring-primary-500/30 text-primary-400'
               : 'text-fg-muted hover:bg-surface-raised hover:text-fg',
           ].join(' ')}
         >

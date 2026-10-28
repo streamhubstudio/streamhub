@@ -1,0 +1,682 @@
+{
+  "module": "streamflow",
+  "description": "Streamflow plugin API (/apps/:app/plugins/streamflow). Manual-run execution is covered by unit tests (the run outcome depends on the queue: BullMQ+dead Redis in Node vs the in-process runner in Go).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "boxes",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "events",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/events",
+      "auth": "adminJwt",
+      "expectStatus": 404,
+      "skip": "GO-DIVERGENCE (Node bug fixed in Go): Node's VisionAppsController apps/:app/plugins/:model/events shadows StreamflowController_events (404 'unknown vision model'), so the trigger picker never gets the event catalogue; Go serves it (TestEventsRouteNotShadowed)."
+    },
+    {
+      "name": "boxes-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+      "expectStatus": 401
+    },
+    {
+      "name": "boxes-viewer-cross-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "boxes-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/boxes",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflows-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflows-unknown-app",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    },
+    {
+      "name": "create-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "create-blank-name",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "body": {
+        "name": "   "
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "create-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "body": {
+        "name": 5,
+        "enabled": "yes",
+        "graph": [
+          1
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "create-minimal",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "body": {
+        "name": " Minimal "
+      },
+      "capture": {
+        "wfMin": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "create-full",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "capture": {
+        "wfFull": "data.id"
+      },
+      "rawBody": "{\"name\": \"Full\", \"enabled\": false, \"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}, \"extra\": \"ignored\"}",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "create-null-graph",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "body": {
+        "name": "Nulls",
+        "enabled": null,
+        "graph": null
+      },
+      "capture": {
+        "wfNull": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "create-unknown-app",
+      "method": "POST",
+      "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "body": {
+        "name": "x"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "workflows-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-get",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-get-404",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    },
+    {
+      "name": "workflow-export",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/export",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-export-404",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/export",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    },
+    {
+      "name": "workflow-update",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+      "auth": "adminJwt",
+      "body": {
+        "name": "Renamed",
+        "graph": {
+          "edges": [],
+          "boxes": [
+            {
+              "type": "trigger.event",
+              "id": "e",
+              "config": {
+                "event": "plate.*"
+              }
+            }
+          ]
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-update-nulls",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfNull}}",
+      "auth": "adminJwt",
+      "body": {
+        "name": null,
+        "enabled": null,
+        "graph": null
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-update-empty",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+      "auth": "adminJwt",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-update-bad",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+      "auth": "adminJwt",
+      "body": {
+        "enabled": 1,
+        "graph": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "workflow-update-404",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope",
+      "auth": "adminJwt",
+      "body": {
+        "name": "x"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "workflow-enable-false",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}/enable",
+      "auth": "adminJwt",
+      "body": {
+        "enabled": false
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "workflow-enable-default",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/enable",
+      "auth": "adminJwt",
+      "body": {},
+      "expectStatus": 201
+    },
+    {
+      "name": "workflow-enable-bad",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/enable",
+      "auth": "adminJwt",
+      "body": {
+        "enabled": "no"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "workflow-enable-404",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/enable",
+      "auth": "adminJwt",
+      "body": {
+        "enabled": true
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "import-ok",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "capture": {
+        "wfImp": "data.id"
+      },
+      "rawBody": "{\"workflow\": {\"streamflow\": 1, \"name\": \" Imported \", \"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}, \"junk\": 1}}",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "import-name-override",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "rawBody": "{\"workflow\": {\"graph\": {\"boxes\": [{\"id\": \"t\", \"type\": \"trigger.manual\", \"config\": {}, \"x\": 10.5, \"y\": 2}, {\"id\": \"c\", \"type\": \"logic.condition\", \"config\": {\"match\": \"all\", \"rules\": [{\"field\": \"trigger.n\", \"op\": \"gt\", \"value\": \"1e1\"}]}}, {\"id\": \"h\", \"type\": \"action.http\", \"config\": {\"url\": \"https://example.com/hook\", \"apiKey\": \"sk-abcdefghijklmnop\", \"token\": \"\\u007b\\u007bsecret.TOKEN}}\", \"password\": \"hunter2\"}}], \"edges\": [{\"from\": \"t\", \"to\": \"c\"}, {\"from\": \"c\", \"fromPort\": \"true\", \"to\": \"h\"}], \"zoom\": 1.25}}, \"name\": \"  Over  \"}",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "import-default-name",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "trigger.manual"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "import-unknown-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "nope.x"
+              },
+              {
+                "id": "b",
+                "type": "nope.y"
+              },
+              {
+                "id": "c"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-unknown-type",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "nope.x"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-cycle",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "logic.delay"
+              },
+              {
+                "id": "b",
+                "type": "logic.delay"
+              }
+            ],
+            "edges": [
+              {
+                "from": "a",
+                "to": "b"
+              },
+              {
+                "from": "b:out",
+                "to": "a"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-dup-id",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "logic.delay"
+              },
+              {
+                "id": "a",
+                "type": "logic.delay"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-bad-edge",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "logic.delay"
+              }
+            ],
+            "edges": [
+              {
+                "from": "a",
+                "to": "zz"
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {}
+        }
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-dangerous-ok",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": {
+          "graph": {
+            "boxes": [
+              {
+                "id": "a",
+                "type": "action.shell",
+                "config": {
+                  "command": "ls",
+                  "dsn": "postgres://u:p@h/db"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "import-not-object",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "body": {
+        "workflow": [
+          1
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "import-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/import",
+      "auth": "adminJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "runs-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/runs",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "runs-filter-limit",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/runs?workflowId=%20{{wfFull}}%20&limit=abc",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "run-get-404",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/runs/nope",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    },
+    {
+      "name": "run-manual-404",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/nope/run",
+      "auth": "adminJwt",
+      "body": {},
+      "expectStatus": 404
+    },
+    {
+      "name": "run-manual-bad-payload",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfFull}}/run",
+      "auth": "adminJwt",
+      "body": {
+        "payload": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "secrets-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "secret-put-bad-name",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/lower_case",
+      "auth": "adminJwt",
+      "body": {
+        "value": "abc"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "secret-put-no-value",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "secret-put-blank",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "body": {
+        "value": "   "
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "secret-put-masked",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "body": {
+        "value": "sk-\u2026abcd"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "secret-put-ok",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "body": {
+        "value": "sk-live-ABCDEFGH1234"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "secret-put-short",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/%20PIN%20",
+      "auth": "adminJwt",
+      "body": {
+        "value": "1234"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "secret-put-unicode",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/EMOJI",
+      "auth": "adminJwt",
+      "body": {
+        "value": "p\u00e4ss\ud83d\ude00w\u00f6rd"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "secrets-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "secret-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "secret-delete-404",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets/API_KEY",
+      "auth": "adminJwt",
+      "expectStatus": 404
+    },
+    {
+      "name": "secret-put-unknown-app",
+      "method": "PUT",
+      "path": "/api/v1/apps/no-such-sf-app/plugins/streamflow/secrets/X",
+      "auth": "adminJwt",
+      "body": {
+        "value": "abcdef"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "secrets-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/secrets",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "workflow-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfImp}}",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-delete-again",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfImp}}",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "workflow-delete-no-auth",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows/{{wfMin}}",
+      "expectStatus": 401
+    },
+    {
+      "name": "workflows-list-final",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/streamflow/workflows",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    }
+  ]
+}

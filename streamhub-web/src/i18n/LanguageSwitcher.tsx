@@ -7,7 +7,7 @@ const LABELS: Record<SupportedLng, string> = {
 }
 
 /**
- * Compact ES/EN toggle. Drop it next to <ThemeToggle /> in the layout.
+ * Compact ES/EN toggle for the layout chrome.
  * Uses i18n.changeLanguage; the choice is persisted to localStorage by the
  * language detector (key 'streamhub-lang').
  */

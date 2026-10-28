@@ -1,0 +1,131 @@
+{
+  "status": {
+    "online": "En línea",
+    "offline": "Desconectada",
+    "unknown": "Sin estado"
+  },
+  "filter": {
+    "all": "Todas ({{count}})",
+    "online": "En línea ({{count}})",
+    "offline": "Desconectadas ({{count}})",
+    "site": "Sitio",
+    "allSites": "Todos los sitios"
+  },
+  "metric": {
+    "fw": "Firmware",
+    "signal": "Señal",
+    "stream": "Stream",
+    "sd": "microSD",
+    "queue": "Cola",
+    "seen": "Visto hace",
+    "uptime": "Encendida",
+    "ip": "IP",
+    "mem": "RAM libre",
+    "load": "Carga",
+    "reboot": "Último reinicio"
+  },
+  "stream": {
+    "on": "Emitiendo",
+    "off": "Detenido"
+  },
+  "sd": {
+    "none": "sin tarjeta"
+  },
+  "card": {
+    "noThumb": "Sin miniatura",
+    "safeMode": "Modo seguro: la cámara se reinició varias veces"
+  },
+  "inactive": "La consola no está activa: instalá y habilitá la app Cámaras y configurá el broker MQTT del app (mqtt.url). Las cámaras deben publicar en {{topic}}/<dispositivo>/….",
+  "empty": "Todavía no hay cámaras. Dá de alta una o apuntá una cámara OpenCam al broker MQTT de este app.",
+  "error": {
+    "load": "No se pudieron cargar las cámaras"
+  },
+  "detail": {
+    "pick": "Elegí una cámara para ver el video y controlarla.",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "ptz": "PTZ",
+    "control": "Acciones",
+    "commands": "Comandos recientes",
+    "noCommands": "Todavía no se enviaron comandos.",
+    "events": "Eventos",
+    "provisioning": "Aprovisionamiento",
+    "downloadIni": "Descargar config.ini",
+    "provisioned": "Dada de alta en StreamHub",
+    "discovered": "Descubierta por MQTT (sin alta)",
+    "streamStopped": "Stream detenido: se muestra la última miniatura",
+    "noRoom": "Sin sala vinculada: se muestra la última miniatura",
+    "eventsLost": "Se perdieron {{count}} eventos (hueco en seq); se pidieron de nuevo a la cámara.",
+    "offlineHint": "La cámara está desconectada: los comandos van a vencer sin respuesta."
+  },
+  "ptz": {
+    "pad": "Pad PTZ",
+    "stop": "Frenar",
+    "speed": "Velocidad",
+    "preset": "Preset",
+    "goPreset": "Ir al preset",
+    "home": "Inicio",
+    "hint": "Mantené apretada una flecha para mover; al soltar, la cámara frena. Si se corta la red, frena sola.",
+    "dir": {
+      "up": "Arriba",
+      "down": "Abajo",
+      "left": "Izquierda",
+      "right": "Derecha",
+      "ul": "Arriba a la izquierda",
+      "ur": "Arriba a la derecha",
+      "dl": "Abajo a la izquierda",
+      "dr": "Abajo a la derecha"
+    }
+  },
+  "action": {
+    "streamStart": "Iniciar stream",
+    "streamStop": "Detener stream",
+    "hd": "Ver en HD",
+    "hdOff": "Volver a calidad normal",
+    "snapshot": "Snapshot ahora",
+    "voiceTest": "Test de voz",
+    "reboot": "Reiniciar"
+  },
+  "hd": {
+    "until": "HD activo hasta las {{time}}; después vuelve al sub-stream."
+  },
+  "reboot": {
+    "confirm": "¿Reiniciar la cámara?",
+    "yes": "Sí, reiniciar",
+    "no": "Cancelar"
+  },
+  "cmd": {
+    "queued": "{{command}} enviado ({{id}})",
+    "failed": "El comando falló"
+  },
+  "cmdStatus": {
+    "sent": "enviado",
+    "pending": "pendiente",
+    "accepted": "aceptado",
+    "progress": "en curso",
+    "done": "ok",
+    "failed": "falló",
+    "timeout": "sin respuesta"
+  },
+  "events": {
+    "level": "Nivel",
+    "allLevels": "Todos los niveles",
+    "src": "Origen",
+    "empty": "Sin eventos."
+  },
+  "add": {
+    "open": "Agregar cámara",
+    "cancel": "Cancelar",
+    "title": "Alta de cámara",
+    "device": "Dispositivo (device.id)",
+    "name": "Nombre",
+    "room": "Sala",
+    "roomPh": "Sala (por defecto, el dispositivo)",
+    "site": "Sitio",
+    "stand": "Stand",
+    "createIngress": "Crear la ingress RTMP passthrough de la cámara",
+    "note": "Después descargá el config.ini y copialo en la raíz de la microSD. La credencial MQTT de la cámara hay que crearla en el broker.",
+    "submit": "Dar de alta",
+    "badDevice": "El dispositivo solo admite letras, números, punto, guion y guion bajo (máx. 64)."
+  }
+}

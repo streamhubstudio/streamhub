@@ -1,0 +1,91 @@
+{
+  "module": "nobody",
+  "description": "Write routes called with NO request body: Nest's ValidationPipe validates a missing body as {} (DTO messages / handler defaults); Go must not answer huma's 'request body is required' (api.OptionalRawBody). Every case is a validation failure \u2014 no state change.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "tokens-create-no-body",
+      "method": "POST",
+      "path": "/api/v1/tokens",
+      "auth": "adminJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "auth-login-no-body",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "expectStatus": 400
+    },
+    {
+      "name": "auth-signup-no-body",
+      "method": "POST",
+      "path": "/api/v1/auth/signup",
+      "expectStatus": 400
+    },
+    {
+      "name": "auth-magic-link-no-body",
+      "method": "POST",
+      "path": "/api/v1/auth/magic-link",
+      "expectStatus": 400
+    },
+    {
+      "name": "auth-magic-verify-no-body",
+      "method": "POST",
+      "path": "/api/v1/auth/magic/verify",
+      "expectStatus": 400
+    },
+    {
+      "name": "account-update-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/account",
+      "auth": "ownerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "account-password-no-body",
+      "method": "POST",
+      "path": "/api/v1/account/password",
+      "auth": "ownerJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "account-smtp-set-no-body",
+      "method": "PUT",
+      "path": "/api/v1/account/smtp",
+      "auth": "ownerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "teams-invite-no-body",
+      "method": "POST",
+      "path": "/api/v1/teams/mine/members",
+      "auth": "ownerJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "tenant-invite-no-body",
+      "method": "POST",
+      "path": "/api/v1/tenant/invites",
+      "auth": "ownerJwt",
+      "expectStatus": 400
+    },
+    {
+      "name": "tenant-quotas-update-no-body",
+      "method": "PATCH",
+      "path": "/api/v1/tenants/{{ownerTenantId}}/quotas",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "security-ip-rule-add-no-body",
+      "method": "POST",
+      "path": "/api/v1/security/ip-rules",
+      "auth": "adminJwt",
+      "expectStatus": 400
+    }
+  ]
+}

@@ -43,7 +43,7 @@ const LAMP_OFF: Record<'green' | 'yellow' | 'red', string> = {
 function TrafficLight({ active }: { active: LightOrUnknown }) {
   const order: Array<'red' | 'yellow' | 'green'> = ['red', 'yellow', 'green']
   return (
-    <div className="inline-flex flex-col items-center gap-2 rounded-2xl bg-gray-900 px-3 py-3 dark:bg-black/60">
+    <div className="inline-flex flex-col items-center gap-2 rounded-2xl px-3 py-3 bg-black/60">
       {order.map((lamp) => (
         <span
           key={lamp}
@@ -61,7 +61,7 @@ const DOT: Record<LightOrUnknown, string> = {
   green: 'bg-emerald-500',
   yellow: 'bg-amber-400',
   red: 'bg-red-500',
-  unknown: 'bg-gray-300 dark:bg-gray-600',
+  unknown: 'bg-gray-600',
 }
 
 function MetricRow({
@@ -76,8 +76,8 @@ function MetricRow({
   light: LightOrUnknown
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-gray-100 py-2 last:border-0 dark:border-gray-700/60">
-      <span className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+    <div className="flex items-center justify-between gap-3 border-b py-2 last:border-0 border-gray-700/60">
+      <span className="flex items-center gap-2 text-sm text-gray-300">
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[light]}`} aria-hidden="true" />
         {label}
       </span>
@@ -171,7 +171,7 @@ export function QualityPanel({ ctx }: PluginComponentProps) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-fg">{t('title')}</h2>
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('subtitle')}</p>
+          <p className="mt-0.5 text-xs text-gray-400">{t('subtitle')}</p>
         </div>
         <Button variant="accent" onClick={run} disabled={running}>
           {running ? t('actions.running') : t('actions.run')}
@@ -206,7 +206,7 @@ export function QualityPanel({ ctx }: PluginComponentProps) {
         {/* Metrics */}
         <div className="min-w-0 flex-1">
           {report && metrics ? (
-            <div className="rounded-lg border border-gray-100 px-3 dark:border-gray-700/60">
+            <div className="rounded-lg border px-3 border-gray-700/60">
               <MetricRow
                 label={t('metric.download')}
                 value={formatMbps(metrics.downMbps)}
@@ -239,10 +239,10 @@ export function QualityPanel({ ctx }: PluginComponentProps) {
               />
             </div>
           ) : (
-            <div className="flex h-full min-h-[8rem] flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-5 py-8 text-center dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="flex h-full min-h-[8rem] flex-col items-center justify-center rounded-lg border border-dashed px-5 py-8 text-center border-gray-700 bg-gray-900/40">
               {running ? (
                 <>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{t(`phase.${phase}`)}</p>
+                  <p className="text-sm text-gray-300">{t(`phase.${phase}`)}</p>
                   {phase === 'download' && (
                     <p className="mt-1 font-mono text-xs text-gray-400">
                       {t('phase.downloaded', { mb: progressMb.toFixed(1) })}
@@ -250,13 +250,13 @@ export function QualityPanel({ ctx }: PluginComponentProps) {
                   )}
                 </>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('empty')}</p>
+                <p className="text-sm text-gray-400">{t('empty')}</p>
               )}
             </div>
           )}
 
           {report && (
-            <p className="mt-3 text-[11px] leading-snug text-gray-400 dark:text-gray-500">
+            <p className="mt-3 text-[11px] leading-snug text-gray-500">
               {metrics?.upMbps === undefined ? t('note.uploadOptional') : t('note.measured')}
             </p>
           )}

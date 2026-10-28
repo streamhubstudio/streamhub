@@ -367,7 +367,7 @@ function StreamEditor({
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <p className="mb-2 rounded-md bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-600 lg:hidden dark:text-amber-300">
+          <p className="mb-2 rounded-md bg-amber-500/10 px-2.5 py-1.5 text-[11px] lg:hidden text-amber-300">
             {t('smallScreenHint')}
           </p>
           <div className="relative overflow-hidden rounded-lg bg-black/40">

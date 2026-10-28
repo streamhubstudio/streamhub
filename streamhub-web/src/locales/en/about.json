@@ -1,0 +1,37 @@
+{
+  "title": "About this server",
+  "open": "StreamHub {{version}} — build details and changelog",
+  "loading": "Loading…",
+  "copy": "Copy build info",
+  "copied": "Copied",
+  "yes": "yes",
+  "no": "no",
+  "slate": {
+    "running": "Running on this server"
+  },
+  "core": {
+    "commit": "Commit",
+    "built": "Built",
+    "modified": "modified tree",
+    "unavailable": "This core doesn't report build details. GET /system/build needs StreamHub 3.2 or newer."
+  },
+  "diverge": "The dashboard (commit {{web}}) and the core (commit {{core}}) come from different builds. Reload the page; if it persists, redeploy both from the same release.",
+  "toolchain": {
+    "title": "Compilers and toolchain",
+    "core": "Core binary",
+    "web": "Dashboard bundle",
+    "target": "Target",
+    "version": "Version",
+    "vcs": "Go VCS stamp",
+    "noVcs": "not stamped",
+    "media": "LiveKit server, ingress and egress versions aren't reported by the core; check the image tags in docker-compose.yml."
+  },
+  "changelog": {
+    "title": "Changelog",
+    "source": "CHANGELOG.md on GitHub",
+    "running": "Running",
+    "showAll": "Show all {{count}} releases",
+    "emptyRelease": "No notes for this release.",
+    "unavailable": "This core doesn't ship its changelog. Open CHANGELOG.md on GitHub instead."
+  }
+}

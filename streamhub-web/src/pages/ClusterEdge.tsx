@@ -73,7 +73,7 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
         <span>{label}</span>
         <span>{pct == null ? '—' : `${Math.round(v)}%`}</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600/50">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-600/50">
         <div className={`h-full ${tone}`} style={{ width: `${v}%` }} />
       </div>
     </div>
@@ -90,10 +90,10 @@ const ASSIGN_TONE: Record<string, 'green' | 'amber' | 'red' | 'slate'> = {
 }
 
 const TAG_TONE: Record<string, string> = {
-  green: 'border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'border-transparent bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'border-transparent bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'border-transparent bg-emerald-500/20 text-emerald-100',
+  amber: 'border-transparent bg-amber-500/20 text-amber-100',
+  red: 'border-transparent bg-red-500/20 text-red-100',
+  slate: 'border-transparent bg-gray-600/60 text-gray-100',
 }
 
 function ToneTag({ tone, children }: { tone: keyof typeof TAG_TONE; children: React.ReactNode }) {
@@ -151,7 +151,7 @@ function EdgeNodesPanel() {
           {errText(nodesQ.error, t('nodes.loadError'))}
         </Alert>
       ) : nodes.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-gray-600">
+        <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-slate-500 border-gray-600">
           {t('nodes.empty')}
         </div>
       ) : (
@@ -206,7 +206,7 @@ function EdgeNodeCard({
   return (
     <div
       data-testid={`edge-node-${node.id}`}
-      className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/40"
+      className="rounded-lg border p-4 border-gray-600 bg-gray-700/40"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate font-mono text-sm font-semibold text-fg">{node.name}</span>
@@ -223,7 +223,7 @@ function EdgeNodeCard({
         <Bar pct={numStat(node.stats, 'disk')} label={t('nodes.disk')} />
       </div>
 
-      <div className="mt-3 rounded-md bg-white/60 px-2.5 py-1.5 text-[11px] dark:bg-gray-800/50">
+      <div className="mt-3 rounded-md px-2.5 py-1.5 text-[11px] bg-gray-800/50">
         <div className="flex items-center justify-between">
           <span className="uppercase tracking-wide text-slate-500">{t('nodes.gpu')}</span>
           <span className="font-medium text-fg">
@@ -254,7 +254,7 @@ function EdgeNodeCard({
               const type = e.target.value as EdgeNodeView['type']
               if (type !== node.type) onPatch({ type })
             }}
-            className="rounded border border-gray-300 bg-white px-1.5 py-1 text-xs text-fg disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
+            className="rounded border px-1.5 py-1 text-xs text-fg disabled:opacity-50 border-gray-600 bg-gray-800"
           >
             <option value="common">{t('nodes.type.common')}</option>
             <option value="edge">{t('nodes.type.edge')}</option>
@@ -348,7 +348,7 @@ function WeightEditor({
           e.currentTarget.blur()
         }
       }}
-      className="w-20 rounded border border-gray-300 bg-white px-1.5 py-1 text-xs text-fg disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
+      className="w-20 rounded border px-1.5 py-1 text-xs text-fg disabled:opacity-50 border-gray-600 bg-gray-800"
     />
   )
 }

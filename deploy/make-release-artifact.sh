@@ -13,8 +13,10 @@
 #                                     published_at} manifest for the landing
 #
 # EXCLUDES (never shipped): .git, all node_modules / dist / coverage /
-# __pycache__ / .pytest_cache build output, the runtime data/ tree, and every
+# __pycache__ / .pytest_cache build output, local Go core builds
+# (streamhub-core-go/bin, ./streamhub), the runtime data/ tree, and every
 # secret (.env, .env.local, *.local, Access.md, deploy-streamhub.sh).
+# The image compiles the Go core from streamhub-core-go/.
 # INCLUDES: install.sh, uninstall.sh, deploy/ (incl. the streamhub CLI +
 # systemd unit), the component sources, docs.
 #
@@ -68,7 +70,7 @@ trap cleanup EXIT
 
 log "staging source from $ROOT (excluding build output, data/, secrets)"
 # Prune build output, the runtime data/ + per-app DB trees (at ANY depth, not
-# just root — the dev core writes streamhub-core/data + streamhub-core/apps),
+# just root — a dev core run from a subdir writes data/ + apps/ there),
 # any 'secrets' dir, and secret files. Belt-and-suspenders: also drop every
 # *.db* file by name so a stray SQLite DB can never ride along.
 ( cd "$ROOT" && find . \
@@ -77,6 +79,8 @@ log "staging source from $ROOT (excluding build output, data/, secrets)"
        -o -name data -o -name secrets -o -path './.claude' \
        -o -name '.env' -o -name '.env.local' -o -name '*.local' \
        -o -path './Access.md' -o -path './deploy-streamhub.sh' \
+       -o -path './streamhub-core-go/bin' -o -path './streamhub-core-go/streamhub' \
+       -o -path './streamhub-core-go/logs' -o -path './streamhub-core-go/sdk' \
     \) -prune -o -type f \
        ! -name '.DS_Store' ! -name '*.log' ! -name 'VERSION' \
        ! -name '*.db' ! -name '*.db-wal' ! -name '*.db-shm' ! -name '*.db.bak-*' \

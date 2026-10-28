@@ -90,7 +90,7 @@ function PluginSurface({ view, app }: { view: PluginView; app: string }) {
   return (
     <PluginBoundary
       fallback={
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+        <div className="rounded-lg px-4 py-3 text-xs font-medium bg-red-500/15 text-red-100">
           {t('host.crashed', { id: view.id })}
         </div>
       }
@@ -186,7 +186,7 @@ export function PluginsTab({ app }: { app: string }) {
         </div>
       )}
       {actionError && (
-        <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+        <div className="mb-5 rounded-lg px-4 py-3 text-sm font-medium bg-red-500/15 text-red-100">
           {errMessage(actionError, t('page.actionError'))}
         </div>
       )}
@@ -234,8 +234,8 @@ export function PluginsTab({ app }: { app: string }) {
                 className={[
                   'rounded-md px-3 py-1.5 text-sm font-semibold transition',
                   isActive
-                    ? 'bg-primary-50 text-primary-600 dark:bg-primary-500 dark:text-gray-100'
-                    : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-100',
+                    ? 'bg-primary-500 text-gray-100'
+                    : 'text-gray-400 hover:text-primary-100',
                 ].join(' ')}
               >
                 {c === ALL ? t('page.allCategories') : c}
@@ -330,11 +330,11 @@ export function PluginsTab({ app }: { app: string }) {
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h5 className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">
+              <h5 className="truncate text-base font-semibold text-gray-100">
                 {dialog.view.name}
               </h5>
               {dialog.view.description && (
-                <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-0.5 truncate text-xs text-gray-400">
                   {dialog.view.description}
                 </p>
               )}

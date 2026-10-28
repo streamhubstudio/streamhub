@@ -106,7 +106,7 @@ const Pagination = (props: PaginationProps) => {
     const pagerClass = {
         default: 'pagination-pager',
         inactive: 'pagination-pager-inactive',
-        active: `text-${themeColor}-${primaryColorLevel} bg-${themeColor}-50 hover:bg-${themeColor}-50 dark:bg-${themeColor}-${primaryColorLevel} dark:text-gray-100`,
+        active: `hover:bg-${themeColor}-50 bg-${themeColor}-${primaryColorLevel} text-gray-100`,
         disabled: 'pagination-pager-disabled',
     }
 

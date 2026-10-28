@@ -22,11 +22,11 @@ export default definePlugin({
   edge: true,
   name: 'YOLO Object Detection',
   description:
-    "Detects COCO objects in the app's live stream and POSTs bounding boxes to a callback URL.",
+    "Detects COCO objects in the app's live stream and (optionally) POSTs bounding boxes to a callback URL.",
   category: 'analytics',
   ui: 'player-overlay',
   icon: 'M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z M9 12l2 2 4-4',
-  version: '1.0.0',
+  version: '1.0.1',
   configSchema: {
     fields: [
       { key: 'room', type: 'string', label: 'Room / stream', required: true },
@@ -38,7 +38,7 @@ export default definePlugin({
         options: MODEL_SIZES.map((m) => ({ value: m, label: m })),
       },
       { key: 'cuda', type: 'boolean', label: 'Use CUDA (GPU)', default: false },
-      { key: 'callbackUrl', type: 'url', label: 'Callback URL', required: true },
+      { key: 'callbackUrl', type: 'url', label: 'Callback URL', default: '' },
       {
         key: 'confidence',
         type: 'number',

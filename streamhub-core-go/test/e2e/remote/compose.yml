@@ -1,0 +1,108 @@
+# Media stack for the Go core e2e run (profile `egress` = egress + S3 + restream
+# sink; without it only LiveKit + ingress + redis run) — host networking (LiveKit's supported
+# shape), every service on non-default ports from env.sh.
+name: ${E2E_PROJECT}
+services:
+  redis:
+    image: redis:6.2-alpine
+    network_mode: host
+    command: ["redis-server", "--bind", "127.0.0.1", "--port", "${P_REDIS}", "--save", ""]
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    network_mode: host
+    depends_on: [redis]
+    environment:
+      LIVEKIT_CONFIG: |
+        port: ${P_LK}
+        bind_addresses: ["127.0.0.1"]
+        rtc:
+          tcp_port: ${P_LK_TCP}
+          udp_port: ${P_LK_UDP}
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        redis:
+          address: 127.0.0.1:${P_REDIS}
+        keys:
+          ${LK_KEY}: ${LK_SECRET}
+        webhook:
+          api_key: ${LK_KEY}
+          urls:
+            - http://127.0.0.1:${P_CORE}/api/v1/webhooks/livekit
+        ingress:
+          rtmp_base_url: rtmp://127.0.0.1:${P_ING_RTMP}/x
+          whip_base_url: http://127.0.0.1:${P_ING_WHIP}/w
+        prometheus:
+          port: ${P_LK_PROM}
+        logging:
+          level: info
+
+  ingress:
+    image: livekit/ingress:v1.5.0
+    network_mode: host
+    depends_on: [redis, livekit]
+    environment:
+      INGRESS_CONFIG_BODY: |
+        redis:
+          address: 127.0.0.1:${P_REDIS}
+        ws_url: ws://127.0.0.1:${P_LK}
+        api_key: ${LK_KEY}
+        api_secret: ${LK_SECRET}
+        rtmp_port: ${P_ING_RTMP}
+        whip_port: ${P_ING_WHIP}
+        http_relay_port: ${P_ING_RELAY}
+        prometheus_port: ${P_ING_PROM}
+        logging:
+          level: info
+
+  egress:
+    profiles: ["egress"]
+    image: livekit/egress:v1.15.0
+    network_mode: host
+    shm_size: "1gb"
+    cap_add: [SYS_ADMIN]
+    # Real compose shape: egress keeps the image's uid 1001 / gid 0 and writes
+    # into the dirs the root core creates with umask 002 (0775 root:root).
+    # E2E_SHAPE=sameuid (hosts without sudo) runs it as the core's uid instead
+    # via compose.sameuid.yml.
+    environment:
+      EGRESS_CONFIG_BODY: |
+        redis:
+          address: 127.0.0.1:${P_REDIS}
+        ws_url: ws://127.0.0.1:${P_LK}
+        api_key: ${LK_KEY}
+        api_secret: ${LK_SECRET}
+        insecure: false
+        log_level: info
+        prometheus_port: ${P_EG_PROM}
+        template_port: ${P_EG_TEMPLATE}
+    volumes:
+      - ${E2E_DATA}:${E2E_DATA}
+
+  # S3 (MinIO no longer ships images): SeaweedFS with its S3 gateway.
+  s3:
+    profiles: ["egress"]
+    image: chrislusf/seaweedfs:latest
+    network_mode: host
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        printf '{"identities":[{"name":"e2e","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$$S3_USER" "$$S3_PASS" > /tmp/s3.json
+        exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=127.0.0.1 -master.port=${P_S3_MASTER} -volume.port=${P_S3_VOLUME} -filer -filer.port=${P_S3_FILER} -s3 -s3.port=${P_MINIO} -s3.config=/tmp/s3.json
+    environment:
+      S3_USER: ${MINIO_USER}
+      S3_PASS: ${MINIO_PASS}
+
+  # Second RTMP endpoint: the restream target (scenario g).
+  sink:
+    profiles: ["egress"]
+    image: bluenviron/mediamtx:latest
+    network_mode: host
+    environment:
+      MTX_RTMPADDRESS: 127.0.0.1:${P_SINK_RTMP}
+      MTX_API: "yes"
+      MTX_APIADDRESS: 127.0.0.1:${P_SINK_API}
+      MTX_RTSP: "no"
+      MTX_HLS: "no"
+      MTX_WEBRTC: "no"
+      MTX_SRT: "no"

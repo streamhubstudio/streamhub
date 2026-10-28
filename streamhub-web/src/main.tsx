@@ -12,21 +12,18 @@ import '@/i18n' // initialise i18next synchronously before first render (no raw-
 import App from './App.tsx'
 import { AuthProvider } from '@/auth/AuthContext'
 import { queryClient } from '@/lib/queryClient'
-import { ThemeProvider } from '@/theme'
 import { StreamHubConfigProvider } from '@/ui/StreamHubConfigProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <StreamHubConfigProvider>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </StreamHubConfigProvider>
-    </ThemeProvider>
+    <StreamHubConfigProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </StreamHubConfigProvider>
   </StrictMode>,
 )

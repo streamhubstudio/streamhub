@@ -1,0 +1,356 @@
+{
+  "module": "edge",
+  "description": "Edge REST surface (no edge connected: WS paths answer 503): manager nodes view/patch, commands/log tails, global + app-scoped assignments (pending placement, revoke, validation, permission/tenant gates). The WS protocol is covered by Go integration tests (internal/edge). Self-contained (joins its own node) and runs with the same file env as cluster.json.",
+  "env": {
+    "STREAMHUB_CLUSTER_TOKEN": "parity-cluster-token"
+  },
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "edge-join-node",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "name": "parity-edge-e",
+        "ip": "192.0.2.44",
+        "type": "edge"
+      },
+      "expectStatus": 201,
+      "capture": {
+        "edgeNode": "data.nodeId"
+      }
+    },
+    {
+      "name": "edge-nodes-no-auth",
+      "method": "GET",
+      "path": "/api/v1/edge/nodes",
+      "expectStatus": 401
+    },
+    {
+      "name": "edge-nodes-app-token",
+      "method": "GET",
+      "path": "/api/v1/edge/nodes",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "edge-nodes",
+      "method": "GET",
+      "path": "/api/v1/edge/nodes",
+      "auth": "globalToken",
+      "mask": [
+        "data.0.stats"
+      ],
+      "expectStatus": 200,
+      "note": "data.0 = origin (live host stats masked); also lists cluster.json's nodes when the files run together"
+    },
+    {
+      "name": "edge-patch-bad",
+      "method": "PATCH",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "type": "gpu",
+        "weight": 1.5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "edge-patch-range",
+      "method": "PATCH",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "weight": 100001
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "edge-patch-unknown",
+      "method": "PATCH",
+      "path": "/api/v1/edge/nodes/ghost",
+      "auth": "globalToken",
+      "body": {
+        "weight": 5
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "edge-patch",
+      "method": "PATCH",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "type": "edge",
+        "weight": 50
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "edge-patch-common",
+      "method": "PATCH",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "type": "common"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "edge-cmd-bad",
+      "method": "POST",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+      "auth": "globalToken",
+      "body": {
+        "command": "format",
+        "args": "x"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "edge-cmd-not-connected",
+      "method": "POST",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+      "auth": "globalToken",
+      "body": {
+        "command": "ping",
+        "args": {
+          "x": 1
+        }
+      },
+      "expectStatus": 503
+    },
+    {
+      "name": "edge-cmd-app-token",
+      "method": "POST",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}/command",
+      "auth": "appToken",
+      "body": {
+        "command": "ping"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "edge-logs-not-connected",
+      "method": "GET",
+      "path": "/api/v1/edge/nodes/{{edgeNode}}/logs?lines=0",
+      "auth": "globalToken",
+      "expectStatus": 503
+    },
+    {
+      "name": "edge-asg-bad",
+      "method": "POST",
+      "path": "/api/v1/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "app": "bad app",
+        "pluginId": "-x",
+        "streamId": "",
+        "config": [
+          1
+        ],
+        "policy": "random"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "edge-asg-empty",
+      "method": "POST",
+      "path": "/api/v1/edge/assignments",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "edge-asg-create",
+      "method": "POST",
+      "path": "/api/v1/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "app": "live",
+        "pluginId": "parity-worker",
+        "streamId": "cam1",
+        "config": {
+          "room": "cam1",
+          "z": 1,
+          "a": {
+            "b": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      "capture": {
+        "asg1": "data.id"
+      },
+      "note": "no connected node: parked pending",
+      "expectStatus": 201
+    },
+    {
+      "name": "edge-asg-create-weighted",
+      "method": "POST",
+      "path": "/api/v1/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "app": "other-app",
+        "pluginId": "p2",
+        "policy": "weighted"
+      },
+      "capture": {
+        "asg2": "data.id"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "edge-asg-list",
+      "method": "GET",
+      "path": "/api/v1/edge/assignments",
+      "auth": "globalToken",
+      "unordered": [
+        "data"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "edge-asg-list-app",
+      "method": "GET",
+      "path": "/api/v1/edge/assignments?app=live",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "edge-asg-list-none",
+      "method": "GET",
+      "path": "/api/v1/edge/assignments?app=nope",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "edge-asg-app-token",
+      "method": "GET",
+      "path": "/api/v1/edge/assignments",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "edge-asg-revoke-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/edge/assignments/ghost",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "edge-asg-revoke",
+      "method": "DELETE",
+      "path": "/api/v1/edge/assignments/{{asg2}}",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "app-asg-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "app-asg-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "app-asg-list-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "app-asg-ghost-app",
+      "method": "GET",
+      "path": "/api/v1/apps/parity-ghost/edge/assignments",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "app-asg-create-bad",
+      "method": "POST",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "pluginId": "",
+        "policy": 1
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "app-asg-create-unknown-plugin",
+      "method": "POST",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "pluginId": "parity-nope"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "app-asg-create-not-edge",
+      "method": "POST",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "pluginId": "stream-health"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "app-asg-create-ghost-app",
+      "method": "POST",
+      "path": "/api/v1/apps/parity-ghost/edge/assignments",
+      "auth": "globalToken",
+      "body": {
+        "pluginId": "stream-health"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "app-asg-revoke-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/edge/assignments/ghost",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "app-asg-revoke-other-app",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/edge/assignments/{{asg2}}",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "app-asg-revoke",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/edge/assignments/{{asg1}}",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "app-asg-list-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/edge/assignments",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

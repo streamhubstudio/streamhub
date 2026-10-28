@@ -1,0 +1,117 @@
+name: gold-a
+display_name: 'Gold A: patched #1'
+room_prefix: gold-prefix
+timezone: ''
+recording:
+  enabled: false
+  mode: participant
+  layout: speaker
+  local_dir: recordings
+  delete_local_after_upload: true
+  split_minutes: 30
+  snapshot_seconds: 60
+  filename_template: ${app}_${room}_${date:yyyyMMdd-HHmmss}
+  snapshot_template: '- snap'
+  retention_days: 0
+s3:
+  provider: aws
+  bucket: b1
+  region: eu-west-1
+  endpoint: https://minio.example.com
+  force_path_style: true
+  prefix: x/y
+  public_url: https://cdn.example.com
+  access_key_env: APP_GOLD_A_S3_KEY
+  secret_key_env: APP_GOLD_A_S3_SECRET
+webrtc:
+  adaptive: false
+  layers: []
+  transcode_max_height: 720
+rtmp:
+  enabled: true
+  transcode: true
+  passthrough: false
+transcoding:
+  enabled: true
+  encoding: h264+vp8
+  vod_adaptive: true
+  vod_renditions:
+    - height: 480
+      bitrate_kbps: 1400
+    - height: 1080
+      bitrate_kbps: 5000
+    - height: 480
+      bitrate_kbps: 1
+callbacks:
+  url: https://93.184.216.34/hook
+  secret: 'cb: secret'
+mqtt:
+  enabled: true
+  url: mqtt://10.1.1.1:1883
+  username: ''
+  password_env: APP_GOLD_A_MQTT_PASSWORD
+  topic_prefix: site/a
+  qos: 2
+  tls: true
+  events:
+    - all
+  logs:
+    enabled: true
+    level: warn
+latency_alert:
+  enabled: true
+  threshold_ms: 1.5
+  cooldown_seconds: 0
+  interval_seconds: 5
+smtp:
+  enabled: true
+  host: smtp.example.com
+  port: 587
+  user: u
+  from: A <a@b.c>
+  pass_env: APP_GOLD_A_SMTP_PASS
+features:
+  rtmp_password: false
+  viewer_counter: true
+  chat: true
+  reactions: false
+  hidden_qc: true
+  adaptive_player: true
+  public_playback: false
+  linear:
+    persistent_room: false
+    room_empty_timeout_seconds: 86400
+    always_on_hls: false
+    dvr: false
+    dvr_window_seconds: 3600
+  ws_ingest:
+    enabled: false
+    max_cameras: 4
+    max_fps: 10
+    max_frame_kb: 128
+    max_data_bytes: 2048
+  drm:
+    enabled: true
+    provider: external
+    systems:
+      - playready
+      - widevine
+    scheme: cenc
+    key_server_url: https://keys.example.com
+    key_server_token_env: DRM_TOKEN
+    license_urls:
+      widevine: https://wv
+      playready: ''
+      fairplay: ''
+    fairplay_cert_url: ''
+    fail_open: true
+variables:
+  '1': one
+  '2': two
+  site: 'HQ: north'
+  'n': '5'
+  t: 'true'
+  obj: '[object Object]'
+  arr: 1,b,
+  long: >-
+    yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy

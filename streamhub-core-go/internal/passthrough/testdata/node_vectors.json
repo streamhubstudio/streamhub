@@ -1,0 +1,802 @@
+{
+ "hlsDir": "/data/apps/live/hls/live-ch1",
+ "remux": [
+  {
+   "in": {
+    "app": "live",
+    "streamKey": "ptk_abc",
+    "port": 1937,
+    "hlsDir": "/data/apps/live/hls/live-ch1"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-listen",
+    "1",
+    "-i",
+    "rtmp://0.0.0.0:1937/live/ptk_abc",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/data/apps/live/hls/live-ch1/seg_%05d.ts",
+    "/data/apps/live/hls/live-ch1/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "live",
+    "streamKey": "ptk_abc",
+    "port": 1938,
+    "hlsDir": "/data/apps/live/hls/live-ch1",
+    "transport": "rtmp"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-listen",
+    "1",
+    "-i",
+    "rtmp://0.0.0.0:1938/live/ptk_abc",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/data/apps/live/hls/live-ch1/seg_%05d.ts",
+    "/data/apps/live/hls/live-ch1/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "tv",
+    "streamKey": "ptk_s",
+    "port": 1940,
+    "hlsDir": "/d/apps/tv/hls/tv-x",
+    "transport": "srt"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "srt://0.0.0.0:1940?mode=listener",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/d/apps/tv/hls/tv-x/seg_%05d.ts",
+    "/d/apps/tv/hls/tv-x/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "tv",
+    "streamKey": "ptk_p",
+    "port": 1935,
+    "hlsDir": "/d/apps/tv/hls/tv-x",
+    "mode": "pull"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "rtmp://127.0.0.1:1935/tv/ptk_p",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/d/apps/tv/hls/tv-x/seg_%05d.ts",
+    "/d/apps/tv/hls/tv-x/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "tv",
+    "streamKey": "ptk_p",
+    "port": 1935,
+    "hlsDir": "/d/apps/tv/hls/tv-x",
+    "mode": "pull",
+    "pullHost": "10.0.0.2"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "rtmp://10.0.0.2:1935/tv/ptk_p",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/d/apps/tv/hls/tv-x/seg_%05d.ts",
+    "/d/apps/tv/hls/tv-x/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "tv",
+    "streamKey": "ptk_m",
+    "port": 0,
+    "hlsDir": "/d/apps/tv/hls/tv-m",
+    "transport": "mpegts",
+    "mode": "pull",
+    "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-f",
+    "mpegts",
+    "-i",
+    "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/d/apps/tv/hls/tv-m/seg_%05d.ts",
+    "/d/apps/tv/hls/tv-m/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "tv",
+    "streamKey": "ptk_m",
+    "port": 0,
+    "hlsDir": "/d/x/",
+    "transport": "mpegts",
+    "sourceUrl": "udp://@:5000?fifo_size=1000&overrun_nonfatal=0"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-f",
+    "mpegts",
+    "-i",
+    "udp://@:5000?fifo_size=1000&overrun_nonfatal=0",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "/d/x/seg_%05d.ts",
+    "/d/x/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "a",
+    "streamKey": "k",
+    "port": 2000,
+    "hlsDir": "rel/dir",
+    "bindHost": "127.0.0.1",
+    "hlsTime": 2,
+    "hlsListSize": 10
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-listen",
+    "1",
+    "-i",
+    "rtmp://127.0.0.1:2000/a/k",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "2",
+    "-hls_list_size",
+    "10",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "rel/dir/seg_%05d.ts",
+    "rel/dir/index.m3u8"
+   ]
+  },
+  {
+   "in": {
+    "app": "a",
+    "streamKey": "k",
+    "port": 2000,
+    "hlsDir": "",
+    "transport": "srt",
+    "bindHost": "::"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "srt://:::2000?mode=listener",
+    "-c",
+    "copy",
+    "-f",
+    "hls",
+    "-hls_time",
+    "4",
+    "-hls_list_size",
+    "6",
+    "-hls_flags",
+    "delete_segments+append_list",
+    "-hls_segment_filename",
+    "seg_%05d.ts",
+    "index.m3u8"
+   ]
+  }
+ ],
+ "forward": [
+  {
+   "in": {
+    "key": "sk_live1",
+    "sourcePort": 1935,
+    "destPort": 11935
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "rtmp://127.0.0.1:1935/live/sk_live1",
+    "-c",
+    "copy",
+    "-f",
+    "flv",
+    "rtmp://127.0.0.1:11935/live/sk_live1"
+   ]
+  },
+  {
+   "in": {
+    "key": "a/b",
+    "sourcePort": 1935,
+    "destPort": 11936,
+    "host": "10.1.1.1"
+   },
+   "args": [
+    "-hide_banner",
+    "-loglevel",
+    "warning",
+    "-i",
+    "rtmp://10.1.1.1:1935/live/a/b",
+    "-c",
+    "copy",
+    "-f",
+    "flv",
+    "rtmp://10.1.1.1:11936/live/a/b"
+   ]
+  }
+ ],
+ "mpegts": [
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "  UDP://@239.1.1.1:5000  "
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@:5000"
+   },
+   "sourceUrl": "udp://@:5000?overrun_nonfatal=1",
+   "host": "",
+   "port": 5000,
+   "multicast": false,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://239.1.1.1:5000"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@10.0.0.1:1234?localaddr=10.0.0.9"
+   },
+   "sourceUrl": "udp://@10.0.0.1:1234?localaddr=10.0.0.9&overrun_nonfatal=1",
+   "host": "10.0.0.1",
+   "port": 1234,
+   "multicast": false,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": "10.0.0.9",
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@232.1.1.1:5000?sources=10.0.0.1,10.0.0.2&block=10.0.0.3"
+   },
+   "sourceUrl": "udp://@232.1.1.1:5000?sources=10.0.0.1,10.0.0.2&block=10.0.0.3&overrun_nonfatal=1",
+   "host": "232.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [
+    "10.0.0.1",
+    "10.0.0.2"
+   ],
+   "blockSources": [
+    "10.0.0.3"
+   ],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@232.1.1.1:5000?sources=10.0.0.1",
+    "sources": "10.0.0.7 , 10.0.0.8"
+   },
+   "sourceUrl": "udp://@232.1.1.1:5000?sources=10.0.0.7,10.0.0.8&overrun_nonfatal=1",
+   "host": "232.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [
+    "10.0.0.7",
+    "10.0.0.8"
+   ],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@232.1.1.1:5000",
+    "sources": ""
+   },
+   "sourceUrl": "udp://@232.1.1.1:5000?overrun_nonfatal=1",
+   "host": "232.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size=50000&overrun_nonfatal=0"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?fifo_size=50000&overrun_nonfatal=0",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": 50000,
+   "overrunNonfatal": false
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?overrun_nonfatal=true"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?overrun_nonfatal=yes"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=0",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": false
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size=10",
+    "fifoSize": 20,
+    "overrunNonfatal": false
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?fifo_size=20&overrun_nonfatal=0",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": 20,
+   "overrunNonfatal": false
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?localaddr=10.0.0.1",
+    "localaddr": " 10.0.0.2 "
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?localaddr=10.0.0.2&overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": "10.0.0.2",
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?localaddr=10.0.0.1",
+    "localaddr": ""
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?localaddr=%2010.0.0.5%20"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?localaddr=10.0.0.5&overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": "10.0.0.5",
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?&&fifo_size=7&"
+   },
+   "sourceUrl": "udp://@239.1.1.1:5000?fifo_size=7&overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 5000,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": 7,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size="
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size=1.5"
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size=abc"
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000",
+    "fifoSize": 100000001
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000",
+    "fifoSize": 0
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?ttl=4"
+   },
+   "error": "unsupported query parameter \"ttl\" — allowed: sources, block, localaddr, fifo_size, overrun_nonfatal"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000?fifo_size"
+   },
+   "error": "fifo_size must be an integer in [1, 100000000] packets"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1"
+   },
+   "error": "source udp:// URL must include a port (udp://@HOST:PORT)"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:0"
+   },
+   "error": "source port must be between 1 and 65535 (got 0)"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:65536"
+   },
+   "error": "source port must be between 1 and 65535 (got 65536)"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:65535"
+   },
+   "sourceUrl": "udp://@239.1.1.1:65535?overrun_nonfatal=1",
+   "host": "239.1.1.1",
+   "port": 65535,
+   "multicast": true,
+   "ssmSources": [],
+   "blockSources": [],
+   "localaddr": null,
+   "fifoSize": null,
+   "overrunNonfatal": true
+  },
+  {
+   "in": {
+    "url": "rtp://@239.1.1.1:5000"
+   },
+   "error": "source must be a udp:// URL, e.g. udp://@239.1.1.1:5000 (multicast) or udp://@:5000 (unicast)"
+  },
+  {
+   "in": {
+    "url": "udp://@host.example:5000"
+   },
+   "error": "source host must be an IPv4 address or empty (got \"host.example\")"
+  },
+  {
+   "in": {
+    "url": "udp://@239.01.1.1:5000"
+   },
+   "error": "source host must be an IPv4 address or empty (got \"239.01.1.1\")"
+  },
+  {
+   "in": {
+    "url": "udp://@256.1.1.1:5000"
+   },
+   "error": "source host must be an IPv4 address or empty (got \"256.1.1.1\")"
+  },
+  {
+   "in": {
+    "url": "udp://@10.0.0.1:5000?sources=10.0.0.2"
+   },
+   "error": "sources=/block= (source-specific multicast) require a multicast group host (224.0.0.0/4)"
+  },
+  {
+   "in": {
+    "url": "udp://@:5000",
+    "block": "10.0.0.2"
+   },
+   "error": "sources=/block= (source-specific multicast) require a multicast group host (224.0.0.0/4)"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000",
+    "sources": "10.0.0.1,bad"
+   },
+   "error": "sources must be a comma-separated list of IPv4 addresses (got \"bad\")"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000",
+    "sources": "10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5,10.0.0.6,10.0.0.7,10.0.0.8,10.0.0.9,10.0.0.10,10.0.0.11,10.0.0.12,10.0.0.13,10.0.0.14,10.0.0.15,10.0.0.16,10.0.0.17"
+   },
+   "error": "sources accepts at most 16 source addresses"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000",
+    "localaddr": "eth0"
+   },
+   "error": "localaddr must be an IPv4 interface address (got \"eth0\")"
+  },
+  {
+   "in": {
+    "url": "udp://@239.1.1.1:5000/path"
+   },
+   "error": "source must be a udp:// URL, e.g. udp://@239.1.1.1:5000 (multicast) or udp://@:5000 (unicast)"
+  },
+  {
+   "in": {
+    "url": ""
+   },
+   "error": "source must be a udp:// URL, e.g. udp://@239.1.1.1:5000 (multicast) or udp://@:5000 (unicast)"
+  }
+ ],
+ "paths": [
+  {
+   "in": "myapp/ptk_abc",
+   "out": {
+    "kind": "passthrough",
+    "app": "myapp",
+    "key": "ptk_abc"
+   }
+  },
+  {
+   "in": "/myapp/ptk_abc",
+   "out": {
+    "kind": "passthrough",
+    "app": "myapp",
+    "key": "ptk_abc"
+   }
+  },
+  {
+   "in": "//live/ptk_x",
+   "out": {
+    "kind": "passthrough",
+    "app": "live",
+    "key": "ptk_x"
+   }
+  },
+  {
+   "in": "live/ptk_abc",
+   "out": {
+    "kind": "passthrough",
+    "app": "live",
+    "key": "ptk_abc"
+   }
+  },
+  {
+   "in": "live/sk_xyz",
+   "out": {
+    "kind": "livekit",
+    "key": "sk_xyz"
+   }
+  },
+  {
+   "in": "live/a/b",
+   "out": {
+    "kind": "livekit",
+    "key": "a/b"
+   }
+  },
+  {
+   "in": "live/",
+   "out": {
+    "kind": "invalid"
+   }
+  },
+  {
+   "in": "myapp/somekey",
+   "out": {
+    "kind": "passthrough",
+    "app": "myapp",
+    "key": "somekey"
+   }
+  },
+  {
+   "in": "a/b/c",
+   "out": {
+    "kind": "invalid"
+   }
+  },
+  {
+   "in": "single",
+   "out": {
+    "kind": "invalid"
+   }
+  },
+  {
+   "in": "",
+   "out": {
+    "kind": "invalid"
+   }
+  },
+  {
+   "in": "live",
+   "out": {
+    "kind": "invalid"
+   }
+  },
+  {
+   "in": "live/ptk_a/b",
+   "out": {
+    "kind": "livekit",
+    "key": "ptk_a/b"
+   }
+  }
+ ]
+}

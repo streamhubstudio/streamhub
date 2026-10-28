@@ -32,15 +32,15 @@ const RESULTS: AuditResult[] = ['success', 'failure', 'deny']
 const EMPTY = '—'
 
 const selectClass =
-  'input input-md h-11 max-md:w-full ltr:pr-8 rtl:pl-8 bg-white focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700'
+  'input input-md h-11 max-md:w-full ltr:pr-8 rtl:pl-8 focus:border-primary-500 focus:ring-primary-500 bg-gray-700'
 
 // --- badges ------------------------------------------------------------------
 
 const BADGE_TONE: Record<PostureTone, string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  red: 'bg-red-500/20 text-red-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 function ToneBadge({ tone, children }: { tone: PostureTone; children: ReactNode }) {
@@ -69,7 +69,7 @@ function ChainChip() {
 
   if (verify.isLoading) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs text-fg-muted dark:bg-gray-600/60">
+      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs text-fg-muted bg-gray-600/60">
         {t('chain.checking')}
       </span>
     )
@@ -81,14 +81,14 @@ function ChainChip() {
   const v = verify.data
   if (v.ok) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">
+      <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-emerald-500/20 text-emerald-100">
         <HiOutlineShieldCheck className="text-sm" />
         {t('chain.verified', { count: v.checked })}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-500/20 dark:text-red-100">
+    <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-red-500/20 text-red-100">
       <HiOutlineShieldExclamation className="text-sm" />
       {t('chain.broken', { id: v.brokenAt ?? '?' })}
     </span>
@@ -150,7 +150,7 @@ function EntryRow({ entry }: { entry: AuditEntry }) {
           <ActorCell entry={entry} />
         </Td>
         <Td>
-          <code className="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-[11px] break-all dark:bg-gray-600/60">
+          <code className="rounded px-1.5 py-0.5 font-mono text-[11px] break-all bg-gray-600/60">
             {entry.action}
           </code>
         </Td>

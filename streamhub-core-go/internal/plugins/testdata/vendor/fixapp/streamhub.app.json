@@ -1,0 +1,39 @@
+{
+  "manifestVersion": 1,
+  "id": "fixapp",
+  "name": "Fixture App",
+  "description": "Synthetic exportable worker app for the export vectors.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "1.2.3-rc.1",
+  "kind": "app",
+  "storage": { "db": "fixapp.db" },
+  "export": { "workerDir": "fixapp-worker" },
+  "events": ["fix.done"],
+  "configSchema": [
+    { "key": "room", "type": "string", "label": "Room", "default": "main" },
+    { "key": "token", "type": "secret", "label": "Token", "default": "" },
+    { "key": "fps", "type": "number", "label": "FPS", "default": 2.5, "min": 0.5, "max": 30 },
+    { "key": "cuda", "type": "boolean", "label": "CUDA", "default": false }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m fix_worker --app {{app}}",
+    "cwd": "{{workerDir}}",
+    "edge": true,
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "FIX_ROOM": "{{config.room}}",
+      "FIX_FPS": "{{ config.fps ?? '1' }}",
+      "FIX_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "FIX_HLS_DIR": "{{appDir}}/hls",
+      "FIX_PUBLIC_BASE": "{{ originUrl ?? publicBase }}",
+      "FIX_LIVEKIT_URL": "{{livekitUrl}}",
+      "FIX_CALLBACK_URL": "{{config.callbackUrl}}",
+      "FIX_CALLBACK_SECRET": "x",
+      "FIX_API_TOKEN": "{{ config.token | localOnly }}",
+      "FIX_CONFIG": "{{configJson}}",
+      "FIX_ENV": "{{env.FIX_HOST}}"
+    }
+  }
+}

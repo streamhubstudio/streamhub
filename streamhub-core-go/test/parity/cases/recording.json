@@ -1,0 +1,407 @@
+{
+  "module": "recording",
+  "description": "Recording + VODs (recording.controller.ts, 11 routes). Empty LIVEKIT_* creds: egress starts fail identically (500 'failed to start egress: LiveKit … failed: api-key and api-secret must be set'); cases cover validation, bucket guard (409), disabled recording, 404s, listing filters/ISO-8601 validation and per-app stats. Apps par-rec / par-rec2 are created and deleted here.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "rec-setup-app",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "body": {
+        "name": "par-rec",
+        "displayName": "REC"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "rec-setup-config",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-rec/config/raw",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-rec\nroom_prefix: prec\ndisplay_name: REC\nrecording:\n  enabled: true\n  split_minutes: 15\n  snapshot_seconds: 30\n  filename_template: '${app}_${room}_${var.site}'\nvariables:\n  site: hq\ns3:\n  provider: aws\n  bucket: parity-bucket\n  region: us-east-1\n"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "rec-setup-nobucket",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "body": {
+        "name": "par-rec2",
+        "displayName": "REC2"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "rec-setup-nobucket-config",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-rec2/config/raw",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-rec2\nrecording:\n  enabled: true\n"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "start-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/start",
+      "expectStatus": 401,
+      "body": {}
+    },
+    {
+      "name": "start-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/start",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {
+        "roomName": "r"
+      }
+    },
+    {
+      "name": "start-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/start",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "rawBody": ""
+    },
+    {
+      "name": "start-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/start",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "roomName": 5,
+        "streamId": "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+        "recordMode": "video",
+        "participantIdentity": []
+      }
+    },
+    {
+      "name": "start-live",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/start",
+      "expectStatus": null,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "room1"
+      },
+      "note": "live app defaults"
+    },
+    {
+      "name": "start-room-blank",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/recording/start",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "roomName": ""
+      }
+    },
+    {
+      "name": "start-no-bucket",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec2/recording/start",
+      "expectStatus": 409,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "r1"
+      }
+    },
+    {
+      "name": "start-egress-fails",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/recording/start",
+      "expectStatus": 500,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "prec-r1",
+        "streamId": "cam/1"
+      }
+    },
+    {
+      "name": "start-track-fails",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/recording/start",
+      "expectStatus": 500,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "prec-r1",
+        "recordMode": "track"
+      }
+    },
+    {
+      "name": "start-audio-fails",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/recording/start",
+      "expectStatus": 500,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "prec-r1",
+        "recordMode": "audio",
+        "participantIdentity": "host"
+      }
+    },
+    {
+      "name": "start-unknown-app",
+      "method": "POST",
+      "path": "/api/v1/apps/no-such-app/recording/start",
+      "expectStatus": null,
+      "auth": "globalToken",
+      "body": {
+        "roomName": "r"
+      }
+    },
+    {
+      "name": "start-app-token-other",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/recording/start",
+      "expectStatus": null,
+      "auth": "appToken",
+      "body": {
+        "roomName": "r"
+      }
+    },
+    {
+      "name": "stop-unknown-num",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/99/stop",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "stop-unknown-egress",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/EG_nope/stop",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "stop-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/recording/1/stop",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "stream-start-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/record/start",
+      "expectStatus": 404,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "stream-start-nobody",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/record/start",
+      "expectStatus": 404,
+      "auth": "globalToken",
+      "rawBody": ""
+    },
+    {
+      "name": "stream-start-bad",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/record/start",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "recordMode": "x",
+        "participantIdentity": 1
+      }
+    },
+    {
+      "name": "stream-stop-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/nope/record/stop",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods",
+      "expectStatus": 401
+    },
+    {
+      "name": "vods-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/vods",
+      "expectStatus": null,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "vods-all",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?all=1&order=size_bytes&dir=asc",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-filters",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?room=r&status=ready&since=2026-01-01&until=2026-12-31T23:59:59Z&limit=5000&offset=-3",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-bad-query",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?status=done&since=yesterday&until=2026-13-01&order=name&dir=up&limit=abc&offset=1.5",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-iso-variants",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?since=2026-W01-1&until=2026-001T10:00",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-array-room",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?room=a&room=b",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vods-long-room",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods?room=rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-get-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods/1",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-get-nan",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods/abc",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-download-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods/1/download",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-raw-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods/1/raw",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-raw-nan",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/vods/1.5/raw",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-probe-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/par-rec/vods/1/probe",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-probe-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/vods/1/probe",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "vod-delete-missing",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-rec/vods/1",
+      "expectStatus": 404,
+      "auth": "globalToken"
+    },
+    {
+      "name": "vod-delete-viewer",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/vods/1",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "stats-app",
+      "method": "GET",
+      "path": "/api/v1/apps/par-rec/stats",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "ignore": [
+        "data.ts",
+        "data.storage.appDbBytes"
+      ]
+    },
+    {
+      "name": "stats-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-app/stats",
+      "expectStatus": null,
+      "auth": "globalToken"
+    },
+    {
+      "name": "stats-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/stats",
+      "expectStatus": null,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "stats-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/stats",
+      "expectStatus": 401
+    },
+    {
+      "name": "rec-teardown",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-rec",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "compare": "status"
+    },
+    {
+      "name": "rec-teardown2",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-rec2",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "compare": "status"
+    }
+  ]
+}

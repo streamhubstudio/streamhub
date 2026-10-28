@@ -11,6 +11,8 @@ export interface AgentMetrics {
   uptime: number | null
   cameras: number | null
   disk: number | null
+  /** Battery percent, null on hosts with no battery (most of the fleet). */
+  battery: number | null
   relay: string | null
 }
 
@@ -83,6 +85,7 @@ function parseAgent(raw: unknown): AgentView | null {
       uptime: numOrNull(m.uptime),
       cameras: numOrNull(m.cameras),
       disk: numOrNull(m.disk),
+      battery: numOrNull(m.battery),
       relay: typeof m.relay === 'string' ? m.relay : null,
     },
   }

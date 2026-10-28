@@ -25,10 +25,10 @@ const POLL_MS = 60_000
 // --- badges ------------------------------------------------------------------
 
 const BADGE_TONE: Record<PostureTone, string> = {
-  green: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100',
-  red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100',
-  slate: 'bg-gray-100 text-gray-600 dark:bg-gray-600/60 dark:text-gray-100',
+  green: 'bg-emerald-500/20 text-emerald-100',
+  amber: 'bg-amber-500/20 text-amber-100',
+  red: 'bg-red-500/20 text-red-100',
+  slate: 'bg-gray-600/60 text-gray-100',
 }
 
 function ToneBadge({ tone, children }: { tone: PostureTone; children: ReactNode }) {
@@ -36,9 +36,9 @@ function ToneBadge({ tone, children }: { tone: PostureTone; children: ReactNode 
 }
 
 const TILE_TONE: Record<PostureTone, string> = {
-  green: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-300',
-  amber: 'border-amber-500/30 text-amber-600 dark:text-amber-300',
-  red: 'border-red-500/30 text-red-600 dark:text-red-300',
+  green: 'border-emerald-500/30 text-emerald-300',
+  amber: 'border-amber-500/30 text-amber-300',
+  red: 'border-red-500/30 text-red-300',
   slate: 'border-border/60 text-fg-muted',
 }
 

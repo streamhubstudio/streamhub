@@ -1,0 +1,2365 @@
+[
+  {
+    "id": "cameras",
+    "name": "Cameras — OpenCam Console",
+    "description": "Fleet console for OpenCam cameras (Thingino) over MQTT: inventory from hello/state, online/offline, event log, and remote control — PTZ pad with deadman, stream start/stop and HD, snapshot, voice test and reboot — plus the microSD config.ini for provisioning.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "baseTopic",
+        "type": "string",
+        "label": "MQTT base topic",
+        "default": "opencam",
+        "placeholder": "opencam",
+        "help": "Topic root of the cameras: must match the firmware's mqtt.base_topic (opencam/%device)."
+      },
+      {
+        "key": "offlineAfterSec",
+        "type": "number",
+        "label": "Offline after (seconds)",
+        "default": 180,
+        "min": 30,
+        "max": 3600,
+        "help": "Mark a camera offline when no live traffic arrives within this window (a backstop beyond the MQTT LWT). Should be ~3 state intervals."
+      },
+      {
+        "key": "commandExpSec",
+        "type": "number",
+        "label": "Command expiry (seconds)",
+        "default": 30,
+        "min": 5,
+        "max": 600,
+        "help": "`exp` sent with every command: a camera drops a command that arrives later (code expired). StreamHub times it out after exp + 10 s without an answer."
+      },
+      {
+        "key": "longCommandTimeoutSec",
+        "type": "number",
+        "label": "Long command timeout (seconds)",
+        "default": 900,
+        "min": 60,
+        "max": 7200,
+        "help": "How long an accepted long command (reboot, firmware upgrade, ini reset) may stay in progress before it is marked timeout."
+      },
+      {
+        "key": "historyPoints",
+        "type": "number",
+        "label": "State history points per camera",
+        "default": 120,
+        "min": 10,
+        "max": 5000,
+        "help": "How many recent state samples (RSSI, memory, load, queue, SD) to keep per camera for the charts."
+      },
+      {
+        "key": "eventsPerCamera",
+        "type": "number",
+        "label": "Events kept per camera",
+        "default": 2000,
+        "min": 100,
+        "max": 100000,
+        "help": "Size of the per-camera event log ring."
+      },
+      {
+        "key": "hdRevertMin",
+        "type": "number",
+        "label": "HD revert (minutes)",
+        "default": 5,
+        "min": 1,
+        "max": 240,
+        "help": "The HD button switches the camera to its main stream; it goes back to the sub-stream after this many minutes."
+      },
+      {
+        "key": "brokerPublicUrl",
+        "type": "string",
+        "label": "Broker URL for cameras",
+        "default": "",
+        "placeholder": "mqtts://mqtt.example.com:8883",
+        "help": "What the cameras dial (written into config.ini). Empty = the app's mqtt.url."
+      },
+      {
+        "key": "rtmpPublicUrl",
+        "type": "string",
+        "label": "Default RTMP URL for cameras",
+        "default": "",
+        "placeholder": "rtmp://media.example.com:1935/live",
+        "help": "Stream URL written into config.ini when a camera has none of its own."
+      },
+      {
+        "key": "iniUseAppBrokerCredentials",
+        "type": "boolean",
+        "label": "config.ini uses the app's broker credentials",
+        "default": false,
+        "help": "Lab setups only: write the app's own MQTT user/password into config.ini instead of the per-camera credential."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "cameras.db"
+    },
+    "exportable": false,
+    "icon": "camera"
+  },
+  {
+    "id": "cockpit",
+    "name": "Cockpit",
+    "description": "CCTV-style surveillance board: a paginated, drag-and-drop grid of every live stream in the app.",
+    "category": "panel",
+    "configSchema": [
+      {
+        "key": "gridSize",
+        "type": "select",
+        "label": "Grid size",
+        "default": "4x3",
+        "options": [
+          {
+            "value": "1x1",
+            "label": "1 × 1"
+          },
+          {
+            "value": "2x2",
+            "label": "2 × 2 (4)"
+          },
+          {
+            "value": "3x3",
+            "label": "3 × 3 (9)"
+          },
+          {
+            "value": "4x3",
+            "label": "4 × 3 (12)"
+          }
+        ]
+      },
+      {
+        "key": "autoPlay",
+        "type": "boolean",
+        "label": "Auto-play cameras",
+        "default": true
+      },
+      {
+        "key": "showLabels",
+        "type": "boolean",
+        "label": "Show stream labels",
+        "default": true
+      },
+      {
+        "key": "refreshSeconds",
+        "type": "number",
+        "label": "Auto-refresh (seconds)",
+        "default": 10,
+        "min": 3,
+        "max": 300
+      }
+    ],
+    "ui": "panel",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "app",
+    "storage": null,
+    "exportable": false,
+    "icon": "grid"
+  },
+  {
+    "id": "counting",
+    "name": "Counting — Line-Crossing People Counter",
+    "description": "Counts people crossing tagged lines (YOLO11 + ByteTrack): IN/OUT + live occupancy — co-located or distributed per-stream on edge nodes.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "device",
+        "type": "select",
+        "label": "Inference device",
+        "default": "cpu",
+        "options": [
+          {
+            "value": "cpu",
+            "label": "CPU (portable)"
+          },
+          {
+            "value": "cuda",
+            "label": "CUDA GPU (recommended for multi-stream)"
+          }
+        ],
+        "help": "Where the model runs. Edge nodes advertise their own GPU capacity."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 3.5,
+        "min": 0.5,
+        "max": 30,
+        "help": "Fixed sampling cadence (3.5 is the counting default — a person must appear on both sides of the line)."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum person-detection confidence (0–1) applied when a line does not override it."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [
+      "count.in",
+      "count.out",
+      "count.occupancy"
+    ],
+    "version": "0.1.1",
+    "kind": "app",
+    "storage": {
+      "db": "counting.db"
+    },
+    "exportable": true,
+    "icon": "users"
+  },
+  {
+    "id": "crowd",
+    "name": "Crowd — Density Threshold",
+    "description": "Periodic head-count per polygon zone with a multi-cycle threshold alert — co-located or distributed per-stream on edge nodes.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "device",
+        "type": "select",
+        "label": "Inference device",
+        "default": "cpu",
+        "options": [
+          {
+            "value": "cpu",
+            "label": "CPU (portable)"
+          },
+          {
+            "value": "cuda",
+            "label": "CUDA GPU (recommended for multi-stream)"
+          }
+        ],
+        "help": "Where the model runs. Edge nodes advertise their own GPU capacity."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 3.5,
+        "min": 0.5,
+        "max": 30,
+        "help": "Snapshot cadence for the head-count pipeline."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum detection confidence (0–1) applied when a zone does not override it."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [
+      "crowd.count",
+      "crowd.threshold"
+    ],
+    "version": "0.1.1",
+    "kind": "app",
+    "storage": {
+      "db": "crowd.db"
+    },
+    "exportable": true,
+    "icon": "eye"
+  },
+  {
+    "id": "deface",
+    "name": "Deface — Face Obfuscation",
+    "description": "Detects faces in the app's live stream (CenterFace) and obfuscates them on the player: blur, mosaic or solid mask over each face.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "live",
+        "help": "HLS room name to process — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "thresh",
+        "type": "number",
+        "label": "Detection threshold",
+        "default": 0.2,
+        "min": 0,
+        "max": 1,
+        "help": "Face detection sensitivity (0–1). Lower catches more faces but adds false positives; raise it if too much is masked."
+      },
+      {
+        "key": "replacewith",
+        "type": "select",
+        "label": "Anonymization method",
+        "default": "blur",
+        "options": [
+          {
+            "value": "blur",
+            "label": "Blur (gaussian)"
+          },
+          {
+            "value": "mosaic",
+            "label": "Mosaic (pixelate)"
+          },
+          {
+            "value": "solid",
+            "label": "Solid (black fill)"
+          },
+          {
+            "value": "none",
+            "label": "None (detect only)"
+          }
+        ],
+        "help": "How the player masks each detected face region."
+      },
+      {
+        "key": "maskScale",
+        "type": "number",
+        "label": "Mask scale",
+        "default": 1.3,
+        "min": 1,
+        "max": 3,
+        "help": "Enlarge detected boxes by this factor to cover hair/chin (deface --mask-scale)."
+      },
+      {
+        "key": "boxes",
+        "type": "boolean",
+        "label": "Rectangular masks",
+        "default": false,
+        "help": "On masks with rectangles; off uses ellipses (deface default)."
+      },
+      {
+        "key": "mosaicSize",
+        "type": "number",
+        "label": "Mosaic block size",
+        "default": 20,
+        "min": 2,
+        "max": 200,
+        "help": "Pixel size of mosaic blocks — only used when method is 'mosaic'."
+      },
+      {
+        "key": "scale",
+        "type": "string",
+        "label": "Detection downscale",
+        "default": "",
+        "placeholder": "640x360",
+        "help": "WxH to downscale frames for detection (empty = native). Smaller is much faster on CPU at a small accuracy cost (deface --scale)."
+      },
+      {
+        "key": "backend",
+        "type": "select",
+        "label": "Inference backend",
+        "default": "auto",
+        "options": [
+          {
+            "value": "auto",
+            "label": "Auto (onnxrt if available, else opencv)"
+          },
+          {
+            "value": "onnxrt",
+            "label": "ONNX Runtime"
+          },
+          {
+            "value": "opencv",
+            "label": "OpenCV DNN"
+          }
+        ]
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU. Falls back to CPU automatically when CUDA is unavailable."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 2,
+        "min": 0.1,
+        "max": 30,
+        "help": "Frames per second to sample from the stream (lower = less CPU)."
+      },
+      {
+        "key": "drawScores",
+        "type": "boolean",
+        "label": "Draw detection scores",
+        "default": false,
+        "help": "Show the confidence score next to each mask (debugging)."
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": null,
+    "exportable": true,
+    "icon": "shield"
+  },
+  {
+    "id": "demography",
+    "name": "Demography — Age / Gender / Emotion",
+    "description": "Per-face age / gender / emotion reads (InsightFace, or an opt-in vision-API engine) — co-located or distributed per-stream on edge nodes.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "device",
+        "type": "select",
+        "label": "Inference device",
+        "default": "cpu",
+        "options": [
+          {
+            "value": "cpu",
+            "label": "CPU (portable)"
+          },
+          {
+            "value": "cuda",
+            "label": "CUDA GPU (recommended for multi-stream)"
+          }
+        ],
+        "help": "Where the model runs. Edge nodes advertise their own GPU capacity."
+      },
+      {
+        "key": "engine",
+        "type": "select",
+        "label": "Demography engine",
+        "default": "local",
+        "options": [
+          {
+            "value": "local",
+            "label": "Local InsightFace (open-source, default)"
+          },
+          {
+            "value": "openai",
+            "label": "OpenAI vision API (opt-in, per-snapshot)"
+          },
+          {
+            "value": "deepseek",
+            "label": "DeepSeek vision API (opt-in, per-snapshot)"
+          }
+        ],
+        "help": "Local by default. An API engine sends periodic snapshots to that provider."
+      },
+      {
+        "key": "ai_api_key",
+        "type": "secret",
+        "label": "Vision-API key (openai / deepseek engines)",
+        "default": "",
+        "help": "Only used when the engine is an external API. Never sent to edge nodes in an assignment frame."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 3.5,
+        "min": 0.5,
+        "max": 30,
+        "help": "Snapshot cadence for the demography pipeline."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum face-detection confidence (0–1)."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [
+      "demography.face"
+    ],
+    "version": "0.1.1",
+    "kind": "app",
+    "storage": {
+      "db": "demography.db"
+    },
+    "exportable": true,
+    "icon": "eye"
+  },
+  {
+    "id": "fixapp",
+    "name": "Fixture App",
+    "description": "Synthetic exportable worker app for the export vectors.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room",
+        "default": "main"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "label": "Token",
+        "default": ""
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "FPS",
+        "default": 2.5,
+        "min": 0.5,
+        "max": 30
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "CUDA",
+        "default": false
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [
+      "fix.done"
+    ],
+    "version": "1.2.3-rc.1",
+    "kind": "app",
+    "storage": {
+      "db": "fixapp.db"
+    },
+    "exportable": true
+  },
+  {
+    "id": "fleet",
+    "name": "Fleet — Agent Management",
+    "description": "Connect to the StreamHub Agents in this app over MQTT: live health (CPU/RAM/temp/uptime/cameras/disk/battery), online/offline status, a configurable battery-low alert, and remote control — restart, OTA update, config push and ping.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "offlineAfterSec",
+        "type": "number",
+        "label": "Offline after (seconds)",
+        "default": 90,
+        "min": 10,
+        "max": 3600,
+        "help": "Mark an agent offline when no telemetry arrives within this window (a backstop beyond the MQTT LWT). Should be a few telemetry intervals."
+      },
+      {
+        "key": "historyPoints",
+        "type": "number",
+        "label": "History points per agent",
+        "default": 120,
+        "min": 10,
+        "max": 1000,
+        "help": "How many recent telemetry samples to keep per agent for the charts."
+      },
+      {
+        "key": "commandTimeoutSec",
+        "type": "number",
+        "label": "Command timeout (seconds)",
+        "default": 30,
+        "min": 5,
+        "max": 600,
+        "help": "How long a command stays \"pending\" before the UI treats it as timed out (the agent still reports late results if it recovers)."
+      },
+      {
+        "key": "batteryLowPercent",
+        "type": "number",
+        "label": "Battery-low alert threshold (percent)",
+        "default": 0,
+        "min": 0,
+        "max": 100,
+        "help": "0 disables the alert. Most fleet hosts run on mains and never report a battery at all — they are silently skipped, not treated as 0%. Fires fleet.battery_low / fleet.battery_recovered (10 points of hysteresis) through the same callback/MQTT/notifier funnel as every other alert family."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "fleet.db"
+    },
+    "exportable": false,
+    "icon": "server"
+  },
+  {
+    "id": "live-control",
+    "name": "Live Control",
+    "description": "Pause, resume or finish an already-live stream: viewers see a configured cover (image, looping video or text card) with audio muted until you resume.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "defaultMode",
+        "type": "select",
+        "label": "Default cover mode",
+        "default": "text",
+        "options": [
+          {
+            "value": "image",
+            "label": "Image"
+          },
+          {
+            "value": "video",
+            "label": "Looping video"
+          },
+          {
+            "value": "text",
+            "label": "Text card"
+          }
+        ],
+        "help": "What a paused/finished stream shows when no per-stream override is given."
+      },
+      {
+        "key": "defaultCardTitle",
+        "type": "string",
+        "label": "Text-card headline",
+        "default": "We will be right back"
+      },
+      {
+        "key": "defaultCardText",
+        "type": "string",
+        "label": "Text-card body",
+        "default": "The live stream is paused."
+      },
+      {
+        "key": "defaultCardColor",
+        "type": "string",
+        "label": "Text-card background",
+        "default": "#0b0b0f",
+        "placeholder": "#RRGGBB"
+      },
+      {
+        "key": "muteAudioServerSide",
+        "type": "boolean",
+        "label": "Mute audio server-side while paused",
+        "default": true,
+        "help": "Also mute the publisher audio in LiveKit (best-effort), not just in our players."
+      },
+      {
+        "key": "pollSeconds",
+        "type": "number",
+        "label": "Overlay poll interval (seconds)",
+        "default": 5,
+        "min": 2,
+        "max": 60,
+        "help": "How often the viewer overlay re-checks the public state (a data-channel push is instant)."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [
+      "livecontrol.paused",
+      "livecontrol.resumed",
+      "livecontrol.finished"
+    ],
+    "version": "1.0.0",
+    "kind": "app",
+    "storage": {
+      "db": "live-control.db"
+    },
+    "exportable": false,
+    "icon": "pause"
+  },
+  {
+    "id": "live-control-overlay",
+    "name": "Live Control Overlay",
+    "description": "Shows the Live Control cover (image, looping video or text card) to viewers while a stream is paused or finished. Pairs with the Live Control console.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "fit",
+        "type": "select",
+        "label": "Image/video fit",
+        "default": "cover",
+        "options": [
+          {
+            "value": "cover",
+            "label": "Cover (fill, may crop)"
+          },
+          {
+            "value": "contain",
+            "label": "Contain (letterbox)"
+          }
+        ]
+      },
+      {
+        "key": "showFinishedBadge",
+        "type": "boolean",
+        "label": "Show a \"finished\" badge on the final card",
+        "default": true
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "pause"
+  },
+  {
+    "id": "lpr",
+    "name": "LPR — License Plate Recognition",
+    "description": "Reads license plates from the app's live stream (fast-alpr: YOLOv9 detector + ONNX OCR, open-source), matches them against a whitelist/blacklist and emits plate.detected/allowed/denied events.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "gate-cam",
+        "help": "HLS room to analyze — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "detector",
+        "type": "select",
+        "label": "Plate detector model",
+        "default": "yolo-v9-t-384-license-plate-end2end",
+        "options": [
+          {
+            "value": "yolo-v9-t-256-license-plate-end2end",
+            "label": "YOLOv9-t 256 (fastest)"
+          },
+          {
+            "value": "yolo-v9-t-384-license-plate-end2end",
+            "label": "YOLOv9-t 384 (balanced, default)"
+          },
+          {
+            "value": "yolo-v9-t-512-license-plate-end2end",
+            "label": "YOLOv9-t 512 (most accurate)"
+          }
+        ],
+        "help": "fast-alpr ONNX plate detectors (MIT). Bigger input = more accurate, slower on CPU."
+      },
+      {
+        "key": "ocrModel",
+        "type": "select",
+        "label": "OCR model",
+        "default": "cct-xs-v1-global-model",
+        "options": [
+          {
+            "value": "cct-xs-v1-global-model",
+            "label": "CCT-XS global (fast, default)"
+          },
+          {
+            "value": "cct-s-v1-global-model",
+            "label": "CCT-S global (more accurate)"
+          }
+        ],
+        "help": "fast-plate-ocr ONNX models (MIT), trained on global plate formats."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Min OCR confidence",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "help": "Reads below this average character confidence are dropped (0–1)."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 2,
+        "min": 0.1,
+        "max": 30,
+        "help": "Frames per second to sample (2–4 is plenty for a gate camera)."
+      },
+      {
+        "key": "dedupeWindowSec",
+        "type": "number",
+        "label": "Dedupe window (seconds)",
+        "default": 10,
+        "min": 0,
+        "max": 300,
+        "help": "The same plate seen again within this window is ONE event (a car idling at the gate does not spam the webhook). 0 = every read emits."
+      },
+      {
+        "key": "whitelist",
+        "type": "string",
+        "label": "Whitelist plates",
+        "default": "",
+        "placeholder": "AB123CD, AA000AA",
+        "help": "Comma/newline-separated plates that fire plate.allowed (normalized: case/separator-insensitive). Empty = no whitelist events."
+      },
+      {
+        "key": "blacklist",
+        "type": "string",
+        "label": "Blacklist plates",
+        "default": "",
+        "placeholder": "XX999XX",
+        "help": "Comma/newline-separated plates that fire plate.denied. A plate on both lists is treated as DENIED (blacklist wins)."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "Direct callback URL",
+        "default": "",
+        "placeholder": "https://example.com/hooks/gate",
+        "help": "Optional extra POST target for every event (e.g. a barrier opener). Events ALWAYS also flow through the app's signed callbacks."
+      },
+      {
+        "key": "snapshots",
+        "type": "boolean",
+        "label": "Save snapshots",
+        "default": true,
+        "help": "Save a JPEG frame per event under <appDir>/lpr/snapshots/."
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU — fast-alpr is CPU-friendly at gate-camera FPS."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [
+      "plate.detected",
+      "plate.allowed",
+      "plate.denied"
+    ],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "lpr.db"
+    },
+    "exportable": true,
+    "icon": "car"
+  },
+  {
+    "id": "occupancy",
+    "name": "Occupancy — Zone Dwell & Sessions",
+    "description": "Tracks people in per-stream polygon zones (YOLO11 + ByteTrack) and emits dwell sessions + over-limit alerts — co-located or distributed on edge nodes.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "device",
+        "type": "select",
+        "label": "Inference device",
+        "default": "cpu",
+        "options": [
+          {
+            "value": "cpu",
+            "label": "CPU (portable)"
+          },
+          {
+            "value": "cuda",
+            "label": "CUDA GPU (recommended for multi-stream)"
+          }
+        ],
+        "help": "Where the model runs. Edge nodes advertise their own GPU capacity."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 3.5,
+        "min": 0.5,
+        "max": 30,
+        "help": "Fixed sampling cadence for the tracking pipeline."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum detection confidence (0–1) applied when a zone does not override it."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": true,
+    "events": [
+      "occupancy.session_started",
+      "occupancy.session_ended",
+      "occupancy.alert"
+    ],
+    "version": "0.1.1",
+    "kind": "app",
+    "storage": {
+      "db": "occupancy.db"
+    },
+    "exportable": true,
+    "icon": "eye"
+  },
+  {
+    "id": "people-counter",
+    "name": "People Counter",
+    "description": "Counts people crossing a line drawn on the live video (YOLOv8 + ByteTrack): IN/OUT totals, live occupancy and a capacity alert, with signed count.in/count.out/occupancy.limit webhooks.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "door",
+        "help": "HLS room name to count — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "lineX1",
+        "type": "number",
+        "label": "Line start X (0–1)",
+        "default": 0.2,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "lineY1",
+        "type": "number",
+        "label": "Line start Y (0–1)",
+        "default": 0.5,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "lineX2",
+        "type": "number",
+        "label": "Line end X (0–1)",
+        "default": 0.8,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "lineY2",
+        "type": "number",
+        "label": "Line end Y (0–1)",
+        "default": 0.5,
+        "min": 0,
+        "max": 1
+      },
+      {
+        "key": "inDirection",
+        "type": "select",
+        "label": "\"In\" side of the line",
+        "default": "right",
+        "options": [
+          {
+            "value": "right",
+            "label": "Right of start→end (arrow side)"
+          },
+          {
+            "value": "left",
+            "label": "Left of start→end (flipped)"
+          }
+        ],
+        "help": "Which side of the drawn line is INSIDE: crossing onto it counts as IN, leaving it counts as OUT. The tab shows it as a rotatable/flippable arrow on the video."
+      },
+      {
+        "key": "capacity",
+        "type": "number",
+        "label": "Capacity alert threshold",
+        "default": 0,
+        "min": 0,
+        "max": 100000,
+        "help": "Fires one occupancy.limit event when occupancy reaches this; re-arms when it drops below. 0 disables the alert."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 5,
+        "min": 0.1,
+        "max": 30,
+        "help": "Frames per second to sample. 3–5 is the CPU sweet spot: a person must appear on both sides of the line to count."
+      },
+      {
+        "key": "model",
+        "type": "select",
+        "label": "Model size",
+        "default": "nano",
+        "options": [
+          {
+            "value": "nano",
+            "label": "Nano (fastest, CPU-friendly)"
+          },
+          {
+            "value": "small",
+            "label": "Small"
+          },
+          {
+            "value": "medium",
+            "label": "Medium (GPU recommended)"
+          },
+          {
+            "value": "large",
+            "label": "Large (GPU)"
+          },
+          {
+            "value": "xlarge",
+            "label": "XLarge (GPU)"
+          }
+        ]
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the GPU; off runs on CPU (yolov8n + low FPS there)."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.3,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum person-detection confidence (0–1)."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "Events callback URL",
+        "default": "",
+        "placeholder": "https://example.com/hooks/people",
+        "help": "Where count.in / count.out / occupancy.limit events are POSTed (signed like app callbacks). Empty = counts stay local (SQLite + live panel)."
+      },
+      {
+        "key": "callbackSecret",
+        "type": "secret",
+        "label": "Callback signing secret",
+        "default": "",
+        "help": "HMAC-SHA256 secret for X-StreamHub-Signature on event POSTs (same verification as app callbacks). Empty = unsigned."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "people-counter.db"
+    },
+    "exportable": true,
+    "icon": "users"
+  },
+  {
+    "id": "perimeter",
+    "name": "Perimeter — Intrusion Detection",
+    "description": "Watches restricted zones on a live camera and, while armed (schedule or manual), alerts on any person inside them — with snapshot + clip evidence and an acknowledgeable alert queue.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / camera",
+        "default": "",
+        "required": true,
+        "placeholder": "cam-1",
+        "help": "HLS room to watch — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "zones",
+        "type": "string",
+        "label": "Restricted zones (JSON)",
+        "default": "[]",
+        "placeholder": "[{\"id\":\"gate\",\"rect\":[0.6,0.4,0.35,0.55]}]",
+        "help": "Normalized 0-1 rects/polygons — draw them in the Perimeter tab instead of editing this by hand."
+      },
+      {
+        "key": "armMode",
+        "type": "select",
+        "label": "Arming",
+        "default": "schedule",
+        "options": [
+          {
+            "value": "schedule",
+            "label": "Follow schedule"
+          },
+          {
+            "value": "armed",
+            "label": "Armed (manual override)"
+          },
+          {
+            "value": "disarmed",
+            "label": "Disarmed (manual override)"
+          }
+        ],
+        "help": "The dashboard arm/disarm toggle writes this field."
+      },
+      {
+        "key": "armSchedule",
+        "type": "string",
+        "label": "Armed window (daily)",
+        "default": "22:00-06:00",
+        "placeholder": "22:00-06:00",
+        "help": "HH:MM-HH:MM local time, wraps past midnight. Empty = weekends only."
+      },
+      {
+        "key": "armWeekends",
+        "type": "boolean",
+        "label": "Armed all weekend",
+        "default": true,
+        "help": "Arms all day Saturday + Sunday in addition to the daily window."
+      },
+      {
+        "key": "timezone",
+        "type": "string",
+        "label": "Schedule timezone",
+        "default": "",
+        "placeholder": "America/Argentina/Buenos_Aires",
+        "help": "IANA name the schedule is evaluated in. Empty = host local time (usually UTC inside Docker — set this for on-site wall-clock arming)."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Person confidence",
+        "default": 0.5,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum detection confidence (0-1) to count a person."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 1,
+        "min": 0.1,
+        "max": 10,
+        "help": "1-2 fps is the honest CPU budget; more needs CUDA."
+      },
+      {
+        "key": "cooldown",
+        "type": "number",
+        "label": "Per-zone cooldown (s)",
+        "default": 60,
+        "min": 1,
+        "max": 3600,
+        "help": "Seconds before the SAME zone may alert again (anti alert-storm)."
+      },
+      {
+        "key": "clipSeconds",
+        "type": "number",
+        "label": "Evidence clip length (s)",
+        "default": 10,
+        "min": 0,
+        "max": 60,
+        "help": "Copies the last HLS segments (-c copy, cheap) next to the snapshot; 0 disables the clip."
+      },
+      {
+        "key": "anchor",
+        "type": "select",
+        "label": "Trigger point",
+        "default": "foot",
+        "options": [
+          {
+            "value": "foot",
+            "label": "Feet (bottom-center — floor zones)"
+          },
+          {
+            "value": "center",
+            "label": "Box center"
+          }
+        ]
+      },
+      {
+        "key": "model",
+        "type": "select",
+        "label": "Model size",
+        "default": "nano",
+        "options": [
+          {
+            "value": "nano",
+            "label": "Nano (CPU-friendly, default)"
+          },
+          {
+            "value": "small",
+            "label": "Small (better far-person recall, 2x CPU)"
+          }
+        ]
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "Alert webhook URL",
+        "default": "",
+        "placeholder": "https://example.com/hooks/perimeter",
+        "help": "Optional: every perimeter.intrusion event is POSTed here (in addition to the dashboard alert queue)."
+      },
+      {
+        "key": "callbackSecret",
+        "type": "secret",
+        "label": "Webhook HMAC secret",
+        "default": "",
+        "help": "When set, events are signed into X-StreamHub-Signature (sha256=<hex>) exactly like the app signed callbacks."
+      },
+      {
+        "key": "ackThrough",
+        "type": "string",
+        "label": "Acknowledged through (ts)",
+        "default": "",
+        "help": "Managed by the alert queue panel — alerts at or before this unix timestamp are marked acknowledged on worker start."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "perimeter.db"
+    },
+    "exportable": true,
+    "icon": "shield-alert"
+  },
+  {
+    "id": "presence",
+    "name": "Presence — Workstation Monitoring",
+    "description": "Detects people in configured zones of the live stream and fires absence / return / after-hours events (signed app callbacks + webhook), with a zone editor and per-zone occupancy timeline.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "office",
+        "help": "HLS room name to monitor — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "zones",
+        "type": "string",
+        "label": "Zones (JSON)",
+        "default": "[]",
+        "placeholder": "[{\"id\":\"desk-1\",\"name\":\"Front desk\",\"x\":0.1,\"y\":0.2,\"w\":0.3,\"h\":0.4}]",
+        "help": "Normalized rectangles ([0-1] fractions of the frame): [{id,name,x,y,w,h}]. Draw them visually in the Presence tab."
+      },
+      {
+        "key": "schedule",
+        "type": "string",
+        "label": "Work schedule",
+        "default": "08:00-18:00",
+        "placeholder": "08:00-18:00",
+        "help": "HH:MM-HH:MM work window. A person present outside it fires presence.after_hours. Empty disables after-hours detection; start > end spans midnight (e.g. 22:00-06:00)."
+      },
+      {
+        "key": "scheduleDays",
+        "type": "string",
+        "label": "Work days",
+        "default": "mon-fri",
+        "placeholder": "mon-fri",
+        "help": "Days the schedule applies: 'mon-fri', 'mon,wed,fri', … Empty = all."
+      },
+      {
+        "key": "timezone",
+        "type": "string",
+        "label": "Timezone",
+        "default": "",
+        "placeholder": "America/Argentina/Buenos_Aires",
+        "help": "IANA timezone for the schedule. Empty = server local time."
+      },
+      {
+        "key": "thresholdMin",
+        "type": "number",
+        "label": "Absence threshold (minutes)",
+        "default": 5,
+        "min": 0.1,
+        "max": 1440,
+        "help": "A zone continuously empty longer than this fires presence.absent."
+      },
+      {
+        "key": "afterHours",
+        "type": "boolean",
+        "label": "After-hours detection",
+        "default": true,
+        "help": "Fire presence.after_hours when someone is present outside the schedule."
+      },
+      {
+        "key": "model",
+        "type": "select",
+        "label": "Model size",
+        "default": "nano",
+        "options": [
+          {
+            "value": "nano",
+            "label": "Nano (fastest, CPU-friendly)"
+          },
+          {
+            "value": "small",
+            "label": "Small"
+          },
+          {
+            "value": "medium",
+            "label": "Medium (GPU recommended)"
+          }
+        ]
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the GPU; off runs on CPU (yolov8n @2fps is CPU-viable)."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Confidence threshold",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum person-detection confidence (0-1)."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 2,
+        "min": 0.1,
+        "max": 10,
+        "help": "Frames per second to sample (lower = less CPU; 2 is plenty)."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "External webhook (optional)",
+        "default": "",
+        "placeholder": "https://example.com/hooks/presence",
+        "help": "Extra raw-JSON POST target for every presence event. The app's signed callbacks fire regardless — leave empty to use only those."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [
+      "presence.absent",
+      "presence.returned",
+      "presence.after_hours"
+    ],
+    "version": "0.1.1",
+    "kind": "app",
+    "storage": {
+      "db": "presence.db"
+    },
+    "exportable": true,
+    "icon": "users"
+  },
+  {
+    "id": "quality",
+    "name": "Quality / Stream Health",
+    "description": "Measure the client↔server connection quality: a download/upload bandwidth test plus latency/jitter, distilled into a green/amber/red traffic light against configurable thresholds.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "green_min_mbps",
+        "type": "number",
+        "label": "Green: min download (Mbps)",
+        "default": 5,
+        "min": 0,
+        "max": 10000,
+        "help": "At or above this download speed the light is green (optimal)."
+      },
+      {
+        "key": "yellow_min_mbps",
+        "type": "number",
+        "label": "Amber: min download (Mbps)",
+        "default": 1,
+        "min": 0,
+        "max": 10000,
+        "help": "Between amber and green thresholds the light is amber; below it, red."
+      },
+      {
+        "key": "target_bitrate_kbps",
+        "type": "number",
+        "label": "Target stream bitrate (kbps)",
+        "default": 2500,
+        "min": 0,
+        "max": 100000,
+        "help": "Expected outbound/received stream bitrate. The measured reception bitrate is graded against this (green ≥ target, amber ≥ half)."
+      },
+      {
+        "key": "max_green_rtt_ms",
+        "type": "number",
+        "label": "Green: max latency (ms)",
+        "default": 120,
+        "min": 0,
+        "max": 10000,
+        "help": "Round-trip time (and derived jitter) at or below this stays green."
+      },
+      {
+        "key": "download_url",
+        "type": "string",
+        "label": "Download test URL",
+        "default": "/apple-touch-icon.png",
+        "placeholder": "/apple-touch-icon.png",
+        "help": "Same-origin asset re-fetched (cache-busted) to measure download throughput. Point at a larger static file for steadier numbers."
+      },
+      {
+        "key": "download_target_mb",
+        "type": "number",
+        "label": "Download test size (MB)",
+        "default": 6,
+        "min": 1,
+        "max": 200,
+        "help": "Total bytes to pull before computing the download speed."
+      },
+      {
+        "key": "upload_url",
+        "type": "string",
+        "label": "Upload test URL (optional)",
+        "default": "",
+        "placeholder": "https://…/upload",
+        "help": "Optional endpoint that ACCEPTS a POST body (e.g. an S3 presigned URL). Leave blank to skip the upload leg — no browser-only test can measure upload without a server that reads the body."
+      }
+    ],
+    "ui": "panel",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "signal"
+  },
+  {
+    "id": "radio",
+    "name": "Radio",
+    "description": "Audio-only WebRTC radio inside the app: go on air from the mic, watch the live listener count and hand out subscribe-only listen tokens.",
+    "category": "panel",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room name",
+        "default": "radio",
+        "placeholder": "radio",
+        "help": "LiveKit room the máster publishes to and listeners subscribe from."
+      },
+      {
+        "key": "listenTokenTtlSeconds",
+        "type": "number",
+        "label": "Listen token TTL (seconds)",
+        "default": 3600,
+        "min": 60,
+        "max": 86400,
+        "help": "Lifetime of generated subscribe-only listener tokens."
+      },
+      {
+        "key": "autoStartMonitor",
+        "type": "boolean",
+        "label": "Auto-start listener monitor",
+        "default": true
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "radio"
+  },
+  {
+    "id": "safety-ppe",
+    "name": "Safety PPE Monitor",
+    "description": "EXPERIMENTAL: detects persons without helmet / hi-viz vest in configured work zones during work hours (pretrained YOLOv8 PPE model, community weights) and records ppe.violation events with evidence snapshots. Advisory only — not a certified safety system.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "live",
+        "help": "HLS room name to monitor — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "requireHelmet",
+        "type": "boolean",
+        "label": "Require helmet",
+        "default": true,
+        "help": "Flag persons without a hard hat."
+      },
+      {
+        "key": "requireVest",
+        "type": "boolean",
+        "label": "Require safety vest",
+        "default": true,
+        "help": "Flag persons without a hi-viz vest."
+      },
+      {
+        "key": "zones",
+        "type": "string",
+        "label": "Work zones (JSON)",
+        "default": "",
+        "placeholder": "[{\"name\":\"dock\",\"rect\":[0.1,0.2,0.5,0.7]}]",
+        "help": "JSON array of {name, rect:[x,y,w,h]} with 0–1 frame-relative coordinates. Empty = one full-frame zone \"all\". A person belongs to a zone when their feet (bottom-center of the box) are inside it. The plugin tab has a visual editor for this field."
+      },
+      {
+        "key": "workHours",
+        "type": "string",
+        "label": "Work hours",
+        "default": "",
+        "placeholder": "08:00-18:00",
+        "help": "HH:MM-HH:MM window (host local time) when PPE rules apply; overnight ranges wrap. Empty or malformed = always on (fail open)."
+      },
+      {
+        "key": "workDays",
+        "type": "string",
+        "label": "Work days",
+        "default": "",
+        "placeholder": "mon-fri",
+        "help": "Days the rules apply: names ('mon-fri', 'mon,wed') or ISO numbers ('1-5', 1=Monday). Empty = every day."
+      },
+      {
+        "key": "sustainFrames",
+        "type": "number",
+        "label": "Sustain frames",
+        "default": 3,
+        "min": 0,
+        "max": 60,
+        "help": "A violation fires only after being seen in MORE THAN this many consecutive analyzed frames (default 3 → fires on the 4th), filtering single-frame detection noise."
+      },
+      {
+        "key": "cooldownSeconds",
+        "type": "number",
+        "label": "Cooldown (seconds)",
+        "default": 120,
+        "min": 5,
+        "max": 3600,
+        "help": "After a violation fires, the same zone + missing item cannot re-fire for this long."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Detection confidence",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum model confidence for person/PPE detections (0–1)."
+      },
+      {
+        "key": "association",
+        "type": "number",
+        "label": "Association threshold",
+        "default": 0.5,
+        "min": 0.05,
+        "max": 1,
+        "help": "Fraction of a PPE item box that must lie inside a person box to count as worn by that person (containment, not IoU)."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 1,
+        "min": 0.1,
+        "max": 10,
+        "help": "Frames per second to analyze. The YOLOv8m model costs ~1 s of one CPU core per frame — keep this at 1 or below on CPU hosts."
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU. Falls back to CPU automatically when CUDA is unavailable."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "Violation webhook URL",
+        "default": "",
+        "placeholder": "https://example.com/hooks/ppe",
+        "help": "Optional: POST each ppe.violation event {event, app, room, ts, zone, missing, confidence, snapshot_path} to this URL."
+      },
+      {
+        "key": "callbackSecret",
+        "type": "secret",
+        "label": "Webhook HMAC secret",
+        "default": "",
+        "help": "Optional: signs the webhook body as X-StreamHub-Signature: sha256=<hmac> — the same format the core app callbacks use."
+      },
+      {
+        "key": "modelUrl",
+        "type": "string",
+        "label": "Model URL (ONNX)",
+        "default": "https://huggingface.co/Hexmon/vyra-yolo-ppe-detection/resolve/main/best.onnx",
+        "help": "ONNX checkpoint downloaded once into <DATA_DIR>/models/safety-ppe/. Swap for a custom YOLOv8 PPE export (class names are read from the ONNX metadata)."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [
+      "ppe.violation"
+    ],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "safety-ppe.db"
+    },
+    "exportable": true,
+    "icon": "hard-hat"
+  },
+  {
+    "id": "scheduled-live",
+    "name": "Scheduled Live",
+    "description": "Schedule live premieres: viewers see a countdown until the start time, then the stream is revealed.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "mode",
+        "type": "select",
+        "label": "Display mode",
+        "default": "cover",
+        "options": [
+          {
+            "value": "cover",
+            "label": "Full cover (hide stream until start)"
+          },
+          {
+            "value": "badge",
+            "label": "Corner badge only"
+          }
+        ]
+      },
+      {
+        "key": "accent",
+        "type": "string",
+        "label": "Accent colour",
+        "default": "#2f7bff",
+        "placeholder": "#RRGGBB"
+      },
+      {
+        "key": "headline",
+        "type": "string",
+        "label": "Headline",
+        "default": "The live stream starts soon"
+      },
+      {
+        "key": "revealAnimation",
+        "type": "select",
+        "label": "Reveal animation",
+        "default": "fade",
+        "options": [
+          {
+            "value": "fade",
+            "label": "Fade"
+          },
+          {
+            "value": "zoom",
+            "label": "Zoom"
+          },
+          {
+            "value": "none",
+            "label": "None"
+          }
+        ]
+      },
+      {
+        "key": "muteUntilStart",
+        "type": "boolean",
+        "label": "Mute stream until start",
+        "default": true
+      },
+      {
+        "key": "showViewerLocalTime",
+        "type": "boolean",
+        "label": "Show viewer's local start time",
+        "default": true
+      },
+      {
+        "key": "autoHideAfterStartSec",
+        "type": "number",
+        "label": "Keep reveal animation (seconds)",
+        "default": 5,
+        "min": 0,
+        "max": 60
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "clock"
+  },
+  {
+    "id": "stream-health",
+    "name": "Stream Health Monitor",
+    "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "sample_interval_sec",
+        "type": "number",
+        "label": "Sample interval (s)",
+        "default": 10,
+        "min": 2,
+        "max": 300,
+        "help": "How often each stream is probed. Cost per stream per sample is one ffprobe + one audio-only decode of a single segment (<1% of a core at the default)."
+      },
+      {
+        "key": "silence_db",
+        "type": "number",
+        "label": "Silence threshold (dBFS)",
+        "default": -50,
+        "min": -120,
+        "max": 0,
+        "help": "Mean segment volume at or below this counts as silent."
+      },
+      {
+        "key": "silence_duration_sec",
+        "type": "number",
+        "label": "Silence duration (s)",
+        "default": 15,
+        "min": 1,
+        "max": 600,
+        "help": "Continuous silence longer than this fires health.audio_lost."
+      },
+      {
+        "key": "desync_ms",
+        "type": "number",
+        "label": "A/V desync threshold (ms)",
+        "default": 200,
+        "min": 10,
+        "max": 10000,
+        "help": "Audio-vs-video timestamp drift beyond this fires health.av_desync."
+      },
+      {
+        "key": "stall_sec",
+        "type": "number",
+        "label": "Stall threshold (s)",
+        "default": 20,
+        "min": 2,
+        "max": 600,
+        "help": "No new HLS segment for this long fires health.stalled (critical)."
+      },
+      {
+        "key": "bitrate_drop_pct",
+        "type": "number",
+        "label": "Bitrate drop (%)",
+        "default": 50,
+        "min": 0,
+        "max": 95,
+        "help": "Measured bitrate falling below this percentage of the rolling baseline marks the stream degraded. 0 disables the check."
+      },
+      {
+        "key": "recover_samples",
+        "type": "number",
+        "label": "Recovery samples",
+        "default": 2,
+        "min": 1,
+        "max": 10,
+        "help": "Consecutive clean samples required before health.recovered fires (hysteresis against flapping)."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [
+      "health.degraded",
+      "health.recovered",
+      "health.audio_lost",
+      "health.audio_recovered",
+      "health.av_desync",
+      "health.stalled",
+      "health.discontinuity"
+    ],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "stream-health.db"
+    },
+    "exportable": false,
+    "icon": "activity"
+  },
+  {
+    "id": "streamflow",
+    "name": "Streamflow — Workflow Engine",
+    "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "ai_provider",
+        "type": "select",
+        "label": "AI provider",
+        "default": "openai",
+        "options": [
+          {
+            "value": "openai",
+            "label": "OpenAI"
+          },
+          {
+            "value": "deepseek",
+            "label": "DeepSeek"
+          }
+        ],
+        "help": "OpenAI-compatible /v1/chat/completions provider used by action.ai boxes."
+      },
+      {
+        "key": "ai_api_key",
+        "type": "secret",
+        "label": "AI API key",
+        "default": "",
+        "help": "API key for the selected provider. Stored as a secret, never returned in clear. Falls back to the SecretsStore ref of the same name."
+      },
+      {
+        "key": "ai_model",
+        "type": "string",
+        "label": "AI model",
+        "default": "gpt-4o-mini",
+        "help": "Model id, e.g. gpt-4o-mini (OpenAI) or deepseek-chat (DeepSeek)."
+      },
+      {
+        "key": "ai_budget_monthly_usd",
+        "type": "number",
+        "label": "Monthly AI budget (USD)",
+        "default": 20,
+        "min": 0,
+        "max": 100000,
+        "help": "Hard cap on estimated AI spend per calendar month for this app. When reached, action.ai boxes fail closed until the next month."
+      },
+      {
+        "key": "max_runs_per_min",
+        "type": "number",
+        "label": "Max runs / minute",
+        "default": 60,
+        "min": 1,
+        "max": 100000,
+        "help": "Per-app rate limit so a hot event cannot flood the engine. Extra triggers within the window are dropped (logged)."
+      },
+      {
+        "key": "dangerousNodes",
+        "type": "boolean",
+        "label": "Enable execution nodes (code / ssh / shell / db)",
+        "default": false,
+        "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators."
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [
+      "streamflow.run_started",
+      "streamflow.run_finished",
+      "streamflow.run_failed",
+      "streamflow.output"
+    ],
+    "version": "0.1.0",
+    "kind": "app",
+    "storage": {
+      "db": "streamflow.db"
+    },
+    "exportable": false,
+    "icon": "workflow"
+  },
+  {
+    "id": "timestamp",
+    "name": "Timestamp CCTV",
+    "description": "Overlay a live CCTV-style date/time stamp (with the camera name) on the player. Configure format, corner, colour and whether to show the name.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "format",
+        "type": "select",
+        "label": "Time format",
+        "default": "datetime-24h",
+        "options": [
+          {
+            "value": "datetime-24h",
+            "label": "YYYY-MM-DD HH:mm:ss"
+          },
+          {
+            "value": "datetime-12h",
+            "label": "YYYY-MM-DD hh:mm:ss AM/PM"
+          },
+          {
+            "value": "time-24h",
+            "label": "HH:mm:ss"
+          },
+          {
+            "value": "time-12h",
+            "label": "hh:mm:ss AM/PM"
+          },
+          {
+            "value": "date-us",
+            "label": "MM/DD/YYYY HH:mm:ss"
+          }
+        ]
+      },
+      {
+        "key": "position",
+        "type": "select",
+        "label": "Position",
+        "default": "bottom-right",
+        "options": [
+          {
+            "value": "top-left",
+            "label": "Top left"
+          },
+          {
+            "value": "top-right",
+            "label": "Top right"
+          },
+          {
+            "value": "bottom-left",
+            "label": "Bottom left"
+          },
+          {
+            "value": "bottom-right",
+            "label": "Bottom right"
+          }
+        ]
+      },
+      {
+        "key": "color",
+        "type": "string",
+        "label": "Text colour",
+        "default": "#00e5ff",
+        "placeholder": "#RRGGBB",
+        "help": "Hex colour for the overlay text (e.g. #ffffff, #00e5ff)."
+      },
+      {
+        "key": "showName",
+        "type": "boolean",
+        "label": "Show camera / stream name",
+        "default": true
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "clock"
+  },
+  {
+    "id": "streaming",
+    "name": "Video Streaming",
+    "description": "Go live with your webcam + mic and forward the composed room to an RTMP destination (YouTube, Twitch, …) via server egress.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room name",
+        "default": "studio",
+        "placeholder": "studio",
+        "help": "LiveKit room the webcam publishes to and the egress composes."
+      },
+      {
+        "key": "defaultRtmpUrl",
+        "type": "string",
+        "label": "Default RTMP URL",
+        "default": "",
+        "placeholder": "rtmp://a.rtmp.youtube.com/live2/<stream-key>",
+        "help": "Optional. Pre-fills the destination field (rtmp:// or rtmps://)."
+      },
+      {
+        "key": "audioOnly",
+        "type": "boolean",
+        "label": "Audio-only by default",
+        "default": false
+      }
+    ],
+    "ui": "app-tab",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "video"
+  },
+  {
+    "id": "vidstack",
+    "name": "Vidstack Player",
+    "description": "Swap the built-in video.js HLS + VOD player for an advanced, skinned Vidstack player (hls.js). Sub-second WebRTC live is unaffected.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "theme",
+        "type": "select",
+        "label": "Player theme",
+        "default": "auto",
+        "options": [
+          {
+            "value": "auto",
+            "label": "Match dashboard (auto)"
+          },
+          {
+            "value": "dark",
+            "label": "Dark"
+          },
+          {
+            "value": "light",
+            "label": "Light"
+          }
+        ]
+      },
+      {
+        "key": "autoplay",
+        "type": "boolean",
+        "label": "Autoplay on load",
+        "default": true,
+        "help": "Muted autoplay to satisfy browser policies; viewers can unmute."
+      }
+    ],
+    "ui": "player",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "play"
+  },
+  {
+    "id": "transcription",
+    "name": "VOD Transcription",
+    "description": "Transcribes recorded VODs to text + SRT subtitles (uploaded next to the recording in S3). Local open-source Whisper by default; OpenAI API optional.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "provider",
+        "type": "select",
+        "label": "Transcription engine",
+        "default": "local",
+        "options": [
+          {
+            "value": "local",
+            "label": "Local Whisper (faster-whisper, open source)"
+          },
+          {
+            "value": "openai",
+            "label": "OpenAI API (whisper-1 / gpt-4o-transcribe)"
+          }
+        ],
+        "help": "local runs on this server via the plugin worker (no external calls, no API cost); openai sends the extracted audio to the OpenAI API."
+      },
+      {
+        "key": "model",
+        "type": "select",
+        "label": "Whisper model (local)",
+        "default": "small",
+        "options": [
+          {
+            "value": "tiny",
+            "label": "tiny (fastest, lowest quality)"
+          },
+          {
+            "value": "base",
+            "label": "base"
+          },
+          {
+            "value": "small",
+            "label": "small (good default)"
+          },
+          {
+            "value": "medium",
+            "label": "medium"
+          },
+          {
+            "value": "large-v3",
+            "label": "large-v3 (best, needs GPU/RAM)"
+          }
+        ],
+        "help": "Only used by the local engine; auto-downloaded on first use."
+      },
+      {
+        "key": "openaiModel",
+        "type": "select",
+        "label": "OpenAI model",
+        "default": "whisper-1",
+        "options": [
+          {
+            "value": "whisper-1",
+            "label": "whisper-1 (timed segments — best for SRT)"
+          },
+          {
+            "value": "gpt-4o-transcribe",
+            "label": "gpt-4o-transcribe (text only)"
+          },
+          {
+            "value": "gpt-4o-mini-transcribe",
+            "label": "gpt-4o-mini-transcribe (text only, cheapest)"
+          }
+        ],
+        "help": "Only used when the engine is openai. Models without segment timestamps yield a single full-length SRT cue."
+      },
+      {
+        "key": "language",
+        "type": "string",
+        "label": "Language",
+        "default": "auto",
+        "placeholder": "auto | es | en | pt …",
+        "help": "ISO code of the spoken language; 'auto' detects it."
+      },
+      {
+        "key": "autoTranscribe",
+        "type": "boolean",
+        "label": "Transcribe new VODs automatically",
+        "default": true,
+        "help": "On: every recording is transcribed as soon as its VOD is ready. Off: transcribe on demand (POST /apps/:app/vods/:id/transcribe)."
+      },
+      {
+        "key": "apiKey",
+        "type": "secret",
+        "label": "OpenAI API key",
+        "default": "",
+        "placeholder": "sk-…",
+        "help": "Required only when the engine is openai."
+      },
+      {
+        "key": "device",
+        "type": "select",
+        "label": "Compute device (local)",
+        "default": "auto",
+        "options": [
+          {
+            "value": "auto",
+            "label": "Auto (CUDA if available, else CPU)"
+          },
+          {
+            "value": "cpu",
+            "label": "CPU"
+          },
+          {
+            "value": "cuda",
+            "label": "CUDA (GPU)"
+          }
+        ]
+      }
+    ],
+    "ui": "panel",
+    "needsWorker": true,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.1",
+    "kind": "app",
+    "storage": null,
+    "exportable": true,
+    "icon": "subtitles"
+  },
+  {
+    "id": "watermark",
+    "name": "Watermark",
+    "description": "Overlay a text watermark on the player.",
+    "category": "tool",
+    "configSchema": [
+      {
+        "key": "text",
+        "type": "string",
+        "label": "Watermark text",
+        "default": "StreamHub"
+      },
+      {
+        "key": "position",
+        "type": "select",
+        "label": "Position",
+        "default": "bottom-right",
+        "options": [
+          {
+            "value": "top-left",
+            "label": "Top left"
+          },
+          {
+            "value": "top-right",
+            "label": "Top right"
+          },
+          {
+            "value": "bottom-left",
+            "label": "Bottom left"
+          },
+          {
+            "value": "bottom-right",
+            "label": "Bottom right"
+          }
+        ]
+      },
+      {
+        "key": "opacity",
+        "type": "number",
+        "label": "Opacity",
+        "default": 0.6,
+        "min": 0,
+        "max": 1
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": false,
+    "workerPlacement": "local",
+    "edge": false,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "plugin",
+    "storage": null,
+    "exportable": false,
+    "icon": "stamp"
+  },
+  {
+    "id": "yolo",
+    "name": "YOLO Object Detection",
+    "description": "Runs a YOLO worker over the app's live stream, detecting COCO objects and POSTing bounding boxes to a callback URL.",
+    "category": "processor",
+    "configSchema": [
+      {
+        "key": "room",
+        "type": "string",
+        "label": "Room / stream",
+        "default": "",
+        "required": true,
+        "placeholder": "live",
+        "help": "HLS room name to analyze — /hls/<app>/<room>/index.m3u8."
+      },
+      {
+        "key": "model",
+        "type": "select",
+        "label": "Model size",
+        "default": "nano",
+        "options": [
+          {
+            "value": "nano",
+            "label": "Nano (fastest, CPU-friendly)"
+          },
+          {
+            "value": "small",
+            "label": "Small"
+          },
+          {
+            "value": "medium",
+            "label": "Medium"
+          },
+          {
+            "value": "large",
+            "label": "Large"
+          },
+          {
+            "value": "xlarge",
+            "label": "XLarge (most accurate, GPU)"
+          }
+        ]
+      },
+      {
+        "key": "cuda",
+        "type": "boolean",
+        "label": "Use CUDA (GPU)",
+        "default": false,
+        "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there."
+      },
+      {
+        "key": "callbackUrl",
+        "type": "string",
+        "label": "Callback URL",
+        "default": "",
+        "required": true,
+        "placeholder": "https://example.com/hooks/yolo",
+        "help": "POST {app, room, ts, detections:[{class,conf,bbox}]} per frame."
+      },
+      {
+        "key": "confidence",
+        "type": "number",
+        "label": "Confidence threshold",
+        "default": 0.35,
+        "min": 0,
+        "max": 1,
+        "help": "Minimum detection confidence (0–1)."
+      },
+      {
+        "key": "fps",
+        "type": "number",
+        "label": "Sample FPS",
+        "default": 2,
+        "min": 0.1,
+        "max": 30,
+        "help": "Frames per second to sample from the stream (lower = less CPU)."
+      },
+      {
+        "key": "classes",
+        "type": "string",
+        "label": "Classes filter",
+        "default": "",
+        "placeholder": "person,car,dog (empty = all 80 COCO classes)",
+        "help": "Comma-separated COCO class names to keep; empty detects all."
+      }
+    ],
+    "ui": "player-overlay",
+    "needsWorker": true,
+    "workerPlacement": "grid",
+    "edge": true,
+    "events": [],
+    "version": "1.0.0",
+    "kind": "app",
+    "storage": null,
+    "exportable": true,
+    "icon": "target"
+  }
+]

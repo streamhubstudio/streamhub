@@ -1,0 +1,447 @@
+{
+  "module": "cluster",
+  "description": "Cluster registry: join (validation → token gate → create/refresh, TLS secret gating), heartbeat (stats cap, operator-pinned status), manager list/info/patch/delete, join-master/leave error paths, node-role seed. File env STREAMHUB_CLUSTER_TOKEN (own server pair): the origin self-registers at boot.",
+  "env": {
+    "STREAMHUB_CLUSTER_TOKEN": "parity-cluster-token"
+  },
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "join-empty-body",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "body": {},
+      "note": "ValidationPipe runs before the token gate",
+      "expectStatus": 400
+    },
+    {
+      "name": "join-bad-fields",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "body": {
+        "name": "bad name!",
+        "ip": "300.1.1.1",
+        "region": 5,
+        "url": 7,
+        "type": "gpu"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "join-long-name",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "body": {
+        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+        "ip": "::1"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "join-no-token",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "body": {
+        "name": "parity-edge-1",
+        "ip": "203.0.113.10"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "join-wrong-token",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "nope"
+      },
+      "body": {
+        "name": "parity-edge-1",
+        "ip": "203.0.113.10"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "join-create",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "name": "parity-edge-1",
+        "ip": "203.0.113.10",
+        "region": "eu-central",
+        "type": "edge"
+      },
+      "capture": {
+        "edgeNode": "data.nodeId"
+      },
+      "note": "loopback client: secrets vended",
+      "expectStatus": 201
+    },
+    {
+      "name": "join-refresh",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "name": "parity-edge-1",
+        "ip": "203.0.113.10",
+        "url": "https://edge1.example.com",
+        "region": "eu-central"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "join-plaintext-withheld",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token",
+        "X-Forwarded-For": "198.51.100.7"
+      },
+      "body": {
+        "name": "parity-edge-2",
+        "ip": "2001:db8::2"
+      },
+      "capture": {
+        "edgeNode2": "data.nodeId"
+      },
+      "note": "non-loopback client over plaintext: apiSecret/redis withheld + hint",
+      "expectStatus": 201
+    },
+    {
+      "name": "join-forwarded-https",
+      "method": "POST",
+      "path": "/api/v1/cluster/join",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token",
+        "X-Forwarded-For": "198.51.100.7",
+        "X-Forwarded-Proto": "https"
+      },
+      "body": {
+        "name": "parity-edge-2",
+        "ip": "2001:db8::2"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "heartbeat-empty",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "body": {
+        "nodeId": "",
+        "stats": [
+          1
+        ]
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "heartbeat-no-token",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "body": {
+        "nodeId": "{{edgeNode}}"
+      },
+      "expectStatus": 401
+    },
+    {
+      "name": "heartbeat-unknown",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "nodeId": "ghost-node"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "heartbeat-stats",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "nodeId": "{{edgeNode}}",
+        "stats": {
+          "cpu": 0.25,
+          "mem": {
+            "used": 1.5,
+            "total": 8
+          },
+          "z": 1,
+          "a": [
+            1,
+            "x",
+            null
+          ],
+          "grid": {
+            "gpu": true,
+            "vramGb": 8,
+            "vramFreeMb": 4000,
+            "capabilities": [
+              "cuda"
+            ]
+          }
+        }
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "heartbeat-too-large",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "nodeId": "{{edgeNode}}",
+        "stats": {
+          "blob": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "expectStatus": 413
+    },
+    {
+      "name": "heartbeat-bare",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "nodeId": "{{edgeNode}}"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "nodes-no-auth",
+      "method": "GET",
+      "path": "/api/v1/cluster/nodes",
+      "expectStatus": 401
+    },
+    {
+      "name": "nodes-app-token",
+      "method": "GET",
+      "path": "/api/v1/cluster/nodes",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "nodes-viewer",
+      "method": "GET",
+      "path": "/api/v1/cluster/nodes",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "nodes-global",
+      "method": "GET",
+      "path": "/api/v1/cluster/nodes",
+      "auth": "globalToken",
+      "mask": [
+        "data.0.stats"
+      ],
+      "note": "data.0 = the origin self-row (live host stats masked)",
+      "expectStatus": 200
+    },
+    {
+      "name": "info-global",
+      "method": "GET",
+      "path": "/api/v1/cluster/info",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "info-app-token",
+      "method": "GET",
+      "path": "/api/v1/cluster/info",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "patch-bad",
+      "method": "PATCH",
+      "path": "/api/v1/cluster/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "name": "",
+        "region": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+        "status": "paused"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "patch-unknown",
+      "method": "PATCH",
+      "path": "/api/v1/cluster/nodes/ghost",
+      "auth": "globalToken",
+      "body": {
+        "status": "draining"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "patch-app-token",
+      "method": "PATCH",
+      "path": "/api/v1/cluster/nodes/{{edgeNode}}",
+      "auth": "appToken",
+      "body": {},
+      "expectStatus": 403
+    },
+    {
+      "name": "patch-drain",
+      "method": "PATCH",
+      "path": "/api/v1/cluster/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {
+        "status": "draining",
+        "region": "us-east"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "patch-empty",
+      "method": "PATCH",
+      "path": "/api/v1/cluster/nodes/{{edgeNode}}",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "heartbeat-keeps-drain",
+      "method": "POST",
+      "path": "/api/v1/cluster/heartbeat",
+      "headers": {
+        "X-Cluster-Token": "parity-cluster-token"
+      },
+      "body": {
+        "nodeId": "{{edgeNode}}"
+      },
+      "expectStatus": 200
+    },
+    {
+      "name": "nodes-after-drain",
+      "method": "GET",
+      "path": "/api/v1/cluster/nodes",
+      "auth": "globalToken",
+      "mask": [
+        "data.0.stats"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "delete-unknown",
+      "method": "DELETE",
+      "path": "/api/v1/cluster/nodes/ghost",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "delete-app-token",
+      "method": "DELETE",
+      "path": "/api/v1/cluster/nodes/{{edgeNode2}}",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "delete-edge2",
+      "method": "DELETE",
+      "path": "/api/v1/cluster/nodes/{{edgeNode2}}",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "join-master-invalid",
+      "method": "POST",
+      "path": "/api/v1/cluster/join-master",
+      "auth": "globalToken",
+      "body": {
+        "masterUrl": "ftp://x",
+        "clusterToken": "",
+        "nodeName": "a b",
+        "nodeIp": "1.2.3",
+        "region": 1,
+        "nodeUrl": 2
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "join-master-empty",
+      "method": "POST",
+      "path": "/api/v1/cluster/join-master",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 400
+    },
+    {
+      "name": "join-master-app-token",
+      "method": "POST",
+      "path": "/api/v1/cluster/join-master",
+      "auth": "appToken",
+      "body": {
+        "masterUrl": "http://127.0.0.1:9",
+        "clusterToken": "t",
+        "nodeName": "n"
+      },
+      "expectStatus": 403
+    },
+    {
+      "name": "join-master-unreachable",
+      "method": "POST",
+      "path": "/api/v1/cluster/join-master",
+      "auth": "globalToken",
+      "body": {
+        "masterUrl": "http://127.0.0.1:9/",
+        "clusterToken": "t",
+        "nodeName": "parity-n",
+        "nodeIp": "10.0.0.5"
+      },
+      "expectStatus": 502
+    },
+    {
+      "name": "leave-invalid",
+      "method": "POST",
+      "path": "/api/v1/cluster/leave",
+      "auth": "globalToken",
+      "body": {
+        "masterToken": 5
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "leave-app-token",
+      "method": "POST",
+      "path": "/api/v1/cluster/leave",
+      "auth": "appToken",
+      "body": {},
+      "expectStatus": 403
+    },
+    {
+      "name": "leave-no-linkage",
+      "method": "POST",
+      "path": "/api/v1/cluster/leave",
+      "auth": "globalToken",
+      "body": {},
+      "expectStatus": 200
+    },
+    {
+      "name": "auth-config-role",
+      "method": "GET",
+      "path": "/api/v1/auth/config",
+      "note": "nodeRole seeded standalone",
+      "expectStatus": 200
+    }
+  ]
+}

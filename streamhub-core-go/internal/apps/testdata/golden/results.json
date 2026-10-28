@@ -1,0 +1,5974 @@
+[
+  {
+    "step": 0,
+    "op": "create",
+    "result": {
+      "id": 1,
+      "name": "gold-a",
+      "displayName": "Gold A",
+      "livekitRoomPrefix": "gold-room",
+      "createdAt": "2026-10-27 19:58:27",
+      "updatedAt": "2026-10-27 19:58:27",
+      "settingsJson": null
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A",
+      "roomPrefix": "gold-room",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-a",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 1,
+    "op": "create",
+    "result": {
+      "id": 2,
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "livekitRoomPrefix": "gold-b",
+      "createdAt": "2026-10-27 19:58:27",
+      "updatedAt": "2026-10-27 19:58:27",
+      "settingsJson": null
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 2,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "Europe/Madrid",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "top",
+            "height": 1080
+          },
+          {
+            "name": "base",
+            "height": 360
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "Europe/Madrid",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "top",
+            "height": 1080
+          },
+          {
+            "name": "base",
+            "height": 360
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 3,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "Europe/Madrid",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [
+          {
+            "name": "top",
+            "height": 1080
+          },
+          {
+            "name": "base",
+            "height": 360
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": true
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "Europe/Madrid",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [
+          {
+            "name": "top",
+            "height": 1080
+          },
+          {
+            "name": "base",
+            "height": 360
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": true
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 4,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 5,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-a",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 6,
+    "op": "setS3",
+    "result": {
+      "provider": "aws",
+      "bucket": "b1",
+      "region": "eu-west-1",
+      "endpoint": "",
+      "forcePathStyle": false,
+      "prefix": "x/y",
+      "public_url": "",
+      "accessKeyEnv": "APP_GOLD_A_S3_KEY",
+      "secretKeyEnv": "APP_GOLD_A_S3_SECRET",
+      "key": "AK***67",
+      "secret": "s3***ue",
+      "configured": true,
+      "keyMasked": "AK***67",
+      "secretMasked": "s3***ue",
+      "hasKey": true,
+      "hasSecret": true,
+      "publicVods": false,
+      "publicWarning": null
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "forcePathStyle": false,
+        "prefix": "x/y",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 7,
+    "op": "setS3",
+    "result": {
+      "$error": "enabling public_url makes recordings publicly accessible; resend with confirmPublic=true to proceed"
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "forcePathStyle": false,
+        "prefix": "x/y",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 8,
+    "op": "setS3",
+    "result": {
+      "provider": "aws",
+      "bucket": "b1",
+      "region": "eu-west-1",
+      "endpoint": "https://minio.example.com",
+      "forcePathStyle": true,
+      "prefix": "x/y",
+      "public_url": "https://cdn.example.com",
+      "accessKeyEnv": "APP_GOLD_A_S3_KEY",
+      "secretKeyEnv": "APP_GOLD_A_S3_SECRET",
+      "key": "AK***67",
+      "secret": "s3***ue",
+      "configured": true,
+      "keyMasked": "AK***67",
+      "secretMasked": "s3***ue",
+      "hasKey": true,
+      "hasSecret": true,
+      "publicVods": true,
+      "publicWarning": "VODs públicos: con public_url activo las grabaciones quedan accesibles sin firma. Preferí una URL firmada de CDN sobre un bucket abierto."
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 9,
+    "op": "getS3",
+    "result": {
+      "provider": "aws",
+      "bucket": "b1",
+      "region": "eu-west-1",
+      "endpoint": "https://minio.example.com",
+      "forcePathStyle": true,
+      "prefix": "x/y",
+      "public_url": "https://cdn.example.com",
+      "accessKeyEnv": "APP_GOLD_A_S3_KEY",
+      "secretKeyEnv": "APP_GOLD_A_S3_SECRET",
+      "key": "AK***67",
+      "secret": "s3***ue",
+      "configured": true,
+      "keyMasked": "AK***67",
+      "secretMasked": "s3***ue",
+      "hasKey": true,
+      "hasSecret": true,
+      "publicVods": true,
+      "publicWarning": "VODs públicos: con public_url activo las grabaciones quedan accesibles sin firma. Preferí una URL firmada de CDN sobre un bucket abierto."
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 1,
+        "tls": false,
+        "events": [
+          "stream_started",
+          "vod_ready"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "debug"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 500,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 10,
+    "op": "setMqtt",
+    "result": {
+      "enabled": true,
+      "url": "mqtt://10.1.1.1:1883",
+      "username": "",
+      "topicPrefix": "site/a",
+      "qos": 2,
+      "tls": true,
+      "events": [
+        "all"
+      ],
+      "logs": {
+        "enabled": true,
+        "level": "warn"
+      },
+      "passwordEnv": "APP_GOLD_A_MQTT_PASSWORD",
+      "password": "mq***ss",
+      "hasPassword": true,
+      "configured": true,
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 11,
+    "op": "getMqtt",
+    "result": {
+      "enabled": true,
+      "url": "mqtt://10.1.1.1:1883",
+      "username": "",
+      "topicPrefix": "site/a",
+      "qos": 2,
+      "tls": true,
+      "events": [
+        "all"
+      ],
+      "logs": {
+        "enabled": true,
+        "level": "warn"
+      },
+      "passwordEnv": "APP_GOLD_A_MQTT_PASSWORD",
+      "password": "mq***ss",
+      "hasPassword": true,
+      "configured": true,
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      }
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 12,
+    "op": "setSmtp",
+    "result": {
+      "enabled": true,
+      "host": "smtp.example.com",
+      "port": 2525,
+      "user": "u",
+      "from": "A <a@b.c>",
+      "passEnv": "APP_GOLD_A_SMTP_PASS",
+      "pass": "****",
+      "hasPass": true,
+      "configured": true
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 2525,
+        "user": "u",
+        "from": "A <a@b.c>",
+        "pass": "pw"
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 13,
+    "op": "setSmtp",
+    "result": {
+      "enabled": true,
+      "host": "smtp.example.com",
+      "port": 587,
+      "user": "u",
+      "from": "A <a@b.c>",
+      "passEnv": "APP_GOLD_A_SMTP_PASS",
+      "pass": "****",
+      "hasPass": true,
+      "configured": true
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "u",
+        "from": "A <a@b.c>",
+        "pass": "pw"
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 14,
+    "op": "getSmtp",
+    "result": {
+      "enabled": true,
+      "host": "smtp.example.com",
+      "port": 587,
+      "user": "u",
+      "from": "A <a@b.c>",
+      "passEnv": "APP_GOLD_A_SMTP_PASS",
+      "pass": "****",
+      "hasPass": true,
+      "configured": true
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "u",
+        "from": "A <a@b.c>",
+        "pass": "pw"
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 15,
+    "op": "putRawConfig",
+    "result": {
+      "reloaded": true,
+      "warnings": [
+        "smtp.pass in the yaml is ignored; use PUT /apps/:app/smtp to set the SMTP password",
+        "room_prefix missing; defaulting to the app name on reload"
+      ]
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 15,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 360
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "quotas": {
+        "maxConcurrentStreams": 4,
+        "maxViewersPerStream": -1
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": true,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "7": "seven",
+        "zeta": "1",
+        "alpha": "a,b"
+      }
+    }
+  },
+  {
+    "step": 16,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 15,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 360
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "quotas": {
+        "maxConcurrentStreams": 4,
+        "maxViewersPerStream": -1
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": true,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "7": "seven",
+        "zeta": "1",
+        "alpha": "a,b"
+      }
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 15,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 360
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "quotas": {
+        "maxConcurrentStreams": 4,
+        "maxViewersPerStream": -1
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": true,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "7": "seven",
+        "zeta": "1",
+        "alpha": "a,b"
+      }
+    }
+  },
+  {
+    "step": 17,
+    "op": "putRawConfig",
+    "result": {
+      "reloaded": true,
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "gold-b",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 18,
+    "op": "updateConfig",
+    "result": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 19,
+    "op": "applyConfigPreset",
+    "result": {
+      "preset": "low-latency",
+      "applied": true,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n    enabled: true\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n    adaptive: true\n    layers:\n      - name: high\n        height: 720\n      - name: med\n        height: 480\n      - name: low\n        height: 240\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n    transcode: false\n    passthrough: false\n  transcoding:\n    enabled: false\n    encoding: h264\n    vod_adaptive: false\n    vod_renditions: []\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n    adaptive_player: true\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n+ distribution:\n+   mode: edge\n+ hls:\n+   segment_seconds: 2\n+   list_size: 3\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 720
+          },
+          {
+            "name": "med",
+            "height": 480
+          },
+          {
+            "name": "low",
+            "height": 240
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 20,
+    "op": "applyConfigPreset",
+    "result": {
+      "preset": "high-quality-recording",
+      "applied": true,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n    enabled: true\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n    adaptive: true\n    layers:\n      - name: high\n-       height: 720\n+       height: 1080\n      - name: med\n-       height: 480\n+       height: 720\n      - name: low\n-       height: 240\n+       height: 480\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n-   transcode: false\n+   transcode: true\n    passthrough: false\n  transcoding:\n-   enabled: false\n+   enabled: true\n    encoding: h264\n-   vod_adaptive: false\n-   vod_renditions: []\n+   vod_adaptive: true\n+   vod_renditions:\n+     - height: 1080\n+       bitrate_kbps: 5000\n+     - height: 720\n+       bitrate_kbps: 2800\n+     - height: 480\n+       bitrate_kbps: 1400\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n    adaptive_player: true\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n  distribution:\n    mode: edge\n  hls:\n    segment_seconds: 2\n    list_size: 3\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 720,
+            "bitrateKbps": 2800
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 21,
+    "op": "listConfigPresets",
+    "result": [
+      {
+        "name": "low-latency",
+        "title": "Baja latencia (WebRTC-first)",
+        "description": "Reproducción interactiva sub-segundo: passthrough puro (sin re-encode), simulcast ON, distribución por edges. Ideal CCTV, subastas, 1:1. El playout delay bajo se aplica desde el SDK/player, no desde el yaml (ver LATENCY-TUNING L3).",
+        "useCase": "CCTV, monitoreo, subastas, telemedicina/soporte, live-shopping interactivo",
+        "sets": [
+          "transcoding.enabled = false (passthrough puro, sin re-encode en el server)",
+          "webrtc.adaptive = true (simulcast ON — es MEJOR para latencia, LATENCY-TUNING)",
+          "rtmp.transcode = false (ingress passthrough)",
+          "features.adaptive_player = true",
+          "distribution.mode = edge (WebRTC-first, sin indirección de CDN)",
+          "hls: segmentos cortos (2s / list 3) por si se usa HLS puntual"
+        ],
+        "applied": false
+      },
+      {
+        "name": "high-quality-recording",
+        "title": "Grabación de alta calidad",
+        "description": "Transcoding ON con ladder, grabación H.264 (opcional h264+vp8) y VOD adaptativo (HLS master + renditions). Prioriza calidad y compatibilidad del archivo sobre latencia.",
+        "useCase": "Eventos grabados, clases, VOD premium, archivo/QC",
+        "sets": [
+          "transcoding.enabled = true (re-encode server-side)",
+          "transcoding.encoding = h264 (cambiar a h264+vp8 para alternativa WebM/VP8)",
+          "transcoding.vod_adaptive = true (HLS VOD adaptativo por grabación)",
+          "transcoding.vod_renditions = 1080/720/480 (ladder explícito)",
+          "recording.enabled = true, mode = room-composite",
+          "rtmp.transcode = true, webrtc.adaptive = true (+ layers 1080/720/480)"
+        ],
+        "applied": true
+      },
+      {
+        "name": "mass-audience-HLS",
+        "title": "Audiencia masiva (HLS + CDN)",
+        "description": "HLS con segmentos/list optimizados detrás de un CDN (distribution.mode cdn) + ladder transcodificado, para miles/cientos de miles de espectadores. Latencia 6–15s a cambio de escala barata y cacheable (ver DISTRIBUTION-CDN-P2P).",
+        "useCase": "Eventos masivos, streams públicos, radio/audio 24/7, webinars grandes",
+        "sets": [
+          "transcoding.enabled = true + vod_adaptive = true (ladder 720/480/360)",
+          "webrtc.adaptive = true, features.adaptive_player = true",
+          "recording.enabled = true",
+          "distribution.mode = cdn (+ cdn.base_url a completar con el dominio del CDN)",
+          "hls: segment_seconds = 4, list_size = 10 (ventana optimizada del m3u8)"
+        ],
+        "applied": false
+      },
+      {
+        "name": "rtmp-passthrough",
+        "title": "RTMP passthrough (remux, sin transcode)",
+        "description": "Ingesta RTMP H.264/AAC servida como HLS por REMUX puro (`ffmpeg -c copy`), sin pasar por LiveKit: CPU casi nula, sin GPU (estilo AntMedia). MUTUAMENTE EXCLUYENTE con transcoding/adaptive — este preset apaga todo re-encode. La fuente DEBE ser H.264/AAC (sin red de seguridad de transcode) y no hay WebRTC/sub-segundo, ABR, grabación ni features de sala. Requiere STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on en el server.",
+        "useCase": "Relay RTMP→HLS barato y masivo, cámaras/encoders H.264/AAC ya conformes",
+        "sets": [
+          "rtmp.passthrough = true (remux directo a HLS, sin re-encode)",
+          "rtmp.transcode = false, transcoding.enabled = false (sin transcode)",
+          "webrtc.adaptive = false, features.adaptive_player = false (sin ABR/WebRTC)",
+          "recording.enabled = false (sin egress/VOD para passthrough)"
+        ],
+        "applied": false
+      }
+    ],
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 720,
+            "bitrateKbps": 2800
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 22,
+    "op": "applyConfigPreset",
+    "result": {
+      "preset": "mass-audience-HLS",
+      "applied": true,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n    enabled: true\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n    adaptive: true\n    layers:\n      - name: high\n        height: 1080\n      - name: med\n        height: 720\n      - name: low\n        height: 480\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n    transcode: true\n    passthrough: false\n  transcoding:\n    enabled: true\n    encoding: h264\n    vod_adaptive: true\n    vod_renditions:\n-     - height: 1080\n-       bitrate_kbps: 5000\n      - height: 720\n        bitrate_kbps: 2800\n      - height: 480\n        bitrate_kbps: 1400\n+     - height: 360\n+       bitrate_kbps: 800\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n    adaptive_player: true\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n  distribution:\n-   mode: edge\n+   mode: cdn\n+   cdn:\n+     base_url: ''\n+     vod_base_url: ''\n+     provider: bunny\n  hls:\n-   segment_seconds: 2\n-   list_size: 3\n+   segment_seconds: 4\n+   list_size: 10\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 720,
+            "bitrateKbps": 2800
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          },
+          {
+            "height": 360,
+            "bitrateKbps": 800
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 23,
+    "op": "deactivateConfigPreset",
+    "result": {
+      "preset": "mass-audience-HLS",
+      "applied": false,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n    enabled: true\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n    adaptive: true\n    layers:\n      - name: high\n        height: 1080\n      - name: med\n        height: 720\n      - name: low\n        height: 480\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n    transcode: true\n    passthrough: false\n  transcoding:\n-   enabled: true\n+   enabled: false\n    encoding: h264\n-   vod_adaptive: true\n-   vod_renditions:\n-     - height: 720\n-       bitrate_kbps: 2800\n-     - height: 480\n-       bitrate_kbps: 1400\n-     - height: 360\n-       bitrate_kbps: 800\n+   vod_adaptive: false\n+   vod_renditions: []\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n    adaptive_player: true\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n- distribution:\n-   mode: cdn\n-   cdn:\n-     base_url: ''\n-     vod_base_url: ''\n-     provider: bunny\n- hls:\n-   segment_seconds: 4\n-   list_size: 10\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 24,
+    "op": "applyConfigPreset",
+    "result": {
+      "preset": "rtmp-passthrough",
+      "applied": true,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n-   enabled: true\n+   enabled: false\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n-   adaptive: true\n+   adaptive: false\n    layers:\n      - name: high\n        height: 1080\n      - name: med\n        height: 720\n      - name: low\n        height: 480\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n-   transcode: true\n-   passthrough: false\n+   transcode: false\n+   passthrough: true\n  transcoding:\n    enabled: false\n    encoding: h264\n    vod_adaptive: false\n    vod_renditions: []\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n-   adaptive_player: true\n+   adaptive_player: false\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": false,
+        "passthrough": true
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": false,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 25,
+    "op": "deactivateConfigPreset",
+    "result": {
+      "preset": "rtmp-passthrough",
+      "applied": false,
+      "reloaded": true,
+      "changed": true,
+      "diff": "  text: |\n    multi\n    line\n  long: >-\n    lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n    aliqua ut enim ad minim\n  name: gold-b\n  display_name: B\n  room_prefix: gold-b\n  timezone: ''\n  recording:\n-   enabled: false\n+   enabled: true\n    mode: room-composite\n    layout: grid\n    local_dir: recordings\n    delete_local_after_upload: true\n    split_minutes: 0\n    snapshot_seconds: 0\n    filename_template: ''\n    snapshot_template: ''\n    retention_days: 0\n  s3:\n    provider: wasabi\n    bucket: ''\n    region: us-east-1\n    endpoint: https://s3.us-east-1.wasabisys.com\n    force_path_style: false\n    prefix: streamhub/gold-b\n    public_url: ''\n    access_key_env: APP_GOLD_B_S3_KEY\n    secret_key_env: APP_GOLD_B_S3_SECRET\n  webrtc:\n-   adaptive: false\n+   adaptive: true\n    layers:\n      - name: high\n        height: 1080\n      - name: med\n        height: 720\n      - name: low\n        height: 480\n    transcode_max_height: 720\n  rtmp:\n    enabled: true\n-   transcode: false\n-   passthrough: true\n+   transcode: true\n+   passthrough: false\n  transcoding:\n    enabled: false\n    encoding: h264\n    vod_adaptive: false\n    vod_renditions: []\n  callbacks:\n    url: ''\n    secret: ''\n  mqtt:\n    enabled: false\n    url: ''\n    username: ''\n    password_env: APP_GOLD_B_MQTT_PASSWORD\n    topic_prefix: streamhub/gold-b\n    qos: 0\n    tls: false\n    events:\n      - all\n    logs:\n      enabled: false\n      level: info\n  latency_alert:\n    enabled: false\n    threshold_ms: 1000\n    cooldown_seconds: 60\n    interval_seconds: 10\n  smtp:\n    enabled: false\n    host: ''\n    port: 587\n    user: ''\n    from: ''\n    pass_env: APP_GOLD_B_SMTP_PASS\n  features:\n    rtmp_password: false\n    viewer_counter: true\n    chat: false\n    reactions: false\n    hidden_qc: true\n-   adaptive_player: false\n+   adaptive_player: true\n    public_playback: true\n    linear:\n      persistent_room: false\n      room_empty_timeout_seconds: 86400\n      always_on_hls: false\n      dvr: false\n      dvr_window_seconds: 3600\n  variables: {}\n  ",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 26,
+    "op": "deactivateConfigPreset",
+    "result": {
+      "preset": "low-latency",
+      "applied": false,
+      "reloaded": true,
+      "changed": false,
+      "diff": "",
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 27,
+    "op": "listConfigPresets",
+    "result": [
+      {
+        "name": "low-latency",
+        "title": "Baja latencia (WebRTC-first)",
+        "description": "Reproducción interactiva sub-segundo: passthrough puro (sin re-encode), simulcast ON, distribución por edges. Ideal CCTV, subastas, 1:1. El playout delay bajo se aplica desde el SDK/player, no desde el yaml (ver LATENCY-TUNING L3).",
+        "useCase": "CCTV, monitoreo, subastas, telemedicina/soporte, live-shopping interactivo",
+        "sets": [
+          "transcoding.enabled = false (passthrough puro, sin re-encode en el server)",
+          "webrtc.adaptive = true (simulcast ON — es MEJOR para latencia, LATENCY-TUNING)",
+          "rtmp.transcode = false (ingress passthrough)",
+          "features.adaptive_player = true",
+          "distribution.mode = edge (WebRTC-first, sin indirección de CDN)",
+          "hls: segmentos cortos (2s / list 3) por si se usa HLS puntual"
+        ],
+        "applied": false
+      },
+      {
+        "name": "high-quality-recording",
+        "title": "Grabación de alta calidad",
+        "description": "Transcoding ON con ladder, grabación H.264 (opcional h264+vp8) y VOD adaptativo (HLS master + renditions). Prioriza calidad y compatibilidad del archivo sobre latencia.",
+        "useCase": "Eventos grabados, clases, VOD premium, archivo/QC",
+        "sets": [
+          "transcoding.enabled = true (re-encode server-side)",
+          "transcoding.encoding = h264 (cambiar a h264+vp8 para alternativa WebM/VP8)",
+          "transcoding.vod_adaptive = true (HLS VOD adaptativo por grabación)",
+          "transcoding.vod_renditions = 1080/720/480 (ladder explícito)",
+          "recording.enabled = true, mode = room-composite",
+          "rtmp.transcode = true, webrtc.adaptive = true (+ layers 1080/720/480)"
+        ],
+        "applied": false
+      },
+      {
+        "name": "mass-audience-HLS",
+        "title": "Audiencia masiva (HLS + CDN)",
+        "description": "HLS con segmentos/list optimizados detrás de un CDN (distribution.mode cdn) + ladder transcodificado, para miles/cientos de miles de espectadores. Latencia 6–15s a cambio de escala barata y cacheable (ver DISTRIBUTION-CDN-P2P).",
+        "useCase": "Eventos masivos, streams públicos, radio/audio 24/7, webinars grandes",
+        "sets": [
+          "transcoding.enabled = true + vod_adaptive = true (ladder 720/480/360)",
+          "webrtc.adaptive = true, features.adaptive_player = true",
+          "recording.enabled = true",
+          "distribution.mode = cdn (+ cdn.base_url a completar con el dominio del CDN)",
+          "hls: segment_seconds = 4, list_size = 10 (ventana optimizada del m3u8)"
+        ],
+        "applied": false
+      },
+      {
+        "name": "rtmp-passthrough",
+        "title": "RTMP passthrough (remux, sin transcode)",
+        "description": "Ingesta RTMP H.264/AAC servida como HLS por REMUX puro (`ffmpeg -c copy`), sin pasar por LiveKit: CPU casi nula, sin GPU (estilo AntMedia). MUTUAMENTE EXCLUYENTE con transcoding/adaptive — este preset apaga todo re-encode. La fuente DEBE ser H.264/AAC (sin red de seguridad de transcode) y no hay WebRTC/sub-segundo, ABR, grabación ni features de sala. Requiere STREAMHUB_RTMP_PASSTHROUGH_ENABLE=on en el server.",
+        "useCase": "Relay RTMP→HLS barato y masivo, cámaras/encoders H.264/AAC ya conformes",
+        "sets": [
+          "rtmp.passthrough = true (remux directo a HLS, sin re-encode)",
+          "rtmp.transcode = false, transcoding.enabled = false (sin transcode)",
+          "webrtc.adaptive = false, features.adaptive_player = false (sin ABR/WebRTC)",
+          "recording.enabled = false (sin egress/VOD para passthrough)"
+        ],
+        "applied": false
+      }
+    ],
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 28,
+    "op": "dryRunRawConfig",
+    "result": {
+      "valid": true,
+      "warnings": [],
+      "error": null,
+      "diff": "- text: |\n-   multi\n-   line\n- long: >-\n-   lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n-   aliqua ut enim ad minim\n  name: gold-b\n- display_name: B\n- room_prefix: gold-b\n- timezone: ''\n- recording:\n-   enabled: true\n-   mode: room-composite\n-   layout: grid\n-   local_dir: recordings\n-   delete_local_after_upload: true\n-   split_minutes: 0\n-   snapshot_seconds: 0\n-   filename_template: ''\n-   snapshot_template: ''\n-   retention_days: 0\n- s3:\n-   provider: wasabi\n-   bucket: ''\n-   region: us-east-1\n-   endpoint: https://s3.us-east-1.wasabisys.com\n-   force_path_style: false\n-   prefix: streamhub/gold-b\n-   public_url: ''\n-   access_key_env: APP_GOLD_B_S3_KEY\n-   secret_key_env: APP_GOLD_B_S3_SECRET\n- webrtc:\n-   adaptive: true\n-   layers:\n-     - name: high\n-       height: 1080\n-     - name: med\n-       height: 720\n-     - name: low\n-       height: 480\n-   transcode_max_height: 720\n- rtmp:\n-   enabled: true\n-   transcode: true\n-   passthrough: false\n- transcoding:\n-   enabled: false\n-   encoding: h264\n-   vod_adaptive: false\n-   vod_renditions: []\n- callbacks:\n-   url: ''\n-   secret: ''\n- mqtt:\n-   enabled: false\n-   url: ''\n-   username: ''\n-   password_env: APP_GOLD_B_MQTT_PASSWORD\n-   topic_prefix: streamhub/gold-b\n-   qos: 0\n-   tls: false\n-   events:\n-     - all\n-   logs:\n-     enabled: false\n-     level: info\n- latency_alert:\n-   enabled: false\n-   threshold_ms: 1000\n-   cooldown_seconds: 60\n-   interval_seconds: 10\n- smtp:\n-   enabled: false\n-   host: ''\n-   port: 587\n-   user: ''\n-   from: ''\n-   pass_env: APP_GOLD_B_SMTP_PASS\n- features:\n-   rtmp_password: false\n-   viewer_counter: true\n-   chat: false\n-   reactions: false\n-   hidden_qc: true\n-   adaptive_player: true\n-   public_playback: true\n-   linear:\n-     persistent_room: false\n-     room_empty_timeout_seconds: 86400\n-     always_on_hls: false\n-     dvr: false\n-     dvr_window_seconds: 3600\n- variables: {}\n+ room_prefix: changed\n  ",
+      "changed": true
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 29,
+    "op": "dryRunRawConfig",
+    "result": {
+      "valid": false,
+      "warnings": [],
+      "error": "config \"name\" (\"nope\") must match the app name \"gold-b\"",
+      "diff": "- text: |\n-   multi\n-   line\n- long: >-\n-   lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna\n-   aliqua ut enim ad minim\n- name: gold-b\n- display_name: B\n- room_prefix: gold-b\n- timezone: ''\n- recording:\n-   enabled: true\n-   mode: room-composite\n-   layout: grid\n-   local_dir: recordings\n-   delete_local_after_upload: true\n-   split_minutes: 0\n-   snapshot_seconds: 0\n-   filename_template: ''\n-   snapshot_template: ''\n-   retention_days: 0\n- s3:\n-   provider: wasabi\n-   bucket: ''\n-   region: us-east-1\n-   endpoint: https://s3.us-east-1.wasabisys.com\n-   force_path_style: false\n-   prefix: streamhub/gold-b\n-   public_url: ''\n-   access_key_env: APP_GOLD_B_S3_KEY\n-   secret_key_env: APP_GOLD_B_S3_SECRET\n- webrtc:\n-   adaptive: true\n-   layers:\n-     - name: high\n-       height: 1080\n-     - name: med\n-       height: 720\n-     - name: low\n-       height: 480\n-   transcode_max_height: 720\n- rtmp:\n-   enabled: true\n-   transcode: true\n-   passthrough: false\n- transcoding:\n-   enabled: false\n-   encoding: h264\n-   vod_adaptive: false\n-   vod_renditions: []\n- callbacks:\n-   url: ''\n-   secret: ''\n- mqtt:\n-   enabled: false\n-   url: ''\n-   username: ''\n-   password_env: APP_GOLD_B_MQTT_PASSWORD\n-   topic_prefix: streamhub/gold-b\n-   qos: 0\n-   tls: false\n-   events:\n-     - all\n-   logs:\n-     enabled: false\n-     level: info\n- latency_alert:\n-   enabled: false\n-   threshold_ms: 1000\n-   cooldown_seconds: 60\n-   interval_seconds: 10\n- smtp:\n-   enabled: false\n-   host: ''\n-   port: 587\n-   user: ''\n-   from: ''\n-   pass_env: APP_GOLD_B_SMTP_PASS\n- features:\n-   rtmp_password: false\n-   viewer_counter: true\n-   chat: false\n-   reactions: false\n-   hidden_qc: true\n-   adaptive_player: true\n-   public_playback: true\n-   linear:\n-     persistent_room: false\n-     room_empty_timeout_seconds: 86400\n-     always_on_hls: false\n-     dvr: false\n-     dvr_window_seconds: 3600\n- variables: {}\n+ name: nope\n  ",
+      "changed": true
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 30,
+    "op": "reload",
+    "result": {
+      "reloaded": true,
+      "warnings": []
+    },
+    "resolved": {
+      "name": "gold-b",
+      "displayName": "B",
+      "roomPrefix": "gold-b",
+      "timezone": "",
+      "recording": {
+        "enabled": true,
+        "mode": "room-composite",
+        "layout": "grid",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 0,
+        "snapshotSeconds": 0,
+        "filenameTemplate": "",
+        "snapshotTemplate": "",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "wasabi",
+        "bucket": "",
+        "region": "us-east-1",
+        "endpoint": "https://s3.us-east-1.wasabisys.com",
+        "forcePathStyle": false,
+        "prefix": "streamhub/gold-b",
+        "accessKey": "",
+        "secretKey": ""
+      },
+      "webrtc": {
+        "adaptive": true,
+        "layers": [
+          {
+            "name": "high",
+            "height": 1080
+          },
+          {
+            "name": "med",
+            "height": 720
+          },
+          {
+            "name": "low",
+            "height": 480
+          }
+        ],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": false,
+        "encoding": "h264",
+        "vodAdaptive": false,
+        "vodRenditions": []
+      },
+      "callbacks": {
+        "url": "",
+        "secret": ""
+      },
+      "mqtt": {
+        "enabled": false,
+        "url": "",
+        "username": "",
+        "password": "",
+        "topicPrefix": "streamhub/gold-b",
+        "qos": 0,
+        "tls": false,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": false,
+          "level": "info"
+        }
+      },
+      "smtp": {
+        "enabled": false,
+        "host": "",
+        "port": 587,
+        "user": "",
+        "from": "",
+        "pass": ""
+      },
+      "latencyAlert": {
+        "enabled": false,
+        "thresholdMs": 1000,
+        "cooldownSeconds": 60,
+        "intervalSeconds": 10
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": false,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": true,
+        "wsIngest": {
+          "enabled": true,
+          "maxCameras": 0,
+          "maxFps": 15,
+          "maxFrameKb": 256,
+          "maxDataBytes": 16384,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": false,
+          "provider": "none",
+          "systems": [
+            "widevine",
+            "playready",
+            "fairplay"
+          ],
+          "scheme": "cbcs",
+          "keyServerUrl": "",
+          "keyServerTokenEnv": "",
+          "licenseUrls": {
+            "widevine": "",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": false
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {}
+    }
+  },
+  {
+    "step": 31,
+    "op": "updateConfig",
+    "result": {
+      "$error": "callback URL points at a private/loopback/link-local address"
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "u",
+        "from": "A <a@b.c>",
+        "pass": "pw"
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 32,
+    "op": "applyConfigPreset",
+    "result": {
+      "$error": "preset \"nope\" not found"
+    },
+    "resolved": {
+      "name": "gold-a",
+      "displayName": "Gold A: patched #1",
+      "roomPrefix": "gold-prefix",
+      "timezone": "",
+      "recording": {
+        "enabled": false,
+        "mode": "participant",
+        "layout": "speaker",
+        "localDir": "recordings",
+        "deleteLocalAfterUpload": true,
+        "splitMinutes": 30,
+        "snapshotSeconds": 60,
+        "filenameTemplate": "${app}_${room}_${date:yyyyMMdd-HHmmss}",
+        "snapshotTemplate": "- snap",
+        "retentionDays": 0
+      },
+      "s3": {
+        "provider": "aws",
+        "bucket": "b1",
+        "region": "eu-west-1",
+        "endpoint": "https://minio.example.com",
+        "forcePathStyle": true,
+        "prefix": "x/y",
+        "publicUrl": "https://cdn.example.com",
+        "accessKey": "AKIA1234567",
+        "secretKey": "s3cr3t-value"
+      },
+      "webrtc": {
+        "adaptive": false,
+        "layers": [],
+        "transcodeMaxHeight": 720
+      },
+      "rtmp": {
+        "enabled": true,
+        "transcode": true,
+        "passthrough": false
+      },
+      "transcoding": {
+        "enabled": true,
+        "encoding": "h264+vp8",
+        "vodAdaptive": true,
+        "vodRenditions": [
+          {
+            "height": 1080,
+            "bitrateKbps": 5000
+          },
+          {
+            "height": 480,
+            "bitrateKbps": 1400
+          }
+        ]
+      },
+      "callbacks": {
+        "url": "https://93.184.216.34/hook",
+        "secret": "cb: secret"
+      },
+      "mqtt": {
+        "enabled": true,
+        "url": "mqtt://10.1.1.1:1883",
+        "username": "",
+        "password": "mq-pass",
+        "topicPrefix": "site/a",
+        "qos": 2,
+        "tls": true,
+        "events": [
+          "all"
+        ],
+        "logs": {
+          "enabled": true,
+          "level": "warn"
+        }
+      },
+      "smtp": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "u",
+        "from": "A <a@b.c>",
+        "pass": "pw"
+      },
+      "latencyAlert": {
+        "enabled": true,
+        "thresholdMs": 1.5,
+        "cooldownSeconds": 0,
+        "intervalSeconds": 5
+      },
+      "features": {
+        "rtmpPassword": false,
+        "viewerCounter": true,
+        "chat": true,
+        "reactions": false,
+        "hiddenQc": true,
+        "adaptivePlayer": true,
+        "publicPlayback": false,
+        "wsIngest": {
+          "enabled": false,
+          "maxCameras": 4,
+          "maxFps": 10,
+          "maxFrameKb": 128,
+          "maxDataBytes": 2048,
+          "maxDataPerSec": 5
+        },
+        "drm": {
+          "enabled": true,
+          "provider": "external",
+          "systems": [
+            "playready",
+            "widevine"
+          ],
+          "scheme": "cenc",
+          "keyServerUrl": "https://keys.example.com",
+          "keyServerTokenEnv": "DRM_TOKEN",
+          "licenseUrls": {
+            "widevine": "https://wv",
+            "playready": "",
+            "fairplay": ""
+          },
+          "fairplayCertUrl": "",
+          "failOpen": true
+        },
+        "linear": {
+          "persistentRoom": false,
+          "roomEmptyTimeoutSeconds": 86400,
+          "alwaysOnHls": false,
+          "dvr": false,
+          "dvrWindowSeconds": 3600
+        }
+      },
+      "variables": {
+        "1": "one",
+        "2": "two",
+        "site": "HQ: north",
+        "n": "5",
+        "t": "true",
+        "obj": "[object Object]",
+        "arr": "1,b,",
+        "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+      }
+    }
+  },
+  {
+    "step": 33,
+    "op": "updateConfig",
+    "result": {
+      "$error": "app \"missing\" not found"
+    },
+    "resolved": null
+  }
+]

@@ -137,12 +137,12 @@ function useAgentDetail(app: string, agentId: string | null): {
 function StatusBadge({ online }: { online: boolean }) {
   const { t } = useTranslation('fleet')
   return online ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
       <span className="h-2 w-2 rounded-full bg-emerald-500" />
       {t('status.online')}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-200 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-gray-700 text-gray-300">
       <span className="h-2 w-2 rounded-full bg-gray-400" />
       {t('status.offline')}
     </span>
@@ -203,7 +203,7 @@ function AgentCard({
       className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition ${
         selected
           ? 'border-emerald-500 ring-1 ring-emerald-500/40'
-          : 'border-gray-200 hover:border-emerald-400 dark:border-gray-700'
+          : 'border-gray-700 hover:border-emerald-400'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -212,7 +212,7 @@ function AgentCard({
         </span>
         <StatusBadge online={agent.online} />
       </div>
-      <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+      <div className="flex items-center justify-between text-[11px] text-gray-400">
         <span>{agent.version ? `v${agent.version}` : t('agent.noVersion')}</span>
         <span>{t('agent.seen', { age: formatAge(agent.ageMs) })}</span>
       </div>
@@ -226,6 +226,9 @@ function AgentCard({
           value={agent.metrics.cameras == null ? '—' : String(agent.metrics.cameras)}
         />
         <Metric label={t('metric.disk')} value={formatPercent(agent.metrics.disk)} />
+        {agent.metrics.battery != null && (
+          <Metric label={t('metric.battery')} value={formatPercent(agent.metrics.battery)} />
+        )}
       </div>
     </button>
   )
@@ -306,7 +309,7 @@ function CommandPanel({
           type="button"
           disabled={busy !== null}
           onClick={() => void send('ping')}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-emerald-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:border-emerald-500 disabled:opacity-50 border-gray-700 text-gray-200"
         >
           {t('action.ping')}
         </button>
@@ -314,7 +317,7 @@ function CommandPanel({
           type="button"
           disabled={busy !== null}
           onClick={() => void send('restart')}
-          className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:border-amber-500 disabled:opacity-50 dark:border-amber-700/60 dark:text-amber-400"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:border-amber-500 disabled:opacity-50 border-amber-700/60 text-amber-400"
         >
           {t('action.restart')}
         </button>
@@ -325,7 +328,7 @@ function CommandPanel({
             setShowOta((v) => !v)
             setShowConfig(false)
           }}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-emerald-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:border-emerald-500 disabled:opacity-50 border-gray-700 text-gray-200"
         >
           {t('action.ota')}
         </button>
@@ -336,34 +339,34 @@ function CommandPanel({
             setShowConfig((v) => !v)
             setShowOta(false)
           }}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-emerald-500 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
+          className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:border-emerald-500 disabled:opacity-50 border-gray-700 text-gray-200"
         >
           {t('action.config')}
         </button>
       </div>
 
       {showOta ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+        <div className="flex flex-col gap-2 rounded-lg border p-3 border-gray-700">
           <input
             aria-label={t('ota.version')}
             placeholder={t('ota.version')}
             value={ota.version}
             onChange={(e) => setOta((o) => ({ ...o, version: e.target.value }))}
-            className="rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800"
+            className="rounded border px-2 py-1 text-xs border-gray-700 bg-gray-800"
           />
           <input
             aria-label={t('ota.url')}
             placeholder="https://assets.example.com/agent/1.13/streamhub-agent"
             value={ota.url}
             onChange={(e) => setOta((o) => ({ ...o, url: e.target.value }))}
-            className="rounded border border-gray-200 px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800"
+            className="rounded border px-2 py-1 text-xs border-gray-700 bg-gray-800"
           />
           <input
             aria-label={t('ota.sha256')}
             placeholder={t('ota.sha256')}
             value={ota.sha256}
             onChange={(e) => setOta((o) => ({ ...o, sha256: e.target.value }))}
-            className="rounded border border-gray-200 px-2 py-1 font-mono text-xs dark:border-gray-700 dark:bg-gray-800"
+            className="rounded border px-2 py-1 font-mono text-xs border-gray-700 bg-gray-800"
           />
           <button
             type="button"
@@ -373,20 +376,20 @@ function CommandPanel({
           >
             {t('ota.submit')}
           </button>
-          <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+          <p className="text-[11px] leading-snug text-gray-400">
             {t('ota.note')}
           </p>
         </div>
       ) : null}
 
       {showConfig ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+        <div className="flex flex-col gap-2 rounded-lg border p-3 border-gray-700">
           <textarea
             aria-label={t('action.config')}
             value={configText}
             onChange={(e) => setConfigText(e.target.value)}
             rows={5}
-            className="rounded border border-gray-200 px-2 py-1 font-mono text-xs dark:border-gray-700 dark:bg-gray-800"
+            className="rounded border px-2 py-1 font-mono text-xs border-gray-700 bg-gray-800"
           />
           <button
             type="button"
@@ -404,8 +407,8 @@ function CommandPanel({
           data-testid="cmd-msg"
           className={`text-xs ${
             msg.kind === 'ok'
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-red-600 dark:text-red-400'
+              ? 'text-emerald-400'
+              : 'text-red-400'
           }`}
         >
           {msg.text}
@@ -434,7 +437,7 @@ function AgentDetailView({
   const commands = detail?.commands ?? []
 
   return (
-    <aside className="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+    <aside className="flex flex-col gap-4 rounded-xl border p-4 border-gray-700">
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <h3 className="truncate font-mono text-sm font-semibold text-fg">{agentId}</h3>
@@ -443,7 +446,7 @@ function AgentDetailView({
         <button
           type="button"
           onClick={onClose}
-          className="shrink-0 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500 dark:border-gray-700"
+          className="shrink-0 rounded-lg border px-2 py-1 text-xs text-gray-500 border-gray-700"
         >
           {t('detail.close')}
         </button>
@@ -474,16 +477,16 @@ function AgentDetailView({
             {commands.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1 text-[11px] dark:bg-gray-800/60"
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-[11px] bg-gray-800/60"
               >
                 <span className="font-mono text-fg">{c.command}</span>
                 <span
                   className={
                     c.status === 'ok'
-                      ? 'text-emerald-600 dark:text-emerald-400'
+                      ? 'text-emerald-400'
                       : c.status === 'error'
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-amber-600 dark:text-amber-400'
+                        ? 'text-red-400'
+                        : 'text-amber-400'
                   }
                 >
                   {t(`cmdStatus.${c.status}`)}
@@ -517,7 +520,7 @@ function FleetTab({ ctx }: PluginComponentProps) {
     <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
+          <div className="flex items-center gap-1 rounded-lg border p-0.5 border-gray-700">
             {(['all', 'online', 'offline'] as FleetFilter[]).map((f) => (
               <button
                 key={f}
@@ -527,7 +530,7 @@ function FleetTab({ ctx }: PluginComponentProps) {
                 className={`rounded-md px-3 py-1 text-xs font-medium transition ${
                   filter === f
                     ? 'bg-emerald-600 text-white'
-                    : 'text-gray-600 hover:text-emerald-600 dark:text-gray-300'
+                    : 'text-gray-300 hover:text-emerald-400'
                 }`}
               >
                 {t(`filter.${f}`, { count: counts[f] })}
@@ -535,14 +538,14 @@ function FleetTab({ ctx }: PluginComponentProps) {
             ))}
           </div>
           {error ? (
-            <span className="text-xs text-red-600 dark:text-red-400">
+            <span className="text-xs text-red-400">
               {t('error.load')}
             </span>
           ) : null}
         </div>
 
         {shown.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-gray-700">
+          <div className="rounded-xl border border-dashed p-8 text-center text-sm text-gray-500 border-gray-700">
             {t('empty')}
           </div>
         ) : (
@@ -562,7 +565,7 @@ function FleetTab({ ctx }: PluginComponentProps) {
       {selected ? (
         <AgentDetailView app={app} agentId={selected} onClose={() => setSelected(null)} />
       ) : (
-        <aside className="hidden rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400 lg:block dark:border-gray-700">
+        <aside className="hidden rounded-xl border border-dashed p-6 text-center text-sm text-gray-400 lg:block border-gray-700">
           {t('detail.pick')}
         </aside>
       )}
@@ -606,6 +609,14 @@ export default definePlugin({
         default: 30,
         min: 5,
         max: 600,
+      },
+      {
+        key: 'batteryLowPercent',
+        type: 'number',
+        label: 'Battery-low alert threshold (percent)',
+        default: 0,
+        min: 0,
+        max: 100,
       },
     ],
   },

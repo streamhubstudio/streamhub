@@ -1,0 +1,40 @@
+{
+ "vectors": [
+  {
+   "entries": [],
+   "base64": "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA=="
+  },
+  {
+   "entries": [
+    {
+     "name": "a.txt",
+     "data": "hello"
+    }
+   ],
+   "base64": "UEsDBBQAAAAAAAAAIQCGphA2BQAAAAUAAAAFAAAAYS50eHRoZWxsb1BLAQIUABQAAAAAAAAAIQCGphA2BQAAAAUAAAAFAAAAAAAAAAAAAAAAAAAAAABhLnR4dFBLBQYAAAAAAQABADMAAAAoAAAAAAA="
+  },
+  {
+   "entries": [
+    {
+     "name": "dir/ñ.md",
+     "data": "ünï\ncode"
+    },
+    {
+     "name": "empty",
+     "data": ""
+    }
+   ],
+   "base64": "UEsDBBQAAAAAAAAAIQDcjW0SCgAAAAoAAAAJAAAAZGlyL8OxLm1kw7xuw68KY29kZVBLAwQUAAAAAAAAACEAAAAAAAAAAAAAAAAABQAAAGVtcHR5UEsBAhQAFAAAAAAAAAAhANyNbRIKAAAACgAAAAkAAAAAAAAAAAAAAAAAAAAAAGRpci/DsS5tZFBLAQIUABQAAAAAAAAAIQAAAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAAADEAAABlbXB0eVBLBQYAAAAAAgACAGoAAABUAAAAAAA="
+  }
+ ],
+ "one": {
+  "filename": "webrtc-play.zip",
+  "length": 10485,
+  "sha256": "5d31d6d71151713bc087fe45d58bb3be811db95cfc720527b9374e476f1bacc8"
+ },
+ "all": {
+  "filename": "streamhub-examples.zip",
+  "length": 134425,
+  "sha256": "4f7743ecd7139933b03964cafea9b36b5dcc8f0b3aa16e065af37f6b61b8c334"
+ }
+}

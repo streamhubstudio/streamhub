@@ -1,0 +1,260 @@
+{
+  "module": "stream-health",
+  "description": "Stream-health Studio App API (stream-health.controller.ts). The funnel tap (health.* recording) is covered by Go unit tests. NOTE: in Node these routes are shadowed by the vision-apps controller; see the skip reasons.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "sh-login-editor",
+      "note": "fresh session: auth.json revokes the fixture sessions when the whole corpus runs",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{editorEmail}}",
+        "password": "{{editorPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "shEditorJwt": "data.token"
+      }
+    },
+    {
+      "name": "sh-login-viewer",
+      "note": "fresh session",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "shViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "sh-overview-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/overview",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-events-empty",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/events",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-events-limits",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/events?limit=abc&room=%20%20",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-events-neg",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/events?limit=-3&room=r1",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-settings-default",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "rawBody": "{\"config\":{\"stall_sec\":30,\"silence_db\":\"-40\",\"1\":2}}",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-valid",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "rawBody": "{\"config\":{\"stall_sec\":30,\"silence_db\":\" -40 \",\"desync_ms\":1e3}}",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-get-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-unknown",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "stall_sec": 30,
+          "bogus": 1
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-range",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "stall_sec": 1
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-range-neg",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "silence_db": 5
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-nan",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "stall_sec": "abc"
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-bool",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "stall_sec": true
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-array",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": [
+          1
+        ]
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-string",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": "x"
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-room2",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room2/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": {
+          "recover_samples": 3
+        }
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-overview-after",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/overview",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-null-clears",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room2/settings",
+      "auth": "globalToken",
+      "body": {
+        "config": null
+      },
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-no-body",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-body-array",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room3/settings",
+      "auth": "globalToken",
+      "body": [
+        1,
+        2
+      ],
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-put-viewer",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "shViewerJwt",
+      "body": {
+        "config": {}
+      }
+    },
+    {
+      "name": "sh-get-viewer-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/overview",
+      "auth": "shViewerJwt"
+    },
+    {
+      "name": "sh-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/events",
+      "auth": "appToken",
+      "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
+    },
+    {
+      "name": "sh-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/stream-health/overview"
+    }
+  ]
+}

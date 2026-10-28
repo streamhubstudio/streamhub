@@ -41,7 +41,7 @@ export function RestartServerDialog({
       aria-label={t('restartDialog.title')}
     >
       <div className="flex items-center gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-100">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -56,33 +56,33 @@ export function RestartServerDialog({
             />
           </svg>
         </span>
-        <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h5 className="text-lg font-semibold text-gray-100">
           {t('restartDialog.title')}
         </h5>
       </div>
 
       <div className="mt-5 space-y-4">
-        <p className="text-sm text-gray-600 dark:text-gray-300">
+        <p className="text-sm text-gray-300">
           {t('restartDialog.body')}
         </p>
 
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+        <div className="rounded-lg px-4 py-3 text-xs font-medium bg-red-500/15 text-red-100">
           {t('restartDialog.warning')}
         </div>
 
-        <label className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <label className="flex items-start gap-2 text-sm text-gray-300">
           <input
             type="checkbox"
             checked={ack}
             disabled={pending}
             onChange={(e) => setAck(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-red-500 dark:border-gray-600"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded accent-red-500 border-gray-600"
           />
           {t('restartDialog.ack')}
         </label>
 
         {error && (
-          <div className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-100">
+          <div className="rounded-lg px-3 py-2 text-xs font-medium bg-red-500/15 text-red-100">
             {error}
           </div>
         )}

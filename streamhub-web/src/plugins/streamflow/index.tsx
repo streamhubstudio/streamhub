@@ -694,7 +694,7 @@ function SecretsView({ app }: { app: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="rounded-md bg-sky-500/10 px-3 py-2 text-xs text-sky-700 dark:text-sky-200">
+      <p className="rounded-md bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
         {t('secrets.help')}
       </p>
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-white/10 bg-white/5 p-3">

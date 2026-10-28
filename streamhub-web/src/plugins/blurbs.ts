@@ -24,6 +24,24 @@ export type BlurbLocale = 'en' | 'es'
 
 /** id → { en, es } blurb. */
 export const PLUGIN_BLURBS: Record<string, Record<BlurbLocale, PluginBlurb>> = {
+  cameras: {
+    en: {
+      what: 'A fleet console for OpenCam cameras over MQTT: every camera with its live state (online, signal, stream, microSD, offline queue), its video, a PTZ pad that stops by itself if the network drops, and remote actions with per-command tracking.',
+      useCases: [
+        'Operating the cameras of every stand in a mall from one screen.',
+        'Pointing a PTZ camera back at its counting position after someone moved it.',
+        'Provisioning a new camera with a config.ini on its microSD card.',
+      ],
+    },
+    es: {
+      what: 'Una consola de flota para cámaras OpenCam por MQTT: cada cámara con su estado en vivo (conexión, señal, stream, microSD, cola offline), su video, un pad PTZ que frena solo si se corta la red y acciones remotas con seguimiento de cada comando.',
+      useCases: [
+        'Operar desde una sola pantalla las cámaras de todos los stands de un shopping.',
+        'Volver a apuntar una cámara PTZ a su posición de conteo después de que alguien la movió.',
+        'Aprovisionar una cámara nueva con un config.ini en su microSD.',
+      ],
+    },
+  },
   cockpit: {
     en: {
       what: 'A CCTV-style surveillance board: a paginated, drag-and-drop grid of every live stream in the app, so an operator can watch many cameras at once.',

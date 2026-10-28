@@ -23,7 +23,7 @@ vi.mock('@/api/http', () => ({ request: requestMock }))
 import type { PluginModule } from '../types.ts'
 
 // COMPOSED-GATED (vision-4 exodus): the four vision apps live in their own
-// repo and are present only when `scripts/apps-pull.mjs` composed them into
+// repo and are present only when `streamhub-core apps pull` composed them into
 // src/plugins-vendor/ (CI always does; a hermetic checkout skips — the same
 // posture as the core registry's composed witnesses).
 import * as fs from 'node:fs'

@@ -97,7 +97,7 @@ function CoverEditor({ op, values, assets, busy, onChange, onConfirm, onCancel }
   const modeAssets = assetsForMode(assets, values.mode)
 
   return (
-    <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+    <div className="mt-3 space-y-3 rounded-lg border p-3 border-gray-700 bg-gray-800/50">
       <Field label={t('editor.mode')}>
         <Select value={values.mode} onChange={(e) => set('mode', e.target.value as EditorState['mode'])}>
           <option value="text">{t('mode.text')}</option>
@@ -120,7 +120,7 @@ function CoverEditor({ op, values, assets, busy, onChange, onConfirm, onCancel }
                 type="color"
                 value={values.cardColor}
                 onChange={(e) => set('cardColor', e.target.value)}
-                className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-transparent dark:border-gray-600"
+                className="h-9 w-12 cursor-pointer rounded border bg-transparent border-gray-600"
                 aria-label={t('editor.cardColor')}
               />
               <TextInput value={values.cardColor} onChange={(e) => set('cardColor', e.target.value)} />
@@ -187,14 +187,14 @@ function StreamRow({
   const summary = coverSummary(item)
 
   return (
-    <li className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+    <li className="rounded-lg border p-3 border-gray-700">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Badge tone={stateTone(state)}>{t(`state.${state}`)}</Badge>
-            <span className="truncate font-semibold text-gray-800 dark:text-gray-100">{item.streamId}</span>
+            <span className="truncate font-semibold text-gray-100">{item.streamId}</span>
           </div>
-          <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-0.5 text-xs text-gray-400">
             {item.room}
             {typeof item.viewers === 'number' ? ` · ${t('row.viewers', { count: item.viewers })}` : ''}
             {summary ? ` · ${t('row.showing', { summary })}` : ''}
@@ -291,10 +291,10 @@ function AssetManager({
   }
 
   return (
-    <section className="space-y-3 border-t border-gray-200 pt-5 dark:border-gray-700">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-100">{t('assets.title')}</h4>
+    <section className="space-y-3 border-t pt-5 border-gray-700">
+      <h4 className="text-sm font-semibold text-gray-100">{t('assets.title')}</h4>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+      <div className="flex flex-wrap items-end gap-2 rounded-lg p-3 bg-gray-800/50">
         <Field label={t('assets.label')}>
           <TextInput value={label} placeholder={t('assets.labelPlaceholder')} onChange={(e) => setLabel(e.target.value)} />
         </Field>
@@ -318,11 +318,11 @@ function AssetManager({
       </div>
 
       {assets.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">{t('assets.empty')}</p>
+        <p className="text-sm text-gray-400">{t('assets.empty')}</p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {assets.map((a) => (
-            <li key={a.id} className="flex gap-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+            <li key={a.id} className="flex gap-3 rounded-lg border p-2 border-gray-700">
               <div className="h-16 w-24 shrink-0 overflow-hidden rounded bg-black/80">
                 {a.url && a.kind === 'image' ? (
                   <img src={a.url} alt={a.label || a.filename} className="h-full w-full object-cover" />
@@ -331,21 +331,21 @@ function AssetManager({
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-gray-800 dark:text-gray-100">
+                <div className="truncate text-sm font-medium text-gray-100">
                   {a.label || a.filename}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-gray-400">
                   {t(`mode.${a.kind}`)} · {formatBytes(a.sizeBytes)}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                  <label className="flex items-center gap-1 text-xs text-gray-300">
                     <Toggle
                       checked={settings?.defaultPauseAssetId === a.id}
                       onChange={(v) => void setDefault('pause', v ? a.id : null)}
                     />
                     {t('assets.defaultPause')}
                   </label>
-                  <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                  <label className="flex items-center gap-1 text-xs text-gray-300">
                     <Toggle
                       checked={settings?.defaultFinishAssetId === a.id}
                       onChange={(v) => void setDefault('finish', v ? a.id : null)}
@@ -431,7 +431,7 @@ function LiveControlConsole({ ctx }: PluginComponentProps) {
 
   return (
     <div className="space-y-5">
-      <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+      <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-300">
         {t('overlayHint')}
       </p>
 
@@ -441,13 +441,13 @@ function LiveControlConsole({ ctx }: PluginComponentProps) {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-100">{t('streams.title')}</h4>
+          <h4 className="text-sm font-semibold text-gray-100">{t('streams.title')}</h4>
           <Button variant="ghost" onClick={refetch} disabled={busy}>
             {t('streams.refresh')}
           </Button>
         </div>
         {streams.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t('streams.empty')}</p>
+          <p className="text-sm text-gray-400">{t('streams.empty')}</p>
         ) : (
           <ul className="space-y-2">
             {streams.map((item) => (

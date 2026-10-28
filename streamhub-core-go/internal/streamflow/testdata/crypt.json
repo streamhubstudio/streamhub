@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "master": "parity-jwt-secret-0123456789abcdef",
+      "app": "live",
+      "plaintext": "sk-live-ABCDEFGH1234",
+      "stored": "aesgcm$sdkBb-BFJK-JmAN8$C1o3O0Nmw8-tiMaBLZV9cg$sG_oJsCl9SSOOMJ2TFfhcwPgwWk"
+    },
+    {
+      "master": "m",
+      "app": "ñandú",
+      "plaintext": "-----BEGIN KEY-----\nñ 😀\n-----END KEY-----",
+      "stored": "aesgcm$qsWdBF4rCttrVCpq$Q1zRHmJSqr-B95HqAbfosw$4OAltP5f7KkrlispMR5Z1Y-6MouSH1OcXlL1HdcqqILTbHd2hKGQXWKOOhaH"
+    },
+    {
+      "master": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "app": "a",
+      "plaintext": "",
+      "stored": "aesgcm$Y5P_Ca3Bo0nukvu3$zNL-6Lz-5XKKW3Nrl3nGxQ$"
+    }
+  ],
+  "masks": [
+    {
+      "v": "",
+      "mask": ""
+    },
+    {
+      "v": "abcd",
+      "mask": "…"
+    },
+    {
+      "v": "abcde",
+      "mask": "ab…bcde"
+    },
+    {
+      "v": "sk-live-ABCDEFGH1234",
+      "mask": "sk-…1234"
+    },
+    {
+      "v": "ghp_xyz9876",
+      "mask": "ghp_…9876"
+    },
+    {
+      "v": "xoxb-1-2-3",
+      "mask": "xoxb-…-2-3"
+    },
+    {
+      "v": "AKIAXXXX",
+      "mask": "AKIA…XXXX"
+    },
+    {
+      "v": "plain😀value",
+      "mask": "pl…alue"
+    }
+  ]
+}

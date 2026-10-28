@@ -1,0 +1,439 @@
+{
+  "schema": [
+    {
+      "key": "s",
+      "type": "string",
+      "label": "S",
+      "default": "a"
+    },
+    {
+      "key": "n",
+      "type": "number",
+      "label": "N",
+      "default": 2,
+      "min": 1,
+      "max": 10.5
+    },
+    {
+      "key": "b",
+      "type": "boolean",
+      "label": "B",
+      "default": false
+    },
+    {
+      "key": "sel",
+      "type": "select",
+      "label": "Sel",
+      "default": "x",
+      "options": [
+        {
+          "value": "x",
+          "label": "X"
+        },
+        {
+          "value": "y",
+          "label": "Y"
+        }
+      ]
+    },
+    {
+      "key": "apiKey",
+      "type": "secret",
+      "label": "K",
+      "default": "",
+      "required": true
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "C",
+      "default": ""
+    }
+  ],
+  "cases": [
+    {
+      "input": null,
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": null,
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {},
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {},
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {
+        "s": "q"
+      },
+      "req": false,
+      "ok": {
+        "s": "q",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "q",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "q",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "s": "q"
+      },
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {
+        "n": "3.5"
+      },
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 3.5,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 3.5,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 3.5,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "n": "3.5"
+      },
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {
+        "n": "abc"
+      },
+      "req": false,
+      "error": "field 'n' must be a number"
+    },
+    {
+      "input": {
+        "n": "abc"
+      },
+      "req": true,
+      "error": "field 'n' must be a number"
+    },
+    {
+      "input": {
+        "n": 0
+      },
+      "req": false,
+      "error": "field 'n' must be >= 1"
+    },
+    {
+      "input": {
+        "n": 0
+      },
+      "req": true,
+      "error": "field 'n' must be >= 1"
+    },
+    {
+      "input": {
+        "n": 11
+      },
+      "req": false,
+      "error": "field 'n' must be <= 10.5"
+    },
+    {
+      "input": {
+        "n": 11
+      },
+      "req": true,
+      "error": "field 'n' must be <= 10.5"
+    },
+    {
+      "input": {
+        "b": "true"
+      },
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": true,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": true,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": true,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "b": "true"
+      },
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {
+        "b": 1
+      },
+      "req": false,
+      "error": "field 'b' must be a boolean"
+    },
+    {
+      "input": {
+        "b": 1
+      },
+      "req": true,
+      "error": "field 'b' must be a boolean"
+    },
+    {
+      "input": {
+        "sel": "z"
+      },
+      "req": false,
+      "error": "field 'sel' must be one of: x, y"
+    },
+    {
+      "input": {
+        "sel": "z"
+      },
+      "req": true,
+      "error": "field 'sel' must be one of: x, y"
+    },
+    {
+      "input": {
+        "sel": 5
+      },
+      "req": false,
+      "error": "field 'sel' must be a string"
+    },
+    {
+      "input": {
+        "sel": 5
+      },
+      "req": true,
+      "error": "field 'sel' must be a string"
+    },
+    {
+      "input": {
+        "nope": 1
+      },
+      "req": false,
+      "error": "unknown config key 'nope'"
+    },
+    {
+      "input": {
+        "nope": 1
+      },
+      "req": true,
+      "error": "unknown config key 'nope'"
+    },
+    {
+      "input": {
+        "s": null
+      },
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "s": null
+      },
+      "req": true,
+      "error": "field 'apiKey' is required"
+    },
+    {
+      "input": {
+        "apiKey": "k"
+      },
+      "req": false,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "k",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "********",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "apiKey": "k"
+      },
+      "req": true,
+      "ok": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "k",
+        "callbackUrl": ""
+      },
+      "redacted": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x",
+        "apiKey": "********",
+        "callbackUrl": ""
+      },
+      "public": {
+        "s": "a",
+        "n": 2,
+        "b": false,
+        "sel": "x"
+      }
+    },
+    {
+      "input": {
+        "s": 5
+      },
+      "req": false,
+      "error": "field 's' must be a string"
+    },
+    {
+      "input": {
+        "s": 5
+      },
+      "req": true,
+      "error": "field 's' must be a string"
+    },
+    {
+      "input": {
+        "n": "1e400"
+      },
+      "req": false,
+      "error": "field 'n' must be a number"
+    },
+    {
+      "input": {
+        "n": "1e400"
+      },
+      "req": true,
+      "error": "field 'n' must be a number"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 # StreamHub — single-domain reverse proxy with automatic HTTPS.
 #   /rtc*  -> LiveKit signaling (wss, WebRTC)   127.0.0.1:7880
-#   /*     -> streamhub-core (NestJS: REST API + React SPA + HLS + /sdk)  127.0.0.1:3020
+#   /*     -> streamhub-core (Go: REST API + React SPA + HLS + /sdk)  127.0.0.1:3020
+#   /hls/* -> straight from disk when STREAMHUB_HLS_DIRECT_SERVE is on (else the core)
 #
 # STREAMHUB_SITE_ADDRESS / ACME_EMAIL are injected from the environment (see
 # compose). It defaults to STREAMHUB_DOMAIN: a real hostname gets a Let's Encrypt
@@ -33,7 +34,62 @@
 		respond 403
 	}
 
-	# Everything else: API + SPA + HLS + samples + /sdk
+	# HLS direct-serve (STREAMHUB_HLS_DIRECT_SERVE, operations/SCALING.md). Opt-in:
+	# with the flag on (1/true/on/yes), Caddy serves live .ts/.m3u8 STRAIGHT FROM
+	# DISK (sendfile) out of the read-only DATA_DIR mount (compose: /srv/streamhub-
+	# data; STREAMHUB_HLS_ROOT overrides) — the core never touches segment bytes.
+	# Public /hls/<app>/<room>/<file> maps to <root>/apps/<app>/hls/<room>/<file>.
+	# Anything not on disk falls back to the core with the ORIGINAL path (the
+	# rewrite only happens inside @disk). Flag off/unset -> @disk never matches ->
+	# everything proxied: zero change.
+	# CORS/Cache-Control are set only on disk hits, so proxied answers keep the
+	# core's own headers (no duplicated Access-Control-Allow-Origin).
+	# Segments starting with '.' (incl. '..') never match — same rule as the
+	# core's safeJoin — so a crafted path can't climb out of <app>/hls/<room>.
+	@hls path_regexp hls ^/hls/([^/.][^/]*)/([^/.][^/]*)/((?:[^/.][^/]*/)*[^/.][^/]*)$
+	handle @hls {
+		root * {$STREAMHUB_HLS_ROOT:/srv/streamhub-data}/apps
+		@disk {
+			expression `{env.STREAMHUB_HLS_DIRECT_SERVE}.matches('^(?i)(1|true|on|yes)$')`
+			file /{re.hls.1}/hls/{re.hls.2}/{re.hls.3}
+		}
+		handle @disk {
+			rewrite * {file_match.relative}
+			header Access-Control-Allow-Origin "*"
+			header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+			@ts path *.ts
+			@m3u8 path *.m3u8
+			header @ts Cache-Control "public, max-age=31536000, immutable"
+			header @m3u8 Cache-Control "no-cache"
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:3020
+		}
+	}
+
+	# Everything else: API + SPA + samples + /sdk (+ the /hls fallback above)
+	handle {
+		reverse_proxy 127.0.0.1:3020
+	}
+}
+
+# Optional samples origin (STREAMHUB_SAMPLES_URL, features/samples.md): tenant-
+# editable sample pages are served ONLY on this host, never on the dashboard's
+# origin (whose localStorage holds the dashboard session). Set SAMPLES_DOMAIN
+# (e.g. samples.example.com, its own DNS record) and STREAMHUB_SAMPLES_URL=
+# https://samples.example.com in .env; the core does the host split itself
+# (samples + /api /sdk /hls here, everything else redirected to the dashboard).
+# Unset, this block binds the reserved name samples.invalid, which nothing
+# resolves to, over plain HTTP (no certificate attempt): effectively off.
+{$SAMPLES_SITE_ADDRESS:http://samples.invalid} {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	handle /metrics {
+		respond 403
+	}
 	handle {
 		reverse_proxy 127.0.0.1:3020
 	}

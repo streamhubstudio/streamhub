@@ -1,0 +1,9 @@
+{
+  "2": "two",
+  "10": "ten",
+  "S3_KEY": "overwritten",
+  "b": "tab\there \"q\" back\\ nl\n ctl\u0001\u001f del u2028  é 😀 \b\f\r",
+  "01": "zero-one",
+  "4294967295": "max",
+  "": "empty-key"
+}

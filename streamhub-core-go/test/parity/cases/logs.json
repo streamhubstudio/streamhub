@@ -1,0 +1,230 @@
+{
+  "module": "logs",
+  "description": "Log viewers (GET /logs, GET /apps/:app/logs): query DTO validation, filters, pagination echo, per-app permission + tenant scope. Only filtered reads: unfiltered totals depend on every module's boot logging.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "logs-no-auth",
+      "method": "GET",
+      "path": "/api/v1/logs",
+      "expectStatus": 401
+    },
+    {
+      "name": "logs-empty-source",
+      "method": "GET",
+      "path": "/api/v1/logs?source=parity-none",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-paging-echo",
+      "method": "GET",
+      "path": "/api/v1/logs?source=parity-none&limit=5&offset=2",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-ready-rows",
+      "method": "GET",
+      "path": "/api/v1/logs?source=logs&q=LogsService%20ready",
+      "auth": "globalToken",
+      "mask": [
+        "data.*.id",
+        "data.1.metaJson"
+      ],
+      "note": "boot self-log rows: this boot (data.0, dir under {{dataDir}}) + the fixture seed boot (data.1, temp seed path masked)",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-ready-rows-level",
+      "method": "GET",
+      "path": "/api/v1/logs?source=logs&q=LogsService&level=info&limit=1",
+      "auth": "globalToken",
+      "mask": [
+        "data.*.id"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-like-escape",
+      "method": "GET",
+      "path": "/api/v1/logs?source=logs&q=%25_",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-since-until",
+      "method": "GET",
+      "path": "/api/v1/logs?source=logs&q=LogsService%20ready&since=2000-01-01T00:00:00Z&until=2000-01-02",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-app-unknown",
+      "method": "GET",
+      "path": "/api/v1/logs?app=parity-ghost",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-bad-level",
+      "method": "GET",
+      "path": "/api/v1/logs?level=loud",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-empty-level",
+      "method": "GET",
+      "path": "/api/v1/logs?level=",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-limit-zero",
+      "method": "GET",
+      "path": "/api/v1/logs?limit=0",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-limit-big",
+      "method": "GET",
+      "path": "/api/v1/logs?limit=1001",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-limit-nan",
+      "method": "GET",
+      "path": "/api/v1/logs?limit=abc",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-limit-float",
+      "method": "GET",
+      "path": "/api/v1/logs?limit=2.5",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-limit-repeat",
+      "method": "GET",
+      "path": "/api/v1/logs?limit=3&limit=4",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-offset",
+      "method": "GET",
+      "path": "/api/v1/logs?offset=-1",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-bad-dates",
+      "method": "GET",
+      "path": "/api/v1/logs?since=yesterday&until=2026-13-01",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-many-errors",
+      "method": "GET",
+      "path": "/api/v1/logs?app=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&level=x&source=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&q=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq&limit=x&offset=x",
+      "auth": "globalToken",
+      "note": "message order: subclass app first, then inherited props",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-level-repeat",
+      "method": "GET",
+      "path": "/api/v1/logs?level=info&level=warn",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "logs-viewer",
+      "method": "GET",
+      "path": "/api/v1/logs?source=parity-none",
+      "auth": "viewerJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "logs-app-token",
+      "method": "GET",
+      "path": "/api/v1/logs?source=parity-none",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "applogs-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs",
+      "expectStatus": 401
+    },
+    {
+      "name": "applogs-global",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?source=parity-none",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "applogs-admin",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?source=parity-none&limit=7",
+      "auth": "adminJwt",
+      "expectStatus": 200
+    },
+    {
+      "name": "applogs-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?source=parity-none",
+      "auth": "appToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "applogs-app-ignored",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?source=parity-none&app=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "auth": "globalToken",
+      "note": "AppLogQueryDto has no app: whitelisted out",
+      "expectStatus": 200
+    },
+    {
+      "name": "applogs-viewer-denied",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "applogs-owner-denied",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "applogs-bad-level",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?level=nope",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "applogs-denied-before-validation",
+      "method": "GET",
+      "path": "/api/v1/apps/live/logs?level=nope",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    }
+  ]
+}

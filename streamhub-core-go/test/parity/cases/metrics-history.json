@@ -1,0 +1,84 @@
+{
+  "module": "metrics-history",
+  "description": "GET /system/metrics/history — global-scope host resource history. Series contents are masked: Node's sampler is a BullMQ job (dead Redis in the parity env → no sample), Go samples in-process at boot (catch-up), so only the shape is compared.",
+  "defaults": {
+    "compareHeaders": ["content-type"],
+    "ignore": ["data.now"]
+  },
+  "cases": [
+    {
+      "name": "history-default-all-series",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "auth": "adminJwt",
+      "expectStatus": 200,
+      "mask": ["data.series.cpu", "data.series.mem", "data.series.disk", "data.series.net"]
+    },
+    {
+      "name": "history-global-token",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history?range=24h",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": ["data.series.cpu", "data.series.mem", "data.series.disk", "data.series.net"]
+    },
+    {
+      "name": "history-metric-filter",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history?range=7d&metric=net",
+      "auth": "adminJwt",
+      "expectStatus": 200,
+      "mask": ["data.series.net"]
+    },
+    {
+      "name": "history-unknown-metric-and-range-fall-back",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history?range=1y&metric=gpu",
+      "auth": "adminJwt",
+      "expectStatus": 200,
+      "mask": ["data.series.cpu", "data.series.mem", "data.series.disk", "data.series.net"]
+    },
+    {
+      "name": "history-empty-range-defaults",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history?range=&metric=",
+      "auth": "adminJwt",
+      "expectStatus": 200,
+      "mask": ["data.series.cpu", "data.series.mem", "data.series.disk", "data.series.net"]
+    },
+    {
+      "name": "history-app-token-403",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "auth": "appToken",
+      "expectStatus": 403
+    },
+    {
+      "name": "history-owner-user-403",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "auth": "ownerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "history-viewer-403",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "history-revoked-401",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "auth": "revokedToken",
+      "expectStatus": 401
+    },
+    {
+      "name": "history-no-auth-401",
+      "method": "GET",
+      "path": "/api/v1/system/metrics/history",
+      "expectStatus": 401
+    }
+  ]
+}

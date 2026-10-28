@@ -14,6 +14,8 @@ import { Trans, useTranslation } from 'react-i18next'
 import { api } from '@/api'
 import type { Sample } from '@/api'
 import { CodeEditor } from './CodeEditor'
+import { samplePreviewSandbox, sampleUrl } from '@/lib/samplesOrigin'
+import { useSamplesOrigin } from '@/lib/useSamplesOrigin'
 import {
   Button,
   Card,
@@ -24,12 +26,6 @@ import {
   SectionTitle,
   errMessage,
 } from './ui'
-
-/** Public URL where the rendered sample HTML is served. */
-function sampleUrl(app: string, file: string): string {
-  const base = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${base}/samples/${encodeURIComponent(app)}/${encodeURIComponent(file)}`
-}
 
 export function SamplesManager({ app }: { app: string }) {
   const { t } = useTranslation(['samplesTab', 'common'])
@@ -144,6 +140,7 @@ function SampleChip({
 function SampleEditor({ app, file }: { app: string; file: string }) {
   const { t } = useTranslation(['samplesTab', 'common'])
   const qc = useQueryClient()
+  const samples = useSamplesOrigin()
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['app-sample', app, file],
     queryFn: ({ signal }) => api.apps.getSample(app, file, signal),
@@ -175,7 +172,7 @@ function SampleEditor({ app, file }: { app: string; file: string }) {
   if (isError)
     return <ErrorBanner message={errMessage(error, t('editor.loadFileError', { file }))} />
 
-  const url = sampleUrl(app, file)
+  const url = sampleUrl(samples.origin, app, file)
   const embed = `<iframe src="${url}" width="640" height="360" allow="autoplay; camera; microphone; fullscreen" style="border:0"></iframe>`
 
   return (
@@ -244,11 +241,12 @@ function SampleEditor({ app, file }: { app: string; file: string }) {
               key={previewNonce}
               src={url}
               title={`preview-${file}`}
-              // Fold 4: sandbox SIN `allow-same-origin`. Un sample editado es JS
-              // arbitrario; al correr en un origen «opaco» no puede leer el token
-              // ni el localStorage/cookies del panel. Mantenemos allow-scripts
-              // (el sample necesita JS) + forms/popups/modals para la demo.
-              sandbox="allow-scripts allow-forms allow-popups allow-modals allow-presentation"
+              // Fold 4: en el origen del panel, sandbox SIN `allow-same-origin`
+              // (un sample editado es JS arbitrario; con origen «opaco» no lee
+              // el token ni el localStorage del panel). Con origen propio de
+              // samples (STREAMHUB_SAMPLES_URL) allow-same-origin solo concede
+              // ese origen, así cámara/mic funcionan también en la preview.
+              sandbox={samplePreviewSandbox(samples.isolated)}
               allow="autoplay; camera; microphone; fullscreen; picture-in-picture"
               referrerPolicy="no-referrer"
               className="h-full w-full"
@@ -257,7 +255,8 @@ function SampleEditor({ app, file }: { app: string; file: string }) {
           <p className="mt-1 text-[11px] text-slate-500">
             <Trans
               t={t}
-              i18nKey="editor.previewHelp"
+              i18nKey={samples.isolated ? 'editor.previewHelpIsolated' : 'editor.previewHelp'}
+              values={{ origin: samples.origin }}
               components={[
                 <span className="font-mono" key="0" />,
                 <span className="font-mono" key="1" />,

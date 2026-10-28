@@ -4,7 +4,8 @@ import type { TypeAttributes, ColorLevel } from '../@types/common'
 
 export type Config = {
     themeColor: string
-    mode: 'light' | 'dark'
+    /** Always 'dark' — the dashboard has a single theme. */
+    mode: 'dark'
     locale: string
     primaryColorLevel: ColorLevel
     cardBordered: boolean
@@ -17,11 +18,11 @@ export type Config = {
 // brand blue scale defined in src/index.css (@theme). Components that build
 // dynamic classes like `bg-${themeColor}-${level}` therefore resolve to
 // `bg-primary-500` (brand #2f7bff). Kept fixed — we do NOT expose the Elstar
-// theme switcher; brand is constant. `mode` is synced from ThemeProvider.
+// theme switcher; brand is constant. Dark only.
 export const defaultConfig = {
     themeColor: 'primary',
     direction: 'ltr',
-    mode: 'light',
+    mode: 'dark',
     locale: 'en',
     primaryColorLevel: 500,
     cardBordered: true,

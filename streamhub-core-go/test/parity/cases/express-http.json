@@ -1,0 +1,203 @@
+{
+  "module": "express-http",
+  "description": "Express/Nest HTTP-layer semantics outside any module: body-parser selection (urlencoded extended \u2192 qs body, text/octet-stream bodies ignored, depth limit), case-insensitive + non-strict (optional trailing slash) routing with param casing preserved.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "form-create-tag",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "slug=form-tag&label=Form+Tag&kind=custom",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "expectStatus": 201
+    },
+    {
+      "name": "form-nested-validation",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/crowd/streams/frm/settings",
+      "auth": "globalToken",
+      "rawBody": "config[zones][0][id]=a&config[zones][0][points][0][0]=0",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "form-patch-tag",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/tags/form-tag",
+      "auth": "globalToken",
+      "rawBody": "label=Renamed%20%26+co",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    },
+    {
+      "name": "form-depth-exceeded",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "k[x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x]=v",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "expectStatus": 404
+    },
+    {
+      "name": "form-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "",
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "text-plain-ignored",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "{\"slug\":\"tp\",\"label\":\"x\"}",
+      "headers": {
+        "Content-Type": "text/plain"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "octet-stream-ignored",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tags",
+      "auth": "globalToken",
+      "rawBody": "{\"slug\":\"tp\",\"label\":\"x\"}",
+      "headers": {
+        "Content-Type": "application/octet-stream"
+      },
+      "expectStatus": 400
+    },
+    {
+      "name": "json-trailing-slash-param",
+      "method": "GET",
+      "path": "/api/v1/apps/live/tags/form-tag/",
+      "auth": "globalToken"
+    },
+    {
+      "name": "mixed-case-route",
+      "method": "GET",
+      "path": "/API/V1/Apps/live/TAGS/form-tag",
+      "auth": "globalToken"
+    },
+    {
+      "name": "mixed-case-param-kept",
+      "method": "GET",
+      "path": "/api/v1/apps/LIVE/tags",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "delete-trailing-slash",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/tags/form-tag/",
+      "auth": "globalToken",
+      "expectStatus": 204
+    },
+    {
+      "name": "docs-trailing-slash",
+      "method": "GET",
+      "path": "/api/v1/docs/",
+      "compare": "status"
+    },
+    {
+      "name": "health-trailing-slash",
+      "method": "GET",
+      "path": "/api/v1/health/",
+      "mask": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "health-upper",
+      "method": "GET",
+      "path": "/API/V1/HEALTH",
+      "mask": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "health-trailing-query",
+      "method": "GET",
+      "path": "/api/v1/health/?x=1",
+      "mask": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "unknown-trailing-slash",
+      "method": "GET",
+      "path": "/api/v1/nope/"
+    },
+    {
+      "name": "method-mismatch-trailing",
+      "method": "POST",
+      "path": "/api/v1/health/",
+      "mask": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "helmet-headers-api",
+      "method": "GET",
+      "path": "/api/v1/health",
+      "compareHeaders": [
+        "content-type",
+        "strict-transport-security",
+        "x-content-type-options",
+        "referrer-policy",
+        "x-dns-prefetch-control",
+        "x-download-options",
+        "x-permitted-cross-domain-policies",
+        "origin-agent-cluster",
+        "x-xss-protection",
+        "x-frame-options",
+        "content-security-policy",
+        "cross-origin-opener-policy",
+        "cross-origin-resource-policy",
+        "cross-origin-embedder-policy",
+        "x-powered-by"
+      ],
+      "mask": [
+        "uptimeSeconds"
+      ]
+    },
+    {
+      "name": "helmet-headers-404",
+      "method": "GET",
+      "path": "/api/v1/nope",
+      "compareHeaders": [
+        "content-type",
+        "strict-transport-security",
+        "x-content-type-options",
+        "referrer-policy",
+        "x-dns-prefetch-control",
+        "x-download-options",
+        "x-permitted-cross-domain-policies",
+        "origin-agent-cluster",
+        "x-xss-protection",
+        "x-frame-options",
+        "content-security-policy",
+        "cross-origin-opener-policy",
+        "cross-origin-resource-policy",
+        "cross-origin-embedder-policy",
+        "x-powered-by"
+      ]
+    }
+  ]
+}

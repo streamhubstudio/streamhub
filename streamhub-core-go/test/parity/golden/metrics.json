@@ -1,0 +1,101 @@
+{
+  "module": "metrics",
+  "cases": [
+    {
+      "name": "metrics-disabled-404",
+      "fingerprint": "sha256:d0b2d3fed2f39ab7",
+      "request": {
+        "method": "GET",
+        "path": "/metrics"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "message": "Not Found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "metrics-disabled-404-with-bearer",
+      "fingerprint": "sha256:9235a4acd16319aa",
+      "request": {
+        "method": "GET",
+        "path": "/metrics",
+        "headers": {
+          "Authorization": "Bearer some-token"
+        }
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "message": "Not Found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "metrics-disabled-404-with-query-token",
+      "fingerprint": "sha256:36bc83764bd04dde",
+      "request": {
+        "method": "GET",
+        "path": "/metrics?token=some-token"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "message": "Not Found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "metrics-disabled-404-with-api-token",
+      "fingerprint": "sha256:327ef6c76dc3ce7b",
+      "request": {
+        "method": "GET",
+        "path": "/metrics",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "message": "Not Found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "metrics-not-under-api-prefix",
+      "fingerprint": "sha256:5ea169abc1f52bb2",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/metrics",
+        "auth": "adminJwt"
+      },
+      "status": 404,
+      "headers": {
+        "cache-control": null,
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/metrics",
+        "statusCode": 404
+      }
+    }
+  ]
+}

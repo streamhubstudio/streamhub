@@ -32,17 +32,17 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/50 backdrop-blur-sm sm:items-center sm:p-4 dark:bg-black/60"
+      className="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-sm sm:items-center sm:p-4 bg-black/60"
       onMouseDown={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border border-gray-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-xl dark:border-gray-700 dark:bg-gray-800"
+        className="flex max-h-[92vh] w-full max-w-md flex-col rounded-t-2xl border shadow-2xl sm:max-h-[90vh] sm:rounded-xl border-gray-700 bg-gray-800"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+        <div className="flex shrink-0 items-center justify-between border-b px-5 py-4 border-gray-700">
           <h2 className="text-base font-semibold text-fg">{title}</h2>
           <button
             onClick={onClose}
@@ -68,7 +68,7 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
         <div className="overflow-y-auto px-5 py-5">{children}</div>
 
         {footer && (
-          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t px-5 py-4 border-gray-700">
             {footer}
           </div>
         )}

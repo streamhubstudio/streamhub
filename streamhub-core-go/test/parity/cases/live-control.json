@@ -1,0 +1,277 @@
+{
+  "module": "live-control",
+  "description": "Live control: anonymous overlay state, operator list, pause/resume/finish transitions + override validation, assets (no S3 \u2192 409, id pipes, 404s), default-asset settings.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type",
+      "cache-control"
+    ]
+  },
+  "cases": [
+    {
+      "name": "lc-public-anon",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/public",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-public-room",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/public?room=lobby",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-public-stream",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/public?stream=s-parity",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-streams-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/streams",
+      "expectStatus": 401
+    },
+    {
+      "name": "lc-streams",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/streams",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.generatedAt"
+      ]
+    },
+    {
+      "name": "lc-streams-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/streams",
+      "auth": "viewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "lc-stream-unknown",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-pause-bad-mode",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "mode": "gif"
+      }
+    },
+    {
+      "name": "lc-pause-bad-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "assetId": "1",
+        "cardTitle": 5,
+        "cardColor": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "name": "lc-pause-missing-asset",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "assetId": 999
+      }
+    },
+    {
+      "name": "lc-pause",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "body": {
+        "mode": "text",
+        "cardTitle": "Brb",
+        "cardColor": "#112233"
+      },
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-pause-again",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/pause",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "body": {
+        "mode": "image"
+      },
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-stream-paused",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-public-paused",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/public?stream=s-parity",
+      "expectStatus": 200,
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-finish",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/finish",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "body": {
+        "cardText": null
+      },
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-resume",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-parity/resume",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-pause-no-body",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-other/pause",
+      "auth": "globalToken",
+      "expectStatus": 201,
+      "mask": [
+        "data.since"
+      ]
+    },
+    {
+      "name": "lc-pause-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/streams/s-other/pause",
+      "auth": "viewerJwt",
+      "expectStatus": 403,
+      "body": {}
+    },
+    {
+      "name": "lc-assets",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/assets",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-upload-no-storage",
+      "method": "POST",
+      "path": "/api/v1/apps/live/plugins/live-control/assets",
+      "auth": "globalToken",
+      "expectStatus": 409,
+      "rawBody": "------parityBoundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.png\"\r\nContent-Type: image/png\r\n\r\nPNG\r\n------parityBoundary--\r\n",
+      "headers": {
+        "Content-Type": "multipart/form-data; boundary=----parityBoundary"
+      }
+    },
+    {
+      "name": "lc-asset-url-bad-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/assets/abc/url",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "lc-asset-url-missing",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/assets/999/url",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "lc-asset-delete-missing",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/live-control/assets/999",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "lc-asset-delete-bad-id",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/plugins/live-control/assets/1.5",
+      "auth": "globalToken",
+      "expectStatus": 400
+    },
+    {
+      "name": "lc-asset-url-exp-id",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/assets/2e2/url",
+      "auth": "globalToken",
+      "expectStatus": 404
+    },
+    {
+      "name": "lc-settings",
+      "method": "GET",
+      "path": "/api/v1/apps/live/plugins/live-control/settings",
+      "auth": "globalToken",
+      "expectStatus": 200
+    },
+    {
+      "name": "lc-settings-bad",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/live-control/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "defaultPauseAssetId": "x"
+      }
+    },
+    {
+      "name": "lc-settings-missing-asset",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/live-control/settings",
+      "auth": "globalToken",
+      "expectStatus": 400,
+      "body": {
+        "defaultFinishAssetId": 42
+      }
+    },
+    {
+      "name": "lc-settings-clear",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/live-control/settings",
+      "auth": "globalToken",
+      "expectStatus": 200,
+      "body": {
+        "defaultPauseAssetId": null
+      }
+    },
+    {
+      "name": "lc-settings-empty",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/live-control/settings",
+      "auth": "globalToken",
+      "expectStatus": 200
+    }
+  ]
+}

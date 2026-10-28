@@ -27,7 +27,7 @@ flowchart TB
     PX[Reverse proxy<br/>Caddy auto-TLS · or nginx+certbot]
     PX -->|/rtc → 7880| LK
     PX -->|/ · /api/v1 · /hls · /sdk · /samples · /metrics → 3020| CORE
-    CORE[streamhub-core · NestJS :3020<br/>REST API + React SPA + HLS + SDK<br/>SQLite · S3 jobs · callbacks · metrics]
+    CORE[streamhub-core · Go :3020<br/>REST API + React SPA + HLS + SDK<br/>SQLite · S3 jobs · callbacks · metrics]
     CORE -->|ws 7880| LK
     CORE --> DB[(streamhub.db + apps/&lt;app&gt;/app.db)]
     CORE -->|jobs 6379| RD[(redis)]
@@ -50,10 +50,19 @@ flowchart TB
 **Ports:** 80/443 (proxy), 7880/7881 tcp + 7882 udp (LiveKit media), 1935 (RTMP), 8080
 (WHIP), 3478 udp (embedded TURN, optional), 3020 (core, local), 6379 (redis, local).
 
-**Processes:** `livekit`, `ingress`, `egress`, `redis`, `streamhub-core` (Node; serves API +
-compiled React SPA + HLS + SDK + samples + `/metrics` — the old Laravel UI was removed). Two
-deploy shapes: **Docker Compose + Caddy** (default) or **systemd + nginx + certbot**
-(plain-server). Details → [architecture/services.md](https://streamhub.studio/docs/architecture/services).
+**Processes:** `livekit`, `ingress`, `egress`, `redis`, `streamhub-core` (one static **Go**
+binary from `streamhub-core-go/`; serves API + compiled React SPA + HLS + SDK + samples +
+`/metrics`). Two deploy shapes: **Docker Compose + Caddy** (default) or **systemd + nginx +
+certbot** (plain-server: `deploy/make-core-bundle.sh` + `deploy/deploy-core.sh`). Details →
+[architecture/services.md](https://streamhub.studio/docs/architecture/services).
+
+**The core (3.x) is Go.** The NestJS core (2.x) was retired from `main` (branch
+`legacy/node-2.x`, tag `2.24.0`); its responses to the parity corpus are recorded in
+`streamhub-core-go/test/parity/golden/` and `cmd/parity` replays every route against Go
+(status, headers, normalized JSON — CI job `parity`). The Go core opens the 2.x
+`DATA_DIR` and SQLite schema unchanged, reads the same `.env`, and keeps every `/api/v1`
+contract; deliberate deviations (Node bugs fixed, security hardening, irreproducible runtime
+facts) are listed in internal design notes.
 
 ## Data — per-app SQLite
 

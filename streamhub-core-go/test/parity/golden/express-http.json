@@ -1,0 +1,456 @@
+{
+  "module": "express-http",
+  "cases": [
+    {
+      "name": "form-create-tag",
+      "fingerprint": "sha256:15e5253bd8c26e2e",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "rawBody": "slug=form-tag&label=Form+Tag&kind=custom"
+      },
+      "status": 201,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Form Tag",
+          "slug": "form-tag",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "form-nested-validation",
+      "fingerprint": "sha256:b76c736a7eea61f7",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/crowd/streams/frm/settings",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "rawBody": "config[zones][0][id]=a&config[zones][0][points][0][0]=0"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "zone[0].points point must be [x,y]",
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "form-patch-tag",
+      "fingerprint": "sha256:ca0e02383e8f8b64",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/apps/live/tags/form-tag",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "rawBody": "label=Renamed%20%26+co"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Renamed & co",
+          "slug": "form-tag",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "form-depth-exceeded",
+      "fingerprint": "sha256:017334a897575692",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "rawBody": "k[x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x][x]=v"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/apps/live/tags",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "form-empty",
+      "fingerprint": "sha256:4f9ef61ceb5933d2",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "rawBody": ""
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)",
+          "slug must be shorter than or equal to 64 characters",
+          "slug must be longer than or equal to 1 characters",
+          "slug must be a string",
+          "label must be shorter than or equal to 200 characters",
+          "label must be longer than or equal to 1 characters",
+          "label must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "text-plain-ignored",
+      "fingerprint": "sha256:ac9f13a72c343670",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "rawBody": "{\"slug\":\"tp\",\"label\":\"x\"}"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)",
+          "slug must be shorter than or equal to 64 characters",
+          "slug must be longer than or equal to 1 characters",
+          "slug must be a string",
+          "label must be shorter than or equal to 200 characters",
+          "label must be longer than or equal to 1 characters",
+          "label must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "octet-stream-ignored",
+      "fingerprint": "sha256:18b01837c2d9dc64",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/apps/live/tags",
+        "auth": "globalToken",
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "rawBody": "{\"slug\":\"tp\",\"label\":\"x\"}"
+      },
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": [
+          "slug must be kebab-case (lowercase a-z, 0-9, hyphen-separated)",
+          "slug must be shorter than or equal to 64 characters",
+          "slug must be longer than or equal to 1 characters",
+          "slug must be a string",
+          "label must be shorter than or equal to 200 characters",
+          "label must be longer than or equal to 1 characters",
+          "label must be a string"
+        ],
+        "statusCode": 400
+      }
+    },
+    {
+      "name": "json-trailing-slash-param",
+      "fingerprint": "sha256:d19fb0899f06978c",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/tags/form-tag/",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Renamed & co",
+          "slug": "form-tag",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "mixed-case-route",
+      "fingerprint": "sha256:7ad9f0762e9a7e8c",
+      "request": {
+        "method": "GET",
+        "path": "/API/V1/Apps/live/TAGS/form-tag",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "config_json": {},
+          "createdAt": "<sql-ts>",
+          "kind": "custom",
+          "label": "Renamed & co",
+          "slug": "form-tag",
+          "updatedAt": "<sql-ts>"
+        }
+      }
+    },
+    {
+      "name": "mixed-case-param-kept",
+      "fingerprint": "sha256:d2acb384d7b97fe0",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/LIVE/tags",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app 'LIVE' not found",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "delete-trailing-slash",
+      "fingerprint": "sha256:718db91747ef31a4",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/apps/live/tags/form-tag/",
+        "auth": "globalToken"
+      },
+      "status": 204,
+      "headers": {
+        "content-type": null
+      },
+      "bodyKind": "text",
+      "body": ""
+    },
+    {
+      "name": "docs-trailing-slash",
+      "fingerprint": "sha256:1019a101a24b89da",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/docs/"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "text/html;charset=utf-8"
+      }
+    },
+    {
+      "name": "health-trailing-slash",
+      "fingerprint": "sha256:3576d4d30e3c97dd",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/health/"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "uptimeSeconds": "<masked>",
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "health-upper",
+      "fingerprint": "sha256:09e77a3d703e0ef3",
+      "request": {
+        "method": "GET",
+        "path": "/API/V1/HEALTH"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "uptimeSeconds": "<masked>",
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "health-trailing-query",
+      "fingerprint": "sha256:a66a6662c8fb8a02",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/health/?x=1"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "uptimeSeconds": "<masked>",
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "unknown-trailing-slash",
+      "fingerprint": "sha256:fa61022c98920fbb",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/nope/"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/nope/",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "method-mismatch-trailing",
+      "fingerprint": "sha256:bc2e020735d9b143",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/health/"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/health/",
+        "statusCode": 404
+      }
+    },
+    {
+      "name": "helmet-headers-api",
+      "fingerprint": "sha256:7b3ad30e7a60790e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/health"
+      },
+      "status": 200,
+      "headers": {
+        "content-security-policy": null,
+        "content-type": "application/json;charset=utf-8",
+        "cross-origin-embedder-policy": null,
+        "cross-origin-opener-policy": null,
+        "cross-origin-resource-policy": null,
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": null,
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": null,
+        "x-xss-protection": "0"
+      },
+      "bodyKind": "json",
+      "body": {
+        "status": "ok",
+        "ts": "<iso-ts>",
+        "up": true,
+        "uptimeSeconds": "<masked>",
+        "version": "{{appVersion}}"
+      }
+    },
+    {
+      "name": "helmet-headers-404",
+      "fingerprint": "sha256:d53eb2b2f1b67b97",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/nope"
+      },
+      "status": 404,
+      "headers": {
+        "content-security-policy": null,
+        "content-type": "application/json;charset=utf-8",
+        "cross-origin-embedder-policy": null,
+        "cross-origin-opener-policy": null,
+        "cross-origin-resource-policy": null,
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": null,
+        "x-permitted-cross-domain-policies": "none",
+        "x-powered-by": null,
+        "x-xss-protection": "0"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/nope",
+        "statusCode": 404
+      }
+    }
+  ]
+}

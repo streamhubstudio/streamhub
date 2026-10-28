@@ -230,6 +230,26 @@ export const pluginsApi = {
     // rows, then any generic items array.
     return raw?.persisted ?? raw?.items ?? []
   },
+
+  /** GET /apps/:app/plugins/:id/worker/status — the worker's real process state. */
+  async workerStatus(
+    app: string,
+    id: string,
+    signal?: AbortSignal,
+  ): Promise<PluginWorkerStatus> {
+    return request<PluginWorkerStatus>(
+      `${base(app)}/${encodeURIComponent(id)}/worker/status`,
+      { signal },
+    )
+  },
+}
+
+/** Worker process state as the backend reports it (`WorkerState`). */
+export interface PluginWorkerStatus {
+  status: string // running | stopped | crashed | starting | …
+  pid?: number | null
+  exitCode?: number | null
+  placement?: string
 }
 
 export type PluginsApi = typeof pluginsApi

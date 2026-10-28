@@ -1,0 +1,54 @@
+lit: |
+  line one
+  line two
+lit_nonl: |-
+  line one
+  line two
+lit_keep: |+
+  a
+  b
+
+lit_keep3: |+
+  a
+
+
+only_nl: |+
+
+two_nl: |+
+
+
+lead_nl: |-
+
+  foo
+lead_space: |2
+    indented
+  next
+lead_nl_space: |2-
+
+    x
+  y
+trailing_space_line: |-
+  a 
+  b
+with_tab: "a\tb\nc"
+blank_lines: |
+  p1
+
+  p2
+
+
+  p3
+crlf: "a\r\nb\r\n"
+nested:
+  deeper:
+    text: |
+      #!/bin/sh
+      echo "hi: there"
+      exit 0
+in_list:
+  - |-
+    first
+    second
+  - |
+    x
+    y

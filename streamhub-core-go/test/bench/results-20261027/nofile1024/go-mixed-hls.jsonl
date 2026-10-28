@@ -1,0 +1,1 @@
+{"cpuAvgPct":96.5,"cpuMaxPct":213.1,"errKinds":{},"errorPct":0,"label":"go-mixed","mode":"hls","playlistErrors":0,"playlistP95ms":0.7,"rssMaxMB":153.5,"segErrors":0,"segMaxms":6,"segP50ms":1.1,"segP95ms":2.3,"segP99ms":3.1,"segments":55970,"stalls":0,"throughputMBps":933.8,"viewers":2500}

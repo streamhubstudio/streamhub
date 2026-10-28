@@ -232,7 +232,7 @@ export function SecurityCard() {
                 'rounded-full px-2 py-0.5 text-[10px] font-medium',
                 twoFaOn
                   ? 'bg-emerald-500/15 text-emerald-400'
-                  : 'bg-gray-200 text-gray-600 dark:bg-gray-600/60 dark:text-gray-200',
+                  : 'bg-gray-600/60 text-gray-200',
               ].join(' ')}
             >
               {twoFaOn ? t('security.twofa.on') : t('security.twofa.off')}
@@ -277,7 +277,7 @@ export function SecurityCard() {
               <img
                 src={setup.qrDataUri}
                 alt={t('security.twofa.qrAlt')}
-                className="h-[180px] w-[180px] rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-600"
+                className="h-[180px] w-[180px] rounded-lg border bg-white p-2 border-gray-600"
               />
               <div className="min-w-0 flex-1 space-y-3">
                 <p className="text-sm text-fg-muted">

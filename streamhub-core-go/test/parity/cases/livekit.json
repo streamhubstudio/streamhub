@@ -1,0 +1,1114 @@
+{
+  "module": "livekit",
+  "description": "LiveKit module (livekit.controller.ts, rooms.controller.ts, webhooks.controller.ts) + GET /stats. The parity env has empty LIVEKIT_* creds, so every SDK call fails identically (503 'LiveKit <op> failed: api-key and api-secret must be set'); cases cover validation 400s, RBAC denials, feature gates, the P0-3 signed-playback gate, the SSRF pull-URL guard and the webhook signature 401s. par-lk is created and deleted here.",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "lk-setup-app",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "body": {
+        "name": "par-lk",
+        "displayName": "LK"
+      },
+      "compare": "status",
+      "note": "private-playback / adaptive / chat-off app for the gates below"
+    },
+    {
+      "name": "lk-setup-config",
+      "method": "PUT",
+      "path": "/api/v1/apps/par-lk/config/raw",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "body": {
+        "yaml": "name: par-lk\nroom_prefix: lkp\ndisplay_name: LK\nwebrtc:\n  adaptive: true\n  transcode_max_height: 1080\n  layers:\n    - {name: low, height: 360}\n    - {name: high, height: 720}\nfeatures:\n  public_playback: false\n  chat: false\n  reactions: true\n  hidden_qc: false\n  adaptive_player: true\n  rtmp_password: true\n"
+      },
+      "compare": "status"
+    },
+    {
+      "name": "tokens-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 401,
+      "body": {}
+    },
+    {
+      "name": "tokens-viewer-denied",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {}
+    },
+    {
+      "name": "tokens-owner-cross-tenant",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 403,
+      "auth": "ownerJwt",
+      "body": {}
+    },
+    {
+      "name": "tokens-validation",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "room": "bad room!",
+        "identity": 5,
+        "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "canPublish": "yes",
+        "canSubscribe": 1,
+        "ttl": "yyyyyyyyyyyyyyyyyyyyy",
+        "metadata": 7,
+        "hidden": "no",
+        "recorder": 0,
+        "audioOnly": "t"
+      }
+    },
+    {
+      "name": "tokens-room-pattern",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "room": "a/b"
+      }
+    },
+    {
+      "name": "tokens-no-livekit-creds",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "room": "demo",
+        "identity": "u1"
+      },
+      "note": "empty LIVEKIT_API_KEY/SECRET → 503 before minting"
+    },
+    {
+      "name": "tokens-app-token",
+      "method": "POST",
+      "path": "/api/v1/apps/live/tokens",
+      "expectStatus": 503,
+      "auth": "appToken",
+      "body": {
+        "hidden": true,
+        "recorder": true
+      }
+    },
+    {
+      "name": "tokens-adaptive-app",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/tokens",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "metadata": "{\"a\":1}"
+      }
+    },
+    {
+      "name": "tokens-unknown-app",
+      "method": "POST",
+      "path": "/api/v1/apps/no-such-app/tokens",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "play-token-public-app",
+      "method": "GET",
+      "path": "/api/v1/apps/live/play-token/demo",
+      "expectStatus": 503,
+      "compareHeaders": [
+        "content-type",
+        "access-control-allow-origin"
+      ]
+    },
+    {
+      "name": "play-token-private-no-sig",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo",
+      "expectStatus": 403,
+      "compareHeaders": [
+        "content-type",
+        "access-control-allow-origin"
+      ]
+    },
+    {
+      "name": "play-token-private-bad-sig",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo?exp=9999999999&sig=0000000000000000000000000000000000000000000000000000000000000000",
+      "expectStatus": 403,
+      "compareHeaders": [
+        "content-type",
+        "access-control-allow-origin"
+      ]
+    },
+    {
+      "name": "play-token-private-malformed",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo?exp=abc&sig=zz",
+      "expectStatus": 403
+    },
+    {
+      "name": "play-token-private-expired",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo?exp=1000000000&sig=b57717af0ad3b80f932b2b0398d6946fa6ad2ce2ebeb50e7859e336fece0a5d8",
+      "expectStatus": 403,
+      "note": "genuine signature (parity JWT secret) with a past exp"
+    },
+    {
+      "name": "play-token-unknown-app",
+      "method": "GET",
+      "path": "/api/v1/apps/no-such-app/play-token/demo",
+      "expectStatus": 503
+    },
+    {
+      "name": "listen-token-public-app",
+      "method": "GET",
+      "path": "/api/v1/apps/live/radio/demo/listen-token",
+      "expectStatus": 503,
+      "compareHeaders": [
+        "content-type",
+        "access-control-allow-origin"
+      ]
+    },
+    {
+      "name": "listen-token-private-no-sig",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/radio/demo/listen-token",
+      "expectStatus": 403
+    },
+    {
+      "name": "sign-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 401,
+      "body": {}
+    },
+    {
+      "name": "sign-validation-low",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "ttlSeconds": 5
+      }
+    },
+    {
+      "name": "sign-validation-types",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "ttlSeconds": "x"
+      }
+    },
+    {
+      "name": "sign-validation-high",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "ttlSeconds": 86401.5
+      }
+    },
+    {
+      "name": "sign-ok",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "body": {
+        "ttlSeconds": 120
+      },
+      "capture": {
+        "lkSig": "data.sig",
+        "lkExp": "data.exp"
+      },
+      "mask": [
+        "data.exp",
+        "data.tokenUrl",
+        "data.playUrl",
+        "data.embedUrl",
+        "data.iframe"
+      ]
+    },
+    {
+      "name": "sign-default-ttl",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/play-token/demo/sign",
+      "expectStatus": 201,
+      "auth": "globalToken",
+      "rawBody": "",
+      "mask": [
+        "data.exp",
+        "data.sig",
+        "data.tokenUrl",
+        "data.playUrl",
+        "data.embedUrl",
+        "data.iframe"
+      ]
+    },
+    {
+      "name": "play-token-private-signed",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo?exp={{lkExp}}&sig={{lkSig}}",
+      "expectStatus": 503,
+      "note": "gate passes → mint fails on missing LiveKit creds"
+    },
+    {
+      "name": "play-token-private-signed-uppercase",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/demo?exp={{lkExp}}&sig=%20{{lkSig}}%20",
+      "expectStatus": 503
+    },
+    {
+      "name": "play-token-private-other-room",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/play-token/other?exp={{lkExp}}&sig={{lkSig}}",
+      "expectStatus": 403
+    },
+    {
+      "name": "listen-token-private-signed",
+      "method": "GET",
+      "path": "/api/v1/apps/par-lk/radio/demo/listen-token?exp={{lkExp}}&sig={{lkSig}}",
+      "expectStatus": 503
+    },
+    {
+      "name": "ingress-create-no-auth",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 401,
+      "body": {}
+    },
+    {
+      "name": "ingress-create-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {
+        "inputType": "rtmp"
+      }
+    },
+    {
+      "name": "ingress-create-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "rawBody": ""
+    },
+    {
+      "name": "ingress-create-bad-enum",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "udp",
+        "mode": "x"
+      }
+    },
+    {
+      "name": "ingress-create-srt-no-mode",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "srt",
+        "room": "ch1"
+      }
+    },
+    {
+      "name": "ingress-create-mpegts-transcode",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "mpegts",
+        "mode": "transcode"
+      }
+    },
+    {
+      "name": "ingress-create-bad-fields",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "room": "a b",
+        "participantIdentity": 1,
+        "url": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu",
+        "sources": 2,
+        "localaddr": "1111111111111111111111111111111111111111111111",
+        "fifoSize": 0,
+        "overrunNonfatal": "y",
+        "enableTranscoding": 1,
+        "audioOnly": "n",
+        "backup": "b"
+      }
+    },
+    {
+      "name": "ingress-create-fifo-float",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "fifoSize": 1500000000.0
+      }
+    },
+    {
+      "name": "ingress-create-rtmp",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "room": "ch1",
+        "backup": true
+      }
+    },
+    {
+      "name": "ingress-create-whip",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "whip",
+        "enableTranscoding": false
+      }
+    },
+    {
+      "name": "ingress-create-url-missing",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url"
+      }
+    },
+    {
+      "name": "ingress-create-url-private",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "rtsp://10.0.0.1/cam"
+      }
+    },
+    {
+      "name": "ingress-create-url-metadata",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "http://169.254.169.254/latest"
+      }
+    },
+    {
+      "name": "ingress-create-url-loopback-srt",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "srt://127.0.0.1:9000"
+      }
+    },
+    {
+      "name": "ingress-create-url-scheme",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "file:///etc/passwd"
+      }
+    },
+    {
+      "name": "ingress-create-url-invalid",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "not a url"
+      }
+    },
+    {
+      "name": "ingress-create-url-public-ip",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "url",
+        "url": "rtsp://93.184.216.34/live"
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-whip",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "whip",
+        "mode": "passthrough"
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-transcode",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "mode": "passthrough",
+        "enableTranscoding": true
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-backup",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "srt",
+        "mode": "passthrough",
+        "backup": true
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-audio",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "mode": "passthrough",
+        "audioOnly": true
+      }
+    },
+    {
+      "name": "ingress-create-passthrough-rtmp",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "inputType": "rtmp",
+        "mode": "passthrough"
+      }
+    },
+    {
+      "name": "ingress-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 401
+    },
+    {
+      "name": "ingress-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "ingress-list-bad-limit",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress?limit=abc&offset=1.5",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-list-array-room",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress?room=a&room=b&q=x",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-list-long-q",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress?q=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+      "expectStatus": 400,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-list-ok-params",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress?limit=&offset=0x10&room=ch1",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-get",
+      "method": "GET",
+      "path": "/api/v1/apps/live/ingress/IN_abc",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-validate-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "ingress-validate-unknown",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+      "expectStatus": 404,
+      "auth": "globalToken",
+      "body": {
+        "password": "x"
+      }
+    },
+    {
+      "name": "ingress-validate-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/ingress/IN_abc/validate",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {
+        "password": "x"
+      }
+    },
+    {
+      "name": "ingress-delete",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ingress/IN_abc",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-delete-passthrough",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ingress/pti_abc",
+      "expectStatus": 200,
+      "auth": "globalToken"
+    },
+    {
+      "name": "ingress-delete-viewer",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/ingress/IN_abc",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "stream-data-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/data",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "stream-data-types",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/data",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "topic": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "message": 1,
+        "reaction": 2,
+        "payload": 3,
+        "from": 4,
+        "destinationIdentities": [
+          1,
+          "a"
+        ],
+        "reliable": "x"
+      }
+    },
+    {
+      "name": "stream-data-dest-not-array",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/data",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "topic": "x",
+        "destinationIdentities": "a"
+      }
+    },
+    {
+      "name": "stream-data-chat-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/streams/s1/data",
+      "expectStatus": 404,
+      "auth": "globalToken",
+      "body": {
+        "topic": "chat",
+        "message": "hi"
+      }
+    },
+    {
+      "name": "stream-data-reaction",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/streams/s1/data",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "topic": "reaction",
+        "reaction": "👍"
+      }
+    },
+    {
+      "name": "stream-data-live",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/data",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "topic": "custom",
+        "payload": "raw"
+      }
+    },
+    {
+      "name": "stream-data-viewer",
+      "method": "POST",
+      "path": "/api/v1/apps/live/streams/s1/data",
+      "expectStatus": 403,
+      "auth": "viewerJwt",
+      "body": {
+        "topic": "x"
+      }
+    },
+    {
+      "name": "rooms-list-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/rooms",
+      "expectStatus": 401
+    },
+    {
+      "name": "rooms-list",
+      "method": "GET",
+      "path": "/api/v1/apps/live/rooms",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "rooms-list-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/rooms",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "rooms-get",
+      "method": "GET",
+      "path": "/api/v1/apps/live/rooms/demo",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "rooms-metadata-empty",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/rooms/demo/metadata",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "rooms-metadata-long",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/rooms/demo/metadata",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "metadata": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+      }
+    },
+    {
+      "name": "rooms-metadata",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/rooms/demo/metadata",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "metadata": "{}"
+      }
+    },
+    {
+      "name": "rooms-participants",
+      "method": "GET",
+      "path": "/api/v1/apps/live/rooms/demo/participants",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "rooms-kick",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+      "expectStatus": 503,
+      "auth": "globalToken"
+    },
+    {
+      "name": "rooms-kick-viewer",
+      "method": "DELETE",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+      "expectStatus": 403,
+      "auth": "viewerJwt"
+    },
+    {
+      "name": "rooms-mute-bad",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "trackSid": 1,
+        "kind": "screen",
+        "muted": "y"
+      }
+    },
+    {
+      "name": "rooms-mute-sid",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "trackSid": "TR_1"
+      }
+    },
+    {
+      "name": "rooms-mute-kind",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/mute",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "kind": "audio",
+        "muted": false
+      }
+    },
+    {
+      "name": "rooms-participant-bad",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "metadata": 1,
+        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn",
+        "canPublish": "x",
+        "canSubscribe": 0,
+        "canPublishData": []
+      }
+    },
+    {
+      "name": "rooms-participant-perm",
+      "method": "PATCH",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "canPublish": false,
+        "name": "N"
+      }
+    },
+    {
+      "name": "rooms-subs-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "rooms-subs-too-many",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {
+        "trackSids": [
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t",
+          "t"
+        ],
+        "subscribe": true
+      }
+    },
+    {
+      "name": "rooms-subs",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/participants/u1/subscriptions",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "trackSids": [
+          "TR_1"
+        ],
+        "subscribe": false
+      }
+    },
+    {
+      "name": "rooms-data-chat-disabled",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/rooms/demo/data",
+      "expectStatus": 404,
+      "auth": "globalToken",
+      "body": {
+        "topic": "chat"
+      }
+    },
+    {
+      "name": "rooms-data",
+      "method": "POST",
+      "path": "/api/v1/apps/par-lk/rooms/demo/data",
+      "expectStatus": 503,
+      "auth": "globalToken",
+      "body": {
+        "topic": "reaction",
+        "reaction": "x",
+        "destinationIdentities": [
+          "a"
+        ],
+        "reliable": false
+      }
+    },
+    {
+      "name": "rooms-data-empty",
+      "method": "POST",
+      "path": "/api/v1/apps/live/rooms/demo/data",
+      "expectStatus": 400,
+      "auth": "globalToken",
+      "body": {}
+    },
+    {
+      "name": "webhook-unsigned",
+      "method": "POST",
+      "path": "/api/v1/webhooks/livekit",
+      "expectStatus": 401,
+      "body": {
+        "event": "room_started",
+        "room": {
+          "name": "live-demo"
+        }
+      }
+    },
+    {
+      "name": "webhook-garbage-auth",
+      "method": "POST",
+      "path": "/api/v1/webhooks/livekit",
+      "expectStatus": 401,
+      "rawBody": "{\"event\":\"room_started\"}",
+      "headers": {
+        "Authorization": "not-a-jwt",
+        "Content-Type": "application/webhook+json"
+      }
+    },
+    {
+      "name": "webhook-forged-empty-secret",
+      "method": "POST",
+      "path": "/api/v1/webhooks/livekit",
+      "expectStatus": 401,
+      "rawBody": "",
+      "headers": {
+        "Authorization": "Bearer x.y.z"
+      }
+    },
+    {
+      "name": "webhook-get",
+      "method": "GET",
+      "path": "/api/v1/webhooks/livekit",
+      "expectStatus": 404
+    },
+    {
+      "name": "stats-no-auth",
+      "method": "GET",
+      "path": "/api/v1/stats",
+      "expectStatus": 401
+    },
+    {
+      "name": "stats",
+      "method": "GET",
+      "path": "/api/v1/stats",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "ignore": [
+        "ts",
+        "uptimeSeconds",
+        "version",
+        "cpu",
+        "memory",
+        "disk",
+        "storage.dbSizeBytes",
+        "storage.appsDbSizeBytes",
+        "storage.totalDbSizeBytes"
+      ],
+      "note": "host/size figures differ per process; LiveKit-derived fields are deterministic (no creds → unreachable)"
+    },
+    {
+      "name": "stats-viewer",
+      "method": "GET",
+      "path": "/api/v1/stats",
+      "expectStatus": 200,
+      "auth": "viewerJwt",
+      "ignore": [
+        "ts",
+        "uptimeSeconds",
+        "version",
+        "cpu",
+        "memory",
+        "disk",
+        "storage.dbSizeBytes",
+        "storage.appsDbSizeBytes",
+        "storage.totalDbSizeBytes"
+      ]
+    },
+    {
+      "name": "lk-teardown-app",
+      "method": "DELETE",
+      "path": "/api/v1/apps/par-lk",
+      "expectStatus": 200,
+      "auth": "globalToken",
+      "compare": "status"
+    }
+  ]
+}

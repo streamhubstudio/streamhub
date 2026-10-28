@@ -69,14 +69,14 @@ Pass `ariaHideApp={false}` (react-modal) unless you call
 | Elstar concept                          | StreamHub mapping |
 |-----------------------------------------|-------------------|
 | `ConfigProvider.themeColor`             | fixed to `'primary'` (brand, no theme switcher) |
-| `primaryColorLevel`                     | `500` (`bg-primary-500` = `#2f7bff`) |
+| `primaryColorLevel`                     | `500` (`bg-primary-500` = `#2468f2`, AA with white labels) |
 | dynamic `bg-${themeColor}-${level}`     | `primary-*` scale in `@theme` + `@source inline(...)` safelist in `src/index.css` |
-| `mode: 'light' | 'dark'`                | synced from `ThemeProvider` via `StreamHubConfigProvider` |
-| Elstar `.dark` (class strategy)         | kept — `@custom-variant dark (&:where(.dark, .dark *))` |
+| `mode`                                  | always `'dark'` (3.2: dark-only dashboard; `StreamHubConfigProvider` is static) |
+| Elstar `.dark` (class strategy)         | `dark:` is an always-on variant (`@custom-variant dark (&:where(:root, :root *))`); light branches removed |
 | Elstar component CSS (`_button.css`, …) | ported to `src/ui/ui.css` (v4-adapted: `@screen`→`@media`, `!x`→`x!`), imported from `src/index.css` |
 | `ltr:` / `rtl:` variants                | `@custom-variant ltr/rtl` in `src/index.css`; app is LTR (`<html dir="ltr">`) |
 | font Inter                              | unchanged (`--font-sans`, self-hosted variable Inter) |
-| logo                                    | unchanged solid `/logo-dark.svg` + `/logo-light.svg` via `@/components/Logo` |
+| logo                                    | `@/components/Logo`: brand mark `/favicon.svg` + live-text wordmark (the `/logo-*.svg` <img> clipped the name without Inter) |
 
 ## What was intentionally NOT migrated
 

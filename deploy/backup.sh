@@ -2,14 +2,18 @@
 # =============================================================================
 # StreamHub — consistent backup of the SQLite data + per-app secrets.
 # -----------------------------------------------------------------------------
-# Backs up, from DATA_DIR:
-#   * streamhub.db            (global DB: tenants, users, api_tokens, apps, nodes)
+# Backs up, from DATA_DIR (the core's layout, 2.x and 3.x alike):
+#   * data/streamhub.db       (global DB: tenants, users, api_tokens, apps, nodes)
 #   * apps/<app>/app.db       (one per app: streams, vods, ingress_auth)
-#   * secrets.json            (per-app S3 credentials, chmod 600)
+#   * data/secrets.json       (per-app S3 credentials, chmod 600)
+# A pre-2.x flat layout (streamhub.db / secrets.json directly under DATA_DIR)
+# is still picked up as a fallback. The archive mirrors DATA_DIR under data/
+# (data/data/streamhub.db, data/apps/<app>/app.db, data/data/secrets.json);
+# deploy/restore.sh reads both this and the old flat archive layout.
 #
 # Each *.db is snapshotted with `sqlite3 … "VACUUM INTO"` — a WAL-safe, single
 # file, consistent copy (the same technique the core uses before its boot-time
-# migration, see streamhub-core/src/shared/db/db.service.ts). We never tar a
+# migration, see streamhub-core-go/internal/platform/db). We never tar a
 # live .db directly (that can capture a torn WAL). The snapshots + secrets.json
 # are tar+gzipped with a UTC timestamp, optionally uploaded to S3, and old
 # copies (local and remote) past BACKUP_RETENTION_DAYS are pruned.
@@ -92,13 +96,23 @@ snapshot_db() {
   sqlite3 "$src" ".backup '$dst'"
 }
 
+# first existing of: <DATA_DIR>/data/<name> (the real layout), <DATA_DIR>/<name>
+# (pre-2.x flat layout); prints the path RELATIVE to DATA_DIR, or nothing.
+locate() {
+  local name="$1"
+  if [ -f "$DATA_DIR/data/$name" ]; then printf 'data/%s' "$name"
+  elif [ -f "$DATA_DIR/$name" ]; then printf '%s' "$name"
+  fi
+}
+
 # --- global DB ---------------------------------------------------------------
-if [ -f "$DATA_DIR/streamhub.db" ]; then
-  snapshot_db "$DATA_DIR/streamhub.db" "$STAGING/data/streamhub.db" \
-    || die "failed to snapshot global streamhub.db" 3
-  log "snapshotted streamhub.db"
+GLOBAL_REL="$(locate streamhub.db)"
+if [ -n "$GLOBAL_REL" ]; then
+  snapshot_db "$DATA_DIR/$GLOBAL_REL" "$STAGING/data/$GLOBAL_REL" \
+    || die "failed to snapshot global $GLOBAL_REL" 3
+  log "snapshotted $GLOBAL_REL"
 else
-  warn "no streamhub.db under $DATA_DIR — is this the right DATA_DIR?"
+  warn "no data/streamhub.db under $DATA_DIR — is this the right DATA_DIR?"
 fi
 
 # --- per-app DBs -------------------------------------------------------------
@@ -114,11 +128,13 @@ fi
 log "snapshotted $app_count per-app DB(s)"
 
 # --- secrets.json (per-app S3 creds) — plain copy, preserve mode -------------
-if [ -f "$DATA_DIR/secrets.json" ]; then
-  cp -p "$DATA_DIR/secrets.json" "$STAGING/data/secrets.json"
-  log "copied secrets.json"
+SECRETS_REL="$(locate secrets.json)"
+if [ -n "$SECRETS_REL" ]; then
+  mkdir -p "$(dirname "$STAGING/data/$SECRETS_REL")"
+  cp -p "$DATA_DIR/$SECRETS_REL" "$STAGING/data/$SECRETS_REL"
+  log "copied $SECRETS_REL"
 else
-  warn "no secrets.json under $DATA_DIR (ok if no per-app S3 configured)"
+  warn "no data/secrets.json under $DATA_DIR (ok if no per-app S3 configured)"
 fi
 
 # --- pack --------------------------------------------------------------------

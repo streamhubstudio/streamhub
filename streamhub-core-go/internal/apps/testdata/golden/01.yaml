@@ -1,0 +1,87 @@
+name: gold-b
+display_name: gold-b
+room_prefix: gold-b
+timezone: ''
+recording:
+  enabled: true
+  mode: room-composite
+  layout: grid
+  local_dir: recordings
+  delete_local_after_upload: true
+  split_minutes: 0
+  snapshot_seconds: 0
+  filename_template: ''
+  snapshot_template: ''
+  retention_days: 0
+s3:
+  provider: wasabi
+  bucket: ''
+  region: us-east-1
+  endpoint: https://s3.us-east-1.wasabisys.com
+  force_path_style: false
+  prefix: streamhub/gold-b
+  public_url: ''
+  access_key_env: APP_GOLD_B_S3_KEY
+  secret_key_env: APP_GOLD_B_S3_SECRET
+webrtc:
+  adaptive: true
+  layers:
+    - name: high
+      height: 720
+    - name: med
+      height: 480
+    - name: low
+      height: 240
+  transcode_max_height: 720
+rtmp:
+  enabled: true
+  transcode: true
+  passthrough: false
+transcoding:
+  enabled: false
+  encoding: h264
+  vod_adaptive: false
+  vod_renditions: []
+callbacks:
+  url: ''
+  secret: ''
+mqtt:
+  enabled: false
+  url: ''
+  username: ''
+  password_env: APP_GOLD_B_MQTT_PASSWORD
+  topic_prefix: streamhub/gold-b
+  qos: 0
+  tls: false
+  events:
+    - all
+  logs:
+    enabled: false
+    level: info
+latency_alert:
+  enabled: false
+  threshold_ms: 1000
+  cooldown_seconds: 60
+  interval_seconds: 10
+smtp:
+  enabled: false
+  host: ''
+  port: 587
+  user: ''
+  from: ''
+  pass_env: APP_GOLD_B_SMTP_PASS
+features:
+  rtmp_password: false
+  viewer_counter: true
+  chat: false
+  reactions: false
+  hidden_qc: true
+  adaptive_player: true
+  public_playback: true
+  linear:
+    persistent_room: false
+    room_empty_timeout_seconds: 86400
+    always_on_hls: false
+    dvr: false
+    dvr_window_seconds: 3600
+variables: {}

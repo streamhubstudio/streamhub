@@ -26,8 +26,8 @@
   {
     "id": "transcription",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-transcription",
-    "version": "1.0.0",
-    "sha256": "d378d8d96d5216deddc1a83288baf66e55413f13c0750c747efd5c78bda0863c"
+    "version": "1.0.1",
+    "sha256": "f48a1c29a5348427bb47755dc232a995283f589cc2e806883c799e6d4ecc29ba"
   },
   {
     "id": "presence",
@@ -44,31 +44,31 @@
   {
     "id": "yolo",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-yolo",
-    "version": "1.0.0",
-    "sha256": "d940a725b17dc140488af321bad0a40a17908806401dcddfec509f8c6395fb4f"
+    "version": "1.0.1",
+    "sha256": "61502573421bcec6f187d94f5fbcfb2d877b292641d68480845da0b6b195bbcc"
   },
   {
     "id": "occupancy",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
-    "version": "0.1.1",
-    "sha256": "f10b066730cd0c31b0d706cc59dfaeb57f76fd29fa72a130e9d6dbf48f584765"
+    "version": "0.1.2",
+    "sha256": "14e44607af36af60bd5b8633a3ba34f59a463d0ae65ac054a5841b97dfa7891c"
   },
   {
     "id": "counting",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
-    "version": "0.1.1",
-    "sha256": "9423c3c606a5448e3fcd418bc76b37965c96b620de3b12f53966b13708ad8f1e"
+    "version": "0.1.2",
+    "sha256": "59ee8698128ec3da6a3e052b69a42e50246553a741c7648309a2c079cee89334"
   },
   {
     "id": "crowd",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
-    "version": "0.1.1",
-    "sha256": "1a92290f55af324be196d264db653c032762e961279a3f19e40f6fa52633d04c"
+    "version": "0.1.2",
+    "sha256": "0d34132e736373a349eb6032c21effe25dd39670b61c02f3288b548f0d4f5b19"
   },
   {
     "id": "demography",
     "repo": "gitlab:digitalhub_com_ar/streamhub-app-vision",
-    "version": "0.1.1",
-    "sha256": "cc4ba2efa2fbbad86120579f425440fcd8c7106102747cfdacf8fc1f5fd88829"
+    "version": "0.1.2",
+    "sha256": "da541c772c6c4de1950ca819af53742a32e4a81163889a1503dd1dd4acd17d6f"
   }
 ]

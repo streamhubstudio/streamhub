@@ -1,0 +1,198 @@
+{
+  "manifestVersion": 1,
+  "id": "people-counter",
+  "name": "People Counter",
+  "description": "Counts people crossing a line drawn on the live video (YOLOv8 + ByteTrack): IN/OUT totals, live occupancy and a capacity alert, with signed count.in/count.out/occupancy.limit webhooks.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.0",
+  "kind": "app",
+  "icon": "users",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "storage": {
+    "db": "people-counter.db"
+  },
+  "export": {
+    "workerDir": "people-counter-worker"
+  },
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "door",
+      "help": "HLS room name to count — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "lineX1",
+      "type": "number",
+      "label": "Line start X (0–1)",
+      "default": 0.2,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "lineY1",
+      "type": "number",
+      "label": "Line start Y (0–1)",
+      "default": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "lineX2",
+      "type": "number",
+      "label": "Line end X (0–1)",
+      "default": 0.8,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "lineY2",
+      "type": "number",
+      "label": "Line end Y (0–1)",
+      "default": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "inDirection",
+      "type": "select",
+      "label": "\"In\" side of the line",
+      "default": "right",
+      "options": [
+        {
+          "value": "right",
+          "label": "Right of start→end (arrow side)"
+        },
+        {
+          "value": "left",
+          "label": "Left of start→end (flipped)"
+        }
+      ],
+      "help": "Which side of the drawn line is INSIDE: crossing onto it counts as IN, leaving it counts as OUT. The tab shows it as a rotatable/flippable arrow on the video."
+    },
+    {
+      "key": "capacity",
+      "type": "number",
+      "label": "Capacity alert threshold",
+      "default": 0,
+      "min": 0,
+      "max": 100000,
+      "help": "Fires one occupancy.limit event when occupancy reaches this; re-arms when it drops below. 0 disables the alert."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 5,
+      "min": 0.1,
+      "max": 30,
+      "help": "Frames per second to sample. 3–5 is the CPU sweet spot: a person must appear on both sides of the line to count."
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Model size",
+      "default": "nano",
+      "options": [
+        {
+          "value": "nano",
+          "label": "Nano (fastest, CPU-friendly)"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium (GPU recommended)"
+        },
+        {
+          "value": "large",
+          "label": "Large (GPU)"
+        },
+        {
+          "value": "xlarge",
+          "label": "XLarge (GPU)"
+        }
+      ]
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the GPU; off runs on CPU (yolov8n + low FPS there)."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Detection confidence",
+      "default": 0.3,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum person-detection confidence (0–1)."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "Events callback URL",
+      "default": "",
+      "placeholder": "https://example.com/hooks/people",
+      "help": "Where count.in / count.out / occupancy.limit events are POSTed (signed like app callbacks). Empty = counts stay local (SQLite + live panel)."
+    },
+    {
+      "key": "callbackSecret",
+      "type": "secret",
+      "label": "Callback signing secret",
+      "default": "",
+      "help": "HMAC-SHA256 secret for X-StreamHub-Signature on event POSTs (same verification as app callbacks). Empty = unsigned."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m people_counter_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "capabilities": [
+        "people-counter"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "PC_APP": "{{app}}",
+      "PC_ROOM": "{{config.room}}",
+      "PC_MODEL": "{{ config.model | map:nano=yolov8n,small=yolov8s,medium=yolov8m,large=yolov8l,xlarge=yolov8x,*=yolov8n }}",
+      "PC_DEVICE": "{{ config.cuda | ternary:cuda:cpu }}",
+      "PC_CONFIDENCE": "{{config.confidence}}",
+      "PC_FPS": "{{config.fps}}",
+      "PC_LINE": "{{config.lineX1}},{{config.lineY1}},{{config.lineX2}},{{config.lineY2}}",
+      "PC_IN_DIRECTION": "{{config.inDirection}}",
+      "PC_CAPACITY": "{{config.capacity}}",
+      "PC_CALLBACK_URL": "{{config.callbackUrl}}",
+      "PC_CALLBACK_SECRET": "{{config.callbackSecret}}",
+      "PC_DB_PATH": "{{dataDir}}/people-counter.db",
+      "PC_HLS_DIR": "{{appDir}}/hls",
+      "PC_PUBLIC_BASE": "{{publicBase}}",
+      "PC_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true,
+    "docs": "STANDALONE.md"
+  }
+}

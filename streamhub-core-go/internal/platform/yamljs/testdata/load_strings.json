@@ -1,0 +1,64 @@
+{
+  "$obj": [
+    [
+      "plain",
+      "hello world"
+    ],
+    [
+      "sq",
+      "it's"
+    ],
+    [
+      "dq",
+      "tab\thereéA😀"
+    ],
+    [
+      "folded",
+      "a b\nc\n"
+    ],
+    [
+      "literal",
+      "x\ny\n"
+    ],
+    [
+      "strip",
+      "x"
+    ],
+    [
+      "keep",
+      "x\n\n\n"
+    ],
+    [
+      "indicator",
+      "  lead\nx\n"
+    ],
+    [
+      "multi",
+      "a b c"
+    ],
+    [
+      "colon_in",
+      "a:b"
+    ],
+    [
+      "hash_in",
+      "a#b"
+    ],
+    [
+      "url",
+      "http://x:1/y"
+    ],
+    [
+      "tpl",
+      "${app}_${room}"
+    ],
+    [
+      "emoji",
+      "🎥"
+    ],
+    [
+      "unicode_esc",
+      " "
+    ]
+  ]
+}

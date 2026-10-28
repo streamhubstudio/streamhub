@@ -1,0 +1,93 @@
+{
+  "module": "pipeline",
+  "description": "Resolved media-pipeline topology (pipeline.controller.ts).",
+  "defaults": {
+    "compareHeaders": [
+      "content-type"
+    ]
+  },
+  "cases": [
+    {
+      "name": "pl-login-viewer",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{viewerEmail}}",
+        "password": "{{viewerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "plViewerJwt": "data.token"
+      }
+    },
+    {
+      "name": "pl-login-owner",
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "body": {
+        "user": "{{ownerEmail}}",
+        "password": "{{ownerPass}}"
+      },
+      "expectStatus": 200,
+      "capture": {
+        "plOwnerJwt": "data.token"
+      }
+    },
+    {
+      "name": "pl-get",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "auth": "globalToken",
+      "ignore": [
+        "data.compute"
+      ],
+      "note": "compute: vision-apps not ported yet (Go falls back to nodes/app_plugins; edge.online needs the edge gateway)",
+      "expectStatus": 200
+    },
+    {
+      "name": "pl-get-compute",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "auth": "globalToken",
+      "note": "compute block alone, pinned while both sides agree",
+      "expectStatus": 200
+    },
+    {
+      "name": "pl-get-no-auth",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "expectStatus": 401
+    },
+    {
+      "name": "pl-get-app-token",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "auth": "appToken",
+      "ignore": [
+        "data.compute"
+      ],
+      "expectStatus": 200
+    },
+    {
+      "name": "pl-get-owner-other-tenant",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "auth": "plOwnerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "pl-get-viewer",
+      "method": "GET",
+      "path": "/api/v1/apps/live/pipeline",
+      "auth": "plViewerJwt",
+      "expectStatus": 403
+    },
+    {
+      "name": "pl-get-unknown-app",
+      "method": "GET",
+      "path": "/api/v1/apps/nope-app/pipeline",
+      "auth": "globalToken",
+      "expectStatus": 404
+    }
+  ]
+}

@@ -88,7 +88,7 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
         <div
           role="menu"
           aria-label={t('share.title')}
-          className="absolute right-0 z-20 mt-1 w-60 rounded-lg border border-gray-200 bg-white p-1 text-left shadow-lg dark:border-gray-600 dark:bg-gray-800"
+          className="absolute right-0 z-20 mt-1 w-60 rounded-lg border p-1 text-left shadow-lg border-gray-600 bg-gray-800"
         >
           {items.map((item) => (
             <button
@@ -99,7 +99,7 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
                 copy(item.value)
                 setCopiedKey(item.key)
               }}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
+              className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-1.5 text-xs transition text-gray-100 hover:bg-gray-700"
             >
               <span className="truncate">{item.label}</span>
               <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">
@@ -116,7 +116,7 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
             role="menuitem"
             disabled={signing}
             onClick={copySignedEmbed}
-            className="mt-1 flex w-full items-center justify-between gap-2 rounded-md border-t border-gray-100 px-3 py-1.5 text-xs text-gray-700 transition hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-700"
+            className="mt-1 flex w-full items-center justify-between gap-2 rounded-md border-t px-3 py-1.5 text-xs transition disabled:opacity-60 border-gray-700 text-gray-100 hover:bg-gray-700"
           >
             <span className="truncate">{t('share.signedEmbed')}</span>
             <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">
@@ -129,7 +129,7 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
                     : t('common:actions.copy')}
             </span>
           </button>
-          <p className="px-3 py-1 text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="px-3 py-1 text-[10px] text-gray-500">
             {t('share.signedEmbedHelp')}
           </p>
         </div>

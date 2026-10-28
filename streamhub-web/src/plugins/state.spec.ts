@@ -13,6 +13,7 @@ import {
   resolveSection,
   sectionsOf,
   studioAppPath,
+  workerBadge,
 } from './state.ts'
 import type {
   InstalledPlugin,
@@ -306,4 +307,13 @@ test('resolveSection: unknown segment → default + redirect (no crash)', () => 
 test('resolveSection: no declared sections → null, never redirects', () => {
   assert.deepEqual(resolveSection([], 'anything'), { section: null, redirect: false })
   assert.deepEqual(resolveSection([], undefined), { section: null, redirect: false })
+})
+
+test('workerBadge: follows the worker PROCESS state, not the enabled flag', () => {
+  assert.deepEqual(workerBadge('running'), { key: 'running', tone: 'green' })
+  assert.deepEqual(workerBadge('starting'), { key: 'running', tone: 'green' })
+  // an enabled app whose worker exited must not read "running"
+  assert.deepEqual(workerBadge('crashed'), { key: 'crashed', tone: 'red' })
+  assert.deepEqual(workerBadge('stopped'), { key: 'stopped', tone: 'slate' })
+  assert.deepEqual(workerBadge(undefined), { key: 'stopped', tone: 'slate' })
 })

@@ -44,7 +44,7 @@ services:
     restart: unless-stopped
 
   livekit:
-    image: livekit/livekit-server:v1.8.4
+    image: livekit/livekit-server:v1.13.11
     container_name: streamhub-livekit
     network_mode: host
     restart: unless-stopped
@@ -90,12 +90,27 @@ services:
           udp_port: 3478
           cert_file: /etc/letsencrypt/live/${STREAMHUB_TURN_DOMAIN:-turn.localhost}/fullchain.pem
           key_file: /etc/letsencrypt/live/${STREAMHUB_TURN_DOMAIN:-turn.localhost}/privkey.pem
+        # live-control pause→resume mutes then UNmutes the publisher's tracks
+        # server-side; LiveKit refuses the unmute unless this is on (audio
+        # would stay muted forever after a resume).
+        room:
+          enable_remote_unmute: true
+        # Public ingest base URLs LiveKit returns in CreateIngress `url` (the
+        # dashboard shows it for WHIP; RTMP's rtmp_url is built by the core).
+        # LiveKit >=1.13 returns "" when unset. RTMP 1935 / WHIP 8080 hit the
+        # host directly (no TLS proxy in front).
+        ingress:
+          rtmp_base_url: rtmp://${STREAMHUB_DOMAIN:-localhost}:1935/live
+          whip_base_url: http://${STREAMHUB_DOMAIN:-localhost}:8080/w
         logging:
           level: info
         # Native Prometheus metrics on the HOST (network_mode: host). Scrape
         # 127.0.0.1:6789 locally — do NOT open 6789 on the firewall. Each LiveKit
         # service needs its own port since they share the host network.
-        prometheus_port: 6789
+        # LiveKit ≥1.13.8 ignores the old top-level `prometheus_port` (ingress
+        # and egress still use it) — the server reads `prometheus.port`.
+        prometheus:
+          port: 6789
     # TURN/TLS cert store (read-only) — only used when TURN is enabled. LiveKit
     # terminates the TURN cert itself, so it needs the certbot PEMs on-disk.
     # Mounting the WHOLE /etc/letsencrypt at the SAME path keeps the live/ symlinks
@@ -106,7 +121,7 @@ services:
       - ${STREAMHUB_TURN_CERT_DIR:-./data/certs/turn}:/etc/letsencrypt:ro
 
   ingress:
-    image: livekit/ingress:latest
+    image: livekit/ingress:v1.5.0
     container_name: streamhub-ingress
     network_mode: host
     restart: unless-stopped
@@ -193,7 +208,7 @@ services:
       - ${STREAMHUB_RTMPS_CERT_DIR:-./data/certs/rtmps}:/certs:ro
 
   egress:
-    image: livekit/egress:latest
+    image: livekit/egress:v1.15.0
     container_name: streamhub-egress
     network_mode: host
     restart: unless-stopped
@@ -241,6 +256,9 @@ services:
         # skip baking the deface worker deps. Default 1 = current behaviour.
         INSTALL_DEFACE_WORKER: ${INSTALL_DEFACE_WORKER:-1}
         INSTALL_VENDORED_WORKER_DEPS: ${INSTALL_VENDORED_WORKER_DEPS:-deface}
+        # Commit shown in the dashboard's About / Build panel (the build
+        # context has no .git), e.g. STREAMHUB_GIT_COMMIT=<sha> docker compose build.
+        STREAMHUB_GIT_COMMIT: ${STREAMHUB_GIT_COMMIT:-}
     image: streamhub-core:local
     container_name: streamhub-core
     network_mode: host
@@ -259,7 +277,8 @@ services:
     volumes:
       - ${STREAMHUB_HOST_DATA_DIR:-./data}:${DATA_DIR:-/data}
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:'+(process.env.PORT||3020)+'/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      # the core binary probes 127.0.0.1:$PORT/api/v1/health itself (no curl/node needed)
+      test: ["CMD", "/app/streamhub-core", "healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -280,10 +299,22 @@ services:
       # under --no-tls / an IP origin so Caddy serves plain HTTP (no cert attempt).
       STREAMHUB_SITE_ADDRESS: ${STREAMHUB_SITE_ADDRESS:-${STREAMHUB_DOMAIN:-localhost}}
       ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+      # Optional samples origin (features/samples.md): the host Caddy serves the
+      # sample pages on. Pair it with STREAMHUB_SAMPLES_URL=https://<SAMPLES_DOMAIN>
+      # (read by the core). Unset = a placeholder site nothing resolves to.
+      SAMPLES_SITE_ADDRESS: ${SAMPLES_DOMAIN:-http://samples.invalid}
+      # HLS direct-serve (opt-in, operations/SCALING.md): 1/true/on/yes makes
+      # Caddy serve live .ts/.m3u8 from the read-only DATA_DIR mount below
+      # (sendfile) instead of proxying every segment through the core. Anything
+      # else (default off) -> every /hls request is proxied, as before.
+      STREAMHUB_HLS_DIRECT_SERVE: ${STREAMHUB_HLS_DIRECT_SERVE:-off}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # DATA_DIR (read-only) for HLS direct-serve. Only <app>/hls/<room>/<file>
+      # is reachable (the Caddyfile's /hls matcher); never read while the flag is off.
+      - ${STREAMHUB_HOST_DATA_DIR:-./data}:/srv/streamhub-data:ro
 
 volumes:
   caddy_data:

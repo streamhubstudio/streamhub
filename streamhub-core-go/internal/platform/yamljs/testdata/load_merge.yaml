@@ -1,0 +1,23 @@
+base:
+  a: 1
+  b: 2
+other:
+  b: 20
+  c: 30
+merged:
+  a: 1
+  b: 99
+multi:
+  a: 1
+  b: 2
+  c: 30
+  d: 4
+over:
+  x: 0
+  a: 1
+  b: 2
+flow:
+  b: 20
+  c: 3
+quoted_merge:
+  '<<': literal

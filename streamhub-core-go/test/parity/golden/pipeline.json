@@ -1,0 +1,651 @@
+{
+  "module": "pipeline",
+  "cases": [
+    {
+      "name": "pl-login-viewer",
+      "fingerprint": "sha256:104316bbc834ec97",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{viewerEmail}}",
+          "password": "{{viewerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{plViewerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "pl-login-owner",
+      "fingerprint": "sha256:3042cee94f94cf3f",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "body": {
+          "user": "{{ownerEmail}}",
+          "password": "{{ownerPass}}"
+        }
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "token": "{{plOwnerJwt}}"
+        }
+      }
+    },
+    {
+      "name": "pl-get",
+      "fingerprint": "sha256:f1aa8f6c99332f6f",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "delivery": [
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC playback",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "/hls/<app>/<room>/index.m3u8 (on-demand live egress)",
+              "enabled": true,
+              "label": "HLS",
+              "type": "hls"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "CDN / public URL",
+              "type": "cdn"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "Restream",
+              "type": "restream"
+            }
+          ],
+          "events": {
+            "callbacks": {
+              "configured": false
+            },
+            "log": {
+              "enabled": true
+            },
+            "mqtt": {
+              "enabled": false
+            }
+          },
+          "ingest": [
+            {
+              "active": false,
+              "detail": "RTMP ingest on port 1935",
+              "enabled": true,
+              "label": "RTMP",
+              "type": "rtmp"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMPS_ENABLE off",
+              "enabled": false,
+              "label": "RTMPS",
+              "type": "rtmps"
+            },
+            {
+              "active": false,
+              "detail": "WebRTC-HTTP ingest (port 8080)",
+              "enabled": true,
+              "label": "WHIP",
+              "type": "whip"
+            },
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC publish",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "URL ingress — pulls a remote rtsp/http/hls/srt source",
+              "enabled": true,
+              "label": "RTSP / URL pull",
+              "type": "rtsp"
+            },
+            {
+              "active": false,
+              "detail": "/ingest/ws gateway",
+              "enabled": true,
+              "label": "WS MJPEG (ESP32)",
+              "type": "ws-mjpeg"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "SRT",
+              "type": "srt"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "MPEG-TS / UDP",
+              "type": "mpegts"
+            }
+          ],
+          "ingestFront": {
+            "mediamtx": false,
+            "port": 1935
+          },
+          "live": {
+            "activeStreams": 0,
+            "tags": []
+          },
+          "net": {
+            "inBytes": 0,
+            "outBytes": 0,
+            "windowSec": 3600
+          },
+          "notifications": {
+            "discord": false,
+            "email": false,
+            "telegram": false
+          },
+          "plugins": [],
+          "processing": {
+            "adaptive": {
+              "enabled": true,
+              "layers": [
+                {
+                  "height": 720,
+                  "name": "high"
+                },
+                {
+                  "height": 480,
+                  "name": "med"
+                },
+                {
+                  "height": 240,
+                  "name": "low"
+                }
+              ]
+            },
+            "passthrough": {
+              "enabled": false,
+              "transports": []
+            },
+            "transcoding": {
+              "enabled": false,
+              "encoder": "cpu",
+              "hwaccel": "auto"
+            }
+          },
+          "storage": {
+            "recording": {
+              "enabled": true
+            },
+            "s3": {
+              "configured": false
+            }
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "pl-get-compute",
+      "fingerprint": "sha256:540abdedfaa3ac63",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline",
+        "auth": "globalToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "compute": {
+            "edge": {
+              "online": 0,
+              "total": 0
+            },
+            "vision": {
+              "assignments": {
+                "pending": 0,
+                "running": 0
+              },
+              "enabled": false,
+              "models": []
+            }
+          },
+          "delivery": [
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC playback",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "/hls/<app>/<room>/index.m3u8 (on-demand live egress)",
+              "enabled": true,
+              "label": "HLS",
+              "type": "hls"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "CDN / public URL",
+              "type": "cdn"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "Restream",
+              "type": "restream"
+            }
+          ],
+          "events": {
+            "callbacks": {
+              "configured": false
+            },
+            "log": {
+              "enabled": true
+            },
+            "mqtt": {
+              "enabled": false
+            }
+          },
+          "ingest": [
+            {
+              "active": false,
+              "detail": "RTMP ingest on port 1935",
+              "enabled": true,
+              "label": "RTMP",
+              "type": "rtmp"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMPS_ENABLE off",
+              "enabled": false,
+              "label": "RTMPS",
+              "type": "rtmps"
+            },
+            {
+              "active": false,
+              "detail": "WebRTC-HTTP ingest (port 8080)",
+              "enabled": true,
+              "label": "WHIP",
+              "type": "whip"
+            },
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC publish",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "URL ingress — pulls a remote rtsp/http/hls/srt source",
+              "enabled": true,
+              "label": "RTSP / URL pull",
+              "type": "rtsp"
+            },
+            {
+              "active": false,
+              "detail": "/ingest/ws gateway",
+              "enabled": true,
+              "label": "WS MJPEG (ESP32)",
+              "type": "ws-mjpeg"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "SRT",
+              "type": "srt"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "MPEG-TS / UDP",
+              "type": "mpegts"
+            }
+          ],
+          "ingestFront": {
+            "mediamtx": false,
+            "port": 1935
+          },
+          "live": {
+            "activeStreams": 0,
+            "tags": []
+          },
+          "net": {
+            "inBytes": 0,
+            "outBytes": 0,
+            "windowSec": 3600
+          },
+          "notifications": {
+            "discord": false,
+            "email": false,
+            "telegram": false
+          },
+          "plugins": [],
+          "processing": {
+            "adaptive": {
+              "enabled": true,
+              "layers": [
+                {
+                  "height": 720,
+                  "name": "high"
+                },
+                {
+                  "height": 480,
+                  "name": "med"
+                },
+                {
+                  "height": 240,
+                  "name": "low"
+                }
+              ]
+            },
+            "passthrough": {
+              "enabled": false,
+              "transports": []
+            },
+            "transcoding": {
+              "enabled": false,
+              "encoder": "cpu",
+              "hwaccel": "auto"
+            }
+          },
+          "storage": {
+            "recording": {
+              "enabled": true
+            },
+            "s3": {
+              "configured": false
+            }
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "pl-get-no-auth",
+      "fingerprint": "sha256:6d99401d0e73e73e",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline"
+      },
+      "status": 401,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Unauthorized",
+        "message": "Missing Bearer token",
+        "statusCode": 401
+      }
+    },
+    {
+      "name": "pl-get-app-token",
+      "fingerprint": "sha256:b78f2ea3e2c3ed81",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline",
+        "auth": "appToken"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "data": {
+          "delivery": [
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC playback",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "/hls/<app>/<room>/index.m3u8 (on-demand live egress)",
+              "enabled": true,
+              "label": "HLS",
+              "type": "hls"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "CDN / public URL",
+              "type": "cdn"
+            },
+            {
+              "active": false,
+              "enabled": false,
+              "label": "Restream",
+              "type": "restream"
+            }
+          ],
+          "events": {
+            "callbacks": {
+              "configured": false
+            },
+            "log": {
+              "enabled": true
+            },
+            "mqtt": {
+              "enabled": false
+            }
+          },
+          "ingest": [
+            {
+              "active": false,
+              "detail": "RTMP ingest on port 1935",
+              "enabled": true,
+              "label": "RTMP",
+              "type": "rtmp"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMPS_ENABLE off",
+              "enabled": false,
+              "label": "RTMPS",
+              "type": "rtmps"
+            },
+            {
+              "active": false,
+              "detail": "WebRTC-HTTP ingest (port 8080)",
+              "enabled": true,
+              "label": "WHIP",
+              "type": "whip"
+            },
+            {
+              "active": false,
+              "detail": "LiveKit SFU (/rtc)",
+              "enabled": true,
+              "label": "WebRTC publish",
+              "type": "webrtc"
+            },
+            {
+              "active": false,
+              "detail": "URL ingress — pulls a remote rtsp/http/hls/srt source",
+              "enabled": true,
+              "label": "RTSP / URL pull",
+              "type": "rtsp"
+            },
+            {
+              "active": false,
+              "detail": "/ingest/ws gateway",
+              "enabled": true,
+              "label": "WS MJPEG (ESP32)",
+              "type": "ws-mjpeg"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "SRT",
+              "type": "srt"
+            },
+            {
+              "active": false,
+              "detail": "STREAMHUB_RTMP_PASSTHROUGH_ENABLE off",
+              "enabled": false,
+              "label": "MPEG-TS / UDP",
+              "type": "mpegts"
+            }
+          ],
+          "ingestFront": {
+            "mediamtx": false,
+            "port": 1935
+          },
+          "live": {
+            "activeStreams": 0,
+            "tags": []
+          },
+          "net": {
+            "inBytes": 0,
+            "outBytes": 0,
+            "windowSec": 3600
+          },
+          "notifications": {
+            "discord": false,
+            "email": false,
+            "telegram": false
+          },
+          "plugins": [],
+          "processing": {
+            "adaptive": {
+              "enabled": true,
+              "layers": [
+                {
+                  "height": 720,
+                  "name": "high"
+                },
+                {
+                  "height": 480,
+                  "name": "med"
+                },
+                {
+                  "height": 240,
+                  "name": "low"
+                }
+              ]
+            },
+            "passthrough": {
+              "enabled": false,
+              "transports": []
+            },
+            "transcoding": {
+              "enabled": false,
+              "encoder": "cpu",
+              "hwaccel": "auto"
+            }
+          },
+          "storage": {
+            "recording": {
+              "enabled": true
+            },
+            "s3": {
+              "configured": false
+            }
+          }
+        },
+        "error": null
+      }
+    },
+    {
+      "name": "pl-get-owner-other-tenant",
+      "fingerprint": "sha256:07ee353be2bf0854",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline",
+        "auth": "plOwnerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "pl-get-viewer",
+      "fingerprint": "sha256:489bf80cacd96ea9",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/live/pipeline",
+        "auth": "plViewerJwt"
+      },
+      "status": 403,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
+      }
+    },
+    {
+      "name": "pl-get-unknown-app",
+      "fingerprint": "sha256:571722e898173e97",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/apps/nope-app/pipeline",
+        "auth": "globalToken"
+      },
+      "status": 404,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Not Found",
+        "message": "app \"nope-app\" not found",
+        "statusCode": 404
+      }
+    }
+  ]
+}

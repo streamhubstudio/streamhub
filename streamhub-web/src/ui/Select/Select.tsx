@@ -34,12 +34,10 @@ interface DefaultOptionProps {
 const DefaultOption = ({
     innerProps,
     label,
-    selectProps,
     isSelected,
     isDisabled,
     isFocused,
 }: DefaultOptionProps) => {
-    const { themeColor } = selectProps
     return (
         <div
             className={classNames(
@@ -53,7 +51,7 @@ const DefaultOption = ({
             <span className="ml-2">{label}</span>
             {isSelected && (
                 <HiCheck
-                    className={`text-${themeColor} dark:text-white text-xl`}
+                    className="text-sky2 text-xl"
                 />
             )}
         </div>
@@ -133,7 +131,7 @@ function SelectImpl<
         ...rest
     } = props
 
-    const { themeColor, controlSize, primaryColorLevel, mode } = useConfig()
+    const { themeColor, controlSize, primaryColorLevel } = useConfig()
     const formControlSize = useForm()?.size
     const inputGroupSize = useInputGroup()?.size
 
@@ -204,7 +202,7 @@ function SelectImpl<
         }
 
         if (state.isFocused) {
-            return shadowBase + tw.primary
+            return shadowBase + 'var(--sh-focus)'
         }
 
         return 'none'
@@ -253,23 +251,19 @@ function SelectImpl<
                 ...theme,
                 colors: {
                     ...theme.colors,
-                    neutral0:
-                        mode === 'dark' ? tw.gray800 : tw.white,
-                    neutral20:
-                        mode === 'dark'
-                            ? tw.gray600
-                            : tw.gray300,
-                    neutral30:
-                        mode === 'dark'
-                            ? tw.gray600
-                            : tw.gray300,
-                    neutral80: mode === 'dark' ? tw.gray400 : tw.gray700,
-                    neutral10:
-                        mode === 'dark'
-                            ? tw.gray600
-                            : tw.gray300,
-                    primary25: tw.primary50,
-                    primary50: tw.primary100,
+                    // Dark only: react-select's palette straight from the
+                    // console tokens (CSS vars work in its inline styles).
+                    neutral0: 'var(--sh-surface-sunken)',
+                    neutral5: 'var(--sh-surface-raised)',
+                    neutral10: 'var(--sh-surface-raised)',
+                    neutral20: 'var(--sh-border-strong)',
+                    neutral30: 'var(--sh-border-strong)',
+                    neutral40: 'var(--sh-fg-subtle)',
+                    neutral50: 'var(--sh-fg-subtle)',
+                    neutral60: 'var(--sh-fg-muted)',
+                    neutral80: 'var(--sh-fg)',
+                    primary25: 'var(--sh-surface-raised)',
+                    primary50: 'var(--sh-surface-raised)',
                     primary: tw.primary,
                 },
             })}

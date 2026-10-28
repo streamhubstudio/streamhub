@@ -1,0 +1,196 @@
+{
+  "manifestVersion": 1,
+  "id": "safety-ppe",
+  "name": "Safety PPE Monitor",
+  "description": "EXPERIMENTAL: detects persons without helmet / hi-viz vest in configured work zones during work hours (pretrained YOLOv8 PPE model, community weights) and records ppe.violation events with evidence snapshots. Advisory only — not a certified safety system.",
+  "category": "processor",
+  "ui": "app-tab",
+  "version": "0.1.0",
+  "kind": "app",
+  "icon": "hard-hat",
+  "compat": {
+    "core": ">=2.19 <3"
+  },
+  "storage": {
+    "db": "safety-ppe.db"
+  },
+  "export": {
+    "workerDir": "safety-ppe-worker"
+  },
+  "events": [
+    "ppe.violation"
+  ],
+  "configSchema": [
+    {
+      "key": "room",
+      "type": "string",
+      "label": "Room / stream",
+      "default": "",
+      "required": true,
+      "placeholder": "live",
+      "help": "HLS room name to monitor — /hls/<app>/<room>/index.m3u8."
+    },
+    {
+      "key": "requireHelmet",
+      "type": "boolean",
+      "label": "Require helmet",
+      "default": true,
+      "help": "Flag persons without a hard hat."
+    },
+    {
+      "key": "requireVest",
+      "type": "boolean",
+      "label": "Require safety vest",
+      "default": true,
+      "help": "Flag persons without a hi-viz vest."
+    },
+    {
+      "key": "zones",
+      "type": "string",
+      "label": "Work zones (JSON)",
+      "default": "",
+      "placeholder": "[{\"name\":\"dock\",\"rect\":[0.1,0.2,0.5,0.7]}]",
+      "help": "JSON array of {name, rect:[x,y,w,h]} with 0–1 frame-relative coordinates. Empty = one full-frame zone \"all\". A person belongs to a zone when their feet (bottom-center of the box) are inside it. The plugin tab has a visual editor for this field."
+    },
+    {
+      "key": "workHours",
+      "type": "string",
+      "label": "Work hours",
+      "default": "",
+      "placeholder": "08:00-18:00",
+      "help": "HH:MM-HH:MM window (host local time) when PPE rules apply; overnight ranges wrap. Empty or malformed = always on (fail open)."
+    },
+    {
+      "key": "workDays",
+      "type": "string",
+      "label": "Work days",
+      "default": "",
+      "placeholder": "mon-fri",
+      "help": "Days the rules apply: names ('mon-fri', 'mon,wed') or ISO numbers ('1-5', 1=Monday). Empty = every day."
+    },
+    {
+      "key": "sustainFrames",
+      "type": "number",
+      "label": "Sustain frames",
+      "default": 3,
+      "min": 0,
+      "max": 60,
+      "help": "A violation fires only after being seen in MORE THAN this many consecutive analyzed frames (default 3 → fires on the 4th), filtering single-frame detection noise."
+    },
+    {
+      "key": "cooldownSeconds",
+      "type": "number",
+      "label": "Cooldown (seconds)",
+      "default": 120,
+      "min": 5,
+      "max": 3600,
+      "help": "After a violation fires, the same zone + missing item cannot re-fire for this long."
+    },
+    {
+      "key": "confidence",
+      "type": "number",
+      "label": "Detection confidence",
+      "default": 0.35,
+      "min": 0,
+      "max": 1,
+      "help": "Minimum model confidence for person/PPE detections (0–1)."
+    },
+    {
+      "key": "association",
+      "type": "number",
+      "label": "Association threshold",
+      "default": 0.5,
+      "min": 0.05,
+      "max": 1,
+      "help": "Fraction of a PPE item box that must lie inside a person box to count as worn by that person (containment, not IoU)."
+    },
+    {
+      "key": "fps",
+      "type": "number",
+      "label": "Sample FPS",
+      "default": 1,
+      "min": 0.1,
+      "max": 10,
+      "help": "Frames per second to analyze. The YOLOv8m model costs ~1 s of one CPU core per frame — keep this at 1 or below on CPU hosts."
+    },
+    {
+      "key": "cuda",
+      "type": "boolean",
+      "label": "Use CUDA (GPU)",
+      "default": false,
+      "help": "On uses the CUDA execution provider (needs onnxruntime-gpu); off runs on CPU. Falls back to CPU automatically when CUDA is unavailable."
+    },
+    {
+      "key": "callbackUrl",
+      "type": "string",
+      "label": "Violation webhook URL",
+      "default": "",
+      "placeholder": "https://example.com/hooks/ppe",
+      "help": "Optional: POST each ppe.violation event {event, app, room, ts, zone, missing, confidence, snapshot_path} to this URL."
+    },
+    {
+      "key": "callbackSecret",
+      "type": "secret",
+      "label": "Webhook HMAC secret",
+      "default": "",
+      "help": "Optional: signs the webhook body as X-StreamHub-Signature: sha256=<hmac> — the same format the core app callbacks use."
+    },
+    {
+      "key": "modelUrl",
+      "type": "string",
+      "label": "Model URL (ONNX)",
+      "default": "https://huggingface.co/Hexmon/vyra-yolo-ppe-detection/resolve/main/best.onnx",
+      "help": "ONNX checkpoint downloaded once into <DATA_DIR>/models/safety-ppe/. Swap for a custom YOLOv8 PPE export (class names are read from the ONNX metadata)."
+    }
+  ],
+  "worker": {
+    "needsWorker": true,
+    "entry": "{{pluginPython}} -m safety_ppe_worker --app {{app}}",
+    "workerDir": "worker",
+    "cwd": "{{workerDir}}",
+    "placement": "grid",
+    "grid": {
+      "gpu": true,
+      "capabilities": [
+        "cuda",
+        "ppe"
+      ]
+    },
+    "edge": true,
+    "requirements": "worker/requirements.txt",
+    "env": {
+      "PYTHONPATH": "{{workerDir}}",
+      "PYTHONUNBUFFERED": "1",
+      "SAFETY_PPE_APP": "{{app}}",
+      "SAFETY_PPE_ROOM": "{{config.room}}",
+      "SAFETY_PPE_REQUIRE_HELMET": "{{ config.requireHelmet | ternary:true:false }}",
+      "SAFETY_PPE_REQUIRE_VEST": "{{ config.requireVest | ternary:true:false }}",
+      "SAFETY_PPE_ZONES": "{{config.zones}}",
+      "SAFETY_PPE_WORK_HOURS": "{{config.workHours}}",
+      "SAFETY_PPE_WORK_DAYS": "{{config.workDays}}",
+      "SAFETY_PPE_SUSTAIN_FRAMES": "{{config.sustainFrames}}",
+      "SAFETY_PPE_COOLDOWN_SECONDS": "{{config.cooldownSeconds}}",
+      "SAFETY_PPE_CONFIDENCE": "{{config.confidence}}",
+      "SAFETY_PPE_ASSOC_THRESHOLD": "{{config.association}}",
+      "SAFETY_PPE_FPS": "{{config.fps}}",
+      "SAFETY_PPE_EXECUTION_PROVIDER": "{{ config.cuda | ternary:cuda:cpu }}",
+      "SAFETY_PPE_CALLBACK_URL": "{{config.callbackUrl}}",
+      "SAFETY_PPE_CALLBACK_SECRET": "{{config.callbackSecret}}",
+      "SAFETY_PPE_MODEL_URL": "{{config.modelUrl}}",
+      "SAFETY_PPE_MODEL_DIR": "{{dataDir}}/models/safety-ppe",
+      "SAFETY_PPE_DB": "{{dataDir}}/safety-ppe.db",
+      "SAFETY_PPE_EVIDENCE_DIR": "{{dataDir}}/evidence",
+      "SAFETY_PPE_HLS_DIR": "{{appDir}}/hls",
+      "SAFETY_PPE_PUBLIC_BASE": "{{publicBase}}",
+      "SAFETY_PPE_LIVEKIT_URL": "{{livekitUrl}}"
+    }
+  },
+  "frontend": {
+    "dir": "frontend",
+    "mode": "composed"
+  },
+  "standalone": {
+    "supported": true,
+    "docs": "STANDALONE.md"
+  }
+}
