@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
 )
 
 // Remux statuses: live = ffmpeg running; idle = armed, between listens / a
@@ -53,6 +55,8 @@ type RemuxSpec struct {
 	DestPort   int
 	ForwardKey string
 	AppID      *int64
+	// HlsVariant: "" (MPEG-TS) or HlsFMP4HEVC (E1).
+	HlsVariant string
 }
 
 // RemuxState is the public state of one remux.
@@ -280,7 +284,7 @@ func (m *RemuxManager) launch(e *remuxEntry) {
 	spec := e.spec
 	forward := spec.Kind == "forward"
 	if !forward {
-		if err := os.MkdirAll(spec.HlsDir, 0o777); err != nil {
+		if err := os.MkdirAll(spec.HlsDir, fsperm.PublicHLS); err != nil {
 			m.system(e, "could not create HLS dir: "+err.Error())
 		}
 	}
@@ -299,6 +303,7 @@ func (m *RemuxManager) launch(e *remuxEntry) {
 		args = BuildRemuxArgs(RemuxArgs{
 			App: spec.App, StreamKey: spec.StreamKey, Port: spec.Port, HlsDir: spec.HlsDir,
 			Transport: spec.Transport, Mode: spec.Mode, PullHost: spec.PullHost, SourceURL: spec.SourceURL,
+			HlsVariant: spec.HlsVariant,
 		})
 	}
 	var proc Proc

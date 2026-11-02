@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/edge"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/edge"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
 )
 
 // vendorFixtures are the vendored manifests of the 4 decoupled model-apps

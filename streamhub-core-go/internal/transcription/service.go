@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/recording"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/recording"
 )
 
 // Port of transcription.service.ts. The pipeline runs in a background

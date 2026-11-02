@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // js parses a JSON literal into the value model (JS key order).

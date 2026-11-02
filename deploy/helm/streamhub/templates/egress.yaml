@@ -1,0 +1,98 @@
+{{- if .Values.egress.enabled }}
+{{- $fullname := include "streamhub.fullname" . -}}
+{{- $e := .Values.egress -}}
+# LiveKit Egress — recordings, HLS, RTMP out. It writes MP4s/HLS segments at
+# the DATA_DIR paths the core hands it, and the core then serves/uploads them:
+# both MUST see the same volume at /data (compose: the same bind mount).
+# With the default RWO claim that means the core's node → required pod
+# affinity to the core. Single replica (it follows the core).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-egress
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: egress
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
+  selector:
+    matchLabels:
+      {{- include "streamhub.selector" (list . "egress") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "streamhub.selector" (list . "egress") | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      hostNetwork: {{ $e.hostNetwork }}
+      dnsPolicy: {{ ternary "ClusterFirstWithHostNet" "ClusterFirst" $e.hostNetwork }}
+      {{- with $e.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* the core's node may be tainted for media: tolerate what the core tolerates */}}
+      {{- $tol := concat (default list .Values.core.tolerations) (default list $e.tolerations) }}
+      {{- with $tol }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $e.colocateWithCore }}
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "streamhub.selector" (list . "core") | nindent 18 }}
+      {{- end }}
+      containers:
+        - name: egress
+          image: {{ include "streamhub.image" $e.image }}
+          imagePullPolicy: {{ $e.image.pullPolicy }}
+          # The image runs as uid 1001 (gid 0) and its pulseaudio refuses root:
+          # never override the user. The core creates every output dir
+          # group-0-writable (umask 002), which is what lets egress write.
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN"]   # headless Chrome sandbox (compose: cap_add)
+          ports:
+            - { name: metrics, containerPort: {{ $e.prometheusPort }}, protocol: TCP }
+          env:
+            {{- include "streamhub.livekitSecretEnv" . | nindent 12 }}
+            - name: EGRESS_CONFIG_BODY
+              value: |
+                redis:
+                  address: {{ include "streamhub.redisAddress" . }}
+                  password: $(REDIS_PASSWORD)
+                ws_url: {{ include "streamhub.livekitWs" . }}
+                api_key: $(LIVEKIT_API_KEY)
+                api_secret: $(LIVEKIT_API_SECRET)
+                insecure: false
+                log_level: info
+                prometheus_port: {{ $e.prometheusPort }}
+                cpu_cost:
+                  room_composite_cpu_cost: {{ $e.compositeCpuCost | default 2.0 }}
+          resources:
+            {{- toYaml $e.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "streamhub.dataClaim" . }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ $e.shmSize }}
+{{- end }}

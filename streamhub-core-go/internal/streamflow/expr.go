@@ -7,7 +7,7 @@ import (
 
 	"github.com/dlclark/regexp2"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of boxes/expr.ts: SAFE typed condition / switch evaluation (no eval).

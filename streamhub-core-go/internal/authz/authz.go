@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
 )
 
 // EnforceEnv is the phased-enforcement switch.
@@ -125,10 +125,15 @@ func (s *Service) AppIDByName(ctx context.Context, app string) (int64, bool) {
 }
 
 // AppBelongsToTenant is the data-scope check. Unknown app, unassigned app,
-// unscoped/superadmin caller or pre-migration schema → true (no signal, no block).
+// superadmin caller or pre-migration schema → true (no signal, no block).
+// Security 3.3.4: it fails CLOSED on an empty tenant or app — a
+// non-superadmin principal without a tenant used to pass for every app.
 func (s *Service) AppBelongsToTenant(ctx context.Context, p *auth.Principal, app string) bool {
-	if p.IsSuperadmin || p.TenantID == "" {
+	if p.IsSuperadmin {
 		return true
+	}
+	if p.TenantID == "" || app == "" {
+		return false
 	}
 	s.once.Do(func() {
 		rows, err := s.db.QueryContext(ctx, `PRAGMA table_info(apps)`)

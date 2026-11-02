@@ -3,7 +3,7 @@ package mcpserver
 import (
 	"strings"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Pretty is JSON.stringify(v, null, 2) over the yamljs value model:

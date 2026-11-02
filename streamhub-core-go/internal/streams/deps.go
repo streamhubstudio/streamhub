@@ -1,6 +1,9 @@
 package streams
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Narrow views of the collaborators this package calls. Each is optional in
 // Node (@Optional / best-effort); a nil getter or nil value means "absent"
@@ -42,6 +45,9 @@ type HlsEgressInfo struct {
 	EgressID string
 	Status   string
 	RoomName string
+	// StartedAt is LiveKit's EgressInfo.started_at (zero = not reported,
+	// e.g. still EGRESS_STARTING): the startup grace of the liveness check.
+	StartedAt time.Time
 }
 
 // StartHlsEgressInput is the contract StartHlsEgressInput.
@@ -94,6 +100,20 @@ type Optional struct {
 	Callbacks func() Callbacks
 	Logs      func() Logs
 	Metrics   func() Metrics
+	HLSTokens func() HLSTokens
+	HLSEdge   func() HLSEdge
+}
+
+// HLSTokens mints the ?st= token of a private app's room dir ("" for a
+// public app) so the playlistUrl the HLS routes return plays as is (G2).
+type HLSTokens interface {
+	HLSTokenFor(ctx context.Context, app, dir string) string
+}
+
+// HLSEdge picks the base of the playlistUrl: a cdn-edge's URL when
+// STREAMHUB_HLS_EDGE_SELECT is on (cluster.HLSEdgeSelector), else origin.
+type HLSEdge interface {
+	HLSBase(ctx context.Context, app, origin string) string
 }
 
 func get[T any](f func() T) T {

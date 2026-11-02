@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // GBBytes is one GiB: the threshold compares with the dashboard's

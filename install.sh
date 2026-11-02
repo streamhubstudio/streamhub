@@ -10,6 +10,10 @@
 #   curl -fsSL https://www.streamhub.studio/install.sh | sudo bash -s -- \
 #       --join --cluster-token <token> --origin-ip <ip> [--origin-url https://app.example.com]
 #
+#   Lightweight HLS cache node (nginx only — no Docker/LiveKit):
+#   curl -fsSL https://www.streamhub.studio/install.sh | sudo bash -s -- \
+#       --cdn-edge --master-token <token> --master-ip <ip> [--edge-url http://<public-ip>]
+#
 # Target OS: Ubuntu Server 24.04/26.04 LTS or Debian 12 (bookworm) / 13 (trixie),
 # x86_64 ONLY (validated, aborts otherwise; STREAMHUB_SKIP_OS_CHECK=1 overrides).
 # Idempotent: safe to re-run — it keeps your .env secrets, updates the
@@ -41,7 +45,7 @@ fi
 set -euo pipefail
 
 VERSION="2.2.0"                       # installer format version (this script)
-REPO_URL="${STREAMHUB_REPO_URL:-https://github.com/streamhubstudio/streamhub.git}"
+REPO_URL="${STREAMHUB_REPO_URL:-https://gitlab.com/digitalhub_com_ar/vision-media-server.git}"
 INSTALL_DIR="${STREAMHUB_DIR:-/opt/streamhub}"
 SELF_URL="${STREAMHUB_INSTALL_URL:-https://www.streamhub.studio/install.sh}"
 # Read-only manifest of the latest published release (version/tarball/sha256).
@@ -72,6 +76,15 @@ is_ip() {
     *.*.*.*) return 0 ;;         # four dotted groups → IPv4
     *) return 1 ;;
   esac
+}
+
+# Normalize a base URL to scheme://host[:port] (no path, no trailing slash) —
+# what nginx's proxy_pass and the registry `url` want. Fails on anything else
+# (also keeps sed-special characters out of the nginx template).
+norm_base_url() {
+  local u="${1%/}"
+  [[ "$u" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$ || "$u" =~ ^https?://\[[0-9A-Fa-f:]+\](:[0-9]{1,5})?$ ]] || return 1
+  printf '%s' "$u"
 }
 
 # ---- semver (X.Y.Z) comparison ----------------------------------------------
@@ -142,6 +155,73 @@ preflight_tcp() { # host port [timeout_sec]
   timeout "$t" bash -c "exec 3<>/dev/tcp/$host/$port" 2>/dev/null
 }
 
+# ---- cloud 1:1 NAT detection (LiveKit node_ip) -------------------------------
+# On AWS/GCP/Azure the public IP is NOT on any interface (the provider NATs it
+# 1:1 onto the private one). LiveKit's use_external_ip then advertises the
+# STUN-detected PUBLIC IP, which the egress' headless Chrome inside the VPC can't
+# reach (black / no HLS — LT3 + LT4 on AWS); the fix is node_ip=<private IP> +
+# use_external_ip=false. Every probe is capped at 1s and failures are silent: a
+# host without metadata just isn't detected, the install never fails here.
+# STREAMHUB_METADATA_HOST / STREAMHUB_PUBLIC_IP_URL are test hooks.
+is_ipv4() { [[ "${1:-}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; }
+local_ipv4s() { # every IPv4 on a local interface, one per line
+  { ip -o -4 addr show 2>/dev/null | awk '{split($4,a,"/"); print a[1]}'
+    hostname -I 2>/dev/null | tr ' ' '\n'; } | grep -E '^[0-9.]+$' | sort -u || true
+}
+default_route_ipv4() { ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1 || true; }
+_meta_get() { # _meta_get <url> [header] → body ('' on any error), ≤1s
+  if [ -n "${2:-}" ]; then curl -fsS --connect-timeout 1 -m 1 -H "$2" "$1" 2>/dev/null || true
+  else curl -fsS --connect-timeout 1 -m 1 "$1" 2>/dev/null || true; fi
+}
+# Prints "<private-ip> <public-ip> <source>" when this host is behind a 1:1 NAT,
+# nothing otherwise.
+detect_nat_ips() {
+  local mh="${STREAMHUB_METADATA_HOST:-169.254.169.254}" mport=80 m tok priv="" pub="" src="" az lip
+  case "$mh" in *:*) mport="${mh##*:}" ;; esac
+  m="http://$mh"
+  # One TCP probe first: off-cloud the link-local metadata IP doesn't answer, so
+  # this bounds the whole detection to ~1s there.
+  if preflight_tcp "${mh%%:*}" "$mport" 1; then
+    # AWS IMDSv2 (session token), then IMDSv1 for instances that still allow it.
+    tok="$(curl -fsS --connect-timeout 1 -m 1 -X PUT -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' "$m/latest/api/token" 2>/dev/null || true)"
+    if [ -n "$tok" ]; then
+      priv="$(_meta_get "$m/latest/meta-data/local-ipv4" "X-aws-ec2-metadata-token: $tok")"
+      pub="$(_meta_get "$m/latest/meta-data/public-ipv4" "X-aws-ec2-metadata-token: $tok")"
+    else
+      priv="$(_meta_get "$m/latest/meta-data/local-ipv4")"
+      is_ipv4 "$priv" && pub="$(_meta_get "$m/latest/meta-data/public-ipv4")"
+    fi
+    is_ipv4 "$priv" && src="aws-imds"
+    if [ -z "$src" ]; then   # GCP
+      priv="$(_meta_get "$m/computeMetadata/v1/instance/network-interfaces/0/ip" 'Metadata-Flavor: Google')"
+      if is_ipv4 "$priv"; then
+        src="gcp-metadata"
+        pub="$(_meta_get "$m/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip" 'Metadata-Flavor: Google')"
+      fi
+    fi
+    if [ -z "$src" ]; then   # Azure IMDS
+      az="$m/metadata/instance/network/interface/0/ipv4/ipAddress/0"
+      priv="$(_meta_get "$az/privateIpAddress?api-version=2021-02-01&format=text" 'Metadata: true')"
+      if is_ipv4 "$priv"; then
+        src="azure-imds"
+        pub="$(_meta_get "$az/publicIpAddress?api-version=2021-02-01&format=text" 'Metadata: true')"
+      fi
+    fi
+  fi
+  # The advertised IP must be one this host actually has.
+  if ! is_ipv4 "$priv" || ! local_ipv4s | grep -qxF "$priv"; then priv="$(default_route_ipv4)"; fi
+  # No metadata: compare the public IP an echo service sees with the interfaces.
+  # (A cloud that answered but has NO public IP is a private-only box: no change.)
+  if [ -z "$src" ]; then
+    pub="$(curl -fsS -m3 "${STREAMHUB_PUBLIC_IP_URL:-https://api.ipify.org}" 2>/dev/null | tr -d '[:space:]' || true)"
+    src="public-ip-not-local"
+  fi
+  is_ipv4 "$priv" && is_ipv4 "$pub" || return 0
+  [ "$priv" != "$pub" ] || return 0
+  while IFS= read -r lip; do [ "$lip" = "$pub" ] && return 0; done < <(local_ipv4s)
+  printf '%s %s %s\n' "$priv" "$pub" "$src"
+}
+
 usage() {
   cat <<'USAGE'
 StreamHub node installer — Ubuntu 24.04/26.04 LTS or Debian 12/13, x86_64.
@@ -155,6 +235,13 @@ Modes
                          LiveKit keys/redis flow back in the join response — no
                          manual key sharing).
   --dry-run              Validate OS/ports/flags and print the plan; change nothing.
+  --prepare-image        Marketplace/golden-image build (Packer): install the deps,
+                         fetch the source, pre-pull the stack images and pre-build
+                         the core image — then STOP. No .env, no secrets, no domain,
+                         nothing started. The first real run on the booted image
+                         (deploy/marketplace/first-boot.sh) installs from that baked
+                         source without re-fetching (STREAMHUB_IMAGE_REFRESH=1 forces
+                         a fetch). See streamhub-docs/operations/MARKETPLACE.md.
 
 Origin flags (all optional; prompted unless --non-interactive)
   --domain <fqdn>        Public domain (DNS A record must point here). Empty = localhost test mode.
@@ -166,7 +253,8 @@ Origin flags (all optional; prompted unless --non-interactive)
                          SMTP for magic-link/reset emails (optional but recommended).
   --proxy nginx|caddy    TLS/reverse proxy. nginx+certbot (default) or the compose
                          Caddy service (auto-TLS, no host packages).
-  --no-tls               Skip certbot (e.g. behind your own proxy/LB).
+  --no-tls               Skip certbot (e.g. behind your own proxy/LB). Without a
+                         --domain, nginx gets a catch-all vhost on :80 to the core.
   --turn                 Enable LiveKit's embedded TURN/TLS relay (5349/tcp +
                          3478/udp) so clients behind symmetric NAT / VPN / strict
                          firewalls (Safari/iOS worst) connect. nginx shape + a real
@@ -209,6 +297,26 @@ Join flags
                          you accept that limitation — fix ships with S3 transport
                          (architecture/CLUSTER-ROADMAP.md). Alias off: --no-egress.
   --region <region>      Optional region label for the registry.
+  --node-ip <ip|auto|off>
+                         IP LiveKit advertises (origin + common joins). DEFAULT
+                         off: STUN public-IP detection (internet browsers reach
+                         WebRTC directly). auto: on a cloud 1:1-NAT host (AWS/GCP/
+                         Azure metadata, or public IP not on any interface) LiveKit
+                         gets node_ip=<private IP> + use_external_ip=false — for
+                         clusters whose media ports are closed to the internet
+                         (browsers then need TURN). <ip> forces. Persisted.
+
+CDN edge (lightweight HLS cache — nginx only, no Docker/LiveKit)
+  --cdn-edge             = --join --node-type cdn-edge: nginx caching /hls from the
+                         origin (deploy/nginx-hls-edge.conf), registered + heartbeating
+                         (conns/req/tx Mbps). Needs --master-token + --master-ip.
+  --edge-url <url>       Public base URL viewers use for this edge (registered as
+                         its `url`). Default: http://<detected public IP>.
+  --cdn-origin-url <url> Where the edge pulls /hls from. Default: the master URL the
+                         join succeeded against (http://<master-ip> or --master-url).
+  --edge-cache-tmpfs <size>
+                         Mount the HLS cache dir as tmpfs (e.g. 4g / 2048m);
+                         nginx's max_size is set to 90% of it. off = disk cache.
 
 General
   --dir <path>           Install dir (default /opt/streamhub).
@@ -226,7 +334,10 @@ STREAMHUB_REGION, STREAMHUB_DIR, STREAMHUB_NON_INTERACTIVE=1,
 STREAMHUB_FORCE_REINSTALL=1, STREAMHUB_MEDIAMTX_ENABLE=1 (--mediamtx),
 STREAMHUB_NO_PLUGINS=1 (--no-plugins), STREAMHUB_TURN_ENABLE=1 (--turn) +
 STREAMHUB_TURN_DOMAIN (--turn-domain), STREAMHUB_NODE_EGRESS=1 (--with-egress),
-STREAMHUB_SAMPLES_DOMAIN (--samples-domain).
+STREAMHUB_SAMPLES_DOMAIN (--samples-domain), STREAMHUB_PREPARE_IMAGE=1
+(--prepare-image), STREAMHUB_NODE_IP (--node-ip), STREAMHUB_CDN_EDGE=1
+(--cdn-edge), STREAMHUB_EDGE_URL (--edge-url), STREAMHUB_CDN_ORIGIN_URL
+(--cdn-origin-url), STREAMHUB_EDGE_CACHE_TMPFS (--edge-cache-tmpfs).
 Re-runs: idempotent. If a newer VERSION is fetched, an UPGRADE runs (pre-upgrade
 DB backup → rebuild → migrate on boot → verify → re-stamp $INSTALL_DIR/VERSION).
 Flags/env update their .env keys; generated secrets are never rotated.
@@ -236,9 +347,15 @@ USAGE
 # ---- flags ------------------------------------------------------------------
 MODE="origin"
 DRY_RUN=0
+PREPARE_IMAGE="${STREAMHUB_PREPARE_IMAGE:-0}"
+case "$PREPARE_IMAGE" in 1|true|on|yes|TRUE|On|Yes) PREPARE_IMAGE=1 ;; *) PREPARE_IMAGE=0 ;; esac
 FORCE_REINSTALL="${STREAMHUB_FORCE_REINSTALL:-0}"
 NONINTERACTIVE="${STREAMHUB_NON_INTERACTIVE:-0}"
 PROXY="${STREAMHUB_PROXY:-nginx}"
+# Only an operator choice (flag/env) may override the proxy persisted in
+# .install-profile — a bare re-run / `streamhub upgrade` of a caddy origin must
+# NOT silently turn into an nginx one (it would also drop its caddy container).
+EXPLICIT_PROXY=0; [ -n "${STREAMHUB_PROXY:-}" ] && EXPLICIT_PROXY=1
 NO_TLS="${STREAMHUB_NO_TLS:-0}"
 NO_PLUGINS="${STREAMHUB_NO_PLUGINS:-0}"
 JOIN="${STREAMHUB_JOIN:-0}"
@@ -279,6 +396,22 @@ case "$WITH_EGRESS" in 1|true|on|yes|TRUE|On|Yes) WITH_EGRESS=1 ;; *) WITH_EGRES
 # it override the persisted .join-profile choice on a bare re-run / upgrade.
 EXPLICIT_EGRESS=0; [ -n "${STREAMHUB_NODE_EGRESS:-}" ] && EXPLICIT_EGRESS=1
 
+# LiveKit advertised IP (cloud 1:1 NAT, see resolve_node_ip): off (DEFAULT — keep
+# use_external_ip STUN detection, so internet browsers reach WebRTC directly),
+# auto (detect via instance metadata; for clusters whose media ports are NOT open
+# to the internet) or an explicit IP. Persisted as STREAMHUB_PROFILE_NODE_IP.
+NODE_IP_MODE="${STREAMHUB_NODE_IP:-off}"
+EXPLICIT_NODE_IP=0; [ -n "${STREAMHUB_NODE_IP:-}" ] && EXPLICIT_NODE_IP=1
+
+# CDN edge (--cdn-edge = --join --node-type cdn-edge): nginx HLS cache only.
+# Empty values fall back to what a previous run stored in .env (section 4).
+case "${STREAMHUB_CDN_EDGE:-0}" in
+  1|true|on|yes|TRUE|On|Yes) JOIN=1; NODE_TYPE="cdn-edge"; EXPLICIT_MODE=1; EXPLICIT_NODE_TYPE=1 ;;
+esac
+EDGE_URL="${STREAMHUB_EDGE_URL:-}"
+CDN_ORIGIN_URL="${STREAMHUB_CDN_ORIGIN_URL:-}"
+EDGE_CACHE_TMPFS="${STREAMHUB_EDGE_CACHE_TMPFS:-}"
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --domain)            STREAMHUB_DOMAIN="${2?$1 requires a value}"; shift 2 ;;
@@ -291,7 +424,7 @@ while [ $# -gt 0 ]; do
     --smtp-user)         STREAMHUB_SMTP_USER="${2?$1 requires a value}"; shift 2 ;;
     --smtp-pass)         STREAMHUB_SMTP_PASS="${2?$1 requires a value}"; shift 2 ;;
     --smtp-from)         STREAMHUB_SMTP_FROM="${2?$1 requires a value}"; shift 2 ;;
-    --proxy)             PROXY="${2?$1 requires a value}"; shift 2 ;;
+    --proxy)             PROXY="${2?$1 requires a value}"; EXPLICIT_PROXY=1; shift 2 ;;
     --cluster-redis-bind) CLUSTER_REDIS_BIND="${2?$1 requires a value}"; shift 2 ;;
     --mediamtx)          MEDIAMTX_ENABLE=1; shift ;;
     --no-mediamtx)       MEDIAMTX_ENABLE=0; shift ;;
@@ -310,9 +443,15 @@ while [ $# -gt 0 ]; do
     --node-name)         NODE_NAME="${2?$1 requires a value}"; EXPLICIT_NODE_NAME=1; shift 2 ;;
     --node-type)         NODE_TYPE="${2?$1 requires a value}"; EXPLICIT_NODE_TYPE=1; shift 2 ;;
     --region)            REGION="${2?$1 requires a value}"; shift 2 ;;
+    --node-ip)           NODE_IP_MODE="${2?$1 requires a value}"; EXPLICIT_NODE_IP=1; shift 2 ;;
+    --cdn-edge)          JOIN=1; MODE="join"; NODE_TYPE="cdn-edge"; EXPLICIT_MODE=1; EXPLICIT_NODE_TYPE=1; shift ;;
+    --edge-url)          EDGE_URL="${2?$1 requires a value}"; shift 2 ;;
+    --cdn-origin-url)    CDN_ORIGIN_URL="${2?$1 requires a value}"; shift 2 ;;
+    --edge-cache-tmpfs)  EDGE_CACHE_TMPFS="${2?$1 requires a value}"; shift 2 ;;
     --dir)               INSTALL_DIR="${2?$1 requires a value}"; shift 2 ;;
     --non-interactive)   NONINTERACTIVE=1; shift ;;
     --dry-run)           DRY_RUN=1; shift ;;
+    --prepare-image)     PREPARE_IMAGE=1; shift ;;
     --force-reinstall)   FORCE_REINSTALL=1; shift ;;
     --version)           echo "streamhub-install $VERSION"; exit 0 ;;
     -h|--help)           usage; exit 0 ;;
@@ -344,8 +483,29 @@ if [ "$EXPLICIT_MODE" = "0" ] && [ -r "$INSTALL_DIR/.join-profile" ]; then
   log "existing join detected ($INSTALL_DIR/.join-profile) — resuming as a '$NODE_TYPE' node '$NODE_NAME' of ${ORIGIN_URL:-$ORIGIN_IP} (pass --standalone to override)"
 fi
 
+# ---- profile resume (.install-profile): proxy + LiveKit node IP ---------------
+# Written by every successful run (origin and joins). A bare re-run keeps the
+# previous choices; an explicit flag/env always wins.
+if [ -r "$INSTALL_DIR/.install-profile" ]; then
+  _prof_proxy="$(sed -n 's/^STREAMHUB_PROFILE_PROXY=//p' "$INSTALL_DIR/.install-profile" 2>/dev/null | head -1)"
+  _prof_nodeip="$(sed -n 's/^STREAMHUB_PROFILE_NODE_IP=//p' "$INSTALL_DIR/.install-profile" 2>/dev/null | head -1)"
+  if [ "$EXPLICIT_PROXY" = "0" ] && [ "$MODE" = "origin" ] && [ -n "$_prof_proxy" ]; then
+    PROXY="$_prof_proxy"
+  fi
+  [ "$EXPLICIT_NODE_IP" = "1" ] || NODE_IP_MODE="${_prof_nodeip:-$NODE_IP_MODE}"
+fi
+
 case "$PROXY" in nginx|caddy) ;; *) die "--proxy must be nginx or caddy" ;; esac
-case "$NODE_TYPE" in common|edge) ;; *) die "--node-type must be common or edge" ;; esac
+# --prepare-image bakes an ORIGIN image (a joined node needs a live master).
+[ "$PREPARE_IMAGE" = "1" ] && [ "$MODE" = "join" ] && die "--prepare-image builds an origin image; it can't be combined with --join"
+case "$NODE_TYPE" in common|edge|cdn-edge) ;; *) die "--node-type must be common, edge or cdn-edge" ;; esac
+# A CDN edge runs nginx only: no Docker, no LiveKit, no compose stack.
+CDN_EDGE=0; [ "$MODE" = "join" ] && [ "$NODE_TYPE" = "cdn-edge" ] && CDN_EDGE=1
+[ "$NODE_TYPE" = "cdn-edge" ] && [ "$MODE" != "join" ] && die "--node-type cdn-edge is a join (use --cdn-edge with --master-token/--master-ip)"
+case "$NODE_IP_MODE" in
+  auto|off) ;;
+  *) is_ip "$NODE_IP_MODE" || die "--node-ip must be an IP address, auto or off (got '$NODE_IP_MODE')" ;;
+esac
 
 # ---- TURN gating (resolve BEFORE the port preflight / ufw so both see it) -----
 # TURN v1 is ORIGIN-ONLY (LiveKit's TURN on the origin serves the whole mesh) and
@@ -382,6 +542,19 @@ if [ -f "$INSTALL_DIR/docker-compose.yml" ] || [ -f "$INSTALL_DIR/VERSION" ]; th
   fi
   [ -n "$INSTALLED_VERSION" ] || INSTALLED_VERSION="0.0.0"   # legacy, pre-VERSION
 fi
+# A marketplace image built with --prepare-image carries the source + pre-pulled
+# images but was never INSTALLED (no .env, no data): its first real run is a
+# FRESH install from that baked source. The marker is removed once the install
+# succeeds (install_app_scaffolding), so later runs are ordinary re-runs.
+IMAGE_PREPARED=0
+IMAGE_MARKER="$INSTALL_DIR/.image-prepared"
+IMAGE_CHANNEL=""   # telemetry channel of the image (e.g. marketplace-digitalocean)
+if [ -f "$IMAGE_MARKER" ]; then
+  IMAGE_PREPARED=1
+  EXISTING_INSTALL=0
+  INSTALLED_VERSION=""
+  IMAGE_CHANNEL="$(sed -n 's/^STREAMHUB_IMAGE_CHANNEL=//p' "$IMAGE_MARKER" 2>/dev/null | head -1)"
+fi
 
 # ---- 0b. install log (tee everything below) ----------------------------------
 # Everything the app owns lives under $INSTALL_DIR: bin/ (the streamhub CLI),
@@ -395,6 +568,7 @@ LOG_ACTIVE=0
 INSTALL_LOG="$INSTALL_DIR/logs/install.log"
 setup_install_log() { # tee stdout+stderr to the credential-free install log
   [ "$DRY_RUN" = "1" ] && return 0
+  [ "$PREPARE_IMAGE" = "1" ] && return 0   # an image build must not bake a log
   [ "$LOG_ACTIVE" = "1" ] && return 0
   mkdir -p "$INSTALL_DIR/logs" 2>/dev/null || return 0
   if : >> "$INSTALL_LOG" 2>/dev/null; then
@@ -469,6 +643,8 @@ PORTS_UDP="7882"
 if [ "$MODE" = "origin" ]; then PORTS_TCP="80 443 3020 6379 $PORTS_TCP"; fi
 # TURN (origin + nginx): the TLS relay (5349/tcp) + UDP relay (3478/udp).
 if [ "$MODE" = "origin" ] && [ "$TURN_ENABLE" = "1" ]; then PORTS_TCP="5349 $PORTS_TCP"; PORTS_UDP="3478 $PORTS_UDP"; fi
+# CDN edge: only nginx on :80 (no media plane).
+if [ "$CDN_EDGE" = "1" ]; then PORTS_TCP="80"; PORTS_UDP=""; fi
 PORT_FAIL=0
 for p in $PORTS_TCP; do
   if ! o=$(check_port "$p" tcp); then warn "port $p/tcp is busy: $o"; PORT_FAIL=1; fi
@@ -489,7 +665,8 @@ remote_target_version() {
 
 if [ "$DRY_RUN" = "1" ]; then
   ok "dry-run: OS + ports OK."
-  echo "  mode=$MODE proxy=$PROXY dir=$INSTALL_DIR domain=${STREAMHUB_DOMAIN:-<ask>} tls=$([ "$NO_TLS" = 1 ] && echo off || echo on) turn=$([ "$TURN_ENABLE" = 1 ] && echo on || echo off)$([ "$MODE" = join ] && { [ "$WITH_EGRESS" = 1 ] && echo ' egress=on' || echo ' egress=off(affinity)'; })"
+  [ "$PREPARE_IMAGE" = "1" ] && echo "  action: PREPARE IMAGE (deps + source + pre-pulled images + pre-built core; no .env, nothing started)"
+  echo "  mode=$MODE proxy=$PROXY dir=$INSTALL_DIR domain=${STREAMHUB_DOMAIN:-<ask>} tls=$([ "$NO_TLS" = 1 ] && echo off || echo on) turn=$([ "$TURN_ENABLE" = 1 ] && echo on || echo off)$([ "$MODE" = join ] && { [ "$WITH_EGRESS" = 1 ] && echo ' egress=on' || echo ' egress=off(affinity)'; }) node-ip=$NODE_IP_MODE$([ "$CDN_EDGE" = 1 ] && echo " node-type=cdn-edge edge-url=${EDGE_URL:-<detected>} cache-tmpfs=${EDGE_CACHE_TMPFS:-off}")"
   if [ "$EXISTING_INSTALL" = "0" ]; then
     echo "  action: FRESH INSTALL (no existing install at $INSTALL_DIR)"
   else
@@ -515,7 +692,15 @@ apt-get update -qq
 # migration evidence (falls back to cp if it somehow isn't present).
 apt-get install -y -qq ca-certificates curl git openssl python3 sqlite3 >/dev/null
 
-if ! command -v docker >/dev/null 2>&1; then
+if [ "$CDN_EDGE" = "1" ]; then
+  # CDN edge: nginx is the whole node (no Docker, no compose stack).
+  if ! command -v nginx >/dev/null 2>&1; then
+    log "installing nginx (CDN edge)"
+    apt-get install -y -qq nginx >/dev/null
+  else
+    ok "nginx already installed"
+  fi
+elif ! command -v docker >/dev/null 2>&1; then
   log "installing Docker (get.docker.com)"
   # get.docker.com reads /etc/os-release and picks the matching Docker apt repo
   # automatically (download.docker.com/linux/{ubuntu,debian}) — no per-distro
@@ -526,13 +711,15 @@ else
 fi
 # docker-compose-plugin lives in Docker's repo; the distro's own archive (the
 # docker.io package) ships it as docker-compose-v2 — try both.
-docker compose version >/dev/null 2>&1 || {
-  log "installing the docker compose plugin"
-  apt-get install -y -qq docker-compose-plugin >/dev/null 2>&1 \
-    || apt-get install -y -qq docker-compose-v2 >/dev/null 2>&1 \
-    || die "could not install a docker compose plugin (tried docker-compose-plugin, docker-compose-v2)"
-}
-systemctl enable --now docker >/dev/null 2>&1 || true
+if [ "$CDN_EDGE" != "1" ]; then
+  docker compose version >/dev/null 2>&1 || {
+    log "installing the docker compose plugin"
+    apt-get install -y -qq docker-compose-plugin >/dev/null 2>&1 \
+      || apt-get install -y -qq docker-compose-v2 >/dev/null 2>&1 \
+      || die "could not install a docker compose plugin (tried docker-compose-plugin, docker-compose-v2)"
+  }
+  systemctl enable --now docker >/dev/null 2>&1 || true
+fi
 
 if [ "$MODE" = "origin" ] && [ "$PROXY" = "nginx" ]; then
   if ! command -v nginx >/dev/null 2>&1; then
@@ -548,10 +735,10 @@ fi
 # 4MB drops packets when several publishers/subscribers saturate the socket).
 # The full set of media-server kernel/limit knobs (somaxconn, udp_mem, ephemeral
 # port range, fs.file-max, swappiness, THP) and their remedies live in
-# https://streamhub.studio/docs/operations/OS-TUNING; the running host's applied/not-applied
+# streamhub-docs/operations/OS-TUNING.md; the running host's applied/not-applied
 # posture is reported read-only at GET /api/v1/system/os-tuning (Server settings
 # -> OS tuning panel).
-if [ "$(sysctl -n net.core.rmem_max 2>/dev/null || echo 0)" -lt 16777216 ]; then
+if [ "$CDN_EDGE" != "1" ] && [ "$(sysctl -n net.core.rmem_max 2>/dev/null || echo 0)" -lt 16777216 ]; then
   log "raising kernel UDP buffers to 16MB (net.core.rmem_max/wmem_max)"
   printf 'net.core.rmem_max=16777216\nnet.core.wmem_max=16777216\n' > /etc/sysctl.d/99-streamhub-webrtc.conf
   sysctl -p /etc/sysctl.d/99-streamhub-webrtc.conf >/dev/null || warn "sysctl apply failed — check /etc/sysctl.d/99-streamhub-webrtc.conf"
@@ -563,6 +750,7 @@ if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: a
   log "ufw active — allowing StreamHub public ports"
   PORTS_TCP_UFW="1935 7880 7881 8080"
   [ "$MODE" = "origin" ] && PORTS_TCP_UFW="80 443 $PORTS_TCP_UFW"
+  [ "$CDN_EDGE" = "1" ] && PORTS_TCP_UFW="80 443"   # $PORTS_UDP is empty here
   # TURN (origin + nginx only): 5349/tcp (TLS) + 3478/udp. $PORTS_UDP already
   # carries 3478 when TURN is enabled (set in the port preflight above).
   [ "$MODE" = "origin" ] && [ "$TURN_ENABLE" = "1" ] && PORTS_TCP_UFW="5349 $PORTS_TCP_UFW"
@@ -631,7 +819,7 @@ fetch_tarball() {
           --exclude='/.env' --exclude='/.env.local' --exclude='*.local' \
           --exclude='/data/' --exclude='/.git/' \
           --exclude='/bin/' --exclude='/logs/' --exclude='/backups/' \
-          --exclude='/.install-profile' --exclude='/.join-profile' --exclude='/.install_id' --exclude='/VERSION' \
+          --exclude='/.install-profile' --exclude='/.join-profile' --exclude='/.install_id' --exclude='/.image-prepared' --exclude='/VERSION' \
           "$src"/ "$INSTALL_DIR"/ || rc=1
       else
         warn "rsync unavailable — using a find-based mirror (delete stale top-level, then copy)"
@@ -642,7 +830,7 @@ fetch_tarball() {
           ! -name .env ! -name '.env.local' ! -name '*.local' \
           ! -name data ! -name .git \
           ! -name bin ! -name logs ! -name backups \
-          ! -name .install-profile ! -name .join-profile ! -name .install_id ! -name VERSION \
+          ! -name .install-profile ! -name .join-profile ! -name .install_id ! -name .image-prepared ! -name VERSION \
           -exec rm -rf {} + 2>/dev/null || true
         cp -a "$src"/. "$INSTALL_DIR"/ || rc=1
       fi
@@ -656,7 +844,12 @@ fetch_tarball() {
 # tarball path sets it inside fetch_tarball (and leaves $INSTALL_DIR/VERSION
 # untouched); the git paths read it from the pulled/cloned tree.
 FETCHED_VERSION=""
-if [ -d "$INSTALL_DIR/.git" ]; then
+if [ "$IMAGE_PREPARED" = "1" ] && [ "${STREAMHUB_IMAGE_REFRESH:-0}" != "1" ]; then
+  # Prepared image: install exactly the version that was baked (no network fetch,
+  # no rebuild drift). STREAMHUB_IMAGE_REFRESH=1 falls through to a normal fetch.
+  FETCHED_VERSION="$(sed -n 's/^STREAMHUB_IMAGE_VERSION=//p' "$IMAGE_MARKER" 2>/dev/null | head -1 | tr -d '[:space:]')"
+  log "prepared image detected — installing the baked source v${FETCHED_VERSION:-?} (STREAMHUB_IMAGE_REFRESH=1 re-fetches)"
+elif [ -d "$INSTALL_DIR/.git" ]; then
   log "updating existing checkout in $INSTALL_DIR"
   GIT_TERMINAL_PROMPT=0 git -C "$INSTALL_DIR" pull --ff-only \
     || warn "git pull failed — continuing with the current checkout"
@@ -725,6 +918,38 @@ if [ "$DO_UPGRADE" = "1" ] && [ "$MODE" = "origin" ]; then
     || warn "pre-upgrade DB backup reported an issue — review before proceeding"
 fi
 
+# ---- 3c. --prepare-image: bake the images, then stop -------------------------
+# Everything that is slow and secret-free: pull the pinned stack images and build
+# the core image (its layers stay in the Docker cache, so the first boot's
+# `compose up --build` is a cache hit). NO .env is left behind (compose needs the
+# env_file to exist while it parses, so an empty one lives only for this step),
+# nothing is started and the install-id/telemetry never run — every instance
+# booted from the image generates its own secrets on first boot.
+if [ "$PREPARE_IMAGE" = "1" ]; then
+  log "--prepare-image: pre-pulling the stack images + pre-building the core (v${TARGET_VERSION})"
+  [ "$TARGET_VERSION" != "0.0.0" ] && printf '%s\n' "$TARGET_VERSION" > VERSION
+  TMP_ENV=0
+  [ -e .env ] || { : > .env; TMP_ENV=1; }
+  PREP_OK=1
+  # caddy is pulled even for an nginx image (small) so first boot can pick either.
+  # (the empty LiveKit keys only silence compose's "variable is not set" noise)
+  LIVEKIT_API_KEY="" LIVEKIT_API_SECRET="" \
+    docker compose --profile caddy pull -q redis livekit ingress egress caddy || PREP_OK=0
+  if [ "$PREP_OK" = "1" ]; then
+    LIVEKIT_API_KEY="" LIVEKIT_API_SECRET="" docker compose build core || PREP_OK=0
+  fi
+  [ "$TMP_ENV" = "1" ] && rm -f .env
+  [ "$PREP_OK" = "1" ] || die "--prepare-image: image pull/build failed (see above)"
+  # STREAMHUB_IMAGE_CHANNEL (Packer: marketplace-<builder>) becomes the telemetry
+  # channel of the first boot's install ping → installs counted per channel.
+  IMG_CH="$(printf '%s' "${STREAMHUB_IMAGE_CHANNEL:-image}" | tr -cd 'A-Za-z0-9._-')"
+  ( umask 022; printf 'STREAMHUB_IMAGE_VERSION=%s\nSTREAMHUB_IMAGE_PROXY=%s\nSTREAMHUB_IMAGE_CHANNEL=%s\nSTREAMHUB_IMAGE_BUILT=%s\n' \
+      "$TARGET_VERSION" "$PROXY" "${IMG_CH:-image}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$IMAGE_MARKER" )
+  ok "image prepared: v${TARGET_VERSION}, proxy=${PROXY} — no .env/secrets written, nothing started."
+  ok "first boot: $INSTALL_DIR/first-boot.sh (or install.sh --domain … --email …) installs from the baked source."
+  exit 0
+fi
+
 # ---- 4. configuration (.env: reuse existing values, fill the gaps) ----------
 # Never overwrites a value that's already in .env — re-running keeps secrets.
 # || true: a grep miss must NOT kill the script under pipefail (fresh .env).
@@ -739,6 +964,11 @@ env_set() { # env_set KEY VALUE  (replace-or-append — operator-provided values
   else
     printf '%s=%s\n' "$1" "$2" >> .env
   fi
+}
+env_del() { # env_del KEY  (drop the key; no-op when absent)
+  grep -qE "^$1=" .env 2>/dev/null || return 0
+  { grep -vE "^$1=" .env > .env.tmp || true; }
+  mv .env.tmp .env
 }
 TTY_DEV=/dev/tty
 ask() { # ask VAR "Prompt" "default"   (no-op if var already set or non-interactive)
@@ -820,6 +1050,18 @@ if [ "$MODE" = "origin" ]; then
   if [ "$PROXY" = "caddy" ] && [ "$NO_TLS" = "1" ]; then
     env_set STREAMHUB_SITE_ADDRESS "http://$STREAMHUB_DOMAIN"
   fi
+  # The compose `caddy` service only runs under its profile: list it in
+  # COMPOSE_PROFILES (compose reads it from .env, so a raw `docker compose up -d`
+  # does the right thing) on a caddy origin, and strip it on an nginx one —
+  # where Caddy used to crash-loop against nginx on :80. Other profiles kept.
+  _profiles=""
+  IFS=',' read -r -a _plist <<<"$(env_get COMPOSE_PROFILES)"
+  for _p in ${_plist[@]+"${_plist[@]}"}; do
+    _p="$(printf '%s' "$_p" | tr -d '[:space:]')"
+    [ -n "$_p" ] && [ "$_p" != "caddy" ] && _profiles="${_profiles:+$_profiles,}$_p"
+  done
+  [ "$PROXY" = "caddy" ] && _profiles="caddy${_profiles:+,$_profiles}"
+  if [ -n "$_profiles" ]; then env_set COMPOSE_PROFILES "$_profiles"; else env_del COMPOSE_PROFILES; fi
   # TURN relay seams (compose reads STREAMHUB_TURN_ENABLE/_DOMAIN/_CERT_DIR). Only
   # written when enabled — otherwise .env stays untouched and the compose default
   # keeps enabled:false (zero behavior change). TURN needs a real TLS domain, so
@@ -905,7 +1147,16 @@ if [ "$MODE" = "origin" ]; then
   ok ".env ready (existing values preserved; flags update their keys)"
 
 else # ---- join mode config ---------------------------------------------------
-  [ -n "$CLUSTER_TOKEN" ] || die "--join needs --cluster-token (see the origin's install summary or its .env STREAMHUB_CLUSTER_TOKEN)"
+  # Per-node credential (3.3.4+): the cluster token is only the JOIN secret.
+  # The master answers the join with this node's own nodeSecret, which is what
+  # gets stored (.env + edge.env + heartbeat.env) — the cluster token is NOT
+  # kept on the node. A re-run without --cluster-token therefore reuses the
+  # existing join instead of re-registering (pass the token to re-register).
+  NODE_SECRET="$(env_get STREAMHUB_NODE_SECRET)"
+  NODE_ID="$(env_get STREAMHUB_NODE_ID)"
+  if [ -z "$CLUSTER_TOKEN" ] && [ -z "$NODE_SECRET" ]; then
+    die "--join needs --cluster-token (see the origin's install summary or its .env STREAMHUB_CLUSTER_TOKEN)"
+  fi
   [ -n "$ORIGIN_IP" ]     || die "--join needs --origin-ip <ip-of-origin>"
 
   # Join target(s). The core binds 127.0.0.1:3020 — only the reverse proxy
@@ -925,16 +1176,44 @@ else # ---- join mode config ---------------------------------------------------
   if [ -n "$(env_get LIVEKIT_API_KEY)" ] && [ -n "$(env_get LIVEKIT_REDIS_ADDRESS)" ]; then
     ALREADY_JOINED=1
   fi
+  # A CDN edge holds no LiveKit keys: its join record is the node id + secret.
+  if [ "$CDN_EDGE" = "1" ] && [ -n "$NODE_ID" ] && [ -n "$(env_get STREAMHUB_CDN_ORIGIN_URL)" ]; then
+    ALREADY_JOINED=1
+  fi
 
   MY_IP="$(curl -fsS -m5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
   JOIN_BODY=$(printf '{"name":"%s","ip":"%s","region":"%s","type":"%s"}' "$NODE_NAME" "$MY_IP" "$REGION" "$NODE_TYPE")
+  if [ "$CDN_EDGE" = "1" ]; then
+    # The public base URL viewers fetch /hls from (registered as the node `url`):
+    # --edge-url, else what a previous run stored, else http://<public IP>.
+    [ -n "$EDGE_URL" ] || EDGE_URL="$(env_get STREAMHUB_CDN_EDGE_URL)"
+    [ -n "$EDGE_URL" ] || EDGE_URL="http://$MY_IP"
+    EDGE_URL="$(norm_base_url "$EDGE_URL")" || die "--edge-url must be http(s)://host[:port] (got '$EDGE_URL')"
+    # The master hands this URL to players: an http:// edge is blocked as mixed
+    # content on an https page (and an IP can't carry a public TLS cert).
+    if [[ "$EDGE_URL" == http://* ]]; then
+      warn "edge URL $EDGE_URL is plain http: players on an https page (the dashboard, your site) block it as mixed content."
+      warn "  Prefer --edge-url https://<public-name> (DNS → this host, TLS on the edge or an LB in front)."
+    fi
+    env_set STREAMHUB_CDN_EDGE_URL "$EDGE_URL"
+    JOIN_BODY=$(printf '{"name":"%s","ip":"%s","region":"%s","type":"%s","url":"%s"}' "$NODE_NAME" "$MY_IP" "$REGION" "$NODE_TYPE" "$EDGE_URL")
+  fi
 
   # Try each candidate: a connection-class failure moves to the next; an HTTP
   # error (server reachable but rejected — bad token) stops and is reported.
   JOIN_OK=0
   JOIN_RESP=""
   API_BASE=""
-  for cand in "${JOIN_CANDIDATES[@]}"; do
+  if [ -z "$CLUSTER_TOKEN" ]; then
+    # Re-run of a 3.3.4+ join: no cluster token on record, only the node
+    # secret — skip the registration and keep the stored join (the heartbeat
+    # agent's URL is the master base this node registered against).
+    JOIN_CANDIDATES=()
+    JOIN_RESP="no --cluster-token given (only the per-node secret is kept on the node) — pass --cluster-token to re-register"
+    [ -r /etc/streamhub/heartbeat.env ] && API_BASE="$(sed -n 's/^STREAMHUB_HB_URL=//p' /etc/streamhub/heartbeat.env | head -1)"
+    [ -n "$API_BASE" ] || API_BASE="${ORIGIN_URL:-http://$ORIGIN_IP}"
+  fi
+  for cand in ${JOIN_CANDIDATES[@]+"${JOIN_CANDIDATES[@]}"}; do
     log "registering node '$NODE_NAME' on the origin ($cand)"
     rc=0
     JOIN_RESP=$(curl -fsS -m15 -X POST "$cand/api/v1/cluster/join" \
@@ -951,6 +1230,7 @@ else # ---- join mode config ---------------------------------------------------
   [ -n "$API_BASE" ] || API_BASE="${JOIN_CANDIDATES[0]}"
 
   if [ "$JOIN_OK" = "0" ]; then
+    [ -n "$CLUSTER_TOKEN" ] || [ "$ALREADY_JOINED" = "1" ] || die "$JOIN_RESP"
     if [ "$ALREADY_JOINED" = "1" ]; then
       warn "cluster join call failed ($API_BASE) — node was already joined, reusing the existing .env. Response: $JOIN_RESP"
     else
@@ -960,7 +1240,7 @@ else # ---- join mode config ---------------------------------------------------
     # jget KEY → the string value of "KEY" in the join response ('' when absent
     # or null). Pure sed — the core binary isn't on this host yet, and no
     # python3/jq is needed. The keys are unique in the payload
-    # ({data:{nodeId,name,redisUrl,publicWsUrl,livekit:{apiKey,apiSecret,wsUrl}}});
+    # ({data:{nodeId,name,redisUrl,publicWsUrl,livekit:{apiKey,apiSecret,wsUrl},nodeSecret}});
     # unescapes what Go's encoder emits for these values (\" \\ \/ & < >).
     jget() {
       printf '%s' "$JOIN_RESP" | tr -d '\n' \
@@ -971,7 +1251,21 @@ else # ---- join mode config ---------------------------------------------------
     LK_SECRET="$(jget apiSecret)"
     REDIS_FROM_ORIGIN="$(jget redisUrl)"
     NODE_ID="$(jget nodeId)"
-    if [ -z "$LK_KEY" ] || [ -z "$LK_SECRET" ]; then
+    # This node's own credential (heartbeat, edge WS, grid). A pre-3.3.4
+    # master vends none: the node then keeps using the cluster token (legacy).
+    NODE_SECRET="$(jget nodeSecret)"
+    if [ -n "$NODE_SECRET" ]; then
+      env_set STREAMHUB_NODE_SECRET "$NODE_SECRET"
+      [ -n "$NODE_ID" ] && env_set STREAMHUB_NODE_ID "$NODE_ID"
+    else
+      warn "origin vended no nodeSecret (core < 3.3.4) — this node keeps the shared cluster token (legacy); re-run with --cluster-token after upgrading the origin"
+    fi
+    if [ "$CDN_EDGE" = "1" ]; then
+      # nginx-only node: keep NO LiveKit keys / redis URL here (least privilege).
+      [ -n "$NODE_ID" ] || die "origin did not return a nodeId for the cdn-edge join — is its core up to date (cdn-edge node type)? Response: $JOIN_RESP"
+      env_set STREAMHUB_NODE_ID "$NODE_ID"
+      ok "registered as CDN edge '$NODE_NAME' (id: $NODE_ID, url: $EDGE_URL)"
+    elif [ -z "$LK_KEY" ] || [ -z "$LK_SECRET" ]; then
       [ "$ALREADY_JOINED" = "1" ] || die "origin did not return LiveKit keys — is its core up to date? Response: $JOIN_RESP"
       warn "origin did not return LiveKit keys — keeping the existing ones"
     else
@@ -996,46 +1290,254 @@ else # ---- join mode config ---------------------------------------------------
     fi
   fi
 
+  # What this node authenticates with from now on: its own secret, or — only
+  # against a pre-3.3.4 origin — the shared cluster token (legacy).
+  NODE_CRED="${NODE_SECRET:-$CLUSTER_TOKEN}"
+
   env_put DATA_DIR           "/data"
   env_put STREAMHUB_HOST_DATA_DIR "./data"
   env_put STREAMHUB_DOMAIN   "join-$NODE_NAME"
   env_put ACME_EMAIL         "none@localhost"
-  ok ".env ready (edge node — shares the origin's Redis at $(env_get LIVEKIT_REDIS_ADDRESS))"
+  if [ "$CDN_EDGE" = "1" ]; then
+    # Where nginx pulls /hls from: --cdn-origin-url, else the stored one, else the
+    # master base the join just used (the origin's proxy, which serves /hls).
+    [ -n "$CDN_ORIGIN_URL" ] || CDN_ORIGIN_URL="$(env_get STREAMHUB_CDN_ORIGIN_URL)"
+    [ -n "$CDN_ORIGIN_URL" ] || CDN_ORIGIN_URL="$API_BASE"
+    CDN_ORIGIN_URL="$(norm_base_url "$CDN_ORIGIN_URL")" || die "--cdn-origin-url must be http(s)://host[:port] (got '$CDN_ORIGIN_URL')"
+    env_set STREAMHUB_CDN_ORIGIN_URL "$CDN_ORIGIN_URL"
+    [ -n "$EDGE_CACHE_TMPFS" ] || EDGE_CACHE_TMPFS="$(env_get STREAMHUB_EDGE_CACHE_TMPFS)"
+    case "${EDGE_CACHE_TMPFS:-off}" in off|none|0|'') EDGE_CACHE_TMPFS="off" ;; esac
+    env_set STREAMHUB_EDGE_CACHE_TMPFS "$EDGE_CACHE_TMPFS"
+    ok ".env ready (CDN edge — pulls /hls from $CDN_ORIGIN_URL, serves $(env_get STREAMHUB_CDN_EDGE_URL))"
+  else
+    ok ".env ready (edge node — shares the origin's Redis at $(env_get LIVEKIT_REDIS_ADDRESS))"
+  fi
 fi
 
-DATA_HOST_DIR="$(env_get STREAMHUB_HOST_DATA_DIR)"
-mkdir -p "${DATA_HOST_DIR:-./data}/apps"
-# We run under umask 077 (for .env) — that would leave data/ mode 700 and the
-# egress worker (uid 1001, gid 0) could not even traverse it to write HLS/MP4s.
-# 755 restores traversal; g+rwX on apps/ lets egress write AND traverse (core
-# creates new dirs group-writable itself via umask 002 in its entrypoint, but
-# dirs made by older cores — and edge nodes, which run no core — need this).
-chmod 755 "${DATA_HOST_DIR:-./data}"
-chmod -R g+rwX "${DATA_HOST_DIR:-./data}/apps" 2>/dev/null || true
+# ---- 4a. LiveKit advertised IP (cloud 1:1 NAT) — origin + common joins -------
+# auto: detect (detect_nat_ips) and, behind a 1:1 NAT, pin node_ip to the private
+# IP with use_external_ip=false; a run that detects nothing keeps what an earlier
+# run wrote (a transient metadata blip must not flip LiveKit back). off: STUN
+# public-IP detection (the compose default). <ip>: forced. Nodes without LiveKit
+# (cdn-edge, Vision edge) skip it.
+apply_node_ip() {
+  local det nip npub nsrc
+  case "$NODE_IP_MODE" in
+    off)
+      if [ -n "$(env_get LIVEKIT_NODE_IP)" ] || [ "$(env_get LIVEKIT_USE_EXTERNAL_IP)" = "false" ]; then
+        log "--node-ip off: LiveKit back to use_external_ip (STUN public-IP detection)"
+      fi
+      env_del LIVEKIT_NODE_IP; env_del LIVEKIT_USE_EXTERNAL_IP ;;
+    auto)
+      det="$(detect_nat_ips)"
+      if [ -n "$det" ]; then
+        read -r nip npub nsrc <<<"$det"
+        env_set LIVEKIT_USE_EXTERNAL_IP "false"
+        env_set LIVEKIT_NODE_IP         "$nip"
+        warn "1:1 NAT detected ($nsrc: public $npub is not on any interface) → LiveKit node_ip=$nip, use_external_ip=false."
+        warn "  Egress/ingress and nodes in the private network reach LiveKit; WebRTC clients outside it need TURN (--turn) or a VPN."
+        warn "  Override: --node-ip <ip>, or --node-ip off to keep STUN public-IP detection."
+      elif [ -n "$(env_get LIVEKIT_NODE_IP)" ]; then
+        log "no 1:1 NAT detected this run — keeping LIVEKIT_NODE_IP=$(env_get LIVEKIT_NODE_IP) from a previous run (--node-ip off resets)"
+      else
+        log "no cloud 1:1 NAT detected — LiveKit keeps use_external_ip (STUN)"
+      fi ;;
+    *)
+      env_set LIVEKIT_USE_EXTERNAL_IP "false"
+      env_set LIVEKIT_NODE_IP         "$NODE_IP_MODE"
+      ok "LiveKit node_ip=$NODE_IP_MODE, use_external_ip=false (--node-ip)" ;;
+  esac
+}
+if [ "$MODE" = "origin" ] || [ "$NODE_TYPE" = "common" ]; then apply_node_ip; fi
 
-# ---- 4b. egress CPU cap: clamp to the host (both origin + edge) --------------
-# livekit-egress refuses room-composite (HLS/recording) below 4 available CPUs,
-# so the compose default is EGRESS_CPUS=4 — but `cpus: 4` HARD-FAILS
-# `docker compose up` on a host with fewer vCPUs ("range of CPUs is 0.01 to N"),
-# killing the install mid-join on a 2-vCPU edge. Clamp to min(4, nproc): below 4
-# the egress self-reports insufficient CPU and simply never claims room-composite
-# jobs (correct degraded behavior — live playback/WebRTC/ingest are unaffected).
-# env_put = fill-if-missing, so an operator's explicit EGRESS_CPUS is respected.
-CPU_COUNT="$(nproc 2>/dev/null || echo 1)"
-case "$CPU_COUNT" in ''|*[!0-9]*) CPU_COUNT=1 ;; esac
-[ "$CPU_COUNT" -ge 1 ] || CPU_COUNT=1
-if [ "$CPU_COUNT" -lt 4 ]; then EGRESS_CPUS_VAL="$CPU_COUNT"; else EGRESS_CPUS_VAL=4; fi
-env_put EGRESS_CPUS "$EGRESS_CPUS_VAL"
-[ "$EGRESS_CPUS_VAL" -lt 4 ] && warn "host has ${CPU_COUNT} vCPU(s) — EGRESS_CPUS=${EGRESS_CPUS_VAL} (<4: egress declines HLS/recording room-composite; live playback/WebRTC unaffected)."
+DATA_HOST_DIR="$(env_get STREAMHUB_HOST_DATA_DIR)"
+if [ "$CDN_EDGE" != "1" ]; then   # a CDN edge has no data dir / egress (nginx only)
+  mkdir -p "${DATA_HOST_DIR:-./data}/apps"
+  # We run under umask 077 (for .env) — that would leave data/ mode 700 and the
+  # egress worker (uid 1001, gid 0) could not even traverse it to write HLS/MP4s.
+  # 755 restores traversal; g+rwX on apps/ lets egress write AND traverse (core
+  # creates new dirs group-writable itself via umask 002 in its entrypoint, but
+  # dirs made by older cores — and edge nodes, which run no core — need this).
+  chmod 755 "${DATA_HOST_DIR:-./data}"
+  chmod -R g+rwX "${DATA_HOST_DIR:-./data}/apps" 2>/dev/null || true
+
+  # ---- 4b. egress CPU cap: clamp to the host (both origin + edge) --------------
+  # livekit-egress refuses room-composite (HLS/recording) below 4 available CPUs,
+  # so the compose default is EGRESS_CPUS=4 — but `cpus: 4` HARD-FAILS
+  # `docker compose up` on a host with fewer vCPUs ("range of CPUs is 0.01 to N"),
+  # killing the install mid-join on a 2-vCPU edge. Clamp to min(4, nproc): below 4
+  # the egress self-reports insufficient CPU and simply never claims room-composite
+  # jobs (correct degraded behavior — live playback/WebRTC/ingest are unaffected).
+  # env_put = fill-if-missing, so an operator's explicit EGRESS_CPUS is respected.
+  CPU_COUNT="$(nproc 2>/dev/null || echo 1)"
+  case "$CPU_COUNT" in ''|*[!0-9]*) CPU_COUNT=1 ;; esac
+  [ "$CPU_COUNT" -ge 1 ] || CPU_COUNT=1
+  if [ "$CPU_COUNT" -lt 4 ]; then EGRESS_CPUS_VAL="$CPU_COUNT"; else EGRESS_CPUS_VAL=4; fi
+  env_put EGRESS_CPUS "$EGRESS_CPUS_VAL"
+  [ "$EGRESS_CPUS_VAL" -lt 4 ] && warn "host has ${CPU_COUNT} vCPU(s) — EGRESS_CPUS=${EGRESS_CPUS_VAL} (<4: egress declines HLS/recording room-composite; live playback/WebRTC unaffected)."
+fi
+
+# ---- nginx limits (origin nginx + CDN edge) -----------------------------------
+# Ubuntu/Debian ship worker_connections 768 — a CDN edge (or an origin serving
+# viewers directly) runs out of connections long before CPU/NIC. Raise it (only
+# upwards; the original value is kept in $NGINX_WC_ORIG so uninstall.sh can put
+# it back) plus worker_rlimit_nofile (marked '# streamhub-tuning') and a systemd
+# LimitNOFILE drop-in. Applies on the next reload (workers set their own rlimit).
+NGINX_WORKER_CONNECTIONS="${STREAMHUB_NGINX_WORKER_CONNECTIONS:-65535}"
+NGINX_WC_ORIG=/etc/nginx/.streamhub-worker-connections.orig
+tune_nginx_limits() {
+  local conf=/etc/nginx/nginx.conf want="$NGINX_WORKER_CONNECTIONS" cur
+  case "$want" in ''|*[!0-9]*) want=65535 ;; esac
+  [ -w "$conf" ] || { warn "$conf not writable — nginx limits not tuned"; return 0; }
+  cur="$(sed -n 's/^[[:space:]]*worker_connections[[:space:]]\{1,\}\([0-9]\{1,\}\);.*/\1/p' "$conf" | head -1)"
+  if [ -z "$cur" ]; then
+    warn "no worker_connections line in $conf — not tuned"
+  elif [ "$cur" -lt "$want" ]; then
+    [ -e "$NGINX_WC_ORIG" ] || printf '%s\n' "$cur" > "$NGINX_WC_ORIG"
+    sed -i -E "s/^([[:space:]]*worker_connections[[:space:]]+)[0-9]+;/\1$want;/" "$conf"
+    log "nginx: worker_connections $cur → $want"
+  fi
+  if ! grep -qE '^[[:space:]]*worker_rlimit_nofile[[:space:]]' "$conf"; then
+    # main context: right after worker_processes (or as the first line).
+    if grep -qE '^[[:space:]]*worker_processes[[:space:]]' "$conf"; then
+      awk -v l="worker_rlimit_nofile $(( want * 2 ));  # streamhub-tuning" \
+        '{print} !d && /^[[:space:]]*worker_processes[[:space:]]/{print l; d=1}' "$conf" > "$conf.streamhub.tmp"
+    else
+      { printf 'worker_rlimit_nofile %s;  # streamhub-tuning\n' "$(( want * 2 ))"; cat "$conf"; } > "$conf.streamhub.tmp"
+    fi
+    cat "$conf.streamhub.tmp" > "$conf" && rm -f "$conf.streamhub.tmp"
+    log "nginx: worker_rlimit_nofile $(( want * 2 ))"
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    mkdir -p /etc/systemd/system/nginx.service.d
+    printf '# StreamHub (install.sh): file descriptors for many concurrent viewers.\n[Service]\nLimitNOFILE=%s\n' \
+      "$(( want * 4 ))" > /etc/systemd/system/nginx.service.d/streamhub-limits.conf
+    systemctl daemon-reload >/dev/null 2>&1 || true
+  fi
+}
+
+# ---- CDN edge: nginx HLS cache (--cdn-edge nodes only) ------------------------
+# Renders the repo's deploy/nginx-hls-edge.conf (the source of truth for the
+# cache policy — only its two `>>>` markers are filled: the origin URL and the
+# server_name) into conf.d, adds a 127.0.0.1-only stub_status for the heartbeat,
+# drops nginx's default site and optionally puts the cache dir on tmpfs.
+# Idempotent: everything is rewritten each run; a template that no longer
+# carries the markers aborts instead of shipping example.com.
+CDN_EDGE_CONF=/etc/nginx/conf.d/streamhub-hls-edge.conf
+CDN_STATUS_CONF=/etc/nginx/conf.d/streamhub-stub-status.conf
+CDN_STATUS_LISTEN="127.0.0.1:18081"
+CDN_CACHE_DIR=""
+CDN_FSTAB_TAG="# streamhub-cdn-edge cache (install.sh --edge-cache-tmpfs)"
+size_to_mib() { # 4g / 2048m / 4G → MiB on stdout; fails on anything else or < 64m
+  local v="${1,,}" n
+  [[ "$v" =~ ^([0-9]+)([mg])$ ]] || return 1
+  n="${BASH_REMATCH[1]}"; [ "${BASH_REMATCH[2]}" = "g" ] && n=$(( n * 1024 ))
+  [ "$n" -ge 64 ] || return 1
+  printf '%s' "$n"
+}
+install_cdn_edge() {
+  local tpl="$INSTALL_DIR/deploy/nginx-hls-edge.conf" tmp sname host ngx_user uid gid mib="" opts
+  [ -r "$tpl" ] || die "deploy/nginx-hls-edge.conf missing from the source — cannot configure the CDN edge"
+  if [ "$EDGE_CACHE_TMPFS" != "off" ]; then
+    mib="$(size_to_mib "$EDGE_CACHE_TMPFS")" || die "--edge-cache-tmpfs must be a size like 4g or 2048m (≥64m), or off (got '$EDGE_CACHE_TMPFS')"
+  fi
+  # server_name: the --edge-url host when it's a name; a catch-all for an IP.
+  host="${EDGE_URL#*://}"; host="${host%%/*}"
+  case "$host" in \[*) host="" ;; *) host="${host%%:*}" ;; esac
+  if [ -n "$host" ] && ! is_ip "$host"; then sname="$host"; else sname="_"; fi
+  CDN_CACHE_DIR="$(sed -n 's/^[[:space:]]*proxy_cache_path[[:space:]]\{1,\}\([^[:space:];]\{1,\}\).*/\1/p' "$tpl" | head -1)"
+  : "${CDN_CACHE_DIR:=/var/cache/nginx/hls}"
+
+  tmp="$(mktemp)"
+  sed -E -e "s#https?://origin\.example\.com#$CDN_ORIGIN_URL#g" \
+         -e "s#^([[:space:]]*server_name[[:space:]]+)edge\.example\.com;#\1$sname;#" "$tpl" > "$tmp"
+  # tmpfs cache: keep nginx's max_size under the tmpfs size, or the cache fills
+  # RAM to ENOSPC before the cache manager evicts anything.
+  [ -n "$mib" ] && sed -i -E "s/max_size=[0-9]+[kKmMgG]?/max_size=$(( mib * 9 / 10 ))m/" "$tmp"
+  if grep -vE '^[[:space:]]*#' "$tmp" | grep -qE '(origin|edge)\.example\.com' \
+     || ! grep -vE '^[[:space:]]*#' "$tmp" | grep -qF "$CDN_ORIGIN_URL"; then
+    rm -f "$tmp"
+    die "deploy/nginx-hls-edge.conf no longer carries the expected markers (https://origin.example.com / server_name edge.example.com) — update install_cdn_edge"
+  fi
+
+  ngx_user="$(awk '$1=="user"{gsub(";","",$2); print $2; exit}' /etc/nginx/nginx.conf 2>/dev/null)"; : "${ngx_user:=www-data}"
+  uid="$(id -u "$ngx_user" 2>/dev/null || echo 0)"; gid="$(id -g "$ngx_user" 2>/dev/null || echo 0)"
+  # umask 022: the installer runs under 077 (for .env) — a 700 parent would
+  # stop the nginx worker from even traversing to the cache (open() EACCES → 500).
+  ( umask 022; mkdir -p "$CDN_CACHE_DIR" )
+  chmod o+x "$(dirname "$CDN_CACHE_DIR")" 2>/dev/null || true
+
+  # Cache on tmpfs (opt-in): one fstab line (tagged) so it survives reboots.
+  if [ -w /etc/fstab ]; then
+    { grep -vxF "$CDN_FSTAB_TAG" /etc/fstab | grep -vE "^tmpfs[[:space:]]+${CDN_CACHE_DIR}[[:space:]]" || true; } > /etc/fstab.streamhub.tmp
+    if [ -n "$mib" ]; then
+      opts="rw,nosuid,nodev,noexec,size=${mib}m,mode=0700,uid=$uid,gid=$gid"
+      printf '%s\ntmpfs %s tmpfs %s 0 0\n' "$CDN_FSTAB_TAG" "$CDN_CACHE_DIR" "$opts" >> /etc/fstab.streamhub.tmp
+    fi
+    cat /etc/fstab.streamhub.tmp > /etc/fstab && rm -f /etc/fstab.streamhub.tmp
+  fi
+  if [ -n "$mib" ]; then
+    if mountpoint -q "$CDN_CACHE_DIR" 2>/dev/null; then
+      mount -o "remount,size=${mib}m" "$CDN_CACHE_DIR" 2>/dev/null || warn "could not resize the tmpfs at $CDN_CACHE_DIR"
+    else
+      mount "$CDN_CACHE_DIR" 2>/dev/null || warn "could not mount tmpfs at $CDN_CACHE_DIR — the cache stays on disk until the next boot"
+    fi
+    mountpoint -q "$CDN_CACHE_DIR" 2>/dev/null && ok "HLS cache on tmpfs ($EDGE_CACHE_TMPFS at $CDN_CACHE_DIR, nginx max_size $(( mib * 9 / 10 ))m)"
+  elif mountpoint -q "$CDN_CACHE_DIR" 2>/dev/null && grep -qs "^tmpfs $CDN_CACHE_DIR " /proc/mounts; then
+    if umount "$CDN_CACHE_DIR" 2>/dev/null; then log "HLS cache back on disk (tmpfs at $CDN_CACHE_DIR unmounted)"; fi
+  fi
+  chown "$uid:$gid" "$CDN_CACHE_DIR" 2>/dev/null || true
+  chmod 0700 "$CDN_CACHE_DIR" 2>/dev/null || true
+
+  install -m 0644 "$tmp" "$CDN_EDGE_CONF"; rm -f "$tmp"
+  ( umask 022; cat > "$CDN_STATUS_CONF" <<EOF
+# StreamHub CDN edge — nginx stub_status for the heartbeat agent (loopback only).
+server {
+    listen $CDN_STATUS_LISTEN;
+    server_name localhost;
+    access_log off;
+    location = /nginx_status {
+        stub_status;
+        allow 127.0.0.1;
+        deny all;
+    }
+    location / { return 404; }
+}
+EOF
+  )
+  # The edge is the only site on :80 (nginx's default site would win the catch-all).
+  rm -f /etc/nginx/sites-enabled/default
+  tune_nginx_limits
+  if ! nginx -t >/dev/null 2>&1; then
+    nginx -t 2>&1 | tail -5 || true
+    mv -f "$CDN_EDGE_CONF" "$CDN_EDGE_CONF.rejected" 2>/dev/null || true
+    die "nginx rejected the CDN edge config (kept as $CDN_EDGE_CONF.rejected) — see above"
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl enable nginx >/dev/null 2>&1 || true
+    systemctl restart nginx >/dev/null 2>&1 || warn "could not restart nginx — check: journalctl -u nginx"
+  else
+    nginx -s reload 2>/dev/null || nginx 2>/dev/null || warn "could not (re)start nginx"
+  fi
+  ok "CDN edge nginx up: /hls → $CDN_ORIGIN_URL (server_name $sname, cache $CDN_CACHE_DIR)"
+}
 
 # ---- 4c. heartbeat agent (systemd timer, every 60s) --------------------------
 # Without this, a node (edge OR origin) has no periodic liveness ping and goes
 # `stale=true` in the registry 90s after boot — the join / self-register is the
 # ONLY latch otherwise. Ships a tiny script + a systemd service+timer that POST
-# cpu/mem/cores stats to the master's /api/v1/cluster/heartbeat with the cluster
-# token. Idempotent: files are rewritten and the timer re-enabled on every run.
-install_heartbeat_agent() { # install_heartbeat_agent <api_base> <token> <node_id>
-  local hb_url="$1" hb_token="$2" hb_node="$3"
+# cpu/mem/cores stats to the master's /api/v1/cluster/heartbeat with the node's
+# own secret (3.3.4+; the origin pings its own core with the cluster token, and
+# against a pre-3.3.4 origin a joined node still uses the token). Sent as
+# X-Cluster-Token, which every core version reads — a 3.3.4+ master matches
+# the per-node secret there too. Idempotent: files are rewritten and the timer
+# re-enabled on every run.
+install_heartbeat_agent() { # install_heartbeat_agent <api_base> <credential> <node_id> [role]
+  local hb_url="$1" hb_token="$2" hb_node="$3" hb_role="${4:-}" hb_every
+  # A CDN edge beats every 15s (the master's least-loaded edge selection reacts
+  # to audience ramps from these stats); everything else every 60s.
+  hb_every="${STREAMHUB_HB_INTERVAL:-}"
+  case "$hb_every" in ''|*[!0-9]*) hb_every=60; [ "$hb_role" = "cdn-edge" ] && hb_every=15 ;; esac
   if ! command -v systemctl >/dev/null 2>&1; then
     warn "systemd not available — skipping the heartbeat timer (node goes stale after 90s without an external heartbeat)"
     return 0
@@ -1045,6 +1547,10 @@ install_heartbeat_agent() { # install_heartbeat_agent <api_base> <token> <node_i
   # (e.g. a re-run while the master was unreachable).
   if [ -z "$hb_node" ] && [ -r /etc/streamhub/heartbeat.env ]; then
     hb_node="$(sed -n 's/^STREAMHUB_HB_NODE_ID=//p' /etc/streamhub/heartbeat.env | head -1)"
+  fi
+  # …and the stored credential (a 3.3.4+ re-run keeps no cluster token).
+  if [ -z "$hb_token" ] && [ -r /etc/streamhub/heartbeat.env ]; then
+    hb_token="$(sed -n 's/^STREAMHUB_HB_TOKEN=//p' /etc/streamhub/heartbeat.env | head -1)"
   fi
   if [ -z "$hb_url" ] || [ -z "$hb_token" ] || [ -z "$hb_node" ]; then
     warn "heartbeat agent not configured (missing url/token/node id) — skipping"
@@ -1056,6 +1562,11 @@ STREAMHUB_HB_URL=$hb_url
 STREAMHUB_HB_TOKEN=$hb_token
 STREAMHUB_HB_NODE_ID=$hb_node
 EOF
+    # CDN edge: the agent adds nginx stub_status + NIC throughput (cdn block).
+    if [ "$hb_role" = "cdn-edge" ]; then
+      printf 'STREAMHUB_HB_ROLE=cdn-edge\nSTREAMHUB_HB_CDN_STATUS_URL=http://%s/nginx_status\nSTREAMHUB_HB_CDN_CACHE_DIR=%s\n' \
+        "$CDN_STATUS_LISTEN" "${CDN_CACHE_DIR:-/var/cache/nginx/hls}" >> /etc/streamhub/heartbeat.env
+    fi
   )
 
   cat > /usr/local/bin/streamhub-heartbeat.sh <<'HBEOF'
@@ -1091,12 +1602,46 @@ if command -v nvidia-smi >/dev/null 2>&1; then
     "$vram_gb" "$gpu_name" "$caps_json")"
 fi
 
-body="$(printf '{"nodeId":"%s","stats":{"cores":%s,"loadavg1":%s,"cpu":%s,"memTotalKb":%s,"memAvailKb":%s,"memUsedRatio":%s%s}}' \
-  "$STREAMHUB_HB_NODE_ID" "$cores" "$load" "$cpu" "$memtotal" "$memavail" "$memused" "$grid")"
+# CDN edge (STREAMHUB_HB_ROLE=cdn-edge): nginx stub_status (127.0.0.1 only) +
+# bytes sent on the default-route NIC, and Mbps since the previous beat (state in
+# /run, so a reboot just restarts the delta). Never fails the beat: any probe
+# that breaks reports 0.
+cdn=""
+if [ "${STREAMHUB_HB_ROLE:-}" = "cdn-edge" ]; then
+  st="$(curl -fsS -m3 "${STREAMHUB_HB_CDN_STATUS_URL:-http://127.0.0.1:18081/nginx_status}" 2>/dev/null || true)"
+  conns="$(printf '%s\n' "$st" | awk '/^Active connections:/{print $3; exit}')"
+  reqs="$(printf '%s\n' "$st" | awk 'f{print $3; exit} /^server accepts handled requests/{f=1}')"
+  case "$conns" in ''|*[!0-9]*) conns=0 ;; esac
+  case "$reqs" in ''|*[!0-9]*) reqs=0 ;; esac
+  [ "$conns" -gt 0 ] && conns=$(( conns - 1 ))   # minus this stub_status probe
+  iface="$(awk '$2=="00000000"{print $1; exit}' /proc/net/route 2>/dev/null || true)"
+  tx=""
+  [ -n "$iface" ] && tx="$(sed 's/:/ /' /proc/net/dev 2>/dev/null | awk -v i="$iface" '$1==i{print $10; exit}')"
+  case "$tx" in ''|*[!0-9]*) tx=0 ;; esac
+  now="$(awk '{print $1}' /proc/uptime 2>/dev/null || echo 0)"
+  state=/run/streamhub/hb-cdn.state
+  mbps=0
+  if [ -r "$state" ]; then
+    pt=0; ptx=0
+    read -r pt ptx < "$state" || true
+    mbps="$(awk -v t="$now" -v pt="${pt:-0}" -v x="$tx" -v px="${ptx:-0}" \
+      'BEGIN{ dt=t-pt; if (pt>0 && dt>0 && x>=px) printf "%.3f", (x-px)*8/dt/1000000; else print 0 }')"
+  fi
+  { mkdir -p /run/streamhub && printf '%s %s\n' "$now" "$tx" > "$state"; } 2>/dev/null || true
+  cdir="$(printf '%s' "${STREAMHUB_HB_CDN_CACHE_DIR:-/var/cache/nginx/hls}" | tr -cd 'A-Za-z0-9/._-')"
+  cdn="$(printf ',"role":"cdn-edge","cdn":{"conns":%s,"reqTotal":%s,"txBytes":%s,"txMbps":%s,"cacheDir":"%s"}' \
+    "$conns" "$reqs" "$tx" "$mbps" "$cdir")"
+fi
 
-curl -fsS -m10 -X POST "$STREAMHUB_HB_URL/api/v1/cluster/heartbeat" \
-  -H 'Content-Type: application/json' -H "X-Cluster-Token: $STREAMHUB_HB_TOKEN" \
-  -d "$body" >/dev/null
+body="$(printf '{"nodeId":"%s","stats":{"cores":%s,"loadavg1":%s,"cpu":%s,"memTotalKb":%s,"memAvailKb":%s,"memUsedRatio":%s%s%s}}' \
+  "$STREAMHUB_HB_NODE_ID" "$cores" "$load" "$cpu" "$memtotal" "$memavail" "$memused" "$grid" "$cdn")"
+
+# A CDN edge always holds a per-node secret (3.4.0+ master): send it as
+# X-Node-Secret too. Elsewhere X-Cluster-Token only (it may be the origin's
+# cluster token, which is no node secret).
+hdrs=(-H 'Content-Type: application/json' -H "X-Cluster-Token: $STREAMHUB_HB_TOKEN")
+[ "${STREAMHUB_HB_ROLE:-}" = "cdn-edge" ] && hdrs+=(-H "X-Node-Secret: $STREAMHUB_HB_TOKEN")
+curl -fsS -m10 -X POST "$STREAMHUB_HB_URL/api/v1/cluster/heartbeat" "${hdrs[@]}" -d "$body" >/dev/null
 HBEOF
   chmod 0755 /usr/local/bin/streamhub-heartbeat.sh
 
@@ -1113,13 +1658,13 @@ ExecStart=/usr/local/bin/streamhub-heartbeat.sh
 Nice=10
 EOF
 
-  cat > /etc/systemd/system/streamhub-heartbeat.timer <<'EOF'
+  cat > /etc/systemd/system/streamhub-heartbeat.timer <<EOF
 [Unit]
-Description=Run the StreamHub cluster heartbeat every 60s
+Description=Run the StreamHub cluster heartbeat every ${hb_every}s
 
 [Timer]
 OnBootSec=30
-OnUnitActiveSec=60
+OnUnitActiveSec=$hb_every
 AccuracySec=5s
 Unit=streamhub-heartbeat.service
 
@@ -1130,7 +1675,7 @@ EOF
   systemctl daemon-reload >/dev/null 2>&1 || true
   systemctl enable --now streamhub-heartbeat.timer >/dev/null 2>&1 \
     || warn "could not enable streamhub-heartbeat.timer"
-  ok "heartbeat agent installed (systemd timer, 60s → $hb_url, node '$hb_node')"
+  ok "heartbeat agent installed (systemd timer, ${hb_every}s → $hb_url, node '$hb_node')"
 }
 
 # ---- Vision Edge placeholder unit (edge nodes only) --------------------------
@@ -1140,15 +1685,25 @@ EOF
 # on the not-yet-installed binary, so the unit is enabled + harmless until the
 # runtime lands. The edge's connection env is written for that runtime to read.
 # Idempotent: files are rewritten every run. Best-effort — never aborts the install.
-install_edge_placeholder_unit() { # install_edge_placeholder_unit <api_base> <token> <node_id>
+install_edge_placeholder_unit() { # install_edge_placeholder_unit <api_base> <node_credential> <node_id>
   local ed_url="$1" ed_token="$2" ed_node="$3"
   if ! command -v systemctl >/dev/null 2>&1; then
     warn "systemd not available — skipping the streamhub-edge unit"
     return 0
   fi
   mkdir -p /etc/streamhub
+  # Re-run where the master was unreachable: keep the stored credential/id.
+  if [ -r /etc/streamhub/edge.env ]; then
+    [ -n "$ed_token" ] || ed_token="$(sed -n 's/^STREAMHUB_NODE_SECRET=//p' /etc/streamhub/edge.env | head -1)"
+    [ -n "$ed_node" ]  || ed_node="$(sed -n 's/^STREAMHUB_NODE_ID=//p' /etc/streamhub/edge.env | head -1)"
+  fi
+  # STREAMHUB_NODE_SECRET is this node's own credential (3.3.4+). The same
+  # value goes in STREAMHUB_CLUSTER_TOKEN ONLY as a compat alias for edge
+  # runtimes that still read that name — it is NOT the shared cluster token
+  # (the master accepts the node secret in X-Cluster-Token / ?token= too).
   ( umask 077; cat > /etc/streamhub/edge.env <<EOF
 STREAMHUB_MASTER_URL=$ed_url
+STREAMHUB_NODE_SECRET=$ed_token
 STREAMHUB_CLUSTER_TOKEN=$ed_token
 STREAMHUB_NODE_ID=$ed_node
 VISION_EDGE_LOG=/var/log/streamhub-edge.log
@@ -1327,9 +1882,16 @@ install_mediamtx() {
   # auth URL to carry ?secret= (authHTTPAddress can't send a header).
   install -m 0644 "$INSTALL_DIR/deploy/mediamtx.yml" /etc/streamhub/mediamtx.yml
   local hs; hs="$(env_get STREAMHUB_MEDIAMTX_HOOK_SECRET)"
+  # E2: SRT on the front (key-checked by the auth hook) only when the core's
+  # STREAMHUB_MEDIAMTX_SRT_ENABLE is on; normalized to MediaMTX's yes/no.
+  local srt_raw srt_port mtx_srt="no"
+  srt_raw="$(env_get STREAMHUB_MEDIAMTX_SRT_ENABLE)"; srt_port="$(env_get STREAMHUB_MEDIAMTX_SRT_PORT)"
+  case "$(printf '%s' "$srt_raw" | tr '[:upper:]' '[:lower:]')" in 1|true|on|yes) mtx_srt="yes" ;; esac
   ( umask 077; cat > /etc/streamhub/mediamtx.env <<EOF
 STREAMHUB_MEDIAMTX_HOOK_SECRET=$hs
 MTX_AUTHHTTPADDRESS=http://127.0.0.1:3020/api/v1/internal/mediamtx/auth?secret=$hs
+MTX_SRT=$mtx_srt
+MTX_SRTADDRESS=:${srt_port:-8890}
 EOF
   )
 
@@ -1350,23 +1912,30 @@ EOF
 #   - a single systemd unit fronting the whole compose stack
 #   - the stamped VERSION (authoritative record for the next upgrade check)
 install_app_scaffolding() {
+  # MODE=cdn-edge tells the CLI this node is nginx-only (no compose stack).
+  local prof_mode="$MODE"; [ "$CDN_EDGE" = "1" ] && prof_mode="cdn-edge"
   ( umask 022; cat > "$INSTALL_DIR/.install-profile" <<EOF
-STREAMHUB_PROFILE_MODE=$MODE
+STREAMHUB_PROFILE_MODE=$prof_mode
 STREAMHUB_PROFILE_PROXY=$PROXY
 STREAMHUB_PROFILE_EGRESS=$WITH_EGRESS
+STREAMHUB_PROFILE_NODE_IP=$NODE_IP_MODE
 EOF
   )
 
-  # Joined nodes also persist their role + join params (mode 600 — it holds the
-  # cluster token) so a bare re-run / `streamhub upgrade` resumes as the same
-  # node instead of silently re-running in origin mode (see the resume block).
+  # Joined nodes also persist their role + join params (mode 600) so a bare
+  # re-run / `streamhub upgrade` resumes as the same node instead of silently
+  # re-running in origin mode (see the resume block). The cluster token is
+  # kept ONLY when the origin vended no per-node secret (pre-3.3.4 origin):
+  # otherwise the node holds just its own secret (.env STREAMHUB_NODE_SECRET).
   if [ "$MODE" = "join" ]; then
+    PROFILE_TOKEN="$CLUSTER_TOKEN"
+    [ -n "$(env_get STREAMHUB_NODE_SECRET)" ] && PROFILE_TOKEN=""
     ( umask 077; cat > "$INSTALL_DIR/.join-profile" <<EOF
 STREAMHUB_PROFILE_NODE_TYPE=$NODE_TYPE
 STREAMHUB_PROFILE_NODE_NAME=$NODE_NAME
 STREAMHUB_PROFILE_ORIGIN_IP=$ORIGIN_IP
 STREAMHUB_PROFILE_ORIGIN_URL=$ORIGIN_URL
-STREAMHUB_PROFILE_CLUSTER_TOKEN=$CLUSTER_TOKEN
+STREAMHUB_PROFILE_CLUSTER_TOKEN=$PROFILE_TOKEN
 STREAMHUB_PROFILE_EGRESS=$WITH_EGRESS
 EOF
     )
@@ -1381,7 +1950,8 @@ EOF
     warn "deploy/streamhub missing from the source — CLI not installed"
   fi
 
-  if command -v systemctl >/dev/null 2>&1 && [ -f "$INSTALL_DIR/deploy/systemd/streamhub.service" ]; then
+  # (a CDN edge has no compose stack — nginx.service is its service)
+  if [ "$CDN_EDGE" != "1" ] && command -v systemctl >/dev/null 2>&1 && [ -f "$INSTALL_DIR/deploy/systemd/streamhub.service" ]; then
     # Template the default /opt/streamhub paths to the actual install dir.
     sed "s#/opt/streamhub#$INSTALL_DIR#g" \
       "$INSTALL_DIR/deploy/systemd/streamhub.service" > /etc/systemd/system/streamhub.service
@@ -1395,6 +1965,8 @@ EOF
   fi
 
   printf '%s\n' "$TARGET_VERSION" > "$INSTALL_DIR/VERSION"
+  # A prepared image is now a real install: later runs fetch/upgrade normally.
+  rm -f "$IMAGE_MARKER"
 }
 
 # Actionable guidance for a FAILED upgrade (build OR health). The pre-upgrade DB
@@ -1425,8 +1997,11 @@ phone_home() { # <mode: fresh|upgrade|join>
     return 0
   fi
   command -v curl >/dev/null 2>&1 || return 0
-  local url idfile iid ver arch body
+  local url idfile iid ver arch body channel
   url="${STREAMHUB_TELEMETRY_URL:-https://streamhub.studio/api/installs}"
+  # stable = the one-liner; a marketplace image reports its own channel.
+  channel="$(printf '%s' "${STREAMHUB_TELEMETRY_CHANNEL:-${IMAGE_CHANNEL:-stable}}" | tr -cd 'A-Za-z0-9._-')"
+  : "${channel:=stable}"
   idfile="$INSTALL_DIR/.install_id"
   [ -r "$idfile" ] && iid="$(head -1 "$idfile" 2>/dev/null | tr -d '[:space:]')" || iid=""
   if [ -z "$iid" ]; then
@@ -1439,11 +2014,11 @@ phone_home() { # <mode: fresh|upgrade|join>
     aarch64|arm64) arch="arm64" ;;
     *)             arch="$(uname -m)" ;;
   esac
-  body="$(printf '{"install_id":"%s","version":"%s","os":"linux","arch":"%s","mode":"%s","channel":"stable"}' \
-    "$iid" "$ver" "$arch" "$mode")"
+  body="$(printf '{"install_id":"%s","version":"%s","os":"linux","arch":"%s","mode":"%s","channel":"%s"}' \
+    "$iid" "$ver" "$arch" "$mode" "$channel")"
   # fire-and-forget: a telemetry hiccup must never fail or slow the install
   ( curl -fsS -m5 -X POST "$url" -H 'Content-Type: application/json' -d "$body" >/dev/null 2>&1 || true ) &
-  log "sent anonymous install ping (mode=$mode, version=$ver, arch=$arch) — opt out: STREAMHUB_NO_TELEMETRY=1"
+  log "sent anonymous install ping (mode=$mode, version=$ver, arch=$arch, channel=$channel) — opt out: STREAMHUB_NO_TELEMETRY=1"
 }
 
 # ---- 5. start services -------------------------------------------------------
@@ -1464,10 +2039,13 @@ if [ "$MODE" = "origin" ]; then
   BUILD_OK=1
   if [ "$PROXY" = "caddy" ]; then
     log "building + starting the full stack (with Caddy auto-TLS)"
-    docker compose up -d --build || BUILD_OK=0
+    docker compose --profile caddy up -d --build || BUILD_OK=0
   else
     log "building + starting the stack (redis livekit ingress egress core — nginx fronts it)"
     docker compose up -d --build redis livekit ingress egress core || BUILD_OK=0
+    # A pre-profile install may have left a compose caddy container fighting
+    # nginx for :80 (restart loop) — drop it.
+    docker compose --profile caddy rm -sf caddy >/dev/null 2>&1 || true
   fi
   if [ "$BUILD_OK" = "0" ]; then
     # Un-stamp the failed build's version so the record matches what still runs.
@@ -1510,16 +2088,27 @@ if [ "$MODE" = "origin" ]; then
 
   # ---- proxy server-block + (optional) certbot ------------------------------
   DOMAIN="$(env_get STREAMHUB_DOMAIN)"
-  if [ "$PROXY" = "nginx" ] && [ "$DOMAIN" != "localhost" ]; then
-    AVAIL="/etc/nginx/sites-available/$DOMAIN"
+  if [ "$PROXY" = "nginx" ]; then
+    # Connection limits first (worker_connections/rlimit/LimitNOFILE) — applied
+    # by the reload below, or right here when the vhost already exists.
+    tune_nginx_limits
+    # No domain (localhost / --no-tls without --domain): a catch-all vhost to
+    # the core instead of leaving nginx's default site (which never reached
+    # /api or /hls). Named so it can't collide with a real domain's file.
+    if [ "$DOMAIN" = "localhost" ]; then AVAIL="/etc/nginx/sites-available/streamhub-default"
+    else AVAIL="/etc/nginx/sites-available/$DOMAIN"; fi
     # HLS direct-serve (STREAMHUB_HLS_DIRECT_SERVE, operations/SCALING.md): ON
-    # points nginx's /hls root at the host DATA_DIR so live .ts/.m3u8 are served
-    # straight from disk (sendfile). OFF (default) uses a non-existent root, so
+    # points nginx's /hls root at the host DATA_DIR so live segments are served
+    # straight from disk (sendfile), each one AFTER an auth_request to the core
+    # (/hls-auth: signed HLS of private apps + geo) — playlists always go to the
+    # core. OFF (default) uses a non-existent root and auth_request off, so
     # try_files always misses and everything falls back to the core (no change).
+    # The two placeholders move together: a real root never ships without auth.
     HLS_DS="$(env_get STREAMHUB_HLS_DIRECT_SERVE)"; : "${HLS_DS:=${STREAMHUB_HLS_DIRECT_SERVE:-}}"
     case "${HLS_DS,,}" in
       on|1|true|yes) HLS_ROOT="$(cd "$INSTALL_DIR" 2>/dev/null && realpath -m "${DATA_HOST_DIR:-./data}" 2>/dev/null || echo "${DATA_HOST_DIR:-./data}")"
-         log "HLS direct-serve ON — nginx serves /hls from disk at $HLS_ROOT"
+         HLS_AUTH="/_streamhub_hls_auth"
+         log "HLS direct-serve ON — nginx serves /hls segments from disk at $HLS_ROOT (auth_request to the core)"
          # data/apps is 770 (umask 077 + g+rwX above): give ONLY the nginx worker
          # user traverse (x, no listing) down to the per-app dirs — not o+x, which
          # would open app.db (664) to every local user.
@@ -1529,31 +2118,42 @@ if [ "$MODE" = "origin" ]; then
          else
            warn "setfacl not found — nginx ($NGX_USER) may get 403 on /hls; run: setfacl -m u:$NGX_USER:x $HLS_ROOT/apps (apt install acl)"
          fi ;;
-      *) HLS_ROOT="/var/empty" ;;
+      *) HLS_ROOT="/var/empty"; HLS_AUTH="off" ;;
     esac
     if [ ! -f "$AVAIL" ]; then
-      if is_ip "$DOMAIN"; then
-        # IP origin: a catch-all default_server answers on :80 for ANY Host
-        # header, so edges/clients reach the core at http://<ip> (no name vhost).
-        log "writing nginx catch-all server block (IP origin $DOMAIN)"
+      if is_ip "$DOMAIN" || [ "$DOMAIN" = "localhost" ]; then
+        # IP origin / no domain: a catch-all default_server answers on :80 for
+        # ANY Host header, so edges/clients reach the core at http://<ip>.
+        log "writing nginx catch-all server block ($([ "$DOMAIN" = localhost ] && echo 'no domain' || echo "IP origin $DOMAIN") → core 127.0.0.1:3020)"
         sed -e 's/server_name streamhub\.example\.com;/server_name _;/' \
             -e 's/listen 80;/listen 80 default_server;/' \
             -e 's/listen \[::\]:80;/listen [::]:80 default_server;/' \
             -e "s#__STREAMHUB_HLS_ROOT__#$HLS_ROOT#" \
+            -e "s#__STREAMHUB_HLS_AUTH__#$HLS_AUTH#" \
             deploy/nginx-streamhub.conf > "$AVAIL"
       else
         log "writing nginx server block for $DOMAIN"
         sed -e "s/streamhub.example.com/$DOMAIN/" \
             -e "s#__STREAMHUB_HLS_ROOT__#$HLS_ROOT#" \
+            -e "s#__STREAMHUB_HLS_AUTH__#$HLS_AUTH#" \
             deploy/nginx-streamhub.conf > "$AVAIL"
       fi
-      ln -sf "$AVAIL" "/etc/nginx/sites-enabled/$DOMAIN"
+      ln -sf "$AVAIL" "/etc/nginx/sites-enabled/$(basename "$AVAIL")"
       rm -f /etc/nginx/sites-enabled/default
       nginx -t && systemctl reload nginx
     else
       ok "nginx server block for $DOMAIN already present"
+      if nginx -t >/dev/null 2>&1; then systemctl reload nginx >/dev/null 2>&1 || true; fi   # picks up tune_nginx_limits
+      # 3.4.0 (G2): a pre-3.4 vhost serves /hls from disk WITHOUT asking the
+      # core, which would expose apps with public_playback:false. Detect it.
+      if [ "$HLS_AUTH" != "off" ] && ! grep -q "_streamhub_hls_auth" "$AVAIL" 2>/dev/null; then
+        warn "HLS direct-serve is ON but $AVAIL predates the /hls auth_request (3.4.0): private apps' segments would be served WITHOUT a token."
+        warn "  Regenerate it: rm $AVAIL && re-run install.sh (or merge deploy/nginx-streamhub.conf by hand), then nginx -t && systemctl reload nginx."
+      fi
     fi
-    if [ "$NO_TLS" = "1" ]; then
+    if [ "$DOMAIN" = "localhost" ]; then
+      log "no domain: no certbot — nginx serves the core on plain HTTP :80 (pass --domain for TLS)"
+    elif [ "$NO_TLS" = "1" ]; then
       warn "--no-tls: skipping certbot ($DOMAIN stays plain HTTP on :80)"
     elif is_ip "$DOMAIN"; then
       warn "domain is an IP ($DOMAIN) — skipping certbot (Let's Encrypt needs a DNS name); plain HTTP on :80."
@@ -1567,7 +2167,7 @@ if [ "$MODE" = "origin" ]; then
     # Samples origin vhost (+ cert): a second server block, same core upstream;
     # the core splits by Host (features/samples.md).
     SAMPLES_URL_SET="$(env_get STREAMHUB_SAMPLES_URL)"
-    if [ -n "$SAMPLES_URL_SET" ] && ! is_ip "$DOMAIN"; then
+    if [ -n "$SAMPLES_URL_SET" ] && ! is_ip "$DOMAIN" && [ "$DOMAIN" != "localhost" ]; then
       SDOM="${SAMPLES_URL_SET#*://}"; SDOM="${SDOM%%/*}"
       SAVAIL="/etc/nginx/sites-available/$SDOM"
       if [ ! -f "$SAVAIL" ]; then
@@ -1618,18 +2218,24 @@ if [ "$MODE" = "origin" ]; then
   # compose ingress has moved to :11935 (STREAMHUB_INGRESS_RTMP_PORT set above),
   # so mediamtx can bind the now-free public :1935.
   [ "$MEDIAMTX_ENABLE" = "1" ] && install_mediamtx
+elif [ "$CDN_EDGE" = "1" ]; then
+  # ---- CDN edge: nginx HLS cache only (no Docker, LiveKit or compose) --------
+  log "CDN edge — nginx caching /hls from $CDN_ORIGIN_URL (no Docker/LiveKit)"
+  install_cdn_edge
+  # Registered + fresh in the master's registry, reporting conns/req/tx Mbps.
+  install_heartbeat_agent "$API_BASE" "$NODE_CRED" "${NODE_ID:-}" "cdn-edge"
 elif [ "$NODE_TYPE" = "edge" ]; then
   # ---- Vision Edge node: NO public media plane -------------------------------
   # An edge is a worker/compute node — it joins + heartbeats + (Wave 2) dials the
   # master's WS control channel, but runs no livekit/ingress/egress. Install the
   # inert edge runtime unit; the heartbeat agent below keeps it fresh meanwhile.
   log "edge node — skipping the public media plane (no livekit/ingress/egress)"
-  install_edge_placeholder_unit "$API_BASE" "$CLUSTER_TOKEN" "${NODE_ID:-}"
+  install_edge_placeholder_unit "$API_BASE" "$NODE_CRED" "${NODE_ID:-}"
   # Provision + start the vision-edge runtime (best-effort; STREAMHUB_NO_EDGE_RUNTIME=1 skips).
   install_edge_runtime
 
   # Keep this edge fresh in the master's registry (60s systemd timer).
-  install_heartbeat_agent "$API_BASE" "$CLUSTER_TOKEN" "${NODE_ID:-}"
+  install_heartbeat_agent "$API_BASE" "$NODE_CRED" "${NODE_ID:-}"
 else
   # ---- redis preflight: the origin's shared Redis MUST be reachable ----------
   # Edges coordinate through the origin's Redis (LIVEKIT_REDIS_ADDRESS). If it
@@ -1673,7 +2279,7 @@ else
     warn "recordings/HLS this node captures land on ITS OWN disk, while the"
     warn "origin uploads/serves from its disk → cross-node recordings and"
     warn "live-HLS are broken (~50% failure) until S3 transport ships."
-    warn "See https://streamhub.studio/docs/architecture/CLUSTER-ROADMAP (Wave C)."
+    warn "See streamhub-docs/architecture/CLUSTER-ROADMAP.md (Wave C)."
     warn "=================================================================="
   else
     log "egress affinity: NOT starting egress here (artifacts stay on the origin). Opt in with --with-egress."
@@ -1689,7 +2295,7 @@ else
   # Keep this edge fresh in the master's registry (60s systemd timer). NODE_ID
   # comes from the join response above; a re-run reuses the stored id if the
   # master was unreachable this time.
-  install_heartbeat_agent "$API_BASE" "$CLUSTER_TOKEN" "${NODE_ID:-}"
+  install_heartbeat_agent "$API_BASE" "$NODE_CRED" "${NODE_ID:-}"
 fi
 
 # ---- 5b. install the CLI + single service + stamp VERSION (both modes) -------
@@ -1720,6 +2326,8 @@ if [ "$MODE" = "origin" ]; then
   [ "$DOMAIN" = "localhost" ] && { SCHEME="http"; DOMAIN="127.0.0.1:3020"; }
   ok "StreamHub origin node is running."
   echo "  Dashboard     : $SCHEME://$DOMAIN/          (login: $(env_get ADMIN_USER) / $(reveal "$(env_get ADMIN_PASS)"))"
+  [ "$DOMAIN" = "127.0.0.1:3020" ] && [ "$PROXY" = "nginx" ] \
+    && echo "  Also on       : http://<this-server-ip>/   (nginx catch-all → core, plain HTTP; --domain for TLS)"
   echo "  API + Swagger : $SCHEME://$DOMAIN/api/v1/docs"
   echo "  API token     : $(reveal "$(env_get STREAMHUB_API_TOKEN)")    (Authorization: Bearer ...)"
   echo "  RTMP publish  : rtmp://$(env_get RTMP_PUBLIC_HOST):1935/x  ·  WHIP: :8080  ·  HLS: /hls/<app>/<room>/index.m3u8"
@@ -1752,6 +2360,15 @@ if [ "$MODE" = "origin" ]; then
     warn "      ufw allow from <edge-private-ip> to any port 6379 proto tcp"
     warn "  Single-node / standalone? You can ignore this."
   fi
+elif [ "$CDN_EDGE" = "1" ]; then
+  ok "StreamHub CDN edge '$NODE_NAME' is running and registered (node id: $(env_get STREAMHUB_NODE_ID))."
+  echo "  Viewers       : $(env_get STREAMHUB_CDN_EDGE_URL)/hls/<app>/<room>/index.m3u8"
+  echo "  Origin        : $(env_get STREAMHUB_CDN_ORIGIN_URL)   (set STREAMHUB_HLS_CDN=on on the origin)"
+  echo "  Cache         : ${CDN_CACHE_DIR:-/var/cache/nginx/hls}$([ "$EDGE_CACHE_TMPFS" != off ] && echo " (tmpfs $EDGE_CACHE_TMPFS)")   ·   config: $CDN_EDGE_CONF"
+  echo "  Heartbeat     : every 15s → $API_BASE (conns / req / tx Mbps from stub_status on $CDN_STATUS_LISTEN)"
+  echo "  Manage        : streamhub status | logs | restart | doctor | upgrade   (systemctl status nginx)"
+  echo "  Version       : $INSTALL_DIR/VERSION (v${TARGET_VERSION})   ·   installer log: $INSTALL_DIR/logs/install.log"
+  echo "  Firewall      : open 80/tcp (and 443 if TLS terminates here) to viewers"
 else
   ok "StreamHub edge node '$NODE_NAME' is running and registered."
   echo "  Sharing Redis : $(env_get REDIS_URL)   (LiveKit room affinity via the origin)"
@@ -1759,7 +2376,7 @@ else
   echo "  Manage        : streamhub status | logs -f | restart | doctor   (systemctl status streamhub)"
   echo "  Version       : $INSTALL_DIR/VERSION (v${TARGET_VERSION})   ·   installer log: $INSTALL_DIR/logs/install.log"
   echo "  Note          : the origin's Redis must be reachable from this node"
-  echo "                  (private network/VPN recommended; see https://streamhub.studio/docs/operations/INSTALL-NODE)"
+  echo "                  (private network/VPN recommended; see streamhub-docs/operations/INSTALL-NODE.md)"
 fi
 ok "Re-running this installer is safe + idempotent: it keeps .env/data, upgrades on a newer version (with a pre-upgrade DB backup), and re-stamps VERSION."
 ok "============================================================"

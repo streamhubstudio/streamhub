@@ -1,6 +1,6 @@
 // Command streamhub is the StreamHub core: REST API /api/v1, the dashboard
 // SPA, HLS/SDK/sample static surfaces. Configuration is the same .env the
-// Node core reads (see https://streamhub.studio/docs/operations/ENV).
+// Node core reads (see streamhub-docs/operations/ENV.md).
 package main
 
 import (
@@ -16,11 +16,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/health"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/server"
+	"github.com/danielgtaylor/huma/v2"
+
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/health"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/server"
 )
 
 func main() {
@@ -37,6 +39,9 @@ func run() error {
 	cfg := config.Load()
 	log := newLogger(cfg.LogLevel)
 	slog.SetDefault(log)
+	for _, w := range cfg.Warnings {
+		log.Warn("config: " + w)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -81,8 +86,9 @@ func run() error {
 }
 
 // buildHandler wires every plane and builds the full HTTP handler. Split
-// from run() so boot_test.go can exercise the complete wiring.
-func buildHandler(ctx context.Context, cfg *config.Config, log *slog.Logger, store *db.Service) (http.Handler, error) {
+// from run() so boot_test.go can exercise the complete wiring; its extra
+// hooks run after the planes' (the guard-coverage test keeps the huma.API).
+func buildHandler(ctx context.Context, cfg *config.Config, log *slog.Logger, store *db.Service, hooks ...func(huma.API)) (http.Handler, error) {
 	global, err := store.Global(ctx)
 	if err != nil {
 		return nil, err
@@ -100,10 +106,11 @@ func buildHandler(ctx context.Context, cfg *config.Config, log *slog.Logger, sto
 		Config:     cfg,
 		Log:        log,
 		Authn:      authn,
-		APIHooks:   c.apiHooks,
+		APIHooks:   append(c.apiHooks, hooks...),
 		Middleware: c.middleware,
 		Modules:    c.modules,
 		Counter:    c.hlsCounter,
+		HLSGate:    c.hlsGate,
 	}), nil
 }
 

@@ -1,5 +1,5 @@
 # Scrape config del stack de observabilidad (Fase 1).
-# Diseño: https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP §4.4.
+# Diseño: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md §4.4.
 # Distinto de deploy/prometheus.yml (config de referencia para
 # despliegues en red docker-compose, con targets `streamhub-core:3020` /
 # `livekit:6789`). Este archivo asume el nodo de referencia (`stream01`):

@@ -6,11 +6,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // Register implements api.Module (quotas.controller.ts: /tenants).
@@ -39,7 +39,9 @@ func (s *Service) Register(a huma.API) {
 		Tags:        []string{"quotas"},
 	}), "usage", "read"), func(ctx context.Context, in *idInput) (*api.Out[api.Envelope[UsageReport]], error) {
 		// A non-superadmin may only read its OWN tenant (always enforced).
-		if p := auth.From(ctx); p != nil && !p.IsSuperadmin && p.Via != auth.ViaAPIToken {
+		// Node exempted every api_token, so an app-scoped token read any
+		// tenant's usage; only global-scope credentials are exempt now.
+		if p := auth.From(ctx); p != nil && !p.IsSuperadmin && p.Scope != auth.ScopeGlobal {
 			if p.TenantID != "" && p.TenantID != in.ID {
 				return nil, httpx.Forbidden("cannot read another tenant usage")
 			}

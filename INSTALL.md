@@ -6,12 +6,12 @@ estilo AntMedia: el **core Go** — un binario estático, `streamhub-core` — q
 React, el SDK y el HLS), todo detrás de **un único dominio**.
 
 > **Atajos:** si no necesitás el detalle a mano, usá el instalador de una línea
-> ([operations/INSTALL-NODE](https://streamhub.studio/docs/operations/INSTALL-NODE), forma
+> ([`streamhub-docs/operations/INSTALL-NODE.md`](streamhub-docs/operations/INSTALL-NODE.md), forma
 > Docker Compose + Caddy). Este archivo es la forma **systemd + nginx + certbot**; la referencia
-> canónica en inglés es [`DEPLOY.md §B`](https://streamhub.studio/docs/operations/DEPLOY#b-systemd--nginx--certbot-plain-server)
+> canónica en inglés es [`DEPLOY.md §B`](streamhub-docs/operations/DEPLOY.md#b-systemd--nginx--certbot-plain-server)
 > y el build paso a paso está en
-> [`MANUAL-BUILD-INSTALL.md`](https://streamhub.studio/docs/operations/MANUAL-BUILD-INSTALL). Detalle de la API en
-> `https://streamhub.studio/docs/`; spec del producto en `https://streamhub.studio/docs/SPEC`.
+> [`MANUAL-BUILD-INSTALL.md`](streamhub-docs/operations/MANUAL-BUILD-INSTALL.md). Detalle de la API en
+> `streamhub-docs/`; spec del producto en `streamhub-docs/SPEC.md`.
 
 ## 0. Arquitectura (un dominio)
 
@@ -36,7 +36,7 @@ Todo el media transport (UDP/RTMP) va por IP; el dominio sólo cubre la página,
 signaling (wss). Por eso con **un** registro DNS A `streamhub... → IP` alcanza para una instancia.
 
 > Los jobs del core (subidas a S3, transcodes, Streamflow, cron de métricas) corren **in-process**
-> en el binario Go; Redis sólo lo usa LiveKit. Ver internal design notes para lo que eso
+> en el binario Go; Redis sólo lo usa LiveKit. Ver `planning/GO-DIVERGENCES.md` para lo que eso
 > cambia respecto del core 2.x (Node/BullMQ).
 
 ## 1. Prerrequisitos
@@ -123,7 +123,7 @@ de deploy es el **bundle nativo**: `streamhub-core-<ver>-linux-amd64.tar.gz` con
 (`web/`), el SDK del browser, las apps desacopladas compuestas (`plugins-vendor/`) y `VERSION`.
 
 **Del lado del build** (una máquina con `go` 1.26+ y node/npm — Node sólo para buildear la SPA y el
-SDK; ver [`MANUAL-BUILD-INSTALL.md §3a`](https://streamhub.studio/docs/operations/MANUAL-BUILD-INSTALL)):
+SDK; ver [`MANUAL-BUILD-INSTALL.md §3a`](streamhub-docs/operations/MANUAL-BUILD-INSTALL.md)):
 
 ```bash
 # opcional: componer las Studio Apps desacopladas (necesita STREAMHUB_APPS_TOKEN)
@@ -141,7 +141,7 @@ mkdir -p /home/$USER/streamhub-core                   # APP_DIR (binario + web/ 
 ```
 
 `.env` en `APP_DIR` (todas las variables comentadas en `.env.example`; referencia completa en
-[operations/ENV](https://streamhub.studio/docs/operations/ENV)):
+[`streamhub-docs/operations/ENV.md`](streamhub-docs/operations/ENV.md)):
 
 ```
 PORT=3020
@@ -173,7 +173,7 @@ sudo APP_DIR=/home/$USER/streamhub-core SERVICE_NAME=streamhub-core \
 Exige que `APP_DIR/.env` exista (nunca inventa secretos), hace backup, instala binario + `web/` +
 `plugins-vendor/`, publica el SDK en `<DATA_DIR>/sdk`, arma el venv de los workers Python, escribe
 el drop-in systemd y reinicia esperando `/api/v1/health`. Detalle de cada paso, `WORKER_DEPS` y
-rollback: [`DEPLOY.md §B.7`](https://streamhub.studio/docs/operations/DEPLOY#b7-redeploys--deploydeploy-coresh-secure-no-hardcoded-secrets).
+rollback: [`DEPLOY.md §B.7`](streamhub-docs/operations/DEPLOY.md#b7-redeploys--deploydeploy-coresh-secure-no-hardcoded-secrets).
 
 Health: `curl http://127.0.0.1:3020/api/v1/health`. Las migraciones SQLite corren solas al boot
 (idempotentes, con backup `VACUUM INTO`).
@@ -190,8 +190,8 @@ grep '^STREAMHUB_API_TOKEN=' .env | cut -d= -f2 | \
 Ese `sk_` es el Bearer de la API. Para entrar a la UI alcanza con `ADMIN_USER`/`ADMIN_PASS`.
 
 > **Alternativa Docker:** todo lo de §2–§5 (LiveKit, ingress, egress, redis, core, TLS con Caddy) en
-> un `docker compose up -d --build` — ver [`MANUAL-BUILD-INSTALL.md`](https://streamhub.studio/docs/operations/MANUAL-BUILD-INSTALL)
-> y [`DEPLOY.md §A`](https://streamhub.studio/docs/operations/DEPLOY#a-docker-compose--caddy-recommended).
+> un `docker compose up -d --build` — ver [`MANUAL-BUILD-INSTALL.md`](streamhub-docs/operations/MANUAL-BUILD-INSTALL.md)
+> y [`DEPLOY.md §A`](streamhub-docs/operations/DEPLOY.md#a-docker-compose--caddy-recommended).
 
 ## 5. StreamHub UI (React) y SDK — vienen en el bundle
 
@@ -243,7 +243,7 @@ El core siembra la app por defecto `live`. Cada app vive en
 **S3 por app** (AWS/Wasabi/MinIO). Las credenciales **no** van al yaml: van a
 `data/secrets.json` (chmod 600) referenciadas desde el `config.yaml` de la app. Se setean por API
 (`PUT /api/v1/apps/<app>/s3`, permiso `s3:write`) o desde la pestaña Config del dashboard; ver
-`https://streamhub.studio/docs/api-app` y `https://streamhub.studio/docs/config-reference`.
+`streamhub-docs/api-app.md` y `streamhub-docs/config-reference.md`.
 
 **Flujo de grabación:** `POST /api/v1/apps/<app>/recording/start {roomName}` → egress room-composite
 → MP4 local en `apps/<app>/recordings/` → webhook `egress_ended` → sube a S3 → borra local → VOD
@@ -262,7 +262,7 @@ lk load-test --url wss://streamhub.<dominio> --room t --video-publishers 1 --sub
 # UI: https://streamhub.<dominio>  (login admin / ADMIN_PASS) · Swagger: /api/v1/docs
 ```
 
-Runbook de operación (logs, restart, rollback): [operations/RUNBOOK](https://streamhub.studio/docs/operations/RUNBOOK).
+Runbook de operación (logs, restart, rollback): [`streamhub-docs/operations/RUNBOOK.md`](streamhub-docs/operations/RUNBOOK.md).
 
 ## 9. Checklist instancia nueva (1 dominio)
 

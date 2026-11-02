@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
 )
 
 // MediaMTX publish-path classes (mediamtx-path.util.ts).

@@ -1,0 +1,58 @@
+{
+  "disabled": {
+    "title": "Encoders are disabled on this server",
+    "body": "Field-device pairing is off by default. Set the variable below in the core's .env and restart it to pair encoders by code."
+  },
+  "claim": {
+    "title": "Add an encoder",
+    "subtitle": "Start pairing on the encoder: it shows an 8-character code (valid 10 minutes). Type it here to bind the encoder to this app.",
+    "codeLabel": "Pairing code",
+    "codeHint": "Case and dashes don't matter. 5 wrong codes lock you out for a while.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Truck 2 — cam A",
+    "submit": "Claim",
+    "claiming": "Claiming…",
+    "error": "Could not claim the encoder.",
+    "done": "{{name}} claimed — it connects as soon as it picks up its credential."
+  },
+  "list": {
+    "empty": "No encoders in this app yet.",
+    "error": "Could not load the encoders."
+  },
+  "device": {
+    "online": "Online",
+    "offline": "Offline",
+    "awaitingCredential": "Waiting for the device",
+    "lastSeen": "Last seen",
+    "temperature": "Temperature",
+    "rename": "Rename",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reboot": "Reboot",
+    "rebootConfirm": "Reboot {{name}}? Its channels stop until it comes back.",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke {{name}}? Its credential stops working and its channels' stream keys are deleted. To use it again, pair it again."
+  },
+  "channels": {
+    "none": "The encoder has not announced any channel yet (it does on connect).",
+    "room": "Room",
+    "protocol": "Protocol",
+    "rtmp": "RTMP — LiveKit (WebRTC + HLS, H.264)",
+    "srt": "SRT — passthrough (HLS, H.264/HEVC)",
+    "link": "Link",
+    "relink": "Change",
+    "unlink": "Unlink",
+    "unlinkConfirm": "Unlink this channel? Its stream key is deleted.",
+    "linkedTo": "Publishing to {{room}} over {{protocol}}",
+    "publishUrl": "Publish URL (pushed to the encoder)",
+    "error": "Could not update the channel."
+  },
+  "command": {
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "ok": "Command done",
+    "failed": "The encoder refused the command",
+    "error": "The command failed."
+  }
+}

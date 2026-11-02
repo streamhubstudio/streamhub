@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"regexp"
 	"strings"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Register implements api.Module: the Prometheus scrape endpoint at the ROOT
@@ -18,9 +19,6 @@ import (
 // document, as @ApiExcludeController). @Public: the guard is skipped; the
 // METRICS_TOKEN check below is the only gate.
 func (s *Service) Register(a huma.API) {
-	type in struct {
-		Token string `query:"token"`
-	}
 	type out struct {
 		ContentType string `header:"Content-Type"`
 		Body        []byte
@@ -33,8 +31,8 @@ func (s *Service) Register(a huma.API) {
 		ctx.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
 		next(ctx)
 	}}
-	huma.Register(a, *op, func(ctx context.Context, i *in) (*out, error) {
-		if err := s.authorize(api.Request(ctx), i.Token); err != nil {
+	huma.Register(a, *op, func(ctx context.Context, _ *struct{}) (*out, error) {
+		if err := s.authorize(api.Request(ctx)); err != nil {
 			return nil, err
 		}
 		body, err := s.Scrape(ctx)
@@ -47,8 +45,10 @@ func (s *Service) Register(a huma.API) {
 
 // authorize is Fase-0 M8 default-deny: without METRICS_TOKEN the endpoint
 // does not exist (404, not 403, so a scanner learns nothing); with it, a
-// matching `Bearer <token>` header or ?token= is required.
-func (s *Service) authorize(r *http.Request, query string) error {
+// matching `Bearer <token>` header is required. Security 3.3.4: `?token=` is
+// no longer accepted (it leaks into access logs, proxies and browser
+// history) and the compare is constant-time.
+func (s *Service) authorize(r *http.Request) error {
 	token := s.d.Env("METRICS_TOKEN")
 	if token == "" {
 		return httpx.NotFound("")
@@ -58,7 +58,7 @@ func (s *Service) authorize(r *http.Request, query string) error {
 	if strings.HasPrefix(h, "Bearer ") {
 		bearer = strings.TrimSpace(h[len("Bearer "):])
 	}
-	if bearer != token && query != token {
+	if subtle.ConstantTimeCompare([]byte(bearer), []byte(token)) != 1 {
 		return httpx.Forbidden("invalid metrics token")
 	}
 	return nil

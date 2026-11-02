@@ -1,7 +1,9 @@
 // Package quotas is tenant quota accounting + enforcement and the superadmin
 // tenant administration (modules/quotas). Enforcement is phased exactly like
-// authz (STREAMHUB_AUTHZ_ENFORCE); superadmin, api_token and unscoped
-// callers are never quota-limited. Every table/column it depends on is
+// authz (STREAMHUB_AUTHZ_ENFORCE); superadmin / global credentials and
+// unscoped callers are never quota-limited. An app-scoped sk_ token IS
+// (security 3.3.4): it used to be exempt like every api_token, so a token
+// confined to one app could blow through its tenant's quotas. Every table/column it depends on is
 // probed first and degrades to "unlimited / zero usage" when absent.
 package quotas
 
@@ -12,13 +14,16 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // TenantQuotas are a tenant's limits (-1 = unlimited).
@@ -133,6 +138,45 @@ func (s *Service) EnforceStreamViewers(limit, current float64, p *auth.Principal
 	return s.enforceScoped(p, "stream", "maxViewersPerStream", limit, func() float64 { return current })
 }
 
+// EdgeAssignmentsEnv caps the live (pending/offered/running) edge
+// assignments one app may hold (security 3.3.4, M5): each one is a worker
+// process on an edge node plus a scheduler retry while unplaced. Unset =
+// DefaultEdgeAssignmentsPerApp; 0 or negative = unlimited.
+const EdgeAssignmentsEnv = "STREAMHUB_EDGE_MAX_ASSIGNMENTS_PER_APP"
+
+// DefaultEdgeAssignmentsPerApp is the per-app cap when the env is unset.
+const DefaultEdgeAssignmentsPerApp = 200
+
+// EdgeAssignmentsLimit is the effective per-app cap (<= 0 = unlimited).
+func EdgeAssignmentsLimit() float64 {
+	raw := strings.TrimSpace(os.Getenv(EdgeAssignmentsEnv))
+	if raw == "" {
+		return DefaultEdgeAssignmentsPerApp
+	}
+	n, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return DefaultEdgeAssignmentsPerApp
+	}
+	return math.Floor(n)
+}
+
+// EnforceAppEdgeAssignments: per-app cap on live edge assignments.
+func (s *Service) EnforceAppEdgeAssignments(ctx context.Context, app string, p *auth.Principal) error {
+	return s.enforceScoped(p, "app", "maxEdgeAssignments", EdgeAssignmentsLimit(), func() float64 { return float64(s.countAppEdgeAssignments(ctx, app)) })
+}
+
+func (s *Service) countAppEdgeAssignments(ctx context.Context, app string) int64 {
+	if !s.tableExists(ctx, "edge_assignments") {
+		return 0
+	}
+	var n int64
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) AS n FROM edge_assignments
+          WHERE app = ? AND status IN ('pending','offered','running')`, app).Scan(&n); err != nil {
+		return 0
+	}
+	return n
+}
+
 // CountAppConcurrentStreams counts active streams of one app (0 on error).
 func (s *Service) CountAppConcurrentStreams(ctx context.Context, app string) int64 {
 	h, err := s.appDB(ctx, app)
@@ -161,9 +205,15 @@ type scopedExceeded struct {
 	Used   float64 `json:"used"`
 }
 
+// exempt: no principal, superadmin, or a global credential. Global sk_
+// tokens resolve as superadmin; the Scope check is belt and braces.
+func exempt(p *auth.Principal) bool {
+	return p == nil || p.IsSuperadmin || p.Scope == auth.ScopeGlobal
+}
+
 func (s *Service) enforce(ctx context.Context, p *auth.Principal, metric string, current func() float64) error {
 	mode := authz.Mode()
-	if mode == authz.ModeOff || p == nil || p.IsSuperadmin || p.Via == auth.ViaAPIToken || p.TenantID == "" {
+	if mode == authz.ModeOff || exempt(p) || p.TenantID == "" {
 		return nil
 	}
 	q := s.quotasFor(ctx, p.TenantID)
@@ -194,7 +244,7 @@ func (s *Service) enforceScoped(p *auth.Principal, scope, metric string, limit f
 		return nil
 	}
 	mode := authz.Mode()
-	if mode == authz.ModeOff || p == nil || p.IsSuperadmin || p.Via == auth.ViaAPIToken {
+	if mode == authz.ModeOff || exempt(p) {
 		return nil
 	}
 	used := current()

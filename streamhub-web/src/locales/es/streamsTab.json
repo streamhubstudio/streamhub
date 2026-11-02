@@ -58,7 +58,8 @@
     "hlsUrl": "URL HLS (.m3u8)",
     "videojs": "Snippet video.js",
     "signedEmbed": "Embed firmado (temporal)",
-    "signedEmbedHelp": "Iframe con token — necesario para apps con reproducción privada.",
+    "signedEmbedHelp": "Iframe / URL HLS con token — necesario para apps con reproducción privada.",
+    "signedHls": "URL HLS firmada (temporal)",
     "signing": "Firmando…",
     "signError": "Falló"
   },

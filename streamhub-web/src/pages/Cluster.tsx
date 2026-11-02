@@ -6,9 +6,11 @@
  * When clustering is disabled (or the endpoint isn't live yet) an empty-state
  * explains how to turn it on (STREAMHUB_CLUSTER_TOKEN + INSTALL-NODE.md).
  *
- * Below: the nodes table (name, url, region, status Badge with a stale tint,
- * relative last-seen) with an expandable per-node health snapshot and per-row
- * edit (name/region) + delete actions, both behind confirmation dialogs.
+ * Below: the CDN edges card (HLS cache nodes, `install.sh --cdn-edge`: Gbps
+ * out, connections, last heartbeat — only when one is registered), then the
+ * nodes table (name, url, region, status Badge with a stale tint, relative
+ * last-seen) with an expandable per-node health snapshot and per-row edit
+ * (name/region) + delete actions, both behind confirmation dialogs.
  *
  * Data via @tanstack/react-query + the typed `api` client. Degrades gracefully:
  * a missing endpoint renders skeleton/empty states, never a crash.
@@ -19,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 import { api, ApiRequestError, type ClusterInfo, type ClusterNode } from '@/api'
 import { Alert, Button, Card, Dialog, Input, Skeleton, Table, Tag } from '@/ui'
 import { relativeTime } from '@/lib/relativeTime'
+import { cdnEdgeView, formatGbps, isCdnEdge, totalGbps } from '@/lib/cdnEdges'
 import { DocsHint } from '@/components/DocsHint'
 import { EdgeTab } from './ClusterEdge'
 
@@ -214,7 +217,7 @@ function InfoBlock({
           </p>
           <p className="mt-2 text-xs">
             <a
-              href="https://streamhub.studio/docs/operations/INSTALL-NODE"
+              href="https://gitlab.com/digitalhub_com_ar/vision-media-server/-/blob/main/streamhub-docs/operations/INSTALL-NODE.md"
               target="_blank"
               rel="noreferrer"
               className="text-primary-500 hover:text-fg"
@@ -366,6 +369,73 @@ function DeleteNodeDialog({ node, onClose }: { node: ClusterNode; onClose: () =>
   )
 }
 
+// --- CDN edges ---------------------------------------------------------------
+
+/** HLS cache edges registered with the cluster and their heartbeat load. */
+function CdnEdgesCard({ edges }: { edges: ClusterNode[] }) {
+  const { t } = useTranslation('clusterPage')
+  const live = edges.filter((n) => !n.stale && n.status === 'active')
+  return (
+    <Card bordered bodyClass="p-0" data-testid="cluster-cdn-edges">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+        <div>
+          <h2 className="text-sm font-semibold text-fg">{t('cdn.title')}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{t('cdn.subtitle')}</p>
+        </div>
+        <div className="text-right">
+          <div className="font-mono text-lg tabular-nums text-fg">
+            {formatGbps(totalGbps(live))} <span className="text-xs text-slate-500">Gbps</span>
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {t('cdn.total', { count: live.length, of: edges.length })}
+          </div>
+        </div>
+      </div>
+      <Table>
+        <THead>
+          <Tr>
+            <Th>{t('nodes.name')}</Th>
+            <Th>{t('nodes.url')}</Th>
+            <Th className="text-right">{t('cdn.gbpsOut')}</Th>
+            <Th className="text-right">{t('cdn.conns')}</Th>
+            <Th>{t('nodes.status')}</Th>
+            <Th>{t('nodes.lastSeen')}</Th>
+          </Tr>
+        </THead>
+        <TBody>
+          {edges.map((node) => {
+            const v = cdnEdgeView(node)
+            return (
+              <Tr key={node.id}>
+                <Td>
+                  <div className="font-medium text-fg">{node.name}</div>
+                  {v.cacheDir && (
+                    <div className="font-mono text-[11px] text-slate-500">{v.cacheDir}</div>
+                  )}
+                </Td>
+                <Td className="font-mono text-xs text-slate-400">{node.url}</Td>
+                <Td className="text-right font-mono tabular-nums text-fg">{formatGbps(v.gbpsOut)}</Td>
+                <Td className="text-right font-mono tabular-nums text-fg">
+                  {v.conns == null ? '—' : v.conns.toLocaleString()}
+                </Td>
+                <Td>
+                  <div className="flex items-center gap-1.5">
+                    <ToneBadge tone={statusTone(node.status, node.stale)}>{node.status || '—'}</ToneBadge>
+                    {node.stale && <ToneBadge tone="red">{t('nodes.stale')}</ToneBadge>}
+                  </div>
+                </Td>
+                <Td>
+                  <LastSeen iso={node.last_seen_at} />
+                </Td>
+              </Tr>
+            )
+          })}
+        </TBody>
+      </Table>
+    </Card>
+  )
+}
+
 // --- nodes table -------------------------------------------------------------
 
 function NodesTable({
@@ -424,7 +494,10 @@ function NodesTable({
                 <Fragment key={node.id}>
                   <Tr>
                     <Td>
-                      <div className="font-medium text-fg">{node.name}</div>
+                      <div className="flex items-center gap-1.5 font-medium text-fg">
+                        {node.name}
+                        {isCdnEdge(node) && <ToneBadge tone="slate">{t('cdn.badge')}</ToneBadge>}
+                      </div>
                       <div className="font-mono text-[11px] text-slate-500">{node.id}</div>
                     </Td>
                     <Td className="font-mono text-xs text-slate-400">{node.url}</Td>
@@ -505,6 +578,7 @@ export default function Cluster() {
 
   const enabled = infoQ.data?.enabled ?? false
   const tabs: ClusterTab[] = ['registry', 'edge']
+  const cdnEdges = (nodesQ.data ?? []).filter(isCdnEdge)
 
   return (
     <div className="space-y-6">
@@ -543,6 +617,8 @@ export default function Cluster() {
             isError={infoQ.isError}
             error={infoQ.error}
           />
+
+          {enabled && cdnEdges.length > 0 && <CdnEdgesCard edges={cdnEdges} />}
 
           {enabled && (
             <NodesTable

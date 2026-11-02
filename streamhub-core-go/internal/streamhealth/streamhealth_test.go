@@ -13,8 +13,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 var bg = context.Background()
@@ -234,10 +234,29 @@ func TestRoutes(t *testing.T) {
 	if code, body := put(`{"config":{"stall_sec":30,"silence_db":"-40"}}`); code != 200 || !strings.Contains(body, `"override":{"stall_sec":30,"silence_db":-40}`) {
 		t.Fatal(code, body)
 	}
-	for _, b := range []string{``, `{"config":null}`, `[1,2]`, `{}`} {
+	for _, b := range []string{``, `null`, `{"config":null}`, `{"config":{}}`, `{}`} {
 		if code, body := put(b); code != 200 || !strings.Contains(body, `"override":{}`) {
 			t.Fatal(b, code, body)
 		}
+	}
+	// 3.4 (GO-DIVERGENCES): an unwrapped / malformed body is a 400 and leaves
+	// the stored override alone (Node answered 200 and wiped it)
+	if code, _ := put(`{"config":{"stall_sec":45}}`); code != 200 {
+		t.Fatal(code)
+	}
+	for b, msg := range map[string]string{
+		`{"silence_db":-100}`:               `"message":"unknown top-level key 'silence_db': thresholds go inside {\"config\":{…}}"`,
+		`{"config":{"stall_sec":30},"x":1}`: `"message":"unknown top-level key 'x'`,
+		`[1,2]`:                             `"message":"settings body must be a JSON object: {\"config\":{…thresholds}}"`,
+		`"x"`:                               `"message":"settings body must be a JSON object`,
+		`3`:                                 `"message":"settings body must be a JSON object`,
+	} {
+		if code, body := put(b); code != 400 || !strings.Contains(body, msg) {
+			t.Fatal(b, code, body)
+		}
+	}
+	if v, _ := svc.GetSettings(bg, "live", "cam-1"); str(v.Override) != `{"stall_sec":45}` {
+		t.Fatalf("a rejected body must not touch the override: %s", str(v.Override))
 	}
 	if code, body := put(`{"config":[1]}`); code != 400 || !strings.Contains(body, "settings must be a JSON object") {
 		t.Fatal(code, body)
@@ -249,6 +268,42 @@ func TestRoutes(t *testing.T) {
 	}
 	if r := api.Get(base + "/overview"); r.Code != 200 || !strings.Contains(r.Body.String(), `"error":null`) {
 		t.Fatal(r.Body.String())
+	}
+}
+
+func TestSources(t *testing.T) {
+	// not installed (no install config): nothing is written, no db is created
+	off, dir := newService(t, "")
+	if off.Watching(bg, "live") {
+		t.Fatal("watching without stream-health")
+	}
+	off.RecordSource(bg, "live", "cam-1", false, true)
+	if _, err := os.Stat(FileFor(filepath.Join(dir, "apps", "live"))); err == nil {
+		t.Fatal("RecordSource must not create the db of an app without stream-health")
+	}
+
+	svc, dir := newService(t, `{}`)
+	appDir := filepath.Join(dir, "apps", "live")
+	if !svc.Watching(bg, "live") {
+		t.Fatal("installed → watching")
+	}
+	svc.RecordSource(bg, "live", "cam-1", false, true)
+	r, err := svc.store.GetSource(bg, "live", appDir, "cam-1")
+	if err != nil || r == nil || r.Audio || !r.Video || r.UpdatedAt == "" {
+		t.Fatalf("%+v %v", r, err)
+	}
+	svc.RecordSource(bg, "live", "cam-1", true, true)
+	if r, _ = svc.store.GetSource(bg, "live", appDir, "cam-1"); r == nil || !r.Audio {
+		t.Fatalf("%+v", r)
+	}
+	svc.RecordSource(bg, "live", "cam-1", false, false) // nobody publishing → unknown
+	if r, _ = svc.store.GetSource(bg, "live", appDir, "cam-1"); r != nil {
+		t.Fatalf("%+v", r)
+	}
+	// a panicking install lookup is "not watching"
+	boom := New(NewStore(nil), func(string) string { return appDir }, func(context.Context, string) *y.Map { panic("x") }, nil, nil)
+	if boom.Watching(bg, "live") {
+		t.Fatal("panic → not watching")
 	}
 }
 

@@ -19,9 +19,9 @@ import (
 	"github.com/livekit/protocol/livekit"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of webhooks.controller.ts: the LiveKit webhook sink. Public route —
@@ -156,8 +156,10 @@ func (m *Module) HandleEvent(ctx context.Context, ev *livekit.WebhookEvent) {
 		m.onIngressEnded(ctx, ev, app)
 	case "track_published":
 		m.onTrackPublished(ctx, ev, app)
+		m.reportSourceTracks(ctx, app, roomName)
 	case "track_unpublished", "participant_left":
 		m.onPublisherGone(ctx, ev, app)
+		m.reportSourceTracks(ctx, app, roomName)
 	case "room_started":
 		m.onRoomStarted(ctx, ev, app)
 	}
@@ -334,6 +336,11 @@ func (m *Module) onIngressStarted(ctx context.Context, ev *livekit.WebhookEvent,
 		if err != nil {
 			m.whLog("error", "ingress auth enforcement failed: "+jsErrorString(err), map[string]any{"ingressId": info.GetIngressId()})
 		}
+	}
+	// maxBitrateAccept: usually not measured yet at start (the sweep catches
+	// it later), but a state that already carries the bitrate is cut here.
+	if cfg := m.appConfig(ctx, app); cfg != nil && m.enforceBitrate(ctx, app, cfg.Features.MaxBitrateAccept, info) {
+		return
 	}
 	typ := ingressStreamType(info.GetInputType())
 	identity := info.GetParticipantIdentity()

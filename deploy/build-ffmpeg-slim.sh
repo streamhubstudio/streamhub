@@ -4,7 +4,7 @@
 #
 # Builds a purpose-built `ffmpeg` + `ffprobe` carrying ONLY the demuxers,
 # muxers, codecs, filters and protocols the core actually uses (see the
-# inventory in https://streamhub.studio/docs/operations/FFMPEG-SLIM). Result: one ~15-25 MB
+# inventory in streamhub-docs/operations/FFMPEG-SLIM.md). Result: one ~15-25 MB
 # binary instead of the ~70-100 MB stock-Debian ffmpeg + its codec .so closure,
 # with a much smaller attack surface. Transcode CPU is UNCHANGED (same encoders).
 #
@@ -146,4 +146,4 @@ log "done:"
 ls -lh "$PREFIX/bin/ffmpeg" "$PREFIX/bin/ffprobe"
 log "protocols:"; "$PREFIX/bin/ffmpeg" -hide_banner -protocols 2>/dev/null | grep -E 'file|rtmp|https|hls' || true
 log "encoders:";  "$PREFIX/bin/ffmpeg" -hide_banner -encoders 2>/dev/null | grep -E 'libx264|libvpx|aac|mjpeg|libopus' || true
-log "Validate every real invocation with the checklist in https://streamhub.studio/docs/operations/FFMPEG-SLIM §4."
+log "Validate every real invocation with the checklist in streamhub-docs/operations/FFMPEG-SLIM.md §4."

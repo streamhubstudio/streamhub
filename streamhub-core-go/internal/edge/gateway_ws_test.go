@@ -19,13 +19,13 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cluster"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Replays testdata/ws_vectors.json — recorded from the Node gateway by
@@ -51,6 +51,7 @@ type stack struct {
 	srv    *httptest.Server
 	gw     *Gateway
 	nodeID string
+	csvc   *cluster.Service
 	ph     map[string]string
 }
 
@@ -63,7 +64,7 @@ func newStack(t *testing.T, token string) *stack {
 	csvc := cluster.New(cfg, g, role, nil, testutil.Log())
 	repo := NewRepo(g)
 	framer := &Framer{}
-	gw := NewGateway(g, func() string { return cfg.ClusterToken }, csvc, repo, framer, testutil.Log())
+	gw := NewGateway(g, csvc.NodeAuth(), csvc, repo, framer, testutil.Log())
 	gw.PingEvery = 300 * time.Millisecond
 	sched := NewScheduler(cfg, g, gw, repo, framer, NewAlerter(nil, nil, testutil.Log()), nil, testutil.Log())
 	mod := NewModule(g, gw, sched, repo, func() Catalog { return nil }, nil, func() Logs { return nil })
@@ -79,7 +80,7 @@ func newStack(t *testing.T, token string) *stack {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &stack{store: store, srv: srv, gw: gw, nodeID: payload.NodeID, ph: map[string]string{payload.NodeID: "{{nodeId}}"}}
+	return &stack{store: store, srv: srv, gw: gw, csvc: csvc, nodeID: payload.NodeID, ph: map[string]string{payload.NodeID: "{{nodeId}}"}}
 }
 
 var (
@@ -383,7 +384,7 @@ func checkUnordered(t *testing.T, step, got, want string) {
 
 func TestWSRejectDisabled(t *testing.T) {
 	s := newStack(t, "tok")
-	s.gw.token = func() string { return "" }
+	s.gw.auth = cluster.NewNodeAuth(nil, func() string { return "" }, true, testutil.Log())
 	// edge.gateway.ts rejectUpgrade with (503, 'cluster disabled')
 	if got := rawUpgrade(t, s.srv.URL, WSPath+"?nodeId=x", nil); got != "HTTP/1.1 503 cluster disabled\r\nConnection: close\r\nContent-Length: 0\r\n\r\n" {
 		t.Fatalf("%q", got)
@@ -437,5 +438,60 @@ func TestCommandNotConnected(t *testing.T) {
 	}
 	if s.gw.Send(s.nodeID, map[string]string{"type": "x"}) {
 		t.Fatal("send to a disconnected node")
+	}
+}
+
+type upgradeCase struct {
+	q string
+	h map[string]string
+}
+
+// C5.3: the edge WS takes the node's own secret (X-Node-Secret,
+// X-Cluster-Token or ?token=); another node's secret never opens this node's
+// channel, and with legacy mode off the shared cluster token is refused.
+func TestWSNodeSecret(t *testing.T) {
+	const reject401 = "HTTP/1.1 401 invalid cluster token\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
+	for _, legacy := range []string{"", "off"} {
+		t.Setenv(cluster.LegacyTokenEnv, legacy)
+		s := newStack(t, "tok")
+		other, _, err := s.csvc.Join(context.Background(), cluster.JoinInput{Name: "ws-edge-2", IP: "192.0.2.11", Type: "edge"}, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		own := cluster.NodeSecret("tok", s.nodeID)
+		me := "?nodeId=" + s.nodeID
+		refused := map[string]upgradeCase{
+			"other node's secret":       {me, map[string]string{cluster.NodeSecretHeader: other.NodeSecret}},
+			"other's secret, cluster h": {me, map[string]string{"X-Cluster-Token": other.NodeSecret}},
+			"other's secret, query":     {me + "&token=" + other.NodeSecret, nil},
+			"own secret, other's id":    {"?nodeId=" + other.NodeID, map[string]string{cluster.NodeSecretHeader: own}},
+			"own secret, no id":         {"", map[string]string{cluster.NodeSecretHeader: own}},
+			"nothing":                   {me, nil},
+		}
+		accepted := []upgradeCase{
+			{me, map[string]string{cluster.NodeSecretHeader: own}},
+			{me, map[string]string{"X-Cluster-Token": own}},
+			{me + "&token=" + own, nil},
+			{"?nodeId=" + other.NodeID + "&token=" + other.NodeSecret, nil},
+		}
+		shared := []upgradeCase{{me + "&token=tok", nil}, {me, map[string]string{"X-Cluster-Token": "tok"}}}
+		if legacy == "off" {
+			refused["shared token, query"], refused["shared token, header"] = shared[0], shared[1]
+		} else {
+			accepted = append(accepted, shared...)
+		}
+		for name, c := range refused {
+			if got := rawUpgrade(t, s.srv.URL, WSPath+c.q, c.h); got != reject401 {
+				t.Errorf("legacy=%q %s → %q", legacy, name, got)
+			}
+		}
+		for _, c := range accepted {
+			h := http.Header{}
+			for k, v := range c.h {
+				h.Set(k, v)
+			}
+			cl := dialEdge(t, s, c.q, h)
+			_ = cl.ws.Close(websocket.StatusNormalClosure, "")
+		}
 	}
 }

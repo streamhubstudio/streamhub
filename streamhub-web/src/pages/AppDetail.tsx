@@ -36,6 +36,7 @@ import { ConfigTab } from './AppDetail/ConfigTab'
 import { StreamsTab } from './AppDetail/StreamsTab'
 import { VodsTab } from './AppDetail/VodsTab'
 import { IngressTab } from './AppDetail/IngressTab'
+import { DevicesTab } from './AppDetail/DevicesTab'
 import { SamplesTab } from './AppDetail/SamplesTab'
 import { MaintenanceTab } from './AppDetail/MaintenanceTab'
 import { PluginsTab } from './AppDetail/PluginsTab'
@@ -54,6 +55,7 @@ const TAB_DOCS: Record<TabId, DocsSection> = {
   streams: 'streams',
   vods: 'recording',
   ingress: 'ingress',
+  devices: 'devices',
   samples: 'samples',
   streamflow: 'plugins',
   plugins: 'plugins',
@@ -282,6 +284,7 @@ export default function AppDetail() {
             {active === 'streams' && <StreamsTab app={app} />}
             {active === 'vods' && <VodsTab app={app} />}
             {active === 'ingress' && <IngressTab app={app} />}
+            {active === 'devices' && <DevicesTab app={app} />}
             {active === 'streamflow' && (
               <StreamflowAppTab app={app} section={sectionParam} onSection={selectSection} />
             )}

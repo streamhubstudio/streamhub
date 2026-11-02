@@ -17,8 +17,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/apps"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // Port of recording/drm/*: features.drm resolution, the pluggable content-key
@@ -204,10 +207,12 @@ type ExternalDrmProvider struct {
 	client *http.Client
 }
 
-// NewExternalDrmProvider builds the client (client nil → a default one).
+// NewExternalDrmProvider builds the client (client nil → the egress-guarded
+// one: key_server_url is tenant config, so the dial re-checks the resolved
+// IP and redirects are re-vetted).
 func NewExternalDrmProvider(cfg contracts.DrmFeatures, token string, client *http.Client) *ExternalDrmProvider {
 	if client == nil {
-		client = &http.Client{}
+		client = security.SafeHTTPClient(nil)
 	}
 	return &ExternalDrmProvider{cfg: cfg, token: token, client: client}
 }
@@ -465,7 +470,7 @@ func BuildShakaHlsArgs(job ShakaHlsJob) []string {
 // PackageDrmHls runs shaka-packager; true when master.m3u8 exists after.
 // Never errors and never logs the argv (it carries key material).
 func PackageDrmHls(ctx context.Context, r Runner, job ShakaHlsJob) bool {
-	if err := os.MkdirAll(job.OutDir, 0o777); err != nil {
+	if err := os.MkdirAll(job.OutDir, fsperm.Private); err != nil {
 		return false
 	}
 	bin := job.Bin
@@ -565,9 +570,11 @@ func (s *DrmService) ProviderFor(cfg *contracts.AppConfig) DrmProvider {
 	if !drm.Enabled || drm.Provider != "external" {
 		return NoopDrmProvider{}
 	}
+	// The bearer token sits under the app's server-derived ref, never under
+	// the configured name (security 3.3.3); an empty ref means "no token".
 	token := ""
 	if drm.KeyServerTokenEnv != "" && s.secrets != nil {
-		token, _ = s.secrets.Get(drm.KeyServerTokenEnv)
+		token, _ = s.secrets.Get(apps.SecretRef(cfg.Name, apps.SecretDrmToken))
 	}
 	return NewExternalDrmProvider(drm, token, s.Client)
 }

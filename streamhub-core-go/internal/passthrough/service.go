@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 const (
@@ -91,6 +91,13 @@ type Service struct {
 	streams func() Streams
 	log     *slog.Logger
 	now     func() time.Time
+
+	// Tracks reports a MediaMTX path's track codecs (E1 HEVC detection);
+	// nil = the MediaMTX API. Tests inject a fake.
+	Tracks TrackProber
+	// HLSEdge picks the hlsUrl base (a cdn-edge when STREAMHUB_HLS_EDGE_SELECT
+	// is on); nil = PUBLIC_BASE_URL.
+	HLSEdge func() livekit.HLSEdge
 
 	mu        sync.Mutex
 	usedPorts map[int]bool
@@ -217,9 +224,23 @@ func (s *Service) Create(ctx context.Context, app, room, transport, sourceURL st
 	return &info, nil
 }
 
-// pullDriven: MediaMTX owns :1935 and arms RTMP via its ready hook.
+// pullDriven: MediaMTX owns :1935 and arms RTMP via its ready hook — and,
+// with STREAMHUB_MEDIAMTX_SRT_ENABLE, SRT too (its :8890 listener, key-checked
+// by the auth hook) instead of a per-ingress ffmpeg listener that checks
+// nothing.
 func (s *Service) pullDriven(transport string) bool {
-	return s.cfg.MediamtxEnable && transport == TransportRTMP
+	if !s.cfg.MediamtxEnable {
+		return false
+	}
+	return transport == TransportRTMP || (transport == TransportSRT && s.cfg.MediamtxSrtEnable)
+}
+
+// mediamtxPort is the MediaMTX listener a pull-driven transport uses.
+func (s *Service) mediamtxPort(transport string) int {
+	if transport == TransportSRT {
+		return s.cfg.MediamtxSrtPort
+	}
+	return s.cfg.MediamtxRtmpPort
 }
 
 func (s *Service) findPassthrough(ctx context.Context, app, streamKey string) *livekit.IngressAuthRow {
@@ -265,10 +286,10 @@ func (s *Service) HandlePublish(ctx context.Context, app, streamKey string, appI
 
 	if s.pullDriven(transport) {
 		// MediaMTX already accepted the push: ffmpeg PULLS from it.
-		port := s.cfg.MediamtxRtmpPort
+		port := s.mediamtxPort(transport)
 		s.remux.Start(row.IngressID, RemuxSpec{
 			App: app, Room: room, StreamKey: streamKey, Port: port, HlsDir: hls,
-			Transport: transport, Mode: "pull", AppID: appID,
+			Transport: transport, Mode: "pull", AppID: appID, HlsVariant: s.hlsVariant(ctx, app, streamKey),
 		})
 		return PublishResult{Accepted: true, IngressID: row.IngressID, Port: port}
 	}
@@ -278,6 +299,31 @@ func (s *Service) HandlePublish(ctx context.Context, app, streamKey string, appI
 		App: app, Room: room, StreamKey: streamKey, Port: port, HlsDir: hls, Transport: transport, AppID: appID,
 	})
 	return PublishResult{Accepted: true, IngressID: row.IngressID, Port: port}
+}
+
+// hlsVariant picks the HLS segmenting of a pull-driven publish: with
+// STREAMHUB_PASSTHROUGH_HEVC on and MediaMTX reporting an H.265 video
+// track, fMP4/hvc1 (E1); anything else (switch off, H.264, probe failure)
+// keeps MPEG-TS, the Node behaviour.
+func (s *Service) hlsVariant(ctx context.Context, app, streamKey string) string {
+	if !s.cfg.PassthroughHEVC {
+		return ""
+	}
+	probe := s.Tracks
+	if probe == nil {
+		probe = mediamtxTracks(s.cfg.MediamtxAPIURL)
+	}
+	tracks, err := probe(ctx, app+"/"+streamKey)
+	if err != nil {
+		s.log.Warn("passthrough HEVC probe failed — segmenting as MPEG-TS", "app", app, "err", err)
+		return ""
+	}
+	for _, t := range tracks {
+		if IsHEVCTrack(t) {
+			return HlsFMP4HEVC
+		}
+	}
+	return ""
 }
 
 // AuthorizeKey is the MediaMTX auth hook gate: a known passthrough key?
@@ -411,7 +457,7 @@ func (s *Service) buildInfo(app, ingressID, room, streamKey, sourceURL string, a
 		case ok:
 			port = p
 		case s.pullDriven(inputType):
-			port = s.cfg.MediamtxRtmpPort
+			port = s.mediamtxPort(inputType)
 		default:
 			port = s.cfg.RtmpPassthroughPort
 		}
@@ -424,14 +470,24 @@ func (s *Service) buildInfo(app, ingressID, room, streamKey, sourceURL string, a
 		info.RtmpURL = livekit.BuildPassthroughRtmpURL(streamKey, host, port, app)
 	}
 	if inputType == TransportSRT {
-		info.SrtURL = livekit.BuildPassthroughSrtURL(streamKey, host, port)
+		if s.pullDriven(inputType) {
+			info.SrtURL = MediamtxSrtPublishURL(host, port, app, streamKey)
+		} else {
+			info.SrtURL = livekit.BuildPassthroughSrtURL(streamKey, host, port)
+		}
 	}
 	if inputType == TransportMPEGTS && sourceURL != "" {
 		info.SourceURL = sourceURL
 	}
 	base := strings.TrimRight(s.cfg.PublicBaseURL, "/")
 	ea, er := jsx.EncodeURIComponent(app), jsx.EncodeURIComponent(room)
-	info.HlsURL = base + "/hls/" + ea + "/" + er + "/" + HlsPlaylist
+	hlsBase := base
+	if s.HLSEdge != nil {
+		if e := s.HLSEdge(); e != nil {
+			hlsBase = e.HLSBase(context.Background(), app, base)
+		}
+	}
+	info.HlsURL = hlsBase + "/hls/" + ea + "/" + er + "/" + HlsPlaylist
 	info.PlayerURL = base + "/play/" + ea + "/" + er
 	info.Status = StatusOff
 	if st, ok := s.remux.Status(ingressID); ok && st.Status != "" {

@@ -22,7 +22,8 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { HlsPlayer, LivePlayer, MjpegPlayer } from '@/components/player'
 import { Spinner } from '@/ui'
-import { hlsPlaylistPath, probeHls } from '@/lib/share'
+import { useDashboardHlsToken } from '@/components/player/useDashboardHlsToken'
+import { hlsPlaylistPath, probeHls, withHlsToken } from '@/lib/share'
 import { pickCellMode } from './playback.ts'
 
 export interface CockpitCamera {
@@ -75,10 +76,13 @@ export function CockpitCell({
   // probeHls resolves { available:false } on any error, so a hiccup just falls
   // back to WebRTC. ws-mjpeg cameras skip straight to the MJPEG player.
   const isMjpeg = camera.type === 'ws-mjpeg'
+  // G2: a private app's playlist needs ?st= (undefined for public apps).
+  const hlsTok = useDashboardHlsToken(app, camera.room, playing && !isMjpeg)
+  const hlsSrc = withHlsToken(hlsPlaylistPath(app, camera.room), hlsTok.st)
   const hlsProbe = useQuery({
-    queryKey: ['cockpit-hls-probe', app, camera.room],
-    enabled: playing && !isMjpeg,
-    queryFn: () => probeHls(hlsPlaylistPath(app, camera.room)),
+    queryKey: ['cockpit-hls-probe', app, camera.room, hlsTok.st ?? ''],
+    enabled: playing && !isMjpeg && !hlsTok.pending,
+    queryFn: () => probeHls(hlsSrc),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     retry: false,
@@ -194,7 +198,7 @@ export function CockpitCell({
             <MjpegPlayer app={app} room={camera.room} access="public" className="!rounded-none" />
           ) : mode === 'hls' ? (
             <HlsPlayer
-              src={hlsPlaylistPath(app, camera.room)}
+              src={hlsSrc}
               app={app}
               room={camera.room}
               access="public"

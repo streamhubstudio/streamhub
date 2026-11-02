@@ -9,15 +9,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // Register implements api.Module: every controller of the Node auth module
@@ -28,6 +28,7 @@ func (s *Service) Register(a huma.API) {
 	s.registerMagic(a)
 	s.registerSessions(a)
 	s.registerAccount(a)
+	s.registerMemberships(a)
 	s.registerTeams(a)
 	s.registerInvites(a)
 }
@@ -53,8 +54,8 @@ func errMessage(err error) string { return err.Error() }
 const tokenScopeMessage = "token management requires a global-scope credential"
 
 func (s *Service) registerTokens(a huma.API) {
-	huma.Register(a, *operation("AuthController_list", http.MethodGet, "/tokens",
-		"List API tokens (hashes never returned).", "tokens"),
+	huma.Register(a, *api.Global(operation("AuthController_list", http.MethodGet, "/tokens",
+		"List API tokens (hashes never returned).", "tokens")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[[]TokenSummary], error) {
 			if err := api.RequireGlobal(ctx, tokenScopeMessage); err != nil {
 				return nil, err
@@ -71,8 +72,8 @@ func (s *Service) registerTokens(a huma.API) {
 		Scope string `json:"scope"`
 		AppID *int64 `json:"appId"`
 	}
-	huma.Register(a, *withStatus(operation("AuthController_create", http.MethodPost, "/tokens",
-		"Create an API token. Plaintext is returned ONCE.", "tokens"), http.StatusCreated),
+	huma.Register(a, *api.Global(withStatus(operation("AuthController_create", http.MethodPost, "/tokens",
+		"Create an API token. Plaintext is returned ONCE.", "tokens"), http.StatusCreated)),
 		func(ctx context.Context, in *rawBody) (*api.Out[*CreatedToken], error) {
 			b, err := body(in.RawBody, "CreateTokenDto")
 			if err != nil {
@@ -97,8 +98,8 @@ func (s *Service) registerTokens(a huma.API) {
 	type idInput struct {
 		ID string `path:"id"`
 	}
-	huma.Register(a, *withStatus(operation("AuthController_revoke", http.MethodDelete, "/tokens/{id}",
-		"Revoke (soft-delete) an API token.", "tokens"), http.StatusNoContent),
+	huma.Register(a, *api.Global(withStatus(operation("AuthController_revoke", http.MethodDelete, "/tokens/{id}",
+		"Revoke (soft-delete) an API token.", "tokens"), http.StatusNoContent)),
 		func(ctx context.Context, in *idInput) (*struct{}, error) {
 			id, err := api.ParseIntParam(in.ID)
 			if err != nil {
@@ -543,6 +544,11 @@ func (s *Service) registerTeams(a huma.API) {
 			if err != nil {
 				return nil, err
 			}
+			// An app-scoped token is confined to its app: Node handed it
+			// the whole member list (emails, roles) of its tenant.
+			if !p.IsSuperadmin && p.Scope == auth.ScopeApp {
+				return nil, httpx.Forbidden("an app-scoped credential has no team")
+			}
 			members, err := s.tenancy.ListMembers(ctx, p.TenantID)
 			if err != nil {
 				return nil, err
@@ -568,13 +574,9 @@ func (s *Service) registerTeams(a huma.API) {
 			if email == "" {
 				return nil, httpx.BadRequest("email is required")
 			}
-			var userID string
-			if existing := s.tenancy.GetUserByEmail(ctx, email); existing != nil {
-				userID = existing.ID
-			} else if userID, err = s.tenancy.CreateUser(ctx, tenancy.CreateUserInput{Email: email, Status: "pending"}); err != nil {
-				return nil, err
-			}
-			if err := s.tenancy.AddMembership(ctx, userID, p.TenantID, role); err != nil {
+			// An existing account only gets a pending membership (M2).
+			userID, _, err := s.addInvitee(ctx, p, email, role)
+			if err != nil {
 				return nil, err
 			}
 			member, err := s.tenancy.FindMember(ctx, p.TenantID, userID)
@@ -656,31 +658,29 @@ func (s *Service) registerInvites(a huma.API) {
 			if s.cfg.AdminUser != "" && email == strings.ToLower(strings.TrimSpace(s.cfg.AdminUser)) {
 				return nil, httpx.BadRequest("cannot invite the break-glass admin")
 			}
-			existing := s.tenancy.GetUserByEmail(ctx, email)
-			if existing != nil && s.tenancy.RoleInTenant(ctx, existing.ID, p.TenantID) != "" {
+			if u := s.tenancy.GetUserByEmail(ctx, email); u != nil && s.tenancy.GetMembership(ctx, u.ID, p.TenantID) != nil {
 				return nil, httpx.BadRequest("that email is already a member")
 			}
-			var userID string
-			if existing != nil {
-				userID = existing.ID
-			} else if userID, err = s.tenancy.CreateUser(ctx, tenancy.CreateUserInput{Email: email, Status: "pending"}); err != nil {
-				return nil, err
-			}
-			if err := s.tenancy.AddMembership(ctx, userID, p.TenantID, role); err != nil {
-				return nil, err
-			}
-			url, err := s.IssueInviteLink(ctx, email)
+			userID, existing, err := s.addInvitee(ctx, p, email, role)
 			if err != nil {
 				return nil, err
 			}
-			opts := InviteOptions{Role: string(role)}
+			// An existing account accepts from its account page: no sign-in
+			// link is minted for it (M1 already refused to honour one).
+			opts := InviteOptions{Role: string(role), Existing: existing}
+			url := s.appURL() + "/account"
+			if !existing {
+				if url, err = s.IssueInviteLink(ctx, email); err != nil {
+					return nil, err
+				}
+			}
 			if t := s.tenancy.GetTenant(ctx, p.TenantID); t != nil {
 				opts.TeamName = t.Name
 			}
 			if p.Email != nil {
 				opts.InvitedBy = *p.Email
 			}
-			sent := s.mailer.SendInvite(ctx, email, url, opts, SendContext{UserID: p.UserID})
+			sent := s.mailer.SendInvite(ctx, email, url, opts)
 			member, err := s.tenancy.FindMember(ctx, p.TenantID, userID)
 			if err != nil {
 				return nil, err

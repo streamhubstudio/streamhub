@@ -9,11 +9,11 @@ import (
 	"regexp"
 	"strings"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of fleet.protocol.ts — the topic layout + payload schemas shared with
-// the StreamHub Agent (https://streamhub.studio/docs/features/fleet):
+// the StreamHub Agent (streamhub-docs/features/fleet.md):
 //
 //	<prefix>/agents/<agentId>/telemetry    agent → broker (retained)
 //	<prefix>/agents/<agentId>/status       agent → broker (retained, LWT)

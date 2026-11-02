@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 
-	appsmod "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/apps"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/callbacks"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logsink"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/metrics"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/metricshistory"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/mqtt"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/netmetrics"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
+	appsmod "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/apps"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/callbacks"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logsink"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/metrics"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/metricshistory"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/mqtt"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/netmetrics"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
 )
 
 // The observability plane: Prometheus metrics (+ the request interceptor),

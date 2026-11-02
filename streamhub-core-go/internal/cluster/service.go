@@ -17,10 +17,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 const (
@@ -69,13 +69,16 @@ type JoinLiveKit struct {
 
 // JoinPayload is returned to a joining node.
 type JoinPayload struct {
-	NodeID          string      `json:"nodeId"`
-	Name            string      `json:"name"`
-	RedisURL        *string     `json:"redisUrl"`
-	PublicWsURL     *string     `json:"publicWsUrl"`
-	Livekit         JoinLiveKit `json:"livekit"`
-	SecretsWithheld bool        `json:"secretsWithheld,omitempty"`
-	Hint            string      `json:"hint,omitempty"`
+	NodeID      string      `json:"nodeId"`
+	Name        string      `json:"name"`
+	RedisURL    *string     `json:"redisUrl"`
+	PublicWsURL *string     `json:"publicWsUrl"`
+	Livekit     JoinLiveKit `json:"livekit"`
+	// NodeSecret is the node's own credential (C5.3): heartbeat, edge WS
+	// and grid calls use it instead of the shared cluster token.
+	NodeSecret      string `json:"nodeSecret,omitempty"`
+	SecretsWithheld bool   `json:"secretsWithheld,omitempty"`
+	Hint            string `json:"hint,omitempty"`
 }
 
 // JoinInput is JoinNodeDto ("" = absent).
@@ -103,6 +106,9 @@ type HeartbeatEnv struct {
 	MasterURL    string `json:"STREAMHUB_MASTER_URL"`
 	MasterNodeID string `json:"STREAMHUB_MASTER_NODE_ID"`
 	NodeID       string `json:"STREAMHUB_NODE_ID"`
+	// NodeSecret is the per-node credential the heartbeat agent sends
+	// (absent when the master predates 3.3.4).
+	NodeSecret string `json:"STREAMHUB_NODE_SECRET,omitempty"`
 }
 
 // JoinMasterResult is POST /cluster/join-master.
@@ -138,6 +144,7 @@ type Service struct {
 	role *NodeRole
 	http HTTPDoer
 	log  *slog.Logger
+	auth *NodeAuth
 	// stats is the origin's own resource snapshot (sysstats.go).
 	stats func(dataDir string) *y.Map
 	// localIP is the best-effort non-internal IPv4.
@@ -149,8 +156,15 @@ func New(cfg *config.Config, global *sql.DB, role *NodeRole, doer HTTPDoer, log 
 	if doer == nil {
 		doer = &http.Client{}
 	}
-	return &Service{cfg: cfg, db: global, role: role, http: doer, log: log, stats: selfStats, localIP: localIPv4}
+	auth := NewNodeAuth(global, func() string { return cfg.ClusterToken }, LegacyTokenAllowed(cfg.Env), log)
+	if !auth.Legacy() {
+		log.Info("cluster: legacy token mode off — nodes must present their per-node secret (" + LegacyTokenEnv + ")")
+	}
+	return &Service{cfg: cfg, db: global, role: role, http: doer, log: log, auth: auth, stats: selfStats, localIP: localIPv4}
 }
+
+// NodeAuth is the master's node-credential verifier (shared with the edge WS).
+func (s *Service) NodeAuth() *NodeAuth { return s.auth }
 
 // Init is onModuleInit: origin self-registration (no-op without a token).
 func (s *Service) Init(ctx context.Context) {
@@ -161,7 +175,8 @@ func (s *Service) Init(ctx context.Context) {
 
 // Join registers (or refreshes, by name) a node. secure = the request came
 // over TLS / loopback; over plaintext the secrets are withheld unless
-// STREAMHUB_CLUSTER_REQUIRE_TLS is off. created picks 201 vs 200.
+// STREAMHUB_CLUSTER_REQUIRE_TLS is off. created picks 201 vs 200. A
+// cdn-edge (HLS cache node) never gets the LiveKit secret nor the Redis URL.
 func (s *Service) Join(ctx context.Context, in JoinInput, secure bool) (payload JoinPayload, created bool, err error) {
 	url := in.URL
 	if url == "" {
@@ -169,7 +184,7 @@ func (s *Service) Join(ctx context.Context, in JoinInput, secure bool) (payload 
 	}
 	region := nullStr(in.Region)
 	var typ any
-	if in.Type == "edge" || in.Type == "common" {
+	if in.Type == "edge" || in.Type == "common" || in.Type == NodeTypeCDNEdge {
 		typ = in.Type
 	}
 	var nodeID string
@@ -210,22 +225,35 @@ func (s *Service) Join(ctx context.Context, in JoinInput, secure bool) (payload 
 		extra = ", secrets withheld: not TLS"
 	}
 	s.log.Info(fmt.Sprintf("cluster join: name=%s ip=%s nodeId=%s (%s%s)", in.Name, in.IP, nodeID, kind, extra))
+	cdnEdge := in.Type == NodeTypeCDNEdge
+	if cdnEdge && !IsHTTPURL(url) {
+		s.log.Warn(fmt.Sprintf("cluster join: cdn-edge %s has no http(s) url (%q) — HLS edge selection will never pick it", in.Name, url))
+	}
 
 	wsURL := s.cfg.LivekitURL
 	if wsURL == "" {
 		wsURL = "ws://127.0.0.1:7880"
 	}
+	// The node secret is vended even over plaintext: the join request itself
+	// carried the cluster token it derives from, so withholding it adds nothing.
 	payload = JoinPayload{
 		NodeID: nodeID, Name: in.Name, PublicWsURL: nullStr(s.cfg.PublicWsURL),
-		Livekit: JoinLiveKit{APIKey: s.cfg.LivekitAPIKey, APISecret: s.cfg.LivekitAPISecret, WsURL: wsURL},
+		Livekit:    JoinLiveKit{APIKey: s.cfg.LivekitAPIKey, APISecret: s.cfg.LivekitAPISecret, WsURL: wsURL},
+		NodeSecret: NodeSecret(s.cfg.ClusterToken, nodeID),
 	}
-	if withhold {
+	switch {
+	case cdnEdge:
+		// An HLS cache edge only proxies /hls: it gets its node secret (the
+		// heartbeat) and never the LiveKit API secret or the cluster Redis.
+		payload.Livekit.APISecret = ""
+		payload.Hint = "cdn-edge: no LiveKit apiSecret / Redis URL (an HLS cache edge needs only its nodeSecret for the heartbeat)."
+	case withhold:
 		payload.Livekit.APISecret = ""
 		payload.SecretsWithheld = true
 		payload.Hint = "LiveKit apiSecret + Redis URL withheld: join over TLS (https, so " +
 			"X-Forwarded-Proto=https at the proxy) or set " +
 			"STREAMHUB_CLUSTER_REQUIRE_TLS=off on the master to allow plaintext."
-	} else {
+	default:
 		payload.RedisURL = nullStr(s.cfg.ClusterRedisURL)
 	}
 	return payload, created, nil
@@ -403,6 +431,7 @@ func (s *Service) JoinMaster(ctx context.Context, in JoinMasterInput) (JoinMaste
 	var env struct {
 		Data struct {
 			NodeID          any `json:"nodeId"`
+			NodeSecret      any `json:"nodeSecret"`
 			SecretsWithheld any `json:"secretsWithheld"`
 		} `json:"data"`
 	}
@@ -416,10 +445,17 @@ func (s *Service) JoinMaster(ctx context.Context, in JoinMasterInput) (JoinMaste
 	}
 	_ = s.role.SetMasterURL(ctx, master)
 	_ = s.role.SetMasterNodeID(ctx, nodeID)
+	// The per-node secret authenticates the master's grid calls here; a
+	// pre-3.3.4 master vends none (the node then relies on the legacy token).
+	secret, _ := env.Data.NodeSecret.(string)
+	_ = s.role.SetNodeSecret(ctx, secret)
+	if secret == "" {
+		s.log.Warn("master " + master + " vended no nodeSecret (pre-3.3.4): grid calls need the legacy STREAMHUB_CLUSTER_TOKEN on this node")
+	}
 	s.log.Info(fmt.Sprintf("joined master %s as edge nodeId=%s", master, nodeID))
 	return JoinMasterResult{
 		Role: RoleEdge, MasterURL: master, NodeID: nodeID, SecretsWithheld: env.Data.SecretsWithheld == true,
-		HeartbeatEnv: HeartbeatEnv{Role: RoleEdge, MasterURL: master, MasterNodeID: nodeID, NodeID: nodeID},
+		HeartbeatEnv: HeartbeatEnv{Role: RoleEdge, MasterURL: master, MasterNodeID: nodeID, NodeID: nodeID, NodeSecret: secret},
 	}, nil
 }
 
@@ -432,6 +468,7 @@ func (s *Service) Leave(ctx context.Context, masterToken string) (LeaveResult, e
 	}
 	_ = s.role.SetMasterURL(ctx, "")
 	_ = s.role.SetMasterNodeID(ctx, "")
+	_ = s.role.SetNodeSecret(ctx, "")
 	s.log.Info("left cluster: role reverted to standalone")
 
 	if master == nil || nodeID == nil {

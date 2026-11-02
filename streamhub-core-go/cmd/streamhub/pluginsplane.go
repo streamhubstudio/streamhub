@@ -4,11 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
 )
 
 // The plugins plane: the plugin framework (registry + installs + worker
@@ -66,8 +67,21 @@ func init() {
 		svc := plugins.NewService(deps)
 		versions := plugins.NewVersions(svc, store, history)
 		authn, _ := maybe[api.Authenticator](c, "authn")
-		routes := plugins.NewRoutes(svc, versions, store, plugins.NewAgent(workers),
+		// The grid agent serves /grid only on an edge node (cluster plane's
+		// "noderole", resolved lazily: same plane priority).
+		agent := plugins.NewAgent(workers, reg, func() plugins.GridNode {
+			if n, ok := maybe[*cluster.NodeRole](c, "noderole"); ok {
+				return n
+			}
+			return nil
+		})
+		routes := plugins.NewRoutes(svc, versions, store, agent,
 			plugins.NewExporter(svc, paths, env), c.cfg.ClusterToken, authn)
+		// Per-node credentials (C5.3): the grid gate (node side) and the
+		// bundle download (master side) take node secrets; the raw cluster
+		// token only while STREAMHUB_CLUSTER_LEGACY_TOKEN is on.
+		legacy := cluster.LegacyTokenAllowed(c.cfg.Env)
+		routes.SetNodeAuth(cluster.NewNodeAuth(c.global, func() string { return c.cfg.ClusterToken }, legacy, c.log), legacy)
 
 		provide(c, "plugins", svc)
 		provide(c, "plugins.registry", reg)

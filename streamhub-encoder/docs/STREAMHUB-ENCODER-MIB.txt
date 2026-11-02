@@ -1,0 +1,278 @@
+STREAMHUB-ENCODER-MIB DEFINITIONS ::= BEGIN
+
+-- ---------------------------------------------------------------------
+-- StreamHub Encoder alarm notifications (SNMPv2-Trap, v2c and v3/USM).
+--
+-- *** PLACEHOLDER ENTERPRISE NUMBER ***
+-- 99999 below is NOT an IANA-assigned Private Enterprise Number: we do
+-- not have one yet. The whole tree hangs off { enterprises 99999 1 }
+-- (1.3.6.1.4.1.99999.1). When a PEN is assigned, change the
+-- MODULE-IDENTITY value here AND the EnterpriseOID constant in
+-- streamhub-encoder/internal/notify/snmp.go together, add a REVISION,
+-- and redistribute this file to the managers. Until then do not load
+-- this MIB next to another vendor's MIB that might use 99999.
+--
+-- OID map (must match internal/notify/snmp.go):
+--   .1.3.6.1.4.1.99999.1         streamhubEncoderMIB
+--   .1.3.6.1.4.1.99999.1.0.1     shEncAlarmRaised      (notification)
+--   .1.3.6.1.4.1.99999.1.0.2     shEncAlarmCleared     (notification)
+--   .1.3.6.1.4.1.99999.1.1.1-9   varbind objects (sent with .0 instance)
+--   .1.3.6.1.4.1.99999.1.2       conformance
+-- ---------------------------------------------------------------------
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE, enterprises
+        FROM SNMPv2-SMI
+    TEXTUAL-CONVENTION, DateAndTime
+        FROM SNMPv2-TC
+    MODULE-COMPLIANCE, OBJECT-GROUP, NOTIFICATION-GROUP
+        FROM SNMPv2-CONF
+    SnmpAdminString
+        FROM SNMP-FRAMEWORK-MIB;
+
+streamhubEncoderMIB MODULE-IDENTITY
+    LAST-UPDATED "202610290000Z"
+    ORGANIZATION "DigitalHub - StreamHub"
+    CONTACT-INFO
+        "StreamHub Encoder team
+         https://gitlab.com/digitalhub_com_ar/vision-media-server"
+    DESCRIPTION
+        "Alarm notifications emitted by the StreamHub Encoder (encoderd).
+
+         Every alarm occurrence produces one SNMPv2-Trap: shEncAlarmRaised
+         when the condition starts and shEncAlarmCleared when it ends. Both
+         carry the same varbinds; shEncEventId identifies the occurrence and
+         is unique per raise or clear. A raise and its clear share
+         shEncAlarmType, shEncAlarmChannel and shEncAlarmOutput, which a
+         manager can use as the correlation key.
+
+         Every trap starts with sysUpTime.0 (hundredths of a second since
+         the encoder's notifier started) and snmpTrapOID.0. Objects in this
+         module are accessible-for-notify only: the encoder runs no SNMP
+         agent, so nothing here can be polled.
+
+         For SNMPv3 the encoder is the authoritative engine. Its
+         snmpEngineID is configurable per target; by default it is
+         0x80 | enterprise 99999 (4 octets), format 4 (text), followed by
+         the encoder host name (at most 27 octets). snmpEngineBoots is the
+         Unix time at which the encoder process started (it increases on
+         every restart) and snmpEngineTime the seconds since then.
+
+         NOTE: enterprise number 99999 is a placeholder, not an
+         IANA-assigned Private Enterprise Number."
+    REVISION "202610290000Z"
+    DESCRIPTION
+        "Initial version, under the placeholder enterprise number 99999."
+    ::= { enterprises 99999 1 }
+
+-- ---------------------------------------------------------------------
+-- Top-level structure
+-- ---------------------------------------------------------------------
+
+shEncNotifications OBJECT IDENTIFIER ::= { streamhubEncoderMIB 0 }
+shEncAlarmObjects  OBJECT IDENTIFIER ::= { streamhubEncoderMIB 1 }
+shEncConformance   OBJECT IDENTIFIER ::= { streamhubEncoderMIB 2 }
+
+-- ---------------------------------------------------------------------
+-- Textual conventions
+-- ---------------------------------------------------------------------
+
+ShEncAlarmSeverity ::= TEXTUAL-CONVENTION
+    STATUS      current
+    DESCRIPTION
+        "Perceived severity of an alarm, after ITU-T X.733. The encoder
+         sends indeterminate when its severity string is not one of the
+         known values. On shEncAlarmCleared the severity is the one the
+         alarm had while raised."
+    SYNTAX      INTEGER {
+                    critical(1),
+                    major(2),
+                    minor(3),
+                    warning(4),
+                    info(5),
+                    indeterminate(6)
+                }
+
+-- ---------------------------------------------------------------------
+-- Varbind objects (accessible-for-notify, instance .0)
+-- ---------------------------------------------------------------------
+
+shEncAlarmType OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Alarm type. Currently one of: input_loss (no input signal),
+         black (black video), freeze (frozen video), silence (audio
+         silence), bitrate_drop (output bitrate below threshold),
+         engine_restart (encoding engine restarted), output_down (an
+         output stopped delivering), loudness (loudness out of range),
+         test (operator-triggered test notification). Managers should
+         accept unknown values: new types may be added."
+    ::= { shEncAlarmObjects 1 }
+
+shEncAlarmSeverity OBJECT-TYPE
+    SYNTAX      ShEncAlarmSeverity
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Perceived severity of the alarm."
+    ::= { shEncAlarmObjects 2 }
+
+shEncAlarmChannel OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Identifier of the encoder channel the alarm refers to; the empty
+         string for device-wide alarms."
+    ::= { shEncAlarmObjects 3 }
+
+shEncAlarmOutput OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Identifier of the channel output the alarm refers to (for
+         example for output_down); the empty string when the alarm is
+         not output-specific."
+    ::= { shEncAlarmObjects 4 }
+
+shEncAlarmMessage OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Human-readable description of the alarm, UTF-8, truncated to
+         255 octets on a character boundary."
+    ::= { shEncAlarmObjects 5 }
+
+shEncAlarmValue OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..64))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Type-specific measured value that triggered or cleared the alarm
+         (for example seconds without input, kbit/s, LUFS), as a decimal
+         number in text form such as 12.5 or -23 (SMIv2 has no
+         floating-point type). 0 when the alarm carries no value."
+    ::= { shEncAlarmObjects 6 }
+
+shEncDeviceId OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Identifier of the encoder device that raised the alarm (the
+         StreamHub device id, or the host name when the device is not
+         paired)."
+    ::= { shEncAlarmObjects 7 }
+
+shEncEventId OBJECT-TYPE
+    SYNTAX      SnmpAdminString (SIZE (0..255))
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Unique identifier of this alarm occurrence (one value per raise
+         or clear). The same value is sent to webhooks as the id field,
+         so it can be used to de-duplicate across delivery channels."
+    ::= { shEncAlarmObjects 8 }
+
+shEncAlarmTimestamp OBJECT-TYPE
+    SYNTAX      DateAndTime
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Wall-clock time (UTC, 11-octet form) at which the encoder
+         detected the raise or clear. It can precede the trap's
+         sysUpTime.0 when the notification was queued."
+    ::= { shEncAlarmObjects 9 }
+
+-- ---------------------------------------------------------------------
+-- Notifications
+-- ---------------------------------------------------------------------
+
+shEncAlarmRaised NOTIFICATION-TYPE
+    OBJECTS     {
+                    shEncAlarmType,
+                    shEncAlarmSeverity,
+                    shEncAlarmChannel,
+                    shEncAlarmOutput,
+                    shEncAlarmMessage,
+                    shEncAlarmValue,
+                    shEncDeviceId,
+                    shEncEventId,
+                    shEncAlarmTimestamp
+                }
+    STATUS      current
+    DESCRIPTION
+        "An alarm condition was detected (or a test notification was
+         requested by an operator, with shEncAlarmType test and severity
+         info)."
+    ::= { shEncNotifications 1 }
+
+shEncAlarmCleared NOTIFICATION-TYPE
+    OBJECTS     {
+                    shEncAlarmType,
+                    shEncAlarmSeverity,
+                    shEncAlarmChannel,
+                    shEncAlarmOutput,
+                    shEncAlarmMessage,
+                    shEncAlarmValue,
+                    shEncDeviceId,
+                    shEncEventId,
+                    shEncAlarmTimestamp
+                }
+    STATUS      current
+    DESCRIPTION
+        "A previously raised alarm condition ended. It matches the
+         shEncAlarmRaised with the same shEncAlarmType, shEncAlarmChannel
+         and shEncAlarmOutput."
+    ::= { shEncNotifications 2 }
+
+-- ---------------------------------------------------------------------
+-- Conformance
+-- ---------------------------------------------------------------------
+
+shEncGroups      OBJECT IDENTIFIER ::= { shEncConformance 1 }
+shEncCompliances OBJECT IDENTIFIER ::= { shEncConformance 2 }
+
+shEncAlarmObjectGroup OBJECT-GROUP
+    OBJECTS     {
+                    shEncAlarmType,
+                    shEncAlarmSeverity,
+                    shEncAlarmChannel,
+                    shEncAlarmOutput,
+                    shEncAlarmMessage,
+                    shEncAlarmValue,
+                    shEncDeviceId,
+                    shEncEventId,
+                    shEncAlarmTimestamp
+                }
+    STATUS      current
+    DESCRIPTION
+        "Objects carried as varbinds in the alarm notifications."
+    ::= { shEncGroups 1 }
+
+shEncAlarmNotificationGroup NOTIFICATION-GROUP
+    NOTIFICATIONS {
+                    shEncAlarmRaised,
+                    shEncAlarmCleared
+                }
+    STATUS      current
+    DESCRIPTION
+        "Alarm raise and clear notifications."
+    ::= { shEncGroups 2 }
+
+shEncCompliance MODULE-COMPLIANCE
+    STATUS      current
+    DESCRIPTION
+        "Compliance statement for StreamHub Encoder devices."
+    MODULE      -- this module
+        MANDATORY-GROUPS {
+                    shEncAlarmObjectGroup,
+                    shEncAlarmNotificationGroup
+                }
+    ::= { shEncCompliances 1 }
+
+END

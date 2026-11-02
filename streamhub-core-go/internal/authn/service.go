@@ -20,13 +20,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // jwtTTL is the lifetime of every session JWT (~12h).
@@ -55,6 +55,8 @@ type Deps struct {
 	NodeRole   NodeRole
 	Mailer     Mailer
 	Log        *slog.Logger
+	// Throttle defaults to ThrottleConfigFromEnv on the wall clock.
+	Throttle *Throttle
 }
 
 // Service is the auth module: AuthService + MagicLinkService + TotpService +
@@ -70,6 +72,7 @@ type Service struct {
 	mailer   Mailer
 	log      *slog.Logger
 	now      func() time.Time
+	throttle *Throttle
 
 	Sessions *Sessions
 }
@@ -82,10 +85,13 @@ func New(d Deps) *Service {
 	if d.Mailer == nil {
 		d.Mailer = LogMailer{Log: d.Log}
 	}
+	if d.Throttle == nil {
+		d.Throttle = NewThrottle(ThrottleConfigFromEnv(d.Config.Env), nil)
+	}
 	return &Service{
 		cfg: d.Config, db: d.DB, tenancy: d.Tenancy, quotas: d.Quotas, audit: d.Audit,
 		rep: d.Reputation, nodeRole: d.NodeRole, mailer: d.Mailer, log: d.Log, now: time.Now,
-		Sessions: NewSessions(d.DB, d.Log),
+		throttle: d.Throttle, Sessions: NewSessions(d.DB, d.Log),
 	}
 }
 
@@ -184,7 +190,7 @@ func (s *Service) Signup(ctx context.Context, in SignupInput, sc SessionContext)
 	var userID string
 	if existing != nil {
 		userID = existing.ID
-		if err := s.tenancy.SetPassword(ctx, userID, hash); err != nil {
+		if err := s.setPassword(ctx, userID, hash, ""); err != nil {
 			return "", err
 		}
 	} else if userID, err = s.tenancy.CreateUser(ctx, tenancy.CreateUserInput{Email: email, PasswordHash: &hash}); err != nil {
@@ -207,21 +213,36 @@ func (s *Service) Signup(ctx context.Context, in SignupInput, sc SessionContext)
 }
 
 // Login: break-glass ADMIN_USER/ADMIN_PASS first (exempt from 2FA), then a
-// built-in user by email (+ TOTP when enabled).
+// built-in user by email (+ TOTP when enabled). Throttled per IP and per
+// account (M3): a locked account is refused before its password is checked.
 func (s *Service) Login(ctx context.Context, user, pass, code string, sc SessionContext) (string, error) {
 	secret, err := s.requireSecret(ctx)
 	if err != nil {
 		return "", err
 	}
-	if s.cfg.AdminUser != "" && s.cfg.AdminPass != "" {
-		userOK := safeEqual(user, s.cfg.AdminUser)
-		passOK := safeEqual(pass, s.cfg.AdminPass)
-		if userOK && passOK {
-			admin := s.cfg.AdminUser
-			return s.issueSessionToken(ctx, tenancy.AdminUserID, &admin, secret, sc)
-		}
+	if err := s.throttle.Attempt(sc.IP); err != nil {
+		return "", err
 	}
 	email := strings.ToLower(strings.TrimSpace(user))
+	var userOK, passOK bool
+	if s.cfg.AdminUser != "" && s.cfg.AdminPass != "" {
+		userOK = safeEqual(user, s.cfg.AdminUser)
+		passOK = safeEqual(pass, s.cfg.AdminPass)
+	}
+	// The break-glass account is throttled per (account, IP): guesses from
+	// one place lock that place out, never the platform owner elsewhere.
+	key := email
+	if userOK && sc.IP != nil {
+		key = email + "|" + *sc.IP
+	}
+	if err := s.throttle.Locked(key); err != nil {
+		return "", err
+	}
+	if userOK && passOK {
+		s.throttle.Succeed(key)
+		admin := s.cfg.AdminUser
+		return s.issueSessionToken(ctx, tenancy.AdminUserID, &admin, secret, sc)
+	}
 	var row *tenancy.User
 	if email != "" {
 		row = s.tenancy.GetUserByEmail(ctx, email)
@@ -230,11 +251,16 @@ func (s *Service) Login(ctx context.Context, user, pass, code string, sc Session
 		auth.VerifyPassword(pass, *row.PasswordHash) {
 		if err := s.AssertLoginCode(ctx, row.ID, code); err != nil {
 			s.offense(sc.IP, security.OffenseLoginFailed)
+			if err.Error() == totpInvalid { // a missing code is the 2FA prompt, not a guess
+				s.throttle.Fail(key)
+			}
 			return "", err
 		}
+		s.throttle.Succeed(key)
 		return s.issueSessionToken(ctx, row.ID, row.Email, secret, sc)
 	}
 	s.offense(sc.IP, security.OffenseLoginFailed)
+	s.throttle.Fail(key)
 	return "", httpx.Unauthorized("Invalid username or password")
 }
 
@@ -363,13 +389,19 @@ func (s *Service) validateJWT(ctx context.Context, r *http.Request, token string
 	if sub == "" {
 		return nil, httpx.Unauthorized("Invalid or expired token")
 	}
+	// Every session JWT carries its session row as `sid` (security 3.3.3): a
+	// token without one was not minted by issueSessionToken — with a leaked
+	// secret anyone could forge it — so it is rejected, never grandfathered.
 	sid := claims.String("sid")
-	if sid != "" {
-		if !s.Sessions.IsActive(ctx, sid) {
-			return nil, httpx.Unauthorized("Session revoked or expired")
-		}
-		s.Sessions.Touch(ctx, sid)
+	if sid == "" {
+		s.offense(strPtr(httpx.ClientIP(r)), security.OffenseInvalidToken)
+		return nil, httpx.Unauthorized("Invalid or expired token")
 	}
+	pinned, live := s.Sessions.Lookup(ctx, sid)
+	if !live {
+		return nil, httpx.Unauthorized("Session revoked or expired")
+	}
+	s.Sessions.Touch(ctx, sid)
 	user := s.tenancy.GetUser(ctx, sub)
 	isLegacyAdmin := s.cfg.AdminUser != "" && sub == s.cfg.AdminUser
 	if sub == tenancy.AdminUserID || isLegacyAdmin || (user != nil && user.IsSuperadmin) {
@@ -388,6 +420,14 @@ func (s *Service) validateJWT(ctx context.Context, r *http.Request, token string
 	p := &auth.Principal{
 		UserID: user.ID, Role: auth.RoleViewer, Scope: auth.ScopeUser, Via: auth.ViaUserJWT,
 		Email: user.Email, SessionID: sid,
+	}
+	// The tenant the user picked for this session (M2) while they are still
+	// an active member of it; otherwise the primary one.
+	if pinned != "" {
+		if role := s.tenancy.RoleInTenant(ctx, user.ID, pinned); role != "" {
+			p.TenantID, p.Role = pinned, auth.Role(role)
+			return p, nil
+		}
 	}
 	if m := s.tenancy.PrimaryMembership(ctx, user.ID); m != nil {
 		p.TenantID, p.Role = m.TenantID, auth.Role(m.Role)

@@ -1,0 +1,20 @@
+#cloud-config
+# StreamHub marketplace image — example user-data (paste it in the provider's
+# "User data" / "Cloud-init" box when creating the server).
+#
+# With these two values the server installs itself on first boot (no SSH
+# needed): streamhub-first-boot.service reads them once cloud-init is done.
+# Point the domain's DNS A record at the server before (or right after) boot —
+# Caddy keeps retrying the Let's Encrypt order until DNS resolves here.
+# Use STREAMHUB_DOMAIN=ip for an IP-only, plain-HTTP test box.
+#
+# Progress:     sudo tail -f /var/log/streamhub-first-boot.log
+# Credentials:  sudo grep -E '^(ADMIN_USER|ADMIN_PASS|STREAMHUB_API_TOKEN)=' /opt/streamhub/.env
+write_files:
+  - path: /etc/streamhub/first-boot.env
+    permissions: "0600"
+    content: |
+      STREAMHUB_DOMAIN=media.example.com
+      STREAMHUB_ACME_EMAIL=admin@example.com
+      # caddy (image default, auto-TLS) or nginx (+certbot; needed for --turn)
+      # STREAMHUB_PROXY=caddy

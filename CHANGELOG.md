@@ -2,6 +2,104 @@
 
 All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 
+## 3.4.0
+
+Feature release on top of 3.3.4 (includes all of its security fixes). Every new knob is off or
+keeps the 3.3.4 behaviour by default, so an upgrade needs no `.env` change.
+
+### Added — playback
+- **Signed HLS for private apps** (G2): playlists and segments need the `?st=` play-token;
+  `play-token/sign` also returns `hlsToken`, `hlsUrl` and `hlsExp`. Players and panels add it.
+  **Geo-blocking** per app (`features.geo`, needs `STREAMHUB_GEOIP_DB`) for play and publish, and
+  a **play-auth webhook** that can veto a viewer.
+- **DVR / timeshift** per stream (G5) with `hlsTime` / `hlsListSize`; the web player gets seek,
+  "Go live", a timeline and `?t=`.
+- **Clips** (G6): instant and event clips cut from HLS/DVR, uploaded like a recording
+  (`vods.source`), a clip client in the dashboard and Streamflow `action.clip` + `clip.*` events.
+- Per-app `features.dvr` / `features.hls` / `features.clips` blocks.
+- **HLS latency knobs:** `STREAMHUB_HLS_SEGMENT_S` and `STREAMHUB_HLS_PLAYLIST_MAX_AGE`.
+
+### Added — ingest and devices
+- **Publish restrictions** per app: `allowedPublisherCIDR` and `maxBitrateAccept`; **S3 storage
+  class** per app (`s3.storage_class`). Both editable under Integrations.
+- **HEVC passthrough** with fMP4 HLS (`STREAMHUB_PASSTHROUGH_HEVC`) and **SRT ingest** with real
+  stream-key auth through the MediaMTX front (`STREAMHUB_MEDIAMTX_SRT_ENABLE`).
+- **Field encoders** (`STREAMHUB_DEVICES_ENABLE`, off by default): code pairing, a control channel
+  and linking encoder channels to rooms; new Encoders tab in the dashboard. Pairs with the new
+  **StreamHub Encoder** (`streamhub-encoder/`, public beta 0.0.1, released separately).
+
+### Added — scale and deployment
+- **CDN edge nodes:** `install.sh --cdn-edge` joins a caching HLS edge; the origin picks one per
+  viewer (`STREAMHUB_HLS_EDGE_SELECT`) and the Cluster page shows each edge's Gbps, connections
+  and last heartbeat. Measured on AWS: 10 000 HLS viewers with 0 errors on 1 origin, 2 cluster
+  nodes and 2 CDN edges.
+- **Installer:** 1:1 NAT for cloud VMs (`--node-ip`, off by default), Caddy as a compose profile,
+  a no-domain mode and `--prepare-image` for marketplace images.
+- **Marketplace images** (Packer for DigitalOcean, Vultr, Hetzner and AWS, cloud-init first boot)
+  and a **Helm chart** (`deploy/helm/streamhub`).
+- Egress CPU reserve per composite (`STREAMHUB_EGRESS_COMPOSITE_CPU`, default 2.0).
+- Stream Health probes through edges/CDN and a "source without audio" alarm; the core records
+  which media each room publishes.
+
+### Fixed
+- A dead egress no longer leaves HLS "active" and unrecoverable.
+- The HLS edge no longer duplicates CORS headers or serves stale playlists indefinitely.
+- A half-rewritten `index.m3u8` line is ignored instead of breaking the stream.
+- nginx: upstream keepalive to the core. Stream Health `PUT settings` rejects bodies without the
+  `{"config":{…}}` envelope.
+
+## 3.3.4
+
+### Security
+Hardening release on top of 3.3.3. Details of the issues are withheld until deployments have
+upgraded; the operator-facing changes are below.
+- **Team memberships need consent:** adding an existing account to a team creates a pending
+  invitation that the user accepts or declines from `/account/invitations`; accepting never moves
+  the user's default team. New `/account/tenants` (+ per-session switch) and
+  `/account/invitations` routes. Changing or setting a password revokes the user's other sessions.
+- **Auth throttle** (in memory, independent of the autoban) on every password/TOTP check:
+  `STREAMHUB_AUTH_IP_LIMIT` (default 10/min per IP) and `STREAMHUB_AUTH_ACCOUNT_FAILS` (default 5,
+  then a 30 s lockout doubling up to 15 min) → `429` + `Retry-After`.
+- **Per-node cluster credential:** `STREAMHUB_CLUSTER_TOKEN` now only joins; every node gets its own
+  `nodeSecret` back (`STREAMHUB_NODE_SECRET` on the node) for heartbeat, edge WS and grid.
+  `STREAMHUB_CLUSTER_LEGACY_TOKEN` (default `on` in 3.3.x) still accepts the raw token with a
+  warning — re-join every node on 3.3.4, then set it `off`.
+- **Quotas:** app-scoped `sk_` tokens are held to their tenant's quotas; new
+  `STREAMHUB_EDGE_MAX_ASSIGNMENTS_PER_APP` (default 200); snapshots are rate-limited per app.
+- **Dashboard headers:** Content-Security-Policy + `X-Frame-Options: DENY` on the SPA (`/embed` and
+  `/play` stay embeddable); `STREAMHUB_DASHBOARD_CSP` overrides or disables it.
+- `STREAMHUB_API_DOCS_PUBLIC=false` hides `/api/v1/docs` and the OpenAPI documents (default `true`).
+- `/metrics` accepts the token only in the `Authorization` header (`?token=` → 403); token checks
+  are constant-time. `/stats` gives non-global callers only their own apps' counts;
+  `POST /system/gpu/refresh` is global-only.
+- Directories under `DATA_DIR` are created with explicit modes instead of following the umask.
+- Edge: a node can only update the status of its own assignments.
+
+## 3.3.3
+
+### Security
+Security release. Upgrade is strongly recommended; rotate `STREAMHUB_JWT_SECRET` (it signs every
+session) and `STREAMHUB_CLUSTER_TOKEN` after upgrading. Details are withheld until deployments
+have upgraded; the operator-facing changes are below.
+- `STREAMHUB_SUPERADMIN_EMAIL` has **no default**: unset = no magic-link email is promoted (the
+  break-glass `ADMIN_USER`/`ADMIN_PASS` login still works). Set it explicitly if you rely on it.
+- Every session JWT must carry a session id; older tokens are rejected (users sign in again).
+- Per-app credentials (S3, MQTT, SMTP, DRM token) are resolved only through the server-derived
+  `APP_<SLUG>_*` references in `data/secrets.json`; `config.yaml` can no longer point them at other
+  env vars.
+- **Streamflow execution boxes** (`action.code`/`shell`/`ssh`/`db`) are off everywhere unless the
+  app is listed in `STREAMHUB_STREAMFLOW_DANGEROUS`, and only a superadmin can save a workflow that
+  holds one; enabled workflows that violate this are disabled at boot (audited).
+  `POST /grid/workers` no longer runs a caller-supplied spawn spec.
+- Missing authorization added on several app- and tenant-scoped routes; a boot test now requires
+  every route to declare its guard.
+- **Outbound requests** (callbacks, streamflow HTTP/plugin/AI, notifiers, DRM key server, custom S3
+  endpoint, tenant SMTP) re-check the destination IP at dial time, re-validate every redirect (max
+  5) and ignore `HTTP(S)_PROXY`. Tenant SMTP overrides to private hosts need
+  `STREAMHUB_ALLOW_PRIVATE_SMTP_HOST=1`; SMTP test errors are generic codes.
+- `recording.local_dir` is confined to the app's directory; plugin config fields declared as
+  `format: "url"` are validated like any outbound URL.
+
 ## 3.3.2
 
 ### Added
@@ -10,7 +108,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
   the core for anything not on disk. Caddy (compose: read-only data mount + the flag) and nginx
   (`install.sh` fills the vhost root and gives only the nginx user traverse access). Paths with
   dot segments are never served from disk. Trade-offs and how to toggle it:
-  `https://streamhub.studio/docs/operations/SCALING`.
+  `streamhub-docs/operations/SCALING.md`.
 - **Fleet battery alert:** agents may report `battery` (percent) in their telemetry; it shows on
   the agent card and in `metrics.battery` (`null` on hosts without one). New fleet setting
   `batteryLowPercent` (default `0` = off) fires `fleet.battery_low` and `fleet.battery_recovered`
@@ -21,8 +119,8 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
   master-playlist resolution.
 
 ### Docs
-- [operations/SCALING](https://streamhub.studio/docs/operations/SCALING) brought over from 2.x and
-  updated for the Go core (load-test findings; StreamHub stays on stock LiveKit).
+- `operations/SCALING.md`, `planning/LOADTEST-REPORT.md` and `planning/LIVEKIT-FORK-DECISION.md`
+  (stay on stock LiveKit) brought from the 2.x branch and updated for the Go core.
 
 ### Changed — ops without Python
 - **`streamhub` CLI**: `cluster` and `app` commands no longer need python3 — responses are
@@ -53,7 +151,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
   MQTT broker — live state per camera, PTZ pad with deadman, stream start/stop and temporary HD,
   snapshot, voice test and reboot with per-command phase tracking, and a `config.ini` generator to
   provision a camera from its microSD. Ships `opencam-sim` to simulate cameras against a broker.
-  See `https://streamhub.studio/docs/features/cameras`.
+  See `streamhub-docs/features/cameras.md`.
 - **Samples on their own origin** (`STREAMHUB_SAMPLES_URL`, e.g. `https://samples.example.com`):
   sample pages are served only on that host (with the API, SDK and HLS they call same-origin) and
   never on the dashboard's, whose storage holds the session. `/samples/*` on the dashboard redirects
@@ -110,7 +208,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 - **Smokes and tooling in Go**: `cmd/smoke` (`-read-only`, `-routes`, `conference`, `call`),
   `go generate ./cmd/build-examples`, `loadgen latency`. `scripts/` is gone.
 - **The NestJS core is retired from the repo**: parity runs as a replay against the recorded Node
-  answers (`test/parity/golden/`, 1343 cases); the 2.x source stays at tag `v2.24.0`.
+  answers (`test/parity/golden/`, 1343 cases); the 2.x source stays on `legacy/node-2.x` / tag 2.24.0.
   `legacy/` removed.
 - Node is now only the build toolchain of the dashboard SPA and the browser SDK.
 
@@ -129,23 +227,24 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
   Verified by a Node↔Go differential parity harness (`cmd/parity`), the dashboard e2e suite
   and a real-media e2e (RTMP/WHIP, HLS, recording, cluster + Vision Edge).
 - **The NestJS core is legacy**: `streamhub-core/` stays only as the parity oracle (frozen at
-  2.24.0, tag `v2.24.0`); it is no longer built or shipped.
+  2.24.0, branch `legacy/node-2.x`); it is no longer built or shipped.
 - **No Redis/BullMQ in the core**: upload/transcode/streamflow queues run in-process; pending
   uploads/transcodes are re-enqueued from state at boot.
-- **Performance**: HLS fan-out and the REST API scale several times past the Node core.
+- **Performance**: HLS fan-out and the REST API scale several times past the Node core (see
+  `planning/GO-CORE-BENCHMARK.md`).
 - **LiveKit pinned to the latest stable**: server v1.13.11, ingress v1.5.0, egress v1.15.0
   (`room.enable_remote_unmute` and `ingress.rtmp_base_url`/`whip_base_url` now set).
 - **MCP server in Go**: `streamhub-mcp` (also `streamhub-core mcp`) replaces the Node
   `mcp-server/` — one static binary per platform (darwin/linux/windows × amd64/arm64,
-  `deploy/make-mcp.sh`), no Node/npx on the client. Same 89 tools, 3
+  `deploy/make-mcp.sh`, CI `release:mcp`), no Node/npx on the client. Same 89 tools, 3
   resources and 2 prompts, same schemas, env vars, destructive gate and error texts (locked
   by vectors from the TypeScript server). Point the client `command` at the binary
-  (`https://streamhub.studio/docs/integrations/MCP`).
+  (`streamhub-docs/integrations/MCP.md`).
 - **Native shape**: `deploy/make-core-bundle.sh` + `deploy/deploy-core.sh` install the binary
   under systemd (converting a 2.x Node unit in place) and provision the Python workers' venv
   (`PLUGIN_PYTHON`, `WORKER_DEPS`).
 
-### Fixed (Node bugs)
+### Fixed (Node bugs, see `planning/GO-DIVERGENCES.md`)
 - Edge workers' results reach the app (edge ingest token accepted; batched vision events).
 - stream-health and streamflow routes no longer shadowed by the vision-apps route; fleet
   `command` honours its documented body; deleted/disabled streamflow schedules stop firing.
@@ -159,7 +258,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 - LiveKit webhooks with an empty `LIVEKIT_API_SECRET` are rejected; the IP ban applies to the
   edge WebSocket upgrade.
 
-## 2.24.0
+## 2.24.0 — 2026-07-14
 
 ### Changed — app navigation regroup
 - The app's vertical tab column slims down: **Tokens, Integraciones and Logs
@@ -170,7 +269,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 - **Icons on every tab label** (vertical tabs + Config sections), reusing the
   plugin icon set.
 
-## 2.23.1
+## 2.23.1 — 2026-07-14
 
 ### Fixed — docker install path was broken for the decoupled world
 - **`deploy/Dockerfile` still COPYied seven decoupled workers' directories**
@@ -189,7 +288,7 @@ All notable changes to StreamHub. Versions follow the repo-root `VERSION`.
 (Note: the Dockerfile/compose/install.sh changes shipped in commit ebda8182
 under a docs-titled message — this entry is the honest record.)
 
-## 2.23.0
+## 2.23.0 — 2026-07-14
 
 ### Changed — the decoupling is COMPLETE: 12 Studio Apps in their own repos
 - **The four vision apps** (`occupancy`, `counting`, `crowd`, `demography`)
@@ -231,7 +330,7 @@ under a docs-titled message — this entry is the honest record.)
 Totals: composed core 240 suites / 2772 · web 457 node + 127 component ·
 runtime pytest 256 · 12 vendored witnesses green.
 
-## 2.22.0
+## 2.22.0 — 2026-07-13
 
 ### Added — Streamflow 2.0
 - **Per-app encrypted secrets manager**: AES-256-GCM under a per-app HKDF key;
@@ -265,7 +364,7 @@ runtime pytest 256 · 12 vendored witnesses green.
 
 Totals: core 225 suites / 2586 (composed) · web 422 node + 96 component.
 
-## 2.21.0
+## 2.21.0 — 2026-07-13
 
 ### Added
 - **Token-protected embeddable player widget**: `POST /apps/:app/play-token/:room/sign`
@@ -294,7 +393,7 @@ Totals: core 225 suites / 2586 (composed) · web 422 node + 96 component.
 
 Totals: web 411 node + 83 component · core 222 suites / 2471 (composed) · CI 7/7.
 
-## 2.20.0
+## 2.20.0 — 2026-07-13
 
 ### Changed — app decoupling: 8 Studio Apps now live in their own repos
 - **`lpr`, `deface`, `safety-ppe`, `people-counter`, `transcription`,
@@ -326,7 +425,7 @@ Totals: web 411 node + 83 component · core 222 suites / 2471 (composed) · CI 7
 Totals: core 222 suites / 2469 tests (composed, 0 skipped) · web 389 ·
 compiled-runtime composition validated (22 plugins discovered from dist/).
 
-## 2.19.0
+## 2.19.0 — 2026-07-13
 
 ### Added — app versioning: nothing ever overwrites anything
 - **Immutable per-version plugin store** (`DATA_DIR/appstore/`): upload a NEW
@@ -367,7 +466,7 @@ compiled-runtime composition validated (22 plugins discovered from dist/).
 Totals: core 224 suites / 2492 tests · web 500 + 86 + Playwright 14 · runtime
 pytest 219 · shellcheck clean.
 
-## 2.18.0
+## 2.18.0 — 2026-07-12
 
 ### Added — every Studio view has a URL + a launcher to reach it
 - **Deep links**: `/apps/:app/studio/:pluginId/:section` — every marketplace
@@ -399,7 +498,7 @@ pytest 219 · shellcheck clean.
 - Docs: `STREAMHUB_AUTHZ_ENFORCE` default corrected to `on`; one canonical
   testing-strategy doc (six layers).
 
-## 2.17.2
+## 2.17.2 — 2026-07-12
 
 ### Fixed — remote edge nodes are now turnkey (field-test findings)
 - **`--node-type edge` now provisions the vision runtime**: the join builds a
@@ -419,7 +518,7 @@ pytest 219 · shellcheck clean.
   recoverable, only stop() exits the loop.
 - Totals: runtime pytest 197 · core 217 suites / 2440 tests · shellcheck clean.
 
-## 2.17.1
+## 2.17.1 — 2026-07-12
 
 ### Fixed — installer (found by field-testing the upgrade path on AWS)
 - **Fresh installs from the release tarball failed at `COPY VERSION`** and
@@ -436,7 +535,7 @@ pytest 219 · shellcheck clean.
   `streamhub upgrade` on a node re-registered under the hostname, duplicating
   the registry entry.
 
-## 2.17.0
+## 2.17.0 — 2026-07-12
 
 ### Added — Cluster Ops
 - **Edge nodes in Prometheus/Grafana via the master**: edge nodes are
@@ -476,7 +575,7 @@ pytest 219 · shellcheck clean.
   is default-DENY behind `METRICS_TOKEN`.
 - Totals: core 217 suites / 2436 tests · web 465 + 75 · shellcheck clean.
 
-## 2.16.0
+## 2.16.0 — 2026-07-11
 
 ### Changed — Edge is a capability, not an app
 - **The `vision` Studio App is split into 4 first-class marketplace apps** —
@@ -515,7 +614,7 @@ pytest 219 · shellcheck clean.
   `development/EXTENDING-STUDIO-APPS.md`, `operations/CLUSTER-UPDATES.md`.
 - Totals: core 214 suites / 2411 tests · web 465 + 69 · runtime pytest 188.
 
-## 2.15.0
+## 2.15.0 — 2026-07-11
 
 ### Added — Streamflow: visual event workflows (Studio App)
 - **n8n-style workflow engine** (`streamflow` Studio App, in-core, no worker):
@@ -550,7 +649,7 @@ pytest 219 · shellcheck clean.
   JPEG → `/live/.../frame.jpg` round-trip → data frame → `iot.data` dispatch)
   plus first-ever gateway upgrade-routing specs. Core: 205 suites / 2361 tests.
 
-## 2.14.1
+## 2.14.1 — 2026-07-11
 
 ### Added / Fixed
 - **Cluster: the master (origin) now reports its DISK** in `selfStats` (DATA_DIR
@@ -562,7 +661,7 @@ pytest 219 · shellcheck clean.
   metrics, vision, cluster/edge nodes incl. origin disk). Plus
   `testing/TEST-STRATEGY.md` (the five test layers + how each runs automatically).
 
-## 2.14.0
+## 2.14.0 — 2026-07-11
 
 ### Added — Vision Edge sizing & pricing calculator
 - **Sizing tab in the vision Studio App** — dimension a deployment live: pick
@@ -577,7 +676,7 @@ pytest 219 · shellcheck clean.
   GPUs extrapolated (±30%), cloud prices approximate. See
   `features/vision-sizing.md`.
 
-## 2.13.0
+## 2.13.0 — 2026-07-11
 
 ### Added — Vision Edge cluster (waves 1+2)
 - **Edge node type** — `install.sh --node-type edge` turns a box into a
@@ -609,7 +708,7 @@ pytest 219 · shellcheck clean.
   `network.threshold_exceeded/recovered`.
 - Structured config saves now PRESERVE unknown yaml blocks (raw-editor parity).
 
-## 2.12.0
+## 2.12.0 — 2026-07-10
 
 ### Added — single-port RTMP ingest (:1935 for everything)
 - **MediaMTX front (opt-in)** — one public RTMP port for BOTH ingest planes:
@@ -636,7 +735,7 @@ pytest 219 · shellcheck clean.
   regenerated `.env` now persists `STREAMHUB_RTMP_PASSTHROUGH_ENABLE` (the
   2.11.0 deploy silently disabled the radios' ingest plane).
 
-## 2.11.0
+## 2.11.0 — 2026-07-10
 
 ### Added — Plugins vs Studio Apps taxonomy
 - **`kind: 'plugin' | 'app'` on the plugin contract** (default `'plugin'`, fully
@@ -661,7 +760,7 @@ pytest 219 · shellcheck clean.
   never embedded. 7 apps exportable (5 vision + yolo + deface). The docker
   core image now ships worker sources (source-only) at `/opt/worker-src`.
 
-## 2.10.1
+## 2.10.1 — 2026-07-10
 
 ### Fixed
 - **Studio catalog showed the wrong plugin version** — the global marketplace read
@@ -670,7 +769,7 @@ pytest 219 · shellcheck clean.
   manifest version (`rec.version ?? reg.version`), and the vision plugins' frontend
   modules were aligned to their manifest version (0.1.0).
 
-## 2.10.0
+## 2.10.0 — 2026-07-10
 
 ### Added
 - **Studio** — the plugin/app surface is rebranded **Studio** in the dashboard
@@ -691,7 +790,7 @@ pytest 219 · shellcheck clean.
   WS-Discovery on the LAN → Profile S RTSP URIs → auto-registers cameras as
   StreamHub ingresses (Wave 1 of the CCTV plan).
 
-## 2.9.0
+## 2.9.0 — 2026-07-10
 
 ### Added — CCTV / vision plugin wave
 - **5 new realtime vision plugins** (all: managed Python worker, per-plugin SQLite,
@@ -704,11 +803,11 @@ pytest 219 · shellcheck clean.
 - **Generic plugin event/data channel**: `POST /apps/:app/plugins/:id/events`
   (ingest-token auth, spoof guard, relays through signed app callbacks + MQTT) and
   authenticated `GET :id/data` / `live/state` for app-tab worker panels.
-- **CCTV market plan** (internal design notes): ONVIF-in-Agent
+- **CCTV market plan** (`planning/CCTV-NEXT-LEVEL-PLAN.md`): ONVIF-in-Agent
   wedge, camera registry/wall roadmap, open-source + consulting business model,
   StreamYard-like `studio` plugin design.
 
-## 2.8.7
+## 2.8.7 — 2026-07-09
 
 ### Added
 - **SRT in the dashboard** — the create-ingress form gains "SRT (push)": selecting
@@ -728,7 +827,7 @@ pytest 219 · shellcheck clean.
   snippet straight from the Streams tab. Passthrough rows open their HLS directly
   (no LiveKit egress round-trip) and hide actions that don't apply.
 
-## 2.8.6
+## 2.8.6 — 2026-07-09
 
 ### Fixed
 - **Streams reconcile was killing passthrough rows** — the LiveKit reconcile
@@ -740,7 +839,7 @@ pytest 219 · shellcheck clean.
   ends the row). The dashboard Streams view now reliably shows live passthrough
   channels.
 
-## 2.8.5
+## 2.8.5 — 2026-07-09
 
 ### Fixed
 - **Passthrough channels were invisible in the dashboard Streams view** — a
@@ -751,7 +850,7 @@ pytest 219 · shellcheck clean.
   stale/stopped/deleted ⇒ ended). Best-effort — the media plane never depends
   on the dashboard write. +4 specs.
 
-## 2.8.4
+## 2.8.4 — 2026-07-09
 
 ### Added
 - **SRT ingest** — two paths: (1) **SRT push → passthrough** (remux → HLS,
@@ -766,7 +865,7 @@ pytest 219 · shellcheck clean.
   regression-locked (public ok; loopback/metadata 400). +34 tests (152 suites /
   1874). Docs: `features/rtmp-passthrough.md` (now RTMP/SRT).
 
-## 2.8.3
+## 2.8.3 — 2026-07-09
 
 ### Changed — ingest profile switch (stability hardening + instant rollback)
 - **New global switch `STREAMHUB_INGEST_PROFILE`** (`livekit` | `efficient`) for
@@ -794,7 +893,7 @@ pytest 219 · shellcheck clean.
   single-layer preset (worst case 1 layer, never 3); radios should use the
   RTMP→HLS passthrough mode.
 
-## 2.8.2
+## 2.8.2 — 2026-07-09
 
 ### Fixed
 - **Efficient transcode profile rejected by LiveKit ("video codec unsupported").**
@@ -805,7 +904,7 @@ pytest 219 · shellcheck clean.
   server). Regression-locked. Unit tests mock the ingress client, so this only
   surfaced under a real functional test against LiveKit.
 
-## 2.8.1
+## 2.8.1 — 2026-07-09
 
 ### Fixed / Added
 - **Efficient transcode profile — no more CPU blow-ups on the RTMP ingress.** The
@@ -825,7 +924,7 @@ pytest 219 · shellcheck clean.
   `features/efficient-transcode.md`; `IngressVideoEncodingOptions` builder with 19
   unit tests.
 
-## 2.8.0
+## 2.8.0 — 2026-07-08
 
 ### Added
 - **RTMP→HLS passthrough (remux, no transcode) — AntMedia parity, near-zero CPU
@@ -848,7 +947,7 @@ pytest 219 · shellcheck clean.
   a **radio** (drops the video track → the trivial-audio-transcode path); use
   passthrough when you need to carry video with no re-encode.
 
-## 2.7.2
+## 2.7.2 — 2026-07-08
 
 ### Added
 - **Audio-only ingest (radio) — near-idle CPU without a GPU** — `POST
@@ -861,7 +960,7 @@ pytest 219 · shellcheck clean.
   + `audioOnly` regression tests. (Video passthrough without transcoding needs
   WHIP, or a future RTMP→HLS remux path.)
 
-## 2.7.1
+## 2.7.1 — 2026-07-08
 
 ### Fixed
 - **RTMP ingress pinned CPU with a forced 3-layer simulcast, unaffected by the
@@ -875,7 +974,7 @@ pytest 219 · shellcheck clean.
   + recreate to apply to an existing one). New `CreateIngressInput.simulcast`;
   regression tests in `livekit.service.ingress.spec.ts`.
 
-## 2.7.0
+## 2.7.0 — 2026-07-08
 
 ### Added
 - **Swappable advanced player (Vidstack) as a plugin** — a new `player` plugin
@@ -913,7 +1012,7 @@ pytest 219 · shellcheck clean.
   30's transform uses `crypto.hash()` (Node 21+), so all core suites failed to
   transform. Bumped CI images to node:24.
 
-## 2.6.0
+## 2.6.0 — 2026-07-08
 
 ### Added
 - **Dynamic media-pipeline diagram per app** — `GET /apps/:app/pipeline` resolves the
@@ -941,10 +1040,10 @@ pytest 219 · shellcheck clean.
   `common.instance_addr=127.0.0.1` (single-binary on a docker host advertised its
   ring on docker0 → self-dial refused / push 500).
 
-## 2.5.0
+## 2.5.0 — 2026-07-08
 
 Cluster becomes a real distribution fabric (phase 1) — see
-`https://streamhub.studio/docs/architecture/CLUSTER-ROADMAP`.
+`streamhub-docs/architecture/CLUSTER-ROADMAP.md`.
 
 ### Added
 - **Node roles + edge login-lock** — a node now has a DB-driven role
@@ -962,7 +1061,7 @@ Cluster becomes a real distribution fabric (phase 1) — see
   the node; the origin injects `originUrl` so results post back; the heartbeat
   advertises a `grid` GPU block via `nvidia-smi`. `yolo` ships as the reference
   (`placement: 'grid'`, falls back to local when no GPU node matches). New
-  `https://streamhub.studio/docs/features/GRID`.
+  `streamhub-docs/features/GRID.md`.
 - **HLS edge/CDN caching** — correct `Cache-Control` on `/hls` (`.ts` immutable,
   `.m3u8` no-cache by default; `STREAMHUB_HLS_CDN` opts into short SWR for a CDN)
   + ready-to-use nginx/Caddy edge-cache configs. New `features/HLS-CDN.md`.
@@ -976,7 +1075,7 @@ Cluster becomes a real distribution fabric (phase 1) — see
   `X-Cluster-Token` records an `invalid_token` offense, so the network-security
   middleware bans the IP (previously the cluster endpoints recorded nothing).
 
-## 2.4.1
+## 2.4.1 — 2026-07-07
 
 ### Fixed
 - **NestJS 11 SPA-fallback regression** — the ServeStaticModule `exclude`
@@ -987,7 +1086,7 @@ Cluster becomes a real distribution fabric (phase 1) — see
   clean 404. Rewrote the excludes to the v8 named-wildcard spelling
   (`/api/*splat`, `/rtc/*splat`, …). Discovered on the 2.4.0 rollout.
 
-## 2.4.0
+## 2.4.0 — 2026-07-07
 
 ### Added
 - **Transcription plugin (#10)** — VOD → mp3 → faster-whisper (OSS) or OpenAI →
@@ -997,7 +1096,7 @@ Cluster becomes a real distribution fabric (phase 1) — see
   tools so an AI client (Claude Desktop/Code) can operate a StreamHub instance;
   destructive ops hidden unless `--allow-destructive` + `confirm:true`.
 - **Documentation site** — `docs.streamhub.studio` (+ `/docs`) renders the
-  `https://streamhub.studio/docs/` tree (CommonMark, sidebar, search); `php artisan docs:sync`.
+  `streamhub-docs/` tree (CommonMark, sidebar, search); `php artisan docs:sync`.
 - **Downloadable example bundles** — every app example as a self-contained,
   configurable bundle (`edit config.js`, host anywhere) + `/apps/:app/examples`
   list/zip download.
@@ -1016,7 +1115,7 @@ Cluster becomes a real distribution fabric (phase 1) — see
   longer 400s (`@ArrayMinSize` removed) and no longer silently reverts to the
   defaults on read; clearing the ladder now disables adaptive delivery.
 
-## 2.3.0
+## 2.3.0 — 2026-07-07
 
 Large stabilization + feature wave.
 
@@ -1057,7 +1156,7 @@ Large stabilization + feature wave.
   (`STREAMHUB_PROVISIONING_ENABLED`) until the owner-supervised launch is signed
   off.
 
-## 2.2.0
+## 2.2.0 — 2026-07-05
 
 - Single-app packaging (`/opt/streamhub`, `streamhub` CLI, systemd unit),
   versioned release pipeline, upgrade + migration in `install.sh`.

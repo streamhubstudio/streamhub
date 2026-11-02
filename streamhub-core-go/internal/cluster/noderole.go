@@ -20,7 +20,12 @@ const (
 	metaRole         = "node_role"
 	metaMasterURL    = "master_url"
 	metaMasterNodeID = "master_node_id"
+	metaNodeSecret   = "node_secret"
 )
+
+// NodeSecretEnv is where install.sh --join writes the per-node secret (the
+// KV value stored by join-master wins).
+const NodeSecretEnv = "STREAMHUB_NODE_SECRET"
 
 // CoerceRole maps arbitrary input to a known role (default standalone).
 func CoerceRole(raw string) string {
@@ -94,6 +99,28 @@ func (n *NodeRole) MasterNodeID(ctx context.Context) *string {
 		return nil
 	}
 	return &v
+}
+
+// NodeSecret is this edge's per-node credential at the master (KV, else
+// STREAMHUB_NODE_SECRET; nil if neither).
+func (n *NodeRole) NodeSecret(ctx context.Context) *string {
+	v, _ := n.get(ctx, metaNodeSecret)
+	if v = strings.TrimSpace(v); v == "" && n.env != nil {
+		v = strings.TrimSpace(n.env(NodeSecretEnv))
+	}
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+// SetNodeSecret persists (or clears, when blank) the per-node credential.
+func (n *NodeRole) SetNodeSecret(ctx context.Context, secret string) error {
+	v := strings.TrimSpace(secret)
+	if v == "" {
+		return n.del(ctx, metaNodeSecret)
+	}
+	return n.set(ctx, metaNodeSecret, v)
 }
 
 // SetRole persists a (coerced) role.

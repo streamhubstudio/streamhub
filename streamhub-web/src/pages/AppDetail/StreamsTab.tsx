@@ -28,7 +28,8 @@ import { Dialog } from '@/ui'
 import type { HlsSession, RecordingHandle, Stream } from '@/api'
 import { HlsPlayer, LivePlayer, MjpegPlayer } from '@/components/player'
 import { usePluginCatalog, usePlayerProvider } from '@/plugins'
-import { hlsPlaylistUrl, isPassthroughStream, publicEmbedUrl } from '@/lib/share'
+import { useDashboardHlsToken } from '@/components/player/useDashboardHlsToken'
+import { hlsPlaylistUrl, isPassthroughStream, publicEmbedUrl, withHlsToken } from '@/lib/share'
 import {
   embedSnippetFor,
   forcePlayerFor,
@@ -208,10 +209,16 @@ export function StreamsTab({ app }: { app: string }) {
   // public playlist so the same modal renders it. No egress → no "Detener HLS".
   const hlsDirect = Boolean(hlsStream && isPassthroughStream(hlsStream))
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // G2: the synthesized passthrough session needs the ?st= of a private app
+  // (egress sessions already get a tokenized playlistUrl from the core).
+  const directTok = useDashboardHlsToken(app, hlsStream?.room ?? '', hlsDirect)
   const hlsSession: HlsSession | null = hlsModal
     ? hlsSessions[hlsModal] ??
       (hlsDirect && hlsStream
-        ? { playlistUrl: hlsPlaylistUrl(origin, app, hlsStream.room), status: 'passthrough' }
+        ? {
+            playlistUrl: withHlsToken(hlsPlaylistUrl(origin, app, hlsStream.room), directTok.st),
+            status: 'passthrough',
+          }
         : null)
     : null
 
@@ -633,6 +640,7 @@ export function StreamsTab({ app }: { app: string }) {
               app={app}
               room={hlsStream?.room}
               forcePlayer={forcePlayerFor(hlsPlayerChoice)}
+              dvr={hlsSession.dvr}
             />
 
             <div className="mt-4 space-y-4">

@@ -40,7 +40,7 @@ export interface BoxSpec {
   inputs: string[]
   outputs: string[]
   fields: BoxField[]
-  /** Flag-gated execution box (only served when streamflow.dangerousNodes is on). */
+  /** Execution box (served only to a superadmin in an app listed in the operator's STREAMHUB_STREAMFLOW_DANGEROUS). */
   dangerous?: boolean
 }
 

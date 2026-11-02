@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-func newStore(t *testing.T, env map[string]string) (*SecretsStore, string) {
+func newStore(t *testing.T) (*SecretsStore, string) {
 	t.Helper()
 	dir := t.TempDir()
-	return NewSecretsStore(dir, func(k string) string { return env[k] }), dir
+	return NewSecretsStore(dir), dir
 }
 
 func readFile(t *testing.T, p string) string {
@@ -24,7 +24,7 @@ func readFile(t *testing.T, p string) string {
 }
 
 func TestSecretsPathAndModes(t *testing.T) {
-	s, dir := newStore(t, nil)
+	s, dir := newStore(t)
 	if want := filepath.Join(dir, "data", "secrets.json"); s.Path() != want {
 		t.Fatalf("path %q", s.Path())
 	}
@@ -54,8 +54,10 @@ func TestSecretsPathAndModes(t *testing.T) {
 }
 
 func TestSecretsGetPrecedence(t *testing.T) {
-	env := map[string]string{"A": "from-env", "B": "env-b", "E": ""}
-	s, _ := newStore(t, env)
+	// Security 3.3.3: the process env is never consulted.
+	t.Setenv("SH_TEST_ENV_ONLY", "from-env")
+	t.Setenv("A", "from-env")
+	s, _ := newStore(t)
 	if err := s.SetMany([][2]string{{"A", "from-store"}, {"C", ""}, {"", "skipped"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -64,10 +66,9 @@ func TestSecretsGetPrecedence(t *testing.T) {
 		want string
 		ok   bool
 	}{
-		{"A", "from-store", true}, // store wins
-		{"B", "env-b", true},      // env fallback
-		{"C", "", false},          // empty store value → env → missing
-		{"E", "", false},          // empty env = missing
+		{"A", "from-store", true},
+		{"SH_TEST_ENV_ONLY", "", false}, // INVARIANT: no env fallback
+		{"C", "", false},                // empty store value = missing
 		{"Z", "", false},
 		{"", "", false},
 	}
@@ -87,7 +88,7 @@ func TestSecretsGetPrecedence(t *testing.T) {
 }
 
 func TestSecretsCacheAndInvalidate(t *testing.T) {
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	_ = s.Set("K", "v1")
 	// External write is invisible until Invalidate.
 	_ = os.WriteFile(s.Path(), []byte(`{"K":"v2"}`), 0o600)
@@ -102,11 +103,11 @@ func TestSecretsCacheAndInvalidate(t *testing.T) {
 
 func TestSecretsCorruptOrNonObject(t *testing.T) {
 	for _, body := range []string{"", "not json", "[1,2]", "null", `"str"`, `{"a":"b"} trailing`, `{"a":`} {
-		s, _ := newStore(t, map[string]string{"a": "env"})
+		s, _ := newStore(t)
 		_ = os.MkdirAll(filepath.Dir(s.Path()), 0o700)
 		_ = os.WriteFile(s.Path(), []byte(body), 0o600)
-		if v, ok := s.Get("a"); v != "env" || !ok {
-			t.Errorf("%q: Get = %q,%v (want env fallback)", body, v, ok)
+		if v, ok := s.Get("a"); v != "" || ok {
+			t.Errorf("%q: Get = %q,%v (want missing)", body, v, ok)
 		}
 		if len(s.ReadFresh()) != 0 {
 			t.Errorf("%q: ReadFresh not empty", body)
@@ -120,7 +121,7 @@ func TestSecretsCorruptOrNonObject(t *testing.T) {
 		}
 	}
 	// Missing file.
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	if _, ok := s.Get("x"); ok {
 		t.Fatal("missing file should be empty")
 	}
@@ -128,7 +129,7 @@ func TestSecretsCorruptOrNonObject(t *testing.T) {
 
 func TestSecretsStringifyVectors(t *testing.T) {
 	// testdata generated with Node: JSON.stringify(map, null, 2).
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	pairs := [][2]string{
 		{"S3_KEY", "AKIA<&>"},
 		{"10", "ten"},
@@ -184,7 +185,7 @@ func TestSecretsStringifyVectors(t *testing.T) {
 }
 
 func TestSecretsRemove(t *testing.T) {
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	if err := s.Remove("absent"); err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +205,7 @@ func TestSecretsRemove(t *testing.T) {
 }
 
 func TestSecretsReadFreshWriteSecret(t *testing.T) {
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	_ = s.Set("a", "1")
 	if err := s.WriteSecret("b", "2"); err != nil {
 		t.Fatal(err)
@@ -234,7 +235,7 @@ func TestSecretsReadFreshWriteSecret(t *testing.T) {
 }
 
 func TestSecretsConcurrent(t *testing.T) {
-	s, _ := newStore(t, nil)
+	s, _ := newStore(t)
 	done := make(chan struct{})
 	for i := 0; i < 20; i++ {
 		go func(i int) {

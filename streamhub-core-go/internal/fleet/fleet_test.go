@@ -14,11 +14,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
 )
 
 var bg = context.Background()

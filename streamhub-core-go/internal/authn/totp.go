@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // TOTP 2FA per built-in user (totp.service.ts). Enrolment is a two-step
@@ -76,7 +76,7 @@ func (s *Service) TotpEnable(ctx context.Context, userID, code string) error {
 	}
 	secret, ok := auth.DecryptSecret(*st.PendingSecret, master)
 	if !ok || secret == "" || !s.checkCode(code, secret) {
-		return httpx.BadRequest("invalid verification code")
+		return httpx.BadRequest(invalidCode)
 	}
 	if err := s.tenancy.ActivateTotp(ctx, userID); err != nil {
 		return err
@@ -97,7 +97,7 @@ func (s *Service) TotpDisable(ctx context.Context, userID, code string) error {
 	}
 	secret, ok := auth.DecryptSecret(*st.Secret, master)
 	if !ok || secret == "" || !s.checkCode(code, secret) {
-		return httpx.BadRequest("invalid verification code")
+		return httpx.BadRequest(invalidCode)
 	}
 	if err := s.tenancy.ClearTotp(ctx, userID); err != nil {
 		return err
@@ -130,10 +130,16 @@ func (s *Service) AssertLoginCode(ctx context.Context, userID, code string) erro
 		return httpx.Unauthorized("totp_required")
 	}
 	if !s.TotpVerify(ctx, userID, code) {
-		return httpx.Unauthorized("totp_invalid")
+		return httpx.Unauthorized(totpInvalid)
 	}
 	return nil
 }
+
+// The wrong-code errors: the ones the throttle counts as failures (M3).
+const (
+	totpInvalid = "totp_invalid"
+	invalidCode = "invalid verification code"
+)
 
 var spaces = regexp.MustCompile(`\s+`)
 

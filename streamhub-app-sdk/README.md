@@ -4,7 +4,7 @@ The Python side of the StreamHub **app contract** — the small, dependency-free
 helpers a decoupled Studio App's worker imports so the exact same code runs
 co-located inside a StreamHub install OR standalone on the operator's own infra.
 
-> Part of the app-decoupling work (internal design notes). In F1 this
+> Part of the app-decoupling work (`planning/APP-DECOUPLING-PLAN.md`). In F1 this
 > directory becomes its own repository (`streamhub-app-sdk`), versioned with
 > semver; each app declares the SDK range it needs. For now it lives in the
 > monorepo and is consumed in-place.

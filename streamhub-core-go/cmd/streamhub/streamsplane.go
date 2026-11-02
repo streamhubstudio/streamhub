@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/apps"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/samples"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tags"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/apps"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/samples"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tags"
 )
 
 // The streams plane: streams (+ per-stream plugin opt-out, live HLS egress,
@@ -21,7 +21,9 @@ import (
 //
 // Optional, resolved lazily at call time (later planes): "livekit.hls"
 // (streams.Egress), "callbacks" (streams.Callbacks), "logs" (streams.Logs),
-// "metrics" (streams.Metrics).
+// "metrics" (streams.Metrics), "playback" (streams.HLSTokens — the ?st= of
+// a private app's playlistUrl), "cluster.hlsedge" (streams.HLSEdge — the
+// cdn-edge base of the playlistUrl).
 func init() {
 	registerPlane(30, "streams", func(ctx context.Context, c *core) error {
 		appsSvc := need[contracts.AppsService](c, "apps")
@@ -39,6 +41,8 @@ func init() {
 			Callbacks: lazy[streams.Callbacks](c, "callbacks"),
 			Logs:      lazy[streams.Logs](c, "logs"),
 			Metrics:   lazy[streams.Metrics](c, "metrics"),
+			HLSTokens: lazy[streams.HLSTokens](c, "playback"),
+			HLSEdge:   lazy[streams.HLSEdge](c, "cluster.hlsedge"),
 		}
 		streamsSvc := streams.New(streams.Deps{
 			Config: c.cfg, Store: c.store, Global: c.global, Apps: appsSvc, S3: s3svc, Opt: opt, Log: c.log,
@@ -61,7 +65,9 @@ func init() {
 		provide(c, "samples", smp)
 
 		c.modules = append(c.modules, &streams.Module{Streams: streamsSvc, Plugins: plugins, Hls: hls}, tagRepo, smp)
-		c.starters = append(c.starters, smp.Backfill, watchdog.Start)
+		// The dvr.m3u8 writer (G5) runs even with the watchdog off: without it
+		// a windowed app would serve a stale playlist.
+		c.starters = append(c.starters, smp.Backfill, watchdog.Start, hls.Windows.Start)
 		return nil
 	})
 }

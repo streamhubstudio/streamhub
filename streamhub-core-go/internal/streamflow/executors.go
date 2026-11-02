@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of boxes/executors.ts + boxes/context.ts: one executor per box type.
@@ -37,6 +38,29 @@ type BoxContext struct {
 	DangerousEnabled bool
 	Trigger          Trigger
 	Bag              *y.Map
+	// WorkflowID / RunID identify the run (action.clip links its clip back).
+	WorkflowID, RunID string
+}
+
+// ClipInput is the action.clip request (BoxDeps.clip, G6).
+type ClipInput struct {
+	App, Room string
+	// EventTs is the raw instant (epoch s/ms number or string, ISO-8601).
+	EventTs       any
+	Before, After float64
+	Wait          bool
+	// The trigger the clip links back to.
+	Event             string
+	Payload           *y.Map
+	WorkflowID, RunID string
+}
+
+// ClipOutput is the box output: the clip job (and its VOD once ready).
+type ClipOutput struct {
+	ClipID, Status, From, To string
+	VodID                    *int64
+	URL                      *string
+	Error                    *string
 }
 
 // newBag builds a fresh run bag from a trigger.
@@ -104,6 +128,7 @@ type DBInput struct {
 // Deps is the BoxDeps capability seam (nil dangerous funcs = unavailable).
 type Deps struct {
 	Snapshot    func(ctx context.Context, app, room string, participant *string) (key, url string, err error)
+	Clip        func(ctx context.Context, in ClipInput) (*ClipOutput, error)
 	S3Upload    func(ctx context.Context, app, key string, body []byte, contentType string) (k, url string, err error)
 	AI          func(ctx context.Context, in AIInput) (*AIOutput, error)
 	HTTPPost    func(ctx context.Context, url string, body any, headers *y.Map) (*HTTPResult, error)
@@ -293,6 +318,56 @@ func snapshotExec(ctx context.Context, box BoxNode, bc *BoxContext, deps *Deps) 
 	return obj("key", key, "url", url), "out", nil
 }
 
+// clipExec cuts a clip of the trigger room around the event (G6): eventTs
+// defaults to trigger.ts (what the vision workers send), else now; before /
+// after default to 10 s. With `wait` it blocks (bounded by the seam) so the
+// next boxes get the VOD URL. Never on a clip.* trigger (loop guard).
+func clipExec(ctx context.Context, box BoxNode, bc *BoxContext, deps *Deps) (any, string, error) {
+	if strings.HasPrefix(bc.Trigger.Event, "clip.") {
+		return nil, "", errors.New("action.clip: refusing to clip on a clip.* trigger (loop guard)")
+	}
+	room := resolveString(box.Config.Get("room"), bc.Bag)
+	if room == "" {
+		room = triggerRoom(bc)
+	}
+	if room == "" {
+		return nil, "", errors.New("action.clip: no room (config.room / trigger.room)")
+	}
+	ts := resolveValue(box.Config.Get("eventTs"), bc.Bag)
+	if s, ok := ts.(string); y.IsNullish(ts) || (ok && strings.TrimSpace(s) == "") {
+		ts = bc.Trigger.Payload.Get("ts")
+	}
+	if y.IsNullish(ts) {
+		ts = deps.Now()
+	}
+	secs := func(k string, fallback float64) float64 {
+		n := y.ToNumber(resolveValue(box.Config.Get(k), bc.Bag))
+		if finite(n) && n >= 0 {
+			return n
+		}
+		return fallback
+	}
+	out, err := deps.Clip(ctx, ClipInput{
+		App: bc.App, Room: room, EventTs: ts, Before: secs("before", 10), After: secs("after", 10),
+		Wait: y.Truthy(resolveValue(box.Config.Get("wait"), bc.Bag)), Event: bc.Trigger.Event, Payload: bc.Trigger.Payload,
+		WorkflowID: bc.WorkflowID, RunID: bc.RunID,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	res := obj("clipId", out.ClipID, "status", out.Status, "from", out.From, "to", out.To)
+	if out.VodID != nil {
+		res.Set("vodId", float64(*out.VodID))
+	}
+	if out.URL != nil {
+		res.Set("url", *out.URL)
+	}
+	if out.Error != nil {
+		res.Set("error", *out.Error)
+	}
+	return res, "out", nil
+}
+
 func s3Exec(ctx context.Context, box BoxNode, bc *BoxContext, deps *Deps) (any, string, error) {
 	content := resolveValue(box.Config.Get("content"), bc.Bag)
 	var body []byte
@@ -462,11 +537,44 @@ func pluginExec(ctx context.Context, box BoxNode, bc *BoxContext, deps *Deps) (a
 }
 
 // ---------------------------------------------------------------------------
-// DANGEROUS execution boxes (flag-gated: streamflow.dangerousNodes)
+// DANGEROUS execution boxes (operator-gated: STREAMHUB_STREAMFLOW_DANGEROUS)
 // ---------------------------------------------------------------------------
 
-// dangerousTypes are refused unless the app enabled execution nodes.
+// dangerousTypes are refused unless the operator enabled execution nodes for
+// the app.
 var dangerousTypes = map[string]bool{"action.code": true, "action.shell": true, "action.ssh": true, "action.db": true}
+
+// DangerousEnv is the operator allowlist of apps whose workflows may run
+// execution boxes: `app1,app2` or `*`. Empty (the default) = none. It
+// replaces the tenant-editable `dangerousNodes` plugin flag (3.3.3): a
+// tenant config can never put code on the host.
+const DangerousEnv = "STREAMHUB_STREAMFLOW_DANGEROUS"
+
+// DangerousAllowed parses a DangerousEnv value into the per-app predicate.
+func DangerousAllowed(raw string) func(app string) bool {
+	set := map[string]bool{}
+	for _, a := range strings.Split(raw, ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			set[a] = true
+		}
+	}
+	return func(app string) bool { return set["*"] || (app != "" && set[app]) }
+}
+
+// dangerousBoxTypes lists the execution box types a graph carries (sorted,
+// de-duplicated; nil when none).
+func dangerousBoxTypes(graph any) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, b := range normalizeGraph(graph).Boxes {
+		if t := boxType(b); dangerousTypes[t] && !seen[t] {
+			seen[t] = true
+			out = append(out, t)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
 
 const (
 	codeTimeoutDefault  = 5_000
@@ -481,7 +589,7 @@ const (
 
 func assertDangerous(bc *BoxContext, typ string) error {
 	if !bc.DangerousEnabled {
-		return fmt.Errorf("%s: execution nodes are disabled (enable streamflow.dangerousNodes)", typ)
+		return fmt.Errorf("%s: execution nodes are disabled for this app (operator setting %s)", typ, DangerousEnv)
 	}
 	return nil
 }
@@ -666,6 +774,7 @@ var executors = map[string]Executor{
 	"trigger.mqtt":     triggerExec,
 	"trigger.manual":   triggerExec,
 	"action.snapshot":  snapshotExec,
+	"action.clip":      clipExec,
 	"action.s3":        s3Exec,
 	"action.http":      httpExec,
 	"action.ai":        aiExec,

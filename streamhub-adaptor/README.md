@@ -154,7 +154,7 @@ Apps that only handle the AntMedia set simply never see them.
 | `activeSpeakersChanged` | `RoomEvent.ActiveSpeakersChanged` | `{ speakers: string[] }` (identities, loudest first) — drive a speaker highlight |
 | `audioPlaybackStatusChanged` | `RoomEvent.AudioPlaybackStatusChanged` | `{ canPlayback: boolean }` — `false` when Safari/iOS blocked audio autoplay. The adaptor auto-arms a one-shot first-gesture unlock (`room.startAudio()`); apps can also call `adaptor.startAudioPlayback()` from their own tap handler. |
 
-### Safari / iOS behaviour (see `https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT`)
+### Safari / iOS behaviour (see `streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md`)
 
 - **Codec:** publishes **H.264 by default** (`videoCodec` option) — hardware
   encode/decode on every Apple device, AntMedia-compatible.

@@ -35,6 +35,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
+
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
 )
 
 //go:embed migrations
@@ -201,7 +203,7 @@ func dsn(file string) string {
 }
 
 func (s *Service) open(ctx context.Context, file string, migrations []string, label string) (*sql.DB, error) {
-	if err := os.MkdirAll(filepath.Dir(file), 0o775); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), fsperm.AppRoot); err != nil {
 		return nil, fmt.Errorf("%s: mkdir: %w", label, err)
 	}
 	h, err := sql.Open("sqlite", dsn(file))
@@ -212,7 +214,7 @@ func (s *Service) open(ctx context.Context, file string, migrations []string, la
 	// queries every returned conn is closed and the next request reopens one,
 	// re-running the DSN pragmas (journal_mode re-parses the whole schema in
 	// pure Go). Under load that churn ate >50% CPU and collapsed the API at
-	// ~2.6k RPS (internal design notes).
+	// ~2.6k RPS (planning/GO-CORE-BENCHMARK.md).
 	h.SetMaxIdleConns(maxIdleConns)
 	h.SetConnMaxIdleTime(5 * time.Minute)
 	if err := s.migrate(ctx, h, migrations, label); err != nil {

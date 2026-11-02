@@ -21,11 +21,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 // StreamRecord is the shared-contract StreamRecord (JSON as Node returns it).
@@ -42,7 +43,20 @@ type StreamRecord struct {
 	LastStatsJSON *string `json:"lastStatsJson"`
 	// Viewers is present only on detail reads with features.viewerCounter on.
 	Viewers *int `json:"viewers,omitempty"`
+	// SourceDevice names the field-device channel feeding the room (E6);
+	// absent unless the device plane links one, so the Node contract holds.
+	SourceDevice *SourceDevice `json:"sourceDevice,omitempty"`
 }
+
+// SourceDevice is the device channel feeding a stream's room.
+type SourceDevice struct {
+	DeviceID string `json:"deviceId"`
+	Name     string `json:"name"`
+	Channel  string `json:"channel"`
+}
+
+// SourceDevices maps an app's linked rooms to their device channel.
+type SourceDevices func(ctx context.Context, app string) map[string]SourceDevice
 
 // RoomLiveStats is one room of the per-app live aggregate.
 type RoomLiveStats struct {
@@ -101,6 +115,28 @@ type Service struct {
 	log     *slog.Logger
 	capture CaptureFunc
 	now     func() time.Time
+	snaps   *snapLimiter
+	// sources resolves sourceDevice (nil = no device plane); bound at boot.
+	sources SourceDevices
+}
+
+// SetSourceDevices binds the device plane's room → channel lookup (boot
+// wiring only, before any request).
+func (s *Service) SetSourceDevices(f SourceDevices) { s.sources = f }
+
+func (s *Service) annotateSources(ctx context.Context, app string, recs []StreamRecord) {
+	if s.sources == nil || len(recs) == 0 {
+		return
+	}
+	m := s.sources(ctx, app)
+	if len(m) == 0 {
+		return
+	}
+	for i := range recs {
+		if sd, ok := m[recs[i].Room]; ok {
+			recs[i].SourceDevice = &sd
+		}
+	}
 }
 
 // New builds the service.
@@ -108,6 +144,7 @@ func New(d Deps) *Service {
 	s := &Service{
 		cfg: d.Config, store: d.Store, global: d.Global, apps: d.Apps, s3: d.S3,
 		opt: d.Opt, log: d.Log, capture: d.Capture, now: d.Now,
+		snaps: newSnapLimiter(SnapshotMaxGlobal, SnapshotMaxPerApp),
 	}
 	if s.capture == nil {
 		s.capture = s.ffmpegCapture
@@ -253,6 +290,7 @@ func (s *Service) List(ctx context.Context, appName string) ([]StreamRecord, err
 	for _, r := range rows {
 		out = append(out, r.record())
 	}
+	s.annotateSources(ctx, appName, out)
 	return out, nil
 }
 
@@ -308,7 +346,9 @@ func (s *Service) Get(ctx context.Context, appName, streamID string) (*StreamRec
 			m.SetViewers(appName, row.room.String, float64(*viewers))
 		}
 	}
-	return &rec, nil
+	one := []StreamRecord{rec}
+	s.annotateSources(ctx, appName, one)
+	return &one[0], nil
 }
 
 // StreamRoom is streams.get(app, id)?.room ("" when absent).
@@ -730,8 +770,13 @@ type snapshotEvent struct {
 }
 
 func (s *Service) captureUpload(ctx context.Context, app *appRow, room, streamID, source string) (*SnapshotResult, error) {
+	release, err := s.snaps.acquire(app.name)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	dir := filepath.Join(s.cfg.DataDir, "apps", app.name, "snapshots")
-	if err := os.MkdirAll(dir, 0o777); err != nil {
+	if err := os.MkdirAll(dir, fsperm.EgressWritable); err != nil {
 		return nil, httpx.Unavailable(fmt.Sprintf("cannot create snapshots dir: Error: %s", err))
 	}
 	stamp := strings.NewReplacer(":", "-", ".", "-").Replace(jsx.ISO(s.now()))

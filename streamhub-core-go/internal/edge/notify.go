@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/notifications"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/notifications"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Notifier is the EDGE_NOTIFIER seam the watchdog / alerter fire through.

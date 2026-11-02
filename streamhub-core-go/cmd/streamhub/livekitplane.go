@@ -2,17 +2,19 @@ package main
 
 import (
 	"context"
+	"time"
 
 	lkproto "github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/callbacks"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/callbacks"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/playback"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
 )
 
 // The livekit plane: the LiveKit SDK wrapper (rooms, ingress, egress, data,
@@ -26,19 +28,26 @@ import (
 // passthrough and ws-ingest planes share), "ingressBackup"
 // (*livekit.IngressBackup).
 //
+// Needs "playback" (*playback.Guard: geo, play-auth webhook and the HLS
+// token on the anonymous token routes).
+//
 // Optional collaborators are resolved at CALL time (Node's lazy ModuleRef),
 // so planes wired later are picked up: "logs", "callbacks", "streams",
 // "recording", "restream", "netmetrics", "passthrough" (each must satisfy
-// the narrow interface in internal/livekit/deps.go) and "hwaccel"
-// (*system.HwAccel, adapted below).
+// the narrow interface in internal/livekit/deps.go), "hwaccel"
+// (*system.HwAccel, adapted below) and "cluster.hlsedge" (the cdn-edge base
+// of the hls-token / sign playlist URLs).
+//
+// Background work (starter): the features.max_bitrate_accept ingress sweep.
 func init() {
 	registerPlane(40, "livekit", func(ctx context.Context, c *core) error {
 		hw := lazy[*system.HwAccel](c, "hwaccel")
 		m := livekit.New(livekit.Deps{
 			Config: c.cfg, Store: c.store, Log: c.log,
-			Apps:   need[contracts.AppsService](c, "apps"),
-			Quotas: need[*quotas.Service](c, "quotas"),
-			Audit:  need[*audit.Service](c, "audit"),
+			Apps:     need[contracts.AppsService](c, "apps"),
+			Quotas:   need[*quotas.Service](c, "quotas"),
+			Audit:    need[*audit.Service](c, "audit"),
+			Playback: need[*playback.Guard](c, "playback"),
 			Optional: livekit.Optional{
 				Logs:        lazy[livekit.Logs](c, "logs"),
 				Callbacks:   lazy[livekit.Callbacks](c, "callbacks"),
@@ -47,6 +56,9 @@ func init() {
 				Restream:    lazy[livekit.Restream](c, "restream"),
 				NetMetrics:  lazy[livekit.NetMetrics](c, "netmetrics"),
 				Passthrough: lazy[livekit.Passthrough](c, "passthrough"),
+				// stream-health's source-audio sink (devices plane, wired later)
+				SourceTracks: lazy[livekit.SourceTracks](c, "streamhealth.sources"),
+				HLSEdge:      lazy[livekit.HLSEdge](c, "cluster.hlsedge"),
 				HwAccel: func() livekit.HwAccel {
 					if h := hw(); h != nil {
 						return hwAccel{h}
@@ -59,7 +71,10 @@ func init() {
 		provide[streams.Egress](c, "livekit.hls", hlsEgress{m.Service()})
 		provide(c, "ingressAuth", m.Auth)
 		provide(c, "ingressBackup", m.Backup)
+		provide(c, "livekit.module", m) // the ingress routes' logic for internal callers (devices)
 		c.modules = append(c.modules, m)
+		// The maxBitrateAccept sweep (no-op while no app sets a cap).
+		c.starters = append(c.starters, m.Start)
 		return nil
 	})
 }
@@ -106,7 +121,7 @@ func (e hlsEgress) StartHlsEgress(ctx context.Context, in streams.StartHlsEgress
 	if err != nil {
 		return nil, err
 	}
-	return &streams.HlsEgressInfo{EgressID: info.EgressID, Status: info.Status, RoomName: info.RoomName}, nil
+	return &streams.HlsEgressInfo{EgressID: info.EgressID, Status: info.Status, RoomName: info.RoomName, StartedAt: nsTime(info.StartedAtNs)}, nil
 }
 
 func (e hlsEgress) ListHlsEgress(ctx context.Context, roomPrefix string) ([]streams.HlsEgressInfo, error) {
@@ -116,9 +131,17 @@ func (e hlsEgress) ListHlsEgress(ctx context.Context, roomPrefix string) ([]stre
 	}
 	out := make([]streams.HlsEgressInfo, 0, len(list))
 	for _, i := range list {
-		out = append(out, streams.HlsEgressInfo{EgressID: i.EgressID, Status: i.Status, RoomName: i.RoomName})
+		out = append(out, streams.HlsEgressInfo{EgressID: i.EgressID, Status: i.Status, RoomName: i.RoomName, StartedAt: nsTime(i.StartedAtNs)})
 	}
 	return out, nil
+}
+
+// nsTime is a LiveKit unix-ns timestamp; 0 (not reported) stays the zero time.
+func nsTime(ns int64) time.Time {
+	if ns <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, ns)
 }
 
 func (e hlsEgress) StopEgress(ctx context.Context, egressID string) (*streams.EgressInfo, error) {

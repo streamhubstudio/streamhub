@@ -10,7 +10,7 @@ package main
 import (
 	"os"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/mcpserver"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/mcpserver"
 )
 
 func main() {

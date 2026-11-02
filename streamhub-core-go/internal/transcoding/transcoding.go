@@ -12,12 +12,13 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/apps"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
 )
 
 // HwAccel is the per-app GPU preference store (system.HwAccel).
@@ -188,6 +189,7 @@ func patchRules(b *validate.Body) {
 		for _, k := range featureFlags {
 			f.Optional(k).IsBoolean()
 		}
+		apps.PublisherFeatureRules(f)
 	})
 	b.Optional("hwaccel").IsIn("auto", "gpu", "cpu")
 	b.Optional("transcodingEnabled").IsBoolean()
@@ -272,6 +274,7 @@ func (s *Service) UpdateConfig(ctx context.Context, app string, b *validate.Body
 			RtmpPassword: fb("rtmpPassword"), ViewerCounter: fb("viewerCounter"), Chat: fb("chat"), Reactions: fb("reactions"),
 			HiddenQc: fb("hiddenQc"), AdaptivePlayer: fb("adaptivePlayer"), PublicPlayback: fb("publicPlayback"),
 		}
+		apps.PublisherFeaturePatch(f, patch.Features)
 	}
 	if v := b.StringPtr("hwaccel"); v != nil && s.hw != nil {
 		if _, err := s.hw.SetMode(app, *v); err != nil {

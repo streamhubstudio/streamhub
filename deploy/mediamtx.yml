@@ -67,7 +67,13 @@ moq: false
 rtsp: false
 hls: false
 webrtc: false
+# SRT (E2) — off here; the deploy turns it on with the MTX_SRT env override
+# when the core runs with STREAMHUB_MEDIAMTX_SRT_ENABLE (compose / mediamtx.env).
+# Encoders then push srt://host:8890?streamid=publish:<app>/<ptk_key>; the auth
+# hook below checks the key (path <app>/<key>) like an RTMP push, and an SRT
+# `read` passes only from loopback (the core's own ffmpeg pulling it to HLS).
 srt: false
+srtAddress: :8890
 
 # --- Authentication ----------------------------------------------------------
 # Delegate every publish/read decision to the core over loopback. The core keys

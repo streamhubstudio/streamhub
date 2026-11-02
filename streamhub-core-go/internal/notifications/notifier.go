@@ -15,10 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/email"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/email"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 const (
@@ -71,7 +72,12 @@ type Poster interface {
 }
 
 // HTTPPoster is the real Poster.
-type HTTPPoster struct{ Client *http.Client }
+type HTTPPoster struct{ Client *http.Client } // nil = safeClient
+
+// safeClient posts the webhooks: the Discord URL is per-app config.yaml, so
+// the dial re-checks the resolved IP and redirects are re-vetted (the
+// STREAMHUB_CALLBACK_ALLOW_HOSTS exemptions apply).
+var safeClient = security.SafeHTTPClient(nil)
 
 // PostJSON implements Poster; the response status is not checked (as fetch).
 func (p HTTPPoster) PostJSON(ctx context.Context, url string, body any) error {
@@ -88,7 +94,7 @@ func (p HTTPPoster) PostJSON(ctx context.Context, url string, body any) error {
 	req.Header.Set("content-type", "application/json")
 	c := p.Client
 	if c == nil {
-		c = http.DefaultClient
+		c = safeClient
 	}
 	res, err := c.Do(req)
 	if err != nil {

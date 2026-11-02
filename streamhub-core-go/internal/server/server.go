@@ -8,14 +8,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/web"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/web"
 )
 
 // Deps are the cross-cutting pieces the handler needs.
@@ -24,6 +25,7 @@ type Deps struct {
 	Log     *slog.Logger
 	Authn   api.Authenticator // nil until the auth module is wired
 	Counter web.ByteCounter   // optional (net-metrics)
+	HLSGate web.HLSGate       // optional (signed HLS + geo: the playback plane)
 	Modules []api.Module
 	// APIHooks run right after the auth guard is installed, before any
 	// module registers (e.g. the authz PermissionGuard middleware).
@@ -37,7 +39,11 @@ type Deps struct {
 // Handler builds the full http.Handler.
 func Handler(d Deps) http.Handler {
 	mux := http.NewServeMux()
-	a := api.New(mux, version.Get())
+	var apiOpts []func(*huma.Config)
+	if !d.Config.EnvBool("STREAMHUB_API_DOCS_PUBLIC", true) {
+		apiOpts = append(apiOpts, api.NoDocs)
+	}
+	a := api.New(mux, version.Get(), apiOpts...)
 	api.UseAuth(a, d.Authn, d.Config.IsProduction())
 	for _, h := range d.APIHooks {
 		h(a)
@@ -46,11 +52,14 @@ func Handler(d Deps) http.Handler {
 		m.Register(a)
 	}
 	web.Mount(mux, web.Options{
-		DataDir: d.Config.DataDir,
-		SDKDir:  d.Config.Env("SDK_DIR"),
-		WebDir:  webDir(d.Config),
-		HLSCDN:  d.Config.EnvBool("STREAMHUB_HLS_CDN", false),
-		Counter: d.Counter,
+		DataDir:      d.Config.DataDir,
+		SDKDir:       d.Config.Env("SDK_DIR"),
+		WebDir:       webDir(d.Config),
+		HLSCDN:       d.Config.EnvBool("STREAMHUB_HLS_CDN", false),
+		HLSCache:     &web.HLSCachePolicy{SegmentS: d.Config.HLSSegmentS, PlaylistMaxAge: d.Config.HLSPlaylistMaxAge},
+		Counter:      d.Counter,
+		DashboardCSP: dashboardCSP(d.Config),
+		Gate:         d.HLSGate,
 	})
 	mws := []func(http.Handler) http.Handler{
 		httpx.Recover(d.Log),
@@ -64,6 +73,19 @@ func Handler(d Deps) http.Handler {
 	// access log still cover the samples host and its redirects.
 	inner := web.SamplesOrigin(httpx.ExpressRouting(mux), d.Config.SamplesURL, config.Origin(d.Config.PublicBaseURL))
 	return httpx.Chain(inner, append(mws, httpx.WithRequest)...)
+}
+
+// dashboardCSP: STREAMHUB_DASHBOARD_CSP verbatim, "off" = no CSP and no
+// X-Frame-Options, unset = web.DashboardCSP over PUBLIC_WS_URL.
+func dashboardCSP(c *config.Config) string {
+	v := strings.TrimSpace(c.Env("STREAMHUB_DASHBOARD_CSP"))
+	switch {
+	case strings.EqualFold(v, "off"):
+		return ""
+	case v != "":
+		return v
+	}
+	return web.DashboardCSP(c.PublicWsURL)
 }
 
 // webDir: $WEB_DIR, else ./web next to the binary, else ./web in the cwd.

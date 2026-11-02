@@ -244,7 +244,10 @@
         "data.tokenUrl",
         "data.playUrl",
         "data.embedUrl",
-        "data.iframe"
+        "data.iframe",
+        "data.hlsExp",
+        "data.hlsToken",
+        "data.hlsUrl"
       ]
     },
     {
@@ -260,7 +263,10 @@
         "data.tokenUrl",
         "data.playUrl",
         "data.embedUrl",
-        "data.iframe"
+        "data.iframe",
+        "data.hlsExp",
+        "data.hlsToken",
+        "data.hlsUrl"
       ]
     },
     {

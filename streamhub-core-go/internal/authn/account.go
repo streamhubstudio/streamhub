@@ -3,21 +3,24 @@ package authn
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/skip2/go-qrcode"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // "Mi cuenta" (account.service.ts): self-service for the signed-in HUMAN
@@ -31,6 +34,7 @@ type AccountInfo struct {
 	User struct {
 		ID               string  `json:"id"`
 		Email            *string `json:"email"`
+		PendingEmail     *string `json:"pendingEmail,omitempty"` // requested change awaiting confirmation
 		Name             *string `json:"name"`
 		IsSuperadmin     bool    `json:"isSuperadmin"`
 		HasPassword      bool    `json:"hasPassword"`
@@ -87,6 +91,7 @@ func (s *Service) GetAccount(ctx context.Context, p *auth.Principal) (*AccountIn
 	}
 	var a AccountInfo
 	a.User.ID, a.User.Email, a.User.Name = u.ID, u.Email, u.Name
+	a.User.PendingEmail = s.pendingEmail(ctx, u.ID)
 	a.User.IsSuperadmin = u.IsSuperadmin || p.IsSuperadmin
 	a.User.HasPassword = hasPassword(u)
 	a.User.TwoFactorEnabled = s.TotpEnabled(ctx, u.ID)
@@ -105,7 +110,26 @@ func (s *Service) GetAccount(ctx context.Context, p *auth.Principal) (*AccountIn
 
 var accountEmailRe = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
-// UpdateAccount patches name and/or email (nil = untouched).
+// emailAvailable: e (normalized) is not another user's, the break-glass
+// admin's or the superadmin's. Checked when a change is requested AND when
+// it is confirmed.
+func (s *Service) emailAvailable(ctx context.Context, userID, e string) error {
+	if taken := s.tenancy.GetUserByEmail(ctx, e); taken != nil && taken.ID != userID {
+		return httpx.BadRequest("email already in use")
+	}
+	if s.cfg.AdminUser != "" && e == strings.ToLower(strings.TrimSpace(s.cfg.AdminUser)) {
+		return httpx.BadRequest("email already in use")
+	}
+	if sa := s.superadminEmail(); sa != "" && e == sa {
+		return httpx.BadRequest("email already in use")
+	}
+	return nil
+}
+
+// UpdateAccount patches the name (nil = untouched) and REQUESTS an email
+// change: the new address only replaces the current one once the link
+// mailed to it is followed (POST /auth/magic/verify). Until then the
+// response carries it as user.pendingEmail.
 func (s *Service) UpdateAccount(ctx context.Context, p *auth.Principal, name, email *string) (*AccountInfo, error) {
 	u, err := s.requireUser(ctx, p)
 	if err != nil {
@@ -131,13 +155,12 @@ func (s *Service) UpdateAccount(ctx context.Context, p *auth.Principal, name, em
 			current = strings.ToLower(*u.Email)
 		}
 		if e != current {
-			if taken := s.tenancy.GetUserByEmail(ctx, e); taken != nil && taken.ID != u.ID {
-				return nil, httpx.BadRequest("email already in use")
+			if err := s.emailAvailable(ctx, u.ID, e); err != nil {
+				return nil, err
 			}
-			if s.cfg.AdminUser != "" && e == strings.ToLower(strings.TrimSpace(s.cfg.AdminUser)) {
-				return nil, httpx.BadRequest("email already in use")
+			if err := s.requestEmailChange(ctx, u, e); err != nil {
+				return nil, err
 			}
-			patch.Email = &e
 		}
 	}
 	if err := s.tenancy.UpdateProfile(ctx, u.ID, patch); err != nil {
@@ -145,6 +168,69 @@ func (s *Service) UpdateAccount(ctx context.Context, p *auth.Principal, name, em
 	}
 	s.log.Info("account updated for user " + u.ID)
 	return s.GetAccount(ctx, p)
+}
+
+// requestEmailChange mints the kind='email_change' token (one live per user,
+// 60s cooldown), mails its link to the NEW address and a notice to the
+// current one — both over the global SMTP. A confirmation that can't be
+// delivered is withdrawn: the change could never be confirmed.
+func (s *Service) requestEmailChange(ctx context.Context, u *tenancy.User, e string) error {
+	if wait := s.emailChangeCooldown(ctx, u.ID); wait > 0 {
+		return &httpx.Error{Status: http.StatusTooManyRequests, Body: cooldownBody{
+			http.StatusTooManyRequests, fmt.Sprintf("Please wait %ds before requesting another email change.", wait), "Too Many Requests", wait,
+		}}
+	}
+	if _, err := s.db.ExecContext(ctx, `UPDATE magic_tokens SET used = 1, used_at = datetime('now')
+          WHERE user_id = ? AND kind = ? AND used = 0`, u.ID, kindEmailChange); err != nil {
+		return err
+	}
+	token := auth.RandomToken(32)
+	hash := auth.HashToken(token)
+	now := s.now()
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO magic_tokens (token_hash, email, request_ip, created_at, expires_at, kind, user_id)
+         VALUES (?, ?, NULL, ?, ?, ?, ?)`, hash, e, jsx.ISO(now), jsx.ISO(now.Add(emailChangeTTL)), kindEmailChange, u.ID); err != nil {
+		return err
+	}
+	if res := s.mailer.SendEmailChange(ctx, e, s.buildMagicURL(token)); !res.OK {
+		_, _ = s.db.ExecContext(ctx, `UPDATE magic_tokens SET used = 1, used_at = datetime('now') WHERE token_hash = ?`, hash)
+		if res.Skipped {
+			return httpx.Unavailable("email change needs the global SMTP (STREAMHUB_SMTP_HOST + STREAMHUB_SMTP_PASS)")
+		}
+		return httpx.Unavailable("could not send the confirmation email")
+	}
+	if u.Email != nil && *u.Email != "" {
+		s.mailer.SendEmailChangeNotice(ctx, *u.Email, e)
+	}
+	s.log.Info(fmt.Sprintf("email change requested for user %s → <%s>", u.ID, maskEmail(e)))
+	return nil
+}
+
+func (s *Service) emailChangeCooldown(ctx context.Context, userID string) int {
+	var last sql.NullString
+	if err := s.db.QueryRowContext(ctx, `SELECT MAX(created_at) AS last FROM magic_tokens
+          WHERE user_id = ? AND kind = ?`, userID, kindEmailChange).Scan(&last); err != nil || !last.Valid {
+		return 0
+	}
+	t, ok := jsx.ParseDate(last.String)
+	if !ok {
+		return 0
+	}
+	return max(0, int(math.Ceil(float64(resendCooldownSec)-s.now().Sub(t).Seconds())))
+}
+
+// pendingEmail is the address of the user's live (unused, unexpired)
+// email-change request, nil when none.
+func (s *Service) pendingEmail(ctx context.Context, userID string) *string {
+	var email, expiresAt string
+	if err := s.db.QueryRowContext(ctx, `SELECT email, expires_at FROM magic_tokens
+          WHERE user_id = ? AND kind = ? AND used = 0 ORDER BY id DESC LIMIT 1`, userID, kindEmailChange).
+		Scan(&email, &expiresAt); err != nil {
+		return nil
+	}
+	if exp, ok := jsx.ParseDate(expiresAt); !ok || !s.now().Before(exp) {
+		return nil
+	}
+	return &email
 }
 
 // ChangePassword requires the current password.
@@ -169,10 +255,28 @@ func (s *Service) ChangePassword(ctx context.Context, p *auth.Principal, current
 	if err != nil {
 		return err
 	}
-	if err := s.tenancy.SetPassword(ctx, u.ID, hash); err != nil {
+	if err := s.setPassword(ctx, u.ID, hash, p.SessionID); err != nil {
 		return err
 	}
 	s.log.Info("password changed for user " + u.ID)
+	return nil
+}
+
+// setPassword stores the hash and ends every session of the user but keepSID
+// ("" = all): whoever signed in with the old password — or stole one of its
+// sessions — is out once it changes (3.3.4). Every path that sets a password
+// goes through here.
+func (s *Service) setPassword(ctx context.Context, userID, hash, keepSID string) error {
+	if err := s.tenancy.SetPassword(ctx, userID, hash); err != nil {
+		return err
+	}
+	n, err := s.Sessions.RevokeOthers(ctx, userID, keepSID)
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		s.log.Info(fmt.Sprintf("password set for user %s: %d other session(s) revoked", userID, n))
+	}
 	return nil
 }
 
@@ -197,21 +301,36 @@ func (s *Service) SetupTwoFa(ctx context.Context, p *auth.Principal) (*TwoFaSetu
 	return &TwoFaSetup{setup.Secret, setup.OtpauthURI, qr}, nil
 }
 
-// EnableTwoFa / DisableTwoFa act on the caller's own user.
+// EnableTwoFa / DisableTwoFa act on the caller's own user. A wrong code
+// counts against the account's throttle (M3).
 func (s *Service) EnableTwoFa(ctx context.Context, p *auth.Principal, code string) error {
-	u, err := s.requireUser(ctx, p)
-	if err != nil {
-		return err
-	}
-	return s.TotpEnable(ctx, u.ID, code)
+	return s.throttledCode(ctx, p, code, s.TotpEnable)
 }
 
 func (s *Service) DisableTwoFa(ctx context.Context, p *auth.Principal, code string) error {
+	return s.throttledCode(ctx, p, code, s.TotpDisable)
+}
+
+func (s *Service) throttledCode(ctx context.Context, p *auth.Principal, code string, fn func(context.Context, string, string) error) error {
 	u, err := s.requireUser(ctx, p)
 	if err != nil {
 		return err
 	}
-	return s.TotpDisable(ctx, u.ID, code)
+	if err := s.throttle.Attempt(strPtr(httpx.ClientIP(api.Request(ctx)))); err != nil {
+		return err
+	}
+	key := accountKey(u.Email, u.ID)
+	if err := s.throttle.Locked(key); err != nil {
+		return err
+	}
+	err = fn(ctx, u.ID, code)
+	switch {
+	case err == nil:
+		s.throttle.Succeed(key)
+	case err.Error() == invalidCode:
+		s.throttle.Fail(key)
+	}
+	return err
 }
 
 // GetSmtp is the masked per-user SMTP override.

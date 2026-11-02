@@ -1,5 +1,5 @@
 // Command loadgen is the Node-vs-Go core benchmark driver
-// (internal design notes). Modes:
+// (planning/GO-CORE-BENCHMARK.md). Modes:
 //
 //	feeder  fake live HLS room: writes a 1–2 MB .ts segment every -seg and
 //	        atomically rewrites index.m3u8 (sliding window of 6)

@@ -54,5 +54,5 @@ congestion control default ya operan cerca del óptimo en red buena. El tuning
 (buffers UDP 16MB, playout delay bajo, aislar egress) protege el **p95/p99 bajo
 carga**, no el p50 en vacío.
 
-(HLS y RTMP: ver `https://streamhub.studio/docs/features/hls-live` y las mediciones del
+(HLS y RTMP: ver `streamhub-docs/features/hls-live.md` y las mediciones del
 informe G1 — órdenes de magnitud mayores por naturaleza del protocolo.)

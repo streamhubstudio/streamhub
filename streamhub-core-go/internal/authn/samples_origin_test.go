@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/server"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/server"
 )
 
 // GET /auth/config tells the SPA where samples live; the field is omitted

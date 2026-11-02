@@ -58,7 +58,8 @@
     "hlsUrl": "HLS URL (.m3u8)",
     "videojs": "video.js snippet",
     "signedEmbed": "Signed embed (expiring)",
-    "signedEmbedHelp": "Tokenized iframe — required for private-playback apps.",
+    "signedEmbedHelp": "Tokenized iframe / HLS URL — required for private-playback apps.",
+    "signedHls": "Signed HLS URL (expiring)",
     "signing": "Signing…",
     "signError": "Failed"
   },

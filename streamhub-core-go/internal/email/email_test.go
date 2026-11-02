@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // Ports email.service.spec.ts, email.service.precedence.spec.ts and
@@ -136,6 +136,13 @@ func TestInviteMessage(t *testing.T) {
 	s.SendInvite(context.Background(), "x@y.com", "https://u", InviteOptions{}, nil)
 	if tr.calls[1].msg.Subject != "You've been invited to a StreamHub team on StreamHub" {
 		t.Fatal(tr.calls[1].msg.Subject)
+	}
+	// An existing account (M2) is pointed at the page where it accepts; no
+	// one-time-link wording.
+	s.SendInvite(context.Background(), "x@y.com", "https://d/account", InviteOptions{TeamName: "T", Existing: true}, nil)
+	if m := tr.calls[2].msg; !strings.Contains(m.Text, "accept (or decline) it from your account page:\n\nhttps://d/account") ||
+		strings.Contains(m.Text, "72 hours") || strings.Contains(m.HTML, "72 hours") {
+		t.Fatalf("%+v", m)
 	}
 }
 

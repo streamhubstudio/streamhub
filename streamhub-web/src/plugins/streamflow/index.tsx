@@ -939,12 +939,6 @@ export default definePlugin({
         min: 1,
         max: 100000,
       },
-      {
-        key: 'dangerousNodes',
-        type: 'boolean',
-        label: 'Enable execution nodes (code / ssh / shell / db)',
-        default: false,
-      },
     ],
   },
   TabComponent: StreamflowTab,

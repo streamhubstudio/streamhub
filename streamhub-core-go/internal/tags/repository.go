@@ -15,9 +15,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // SlugRE is TAG_SLUG_RE: kebab-case, lowercase alphanumerics in hyphen groups.

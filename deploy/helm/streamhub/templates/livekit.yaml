@@ -1,0 +1,116 @@
+{{- $fullname := include "streamhub.fullname" . -}}
+{{- $l := .Values.livekit -}}
+# LiveKit server — host networking: WebRTC media (7881/tcp, 7882/udp) goes
+# straight to the node IP, and the advertised ICE candidates must be that IP
+# (use_external_ip → STUN). Host ports ⇒ at most ONE pod per node: the
+# required anti-affinity + the declared ports make the scheduler enforce it,
+# and the rollout replaces pods in place (maxSurge 0).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-livekit
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: livekit
+spec:
+  replicas: {{ $l.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
+  selector:
+    matchLabels:
+      {{- include "streamhub.selector" (list . "livekit") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "streamhub.selector" (list . "livekit") | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      hostNetwork: {{ $l.hostNetwork }}
+      dnsPolicy: {{ ternary "ClusterFirstWithHostNet" "ClusterFirst" $l.hostNetwork }}
+      {{- include "streamhub.mediaScheduling" (list . $l) | nindent 6 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "streamhub.selector" (list . "livekit") | nindent 18 }}
+        {{- with $l.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: livekit
+          image: {{ include "streamhub.image" $l.image }}
+          imagePullPolicy: {{ $l.image.pullPolicy }}
+          ports:
+            - { name: signal, containerPort: {{ $l.port }}, protocol: TCP }
+            - { name: rtc-tcp, containerPort: {{ $l.rtcTcpPort }}, protocol: TCP }
+            - { name: rtc-udp, containerPort: {{ $l.rtcUdpPort }}, protocol: UDP }
+            - { name: metrics, containerPort: {{ $l.prometheusPort }}, protocol: TCP }
+          env:
+            {{- include "streamhub.livekitSecretEnv" . | nindent 12 }}
+            # Same config as docker-compose.yml's LIVEKIT_CONFIG; $(VAR) is
+            # expanded by the kubelet from the secret env above, so the keys
+            # never sit in a ConfigMap (and existingSecret just works).
+            - name: LIVEKIT_CONFIG
+              value: |
+                port: {{ $l.port }}
+                bind_addresses: [""]
+                rtc:
+                  tcp_port: {{ $l.rtcTcpPort }}
+                  udp_port: {{ $l.rtcUdpPort }}
+                  use_external_ip: {{ $l.useExternalIP }}
+                redis:
+                  address: {{ include "streamhub.redisAddress" . }}
+                  password: $(REDIS_PASSWORD)
+                keys:
+                  $(LIVEKIT_API_KEY): $(LIVEKIT_API_SECRET)
+                webhook:
+                  api_key: $(LIVEKIT_API_KEY)
+                  urls:
+                    - {{ include "streamhub.coreUrl" . }}/api/v1/webhooks/livekit
+                room:
+                  enable_remote_unmute: true
+                ingress:
+                  rtmp_base_url: rtmp://{{ include "streamhub.mediaHost" . }}:{{ .Values.livekitIngress.rtmpPort }}/live
+                  whip_base_url: http://{{ include "streamhub.mediaHost" . }}:{{ .Values.livekitIngress.whipPort }}/w
+                logging:
+                  level: {{ $l.logLevel }}
+                prometheus:
+                  port: {{ $l.prometheusPort }}
+                {{- with $l.extraConfig }}
+                {{- . | nindent 16 }}
+                {{- end }}
+          readinessProbe:
+            httpGet: { path: /, port: {{ $l.port }} }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: {{ $l.port }} }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml $l.resources | nindent 12 }}
+---
+# Signaling/API for in-cluster clients (core, ingress, egress) and the
+# Ingress' /rtc route. Endpoints are node IPs (host-network pods).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-livekit
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: livekit
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "streamhub.selector" (list . "livekit") | nindent 4 }}
+  ports:
+    - name: signal
+      port: {{ $l.port }}
+      targetPort: {{ $l.port }}

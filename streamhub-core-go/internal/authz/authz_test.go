@@ -11,10 +11,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
 )
 
 // testdata/casbin_truth_table.json is every (role, domain, resource, action)
@@ -99,9 +99,12 @@ func TestAppBelongsToTenant(t *testing.T) {
 		{owner, "mine", true},
 		{owner, "theirs", false},
 		{&auth.Principal{TenantID: "tnt_a", IsSuperadmin: true}, "theirs", true},
-		{&auth.Principal{}, "theirs", true}, // unscoped
-		{owner, "unknown", true},            // handler 404s
-		{owner, "orphan", true},             // unassigned
+		{&auth.Principal{}, "theirs", false},                   // no tenant: fails closed (3.3.4)
+		{&auth.Principal{Role: auth.RoleOwner}, "mine", false}, // idem
+		{owner, "", false}, // no app: fails closed (3.3.4)
+		{&auth.Principal{IsSuperadmin: true}, "", true}, // superadmin unaffected
+		{owner, "unknown", true},                        // handler 404s
+		{owner, "orphan", true},                         // unassigned
 	}
 	for _, c := range cases {
 		if got := s.AppBelongsToTenant(ctx, c.p, c.app); got != c.want {

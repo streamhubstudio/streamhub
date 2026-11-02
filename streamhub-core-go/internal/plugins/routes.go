@@ -11,12 +11,13 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Routes is the plugins module's HTTP surface: PluginsController (19
@@ -30,11 +31,23 @@ type Routes struct {
 	exporter     *Exporter
 	clusterToken string
 	authn        api.Authenticator // nil = no auth graph (dev): allow
+	// noLegacyToken refuses the raw cluster token where a node secret is
+	// expected (STREAMHUB_CLUSTER_LEGACY_TOKEN=off); zero = legacy accepted.
+	noLegacyToken bool
+	// nodeAuth verifies node secrets on the bundle download (nil = only the
+	// raw cluster token, as before 3.3.4).
+	nodeAuth *cluster.NodeAuth
 }
 
 // NewRoutes builds the module.
 func NewRoutes(svc *Service, versions *Versions, store *Appstore, agent *Agent, exporter *Exporter, clusterToken string, authn api.Authenticator) *Routes {
 	return &Routes{svc: svc, versions: versions, store: store, agent: agent, exporter: exporter, clusterToken: clusterToken, authn: authn}
+}
+
+// SetNodeAuth wires the per-node credentials (C5.3): legacy is
+// cluster.LegacyTokenAllowed, auth the master-side verifier.
+func (rt *Routes) SetNodeAuth(auth *cluster.NodeAuth, legacy bool) {
+	rt.nodeAuth, rt.noLegacyToken = auth, !legacy
 }
 
 // Register implements api.Module.
@@ -336,7 +349,7 @@ func (rt *Routes) registerPlugins(a huma.API) {
 // /grid (grid-agent.controller.ts) — cluster-token auth
 // ---------------------------------------------------------------------------
 
-const gridDisabled = "grid agent disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+const gridDisabled = "grid agent disabled (no node secret and STREAMHUB_CLUSTER_TOKEN unset)"
 
 func gridOp(id, method, path, summary string, status int) huma.Operation {
 	return *api.Public(&huma.Operation{
@@ -345,23 +358,68 @@ func gridOp(id, method, path, summary string, status int) huma.Operation {
 	})
 }
 
+// gate: /grid exists only on an edge node (a master or standalone answers
+// exactly like an unmounted route, 404), then the caller's credential.
+//
+// GO-DIVERGENCE (security, 3.3.4 — C5.3): the master signs with THIS node's
+// secret (vended at join: KV from join-master, else STREAMHUB_NODE_SECRET),
+// sent as X-Node-Secret (X-Cluster-Token carrying it passes too). The raw
+// cluster token in X-Cluster-Token is accepted only in legacy mode and only
+// when this node still has STREAMHUB_CLUSTER_TOKEN set (a pre-3.3.4 master).
+// 503 when the node holds neither credential, 401 otherwise.
 func (rt *Routes) gate(ctx context.Context) error {
-	return AssertClusterToken(api.Request(ctx), rt.clusterToken, gridDisabled)
+	if err := rt.gridMounted(ctx); err != nil {
+		return err
+	}
+	r := api.Request(ctx)
+	secret := ""
+	if n := rt.agent.gridNode(); n != nil {
+		if s := n.NodeSecret(ctx); s != nil {
+			secret = *s
+		}
+	}
+	legacy := !rt.noLegacyToken && rt.clusterToken != ""
+	if secret == "" && !legacy {
+		return &httpx.Error{Status: http.StatusServiceUnavailable, Body: errorOnly{gridDisabled}}
+	}
+	raw := r.Header.Get("x-cluster-token")
+	if secret != "" && (ClusterTokenMatches(r.Header.Get(cluster.NodeSecretHeader), secret) || ClusterTokenMatches(raw, secret)) {
+		return nil
+	}
+	if legacy && ClusterTokenMatches(raw, rt.clusterToken) {
+		rt.agent.warnLegacy()
+		return nil
+	}
+	return &httpx.Error{Status: http.StatusUnauthorized, Body: errorOnly{"invalid cluster token"}}
+}
+
+func (rt *Routes) gridMounted(ctx context.Context) error {
+	if rt.agent.Enabled(ctx) {
+		return nil
+	}
+	r := api.Request(ctx)
+	return httpx.NotFound("Cannot " + r.Method + " " + r.URL.RequestURI())
 }
 
 func (rt *Routes) registerGrid(a huma.API) {
 	huma.Register(a, gridOp("createWorker", http.MethodPost, "/workers", "Run an offloaded plugin worker on this node (X-Cluster-Token).", 201),
 		func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[GridWorkerView]], error) {
+			if err := rt.gridMounted(ctx); err != nil {
+				return nil, err
+			}
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
 				return nil, err
 			}
 			b.Field("pluginId").MaxLength(64).NotEmpty().IsString()
 			b.Field("appName").MaxLength(64).NotEmpty().IsString()
-			b.Field("command").MaxLength(512).NotEmpty().IsString()
-			b.Optional("args").ArrayMaxSize(256).EachIsString().IsArray()
-			b.Optional("env").IsObject()
+			b.Optional("config").IsObject()
 			b.Optional("ingestToken").MaxLength(200).IsString()
+			// GO-DIVERGENCE (security, 3.3.3): a resolved spawn spec is no
+			// longer accepted — the node resolves it from its own registry.
+			for _, k := range []string{"command", "args", "env", "cwd"} {
+				b.Optional(k).Check(false, "property "+k+" should not exist")
+			}
 			if err := b.Err(); err != nil {
 				return nil, err
 			}
@@ -369,11 +427,14 @@ func (rt *Routes) registerGrid(a huma.API) {
 				return nil, err
 			}
 			parsed, _ := y.ParseJSON(in.RawBody)
-			env, _ := prop(parsed, "env").(*y.Map)
-			return api.OK(rt.agent.Spawn(GridWorkerInput{
-				PluginID: b.String("pluginId"), AppName: b.String("appName"), Command: b.String("command"),
-				Args: b.Strings("args"), Env: env, IngestToken: b.String("ingestToken"),
-			})), nil
+			cfg, _ := prop(parsed, "config").(*y.Map)
+			v, err := rt.agent.Spawn(ctx, GridWorkerInput{
+				PluginID: b.String("pluginId"), AppName: b.String("appName"), Config: cfg, IngestToken: b.String("ingestToken"),
+			})
+			if err != nil {
+				return nil, err
+			}
+			return api.OK(v), nil
 		})
 
 	type wid struct {
@@ -505,8 +566,8 @@ func (rt *Routes) registerAppstore(a huma.API) {
 	huma.Register(a, storeOp("downloadBundle", http.MethodGet, "/{id}/versions/{v}/bundle", "Download a version bundle (superadmin sk_ OR X-Cluster-Token).", 200),
 		func(ctx context.Context, in *pv) (*bundleOut, error) {
 			r := api.Request(ctx)
-			if r.Header.Get("x-cluster-token") != "" {
-				if err := AssertClusterToken(r, rt.clusterToken, "bundle download disabled (STREAMHUB_CLUSTER_TOKEN unset)"); err != nil {
+			if r.Header.Get("x-cluster-token") != "" || r.Header.Get(cluster.NodeSecretHeader) != "" {
+				if err := rt.assertNodeForBundle(ctx, r); err != nil {
 					return nil, err
 				}
 			} else if err := rt.requireSuperadmin(ctx); err != nil {
@@ -529,6 +590,25 @@ func (rt *Routes) registerAppstore(a huma.API) {
 			}
 			return api.OK(deletedOut{true}), nil
 		})
+}
+
+const bundleDisabled = "bundle download disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+
+// assertNodeForBundle: an edge fetching an offered bundle presents its own
+// node secret (X-Node-Secret or X-Cluster-Token; the request names no node,
+// so any registered node's secret passes) — or, in legacy mode, the raw
+// cluster token (GO-DIVERGENCE, security 3.3.4 — C5.3).
+func (rt *Routes) assertNodeForBundle(ctx context.Context, r *http.Request) error {
+	if rt.nodeAuth == nil {
+		return AssertClusterToken(r, rt.clusterToken, bundleDisabled)
+	}
+	if !rt.nodeAuth.Enabled() {
+		return &httpx.Error{Status: http.StatusServiceUnavailable, Body: errorOnly{bundleDisabled}}
+	}
+	if rt.nodeAuth.CheckAny(ctx, "bundle download", r.Header.Get(cluster.NodeSecretHeader), r.Header.Get("x-cluster-token")) == cluster.CredNone {
+		return &httpx.Error{Status: http.StatusUnauthorized, Body: errorOnly{"invalid cluster token"}}
+	}
+	return nil
 }
 
 // readMultipart is FileInterceptor('bundle', 200 MB) + the text fields.

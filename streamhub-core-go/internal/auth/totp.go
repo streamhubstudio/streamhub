@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 // RFC 6238 TOTP matching the Node core's otplib `authenticator` clone:

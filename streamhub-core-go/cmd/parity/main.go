@@ -66,7 +66,7 @@ func run() int {
 	flag.BoolVar(&replay, "replay", false, "compare Go against the recorded oracle in -golden (the default mode; no Node needed)")
 	flag.BoolVar(&record, "record", false, "run only the Node oracle and (re)write -golden")
 	flag.BoolVar(&live, "live", false, "run Node and Go side by side and diff them")
-	flag.BoolVar(&o.accept, "accept", false, "replay: overwrite the golden entries of the selected cases with Go's responses (deliberate contract changes only — log them in internal design notes)")
+	flag.BoolVar(&o.accept, "accept", false, "replay: overwrite the golden entries of the selected cases with Go's responses (deliberate contract changes only — log them in planning/GO-DIVERGENCES.md)")
 	flag.StringVar(&o.nodeDir, "node", "", "legacy Node core dir (dist/main.js, node_modules, scripts/seed-token.js) — -record/-live; a checkout of legacy/node-2.x")
 	flag.StringVar(&o.nodeBin, "node-bin", "node", "node executable")
 	flag.StringVar(&o.goBin, "go", "./bin/streamhub", "Go core binary (-replay/-live)")
@@ -580,7 +580,7 @@ func writeRecording(o *options, files []*caseFile, results []*caseResult) error 
 		AppVersion:   parityVersion,
 		VendorDigest: digest,
 		VendorApps:   apps,
-		Note:         "Recorded by `go run ./cmd/parity -record`. Entries with \"source\": \"go\" were accepted from the Go core with -accept (see internal design notes).",
+		Note:         "Recorded by `go run ./cmd/parity -record`. Entries with \"source\": \"go\" were accepted from the Go core with -accept (see planning/GO-DIVERGENCES.md).",
 	})
 }
 

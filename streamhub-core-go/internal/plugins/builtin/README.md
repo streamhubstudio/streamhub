@@ -3,7 +3,7 @@
 `builtins.json` is **the source of truth** for the in-tree (built-in) plugins and
 Studio Apps: one declarative meta per entry, embedded into the binary
 (`registry.go`, `//go:embed`). The shape is the one documented by the plugin
-contract (`https://streamhub.studio/docs/features/plugins`, `STUDIO-APPS.md`); the registry
+contract (`streamhub-docs/features/plugins.md`, `STUDIO-APPS.md`); the registry
 validates every entry exactly like Node validated a `plugin.meta.ts`.
 
 History: the file was exported from the NestJS core's

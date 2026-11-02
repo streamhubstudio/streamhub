@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
 )
 
 // fakeProc is a spawned child the test drives (output + exit).

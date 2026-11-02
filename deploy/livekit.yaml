@@ -16,7 +16,7 @@ keys:
 # (STREAMHUB_TURN_ENABLE / STREAMHUB_TURN_DOMAIN — installer `--turn`); en este
 # shape bare-metal/systemd se activa a mano. Sin TURN, los clientes detras de NAT
 # simetrico / VPN / firewall corporativo NO conectan (Safari/iOS el mas estricto;
-# ver https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT, seccion TURN). Para activar:
+# ver streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md, seccion TURN). Para activar:
 # poner enabled:true, apuntar domain a turn.<dominio> (su propio A record DNS) y
 # cert_file/key_file a los PEM de ese dominio (certbot: /etc/letsencrypt/live/
 # turn.<dominio>/). Abrir 5349/tcp + 3478/udp en el firewall. LiveKit termina el

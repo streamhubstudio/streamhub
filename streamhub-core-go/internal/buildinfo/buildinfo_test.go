@@ -13,7 +13,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2/humatest"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
 )
 
 func withBuildInfo(t *testing.T, bi *debug.BuildInfo, ok bool) {

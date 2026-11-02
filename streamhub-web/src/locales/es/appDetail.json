@@ -39,6 +39,10 @@
       "label": "Tokens",
       "hint": "Tokens de API y de sala"
     },
+    "devices": {
+      "label": "Encoders",
+      "hint": "Emparejá encoders de campo por código, mirá su estado y mandales comandos"
+    },
     "samples": {
       "label": "Ejemplos",
       "hint": "Ejemplos de código para integrar"

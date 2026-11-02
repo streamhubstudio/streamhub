@@ -1,6 +1,6 @@
 [Unit]
 Description=StreamHub backup (SQLite DBs + secrets.json -> tar.gz -> S3)
-Documentation=file:///opt/streamhub/https://streamhub.studio/docs/operations/BACKUPS
+Documentation=file:///opt/streamhub/streamhub-docs/operations/BACKUPS.md
 Wants=network-online.target
 After=network-online.target
 

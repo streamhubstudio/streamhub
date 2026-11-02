@@ -18,7 +18,8 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trans, useTranslation } from 'react-i18next'
 import { api } from '@/api'
-import type { AppFeatures, MintedToken, S3Provider } from '@/api'
+import { parseCidrList } from '@/lib/cidr'
+import type { AppFeatureFlags, AppFeatures, MintedToken, S3Provider } from '@/api'
 import {
   Button,
   Card,
@@ -33,7 +34,7 @@ import {
   errMessage,
 } from './ui'
 
-type FeatureKey = keyof AppFeatures
+type FeatureKey = keyof AppFeatureFlags
 
 const FEATURE_KEYS: FeatureKey[] = [
   'chat',
@@ -705,6 +706,20 @@ const PROVIDERS: { value: S3Provider; label: string }[] = [
   { value: 'minio', label: 'MinIO' },
 ]
 
+// s3.storage_class — mirrors internal/s3 StorageClasses ('' = provider default).
+const STORAGE_CLASSES = [
+  'STANDARD',
+  'REDUCED_REDUNDANCY',
+  'STANDARD_IA',
+  'ONEZONE_IA',
+  'INTELLIGENT_TIERING',
+  'GLACIER',
+  'DEEP_ARCHIVE',
+  'GLACIER_IR',
+  'OUTPOSTS',
+  'EXPRESS_ONEZONE',
+]
+
 function S3Card({ app }: { app: string }) {
   const { t } = useTranslation(['integracionesTab', 'common'])
   const qc = useQueryClient()
@@ -719,6 +734,7 @@ function S3Card({ app }: { app: string }) {
   const [endpoint, setEndpoint] = useState('')
   const [prefix, setPrefix] = useState('')
   const [publicUrl, setPublicUrl] = useState('')
+  const [storageClass, setStorageClass] = useState('')
   // Fold 3: explicit opt-in to make recordings public.
   const [ackPublic, setAckPublic] = useState(false)
   // Secrets: never prefilled. Sent only when the user types a new value.
@@ -733,6 +749,7 @@ function S3Card({ app }: { app: string }) {
     setEndpoint(data.endpoint ?? '')
     setPrefix(data.prefix ?? '')
     setPublicUrl(data.public_url ?? '')
+    setStorageClass(data.storageClass ?? '')
     setAckPublic(false)
     setKey('')
     setSecret('')
@@ -747,6 +764,7 @@ function S3Card({ app }: { app: string }) {
         endpoint: endpoint.trim(),
         prefix: prefix.trim(),
         public_url: publicUrl.trim(),
+        storageClass,
         // Omit empty secrets so the server keeps the stored credentials.
         ...(key.trim() ? { key: key.trim() } : {}),
         ...(secret.trim() ? { secret: secret.trim() } : {}),
@@ -776,6 +794,7 @@ function S3Card({ app }: { app: string }) {
     endpoint !== (data?.endpoint ?? '') ||
     prefix !== (data?.prefix ?? '') ||
     publicUrl !== (data?.public_url ?? '') ||
+    storageClass !== (data?.storageClass ?? '') ||
     key.trim() !== '' ||
     secret.trim() !== ''
   const state: SaveState = save.isPending
@@ -848,6 +867,16 @@ function S3Card({ app }: { app: string }) {
               placeholder={t('s3.publicUrlPlaceholder')}
               onChange={(e) => setPublicUrl(e.target.value)}
             />
+          </Field>
+          <Field label={t('s3.storageClassLabel')} hint={t('s3.storageClassHint')}>
+            <Select value={storageClass} onChange={(e) => setStorageClass(e.target.value)}>
+              <option value="">{t('s3.storageClassDefault')}</option>
+              {STORAGE_CLASSES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
 
@@ -967,7 +996,14 @@ function FeaturesCard({ app }: { app: string }) {
   }, [data])
 
   const save = useMutation({
-    mutationFn: (next: AppFeatures) => api.apps.updateConfig(app, { features: next }),
+    // Only the toggles this card owns: the publisher restrictions (lists /
+    // numbers) are saved by their own card.
+    mutationFn: (next: AppFeatures) =>
+      api.apps.updateConfig(app, {
+        features: Object.fromEntries(
+          FEATURE_KEYS.filter((k) => next[k] !== undefined).map((k) => [k, next[k]]),
+        ) as AppFeatureFlags,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['app-config', app] }),
   })
 
@@ -1021,6 +1057,109 @@ function FeaturesCard({ app }: { app: string }) {
           <ErrorBanner message={errMessage(save.error, t('featuresCard.saveError'))} />
         </div>
       )}
+    </Card>
+  )
+}
+
+// --- publisher restrictions ---------------------------------------------------
+// features.allowed_publisher_cidr + features.max_bitrate_accept (AntMedia
+// allowedPublisherCIDR / maxBitrateAccept). Explicit save, like S3. The UI
+// edits the cap in kbps; config.yaml stores bits/s.
+
+function PublishGuardCard({ app }: { app: string }) {
+  const { t } = useTranslation('integracionesTab')
+  const qc = useQueryClient()
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['app-config', app],
+    queryFn: ({ signal }) => api.apps.getConfig(app, signal),
+  })
+  const savedCidrs = (data?.features?.allowedPublisherCidr ?? []).join('\n')
+  const savedKbps = data?.features?.maxBitrateAccept
+    ? String(Math.round(data.features.maxBitrateAccept / 1000))
+    : ''
+  const [cidrs, setCidrs] = useState('')
+  const [kbps, setKbps] = useState('')
+  const parsed = parseCidrList(cidrs)
+
+  useEffect(() => {
+    if (!data) return
+    setCidrs(savedCidrs)
+    setKbps(savedKbps)
+  }, [data, savedCidrs, savedKbps])
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.apps.updateConfig(app, {
+        features: {
+          allowedPublisherCidr: parsed.entries,
+          maxBitrateAccept: Math.max(0, Math.round(Number(kbps || 0) * 1000)),
+        },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['app-config', app] }),
+  })
+
+  if (isLoading) return <Loading label={t('featuresCard.loading')} />
+  if (isError)
+    return <ErrorBanner message={errMessage(error, t('featuresCard.loadError'))} />
+
+  const badKbps = kbps.trim() !== '' && !(Number(kbps) >= 0)
+  const badCidrs = parsed.invalid.length > 0
+  const dirty = cidrs !== savedCidrs || kbps !== savedKbps
+  const state: SaveState = save.isPending
+    ? 'saving'
+    : dirty
+      ? 'dirty'
+      : save.isSuccess
+        ? 'saved'
+        : 'idle'
+
+  return (
+    <Card>
+      <SectionTitle
+        title={t('publishGuard.title')}
+        subtitle={t('publishGuard.subtitle')}
+      />
+      <div className="space-y-4">
+        <Field
+          label={t('publishGuard.cidrLabel')}
+          hint={
+            badCidrs
+              ? t('publishGuard.cidrInvalid', { entries: parsed.invalid.join(', ') })
+              : t('publishGuard.cidrHint')
+          }
+        >
+          <textarea
+            rows={3}
+            value={cidrs}
+            placeholder={'203.0.113.0/24\n198.51.100.7'}
+            onChange={(e) => setCidrs(e.target.value)}
+            className="w-full rounded-md border border-gray-600 bg-transparent px-3 py-2 font-mono text-sm text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+        </Field>
+        <Field label={t('publishGuard.bitrateLabel')} hint={t('publishGuard.bitrateHint')}>
+          <TextInput
+            type="number"
+            min={0}
+            value={kbps}
+            placeholder="0"
+            onChange={(e) => setKbps(e.target.value)}
+          />
+        </Field>
+        <p className="text-[11px] text-slate-400">{t('publishGuard.limits')}</p>
+        {save.isError && (
+          <ErrorBanner message={errMessage(save.error, t('publishGuard.saveError'))} />
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="accent"
+            disabled={save.isPending || !dirty || badKbps || badCidrs}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? t('publishGuard.saving') : t('publishGuard.save')}
+          </Button>
+          <SaveStatus state={save.isError ? 'error' : state} />
+        </div>
+      </div>
     </Card>
   )
 }
@@ -1083,7 +1222,10 @@ export function IntegracionesTab({ app }: { app: string }) {
         <S3Card app={app} />
       </Section>
       <Section id="features">
-        <FeaturesCard app={app} />
+        <div className="space-y-5">
+          <FeaturesCard app={app} />
+          <PublishGuardCard app={app} />
+        </div>
       </Section>
       <Section id="qc">
         <QcTokenCard app={app} />

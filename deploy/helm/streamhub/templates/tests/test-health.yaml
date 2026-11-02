@@ -1,0 +1,19 @@
+{{- if .Values.tests.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "streamhub.fullname" . }}-test-health
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: health
+      image: {{ .Values.tests.image }}
+      command: ["sh", "-c"]
+      args:
+        - wget -qO- {{ include "streamhub.coreUrl" . }}/api/v1/health && echo && wget -qO- {{ include "streamhub.livekitWs" . | replace "ws://" "http://" }}/ && echo
+{{- end }}

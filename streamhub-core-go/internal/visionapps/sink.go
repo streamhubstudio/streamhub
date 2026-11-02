@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
 )
 
 // AppLog is the rotated per-app app.log (logs.AppLog).

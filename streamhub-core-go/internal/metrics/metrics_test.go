@@ -13,10 +13,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -305,7 +305,10 @@ func TestScrapeEndpointAuth(t *testing.T) {
 		{"/metrics", "Bearer wrong", 403},
 		{"/metrics?token=wrong", "", 403},
 		{"/metrics", "Bearer s3cret-token", 200},
-		{"/metrics?token=s3cret-token", "", 200},
+		{"/metrics?token=s3cret-token", "", 403}, // security 3.3.4: header only
+		{"/metrics?token=s3cret-token", "Bearer wrong", 403},
+		{"/metrics", "Bearer s3cret-tokenX", 403},
+		{"/metrics", "Bearer s3cret-toke", 403},
 	} {
 		w := do(h, "GET", c.target, c.auth)
 		if w.Code != c.code {
@@ -330,7 +333,7 @@ func TestInterceptorLabels(t *testing.T) {
 	do(h, "GET", "/api/v1/apps/live", "")
 	do(h, "GET", "/api/v1/apps/nope", "") // 404 thrown → labelled with the success status (Node finalize quirk)
 	do(h, "POST", "/api/v1/apps", "")     // 400 thrown on a create → 201
-	do(h, "GET", "/metrics?token=tok", "")
+	do(h, "GET", "/metrics", "Bearer tok")
 	out := scrape(t, s)
 	mustMatch(t, out,
 		`^streamhub_http_requests_total\{method="GET",route="/api/v1/apps/:name",status="204"\} 2$`,

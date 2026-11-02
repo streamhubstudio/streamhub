@@ -6,13 +6,14 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 // Register implements api.Module (apps.controller.ts: /apps, 22 routes).
@@ -80,6 +81,12 @@ func (s *Service) registerCrud(a huma.API) {
 				return nil, err
 			}
 			p := auth.From(ctx)
+			// An app-scoped token is confined to its own app: the route has
+			// no app to scope on and api_tokens skip RBAC and quotas, so
+			// Node let it create apps at will (GO-DIVERGENCES).
+			if p != nil && !p.IsSuperadmin && p.Scope == auth.ScopeApp {
+				return nil, httpx.Forbidden("an app-scoped credential cannot create apps")
+			}
 			if err := s.quotas.EnforceCreateApp(ctx, p); err != nil {
 				return nil, err
 			}

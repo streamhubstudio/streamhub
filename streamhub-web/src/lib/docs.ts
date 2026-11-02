@@ -28,6 +28,8 @@ export const DOCS_PATHS = {
   config: 'config-reference',
   /** DB maintenance / app upkeep (Sistema tab). */
   dbMaintenance: 'features/db-maintenance',
+  /** Field encoders: pairing by code + remote control. */
+  devices: 'features/devices',
   /** Low-latency HLS live playback. */
   hlsLive: 'features/hls-live',
   /** RTMP/WHIP/RTSP ingest + stream keys (incl. backup keys). */

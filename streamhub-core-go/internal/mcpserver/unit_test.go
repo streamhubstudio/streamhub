@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Ports of config.spec.ts, client.spec.ts and tools.spec.ts (the full

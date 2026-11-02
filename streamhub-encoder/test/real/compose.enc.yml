@@ -1,0 +1,48 @@
+# Override for the isolated "enc-sh" test stack: own container names, the
+# core image built by streamhub-real.sh, Caddy disabled (tests hit the core on
+# 127.0.0.1:3020 directly). Used only by test/real/streamhub-real.sh.
+services:
+  redis:
+    container_name: enc-sh-redis
+  livekit:
+    container_name: enc-sh-livekit
+    # Single test host behind NAT without hairpin: the ingress/egress (WebRTC
+    # clients of the SFU on the same box) cannot reach the STUN-detected public
+    # IP, so the SFU advertises 127.0.0.1 here. Production keeps use_external_ip.
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        bind_addresses: [""]
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        redis:
+          address: 127.0.0.1:6379
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        webhook:
+          api_key: ${LIVEKIT_API_KEY}
+          urls:
+            - http://127.0.0.1:3020/api/v1/webhooks/livekit
+        room:
+          enable_remote_unmute: true
+        ingress:
+          rtmp_base_url: rtmp://127.0.0.1:1935/live
+          whip_base_url: http://127.0.0.1:8080/w
+        logging:
+          level: info
+  ingress:
+    container_name: enc-sh-ingress
+  egress:
+    container_name: enc-sh-egress
+  core:
+    container_name: enc-sh-core
+    image: enc-sh-core:local
+    pull_policy: never
+  mediamtx:
+    container_name: enc-sh-mediamtx
+  caddy:
+    container_name: enc-sh-caddy
+    profiles: ["disabled"]

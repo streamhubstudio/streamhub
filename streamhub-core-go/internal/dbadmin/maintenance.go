@@ -13,7 +13,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
 )
 
 // TableHealth is one table's row count (+ bytes when dbstat is available).

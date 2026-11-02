@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of plugin-config.util.ts: validate + normalize a config object
@@ -75,6 +75,15 @@ func coerceField(f Field, raw any) (any, error) {
 
 func isEmptyValue(v any) bool { return v == nil || y.IsUndefined(v) || v == "" }
 
+// retiredConfigKeys are keys removed from a plugin's configSchema whose
+// stored values must not break installs that still carry them: they are
+// dropped from any input (stored config or PATCH) instead of rejected as
+// unknown. streamflow.dangerousNodes moved to the operator env
+// (STREAMHUB_STREAMFLOW_DANGEROUS) in 3.3.3, so a PATCH sending it is a no-op.
+var retiredConfigKeys = map[string]map[string]bool{
+	"streamflow": {"dangerousNodes": true},
+}
+
 // ValidateConfig returns a NEW object holding exactly the schema keys
 // (defaults filled, values coerced). input may be nil.
 func ValidateConfig(meta *Meta, input *y.Map, requireRequired bool) (*y.Map, error) {
@@ -85,8 +94,9 @@ func ValidateConfig(meta *Meta, input *y.Map, requireRequired bool) (*y.Map, err
 	for _, f := range meta.Fields {
 		keys[f.Key] = true
 	}
+	retired := retiredConfigKeys[meta.ID]
 	for _, k := range input.Keys() {
-		if !keys[k] {
+		if !keys[k] && !retired[k] {
 			return nil, cfgErr(k, "unknown config key '%s'", k)
 		}
 	}

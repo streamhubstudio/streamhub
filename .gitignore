@@ -32,10 +32,12 @@ streamhub-adaptor/dist/
 # release artifacts (make-release-artifact.sh / CI release stage)
 /dist/
 
-# app composition scratch (streamhub-core apps pull). The composed Studio Apps
-# under plugins-vendor/ and streamhub-web/src/plugins-vendor/ ARE committed in
-# this public tree.
+# app composition (streamhub-core apps pull) — regenerated from apps.lock.json,
+# never committed. Decoupled Studio Apps land here at build time.
 /vendor/
+/plugins-vendor/*
+!/plugins-vendor/README.md
+streamhub-web/src/plugins-vendor/
 
 # workspace de agentes (worktrees temporales de Claude Code)
 .claude/worktrees/

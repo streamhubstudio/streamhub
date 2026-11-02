@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 // SessionContext is the client fingerprint captured when a JWT is minted.
@@ -51,20 +52,26 @@ const (
 // Sessions is session.service.ts: every human JWT mints a sessions row whose
 // id rides in the token as `sid`; the validator rejects a revoked/missing
 // sid. isActive is the hot path, fronted by a 10s in-memory cache that every
-// revoke clears.
+// revoke clears. A session may also pin the tenant its user chose to work in
+// (3.3.4, M2): sessions.tenant_id, cached alongside.
 type Sessions struct {
 	db  *sql.DB
 	log *slog.Logger
 	now func() time.Time
 
 	mu        sync.Mutex
-	active    map[string]time.Time // sid → known-active until
+	active    map[string]activeSession // sid → known-active until (+ its tenant)
 	lastTouch map[string]time.Time
+}
+
+type activeSession struct {
+	until  time.Time
+	tenant string
 }
 
 // NewSessions builds the service over the global DB.
 func NewSessions(global *sql.DB, log *slog.Logger) *Sessions {
-	return &Sessions{db: global, log: log, now: time.Now, active: map[string]time.Time{}, lastTouch: map[string]time.Time{}}
+	return &Sessions{db: global, log: log, now: time.Now, active: map[string]activeSession{}, lastTouch: map[string]time.Time{}}
 }
 
 // Init creates the sessions table (never fatal).
@@ -80,6 +87,12 @@ func (s *Sessions) Init(ctx context.Context) {
          revoked_at TEXT
        );
        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);`)
+	if err == nil {
+		var has bool
+		if has, err = db.HasColumn(ctx, s.db, "sessions", "tenant_id"); err == nil && !has {
+			_, err = s.db.ExecContext(ctx, `ALTER TABLE sessions ADD COLUMN tenant_id TEXT`)
+		}
+	}
 	if err != nil {
 		s.log.Error("sessions bootstrap failed (continuing)", "err", err)
 	}
@@ -95,33 +108,55 @@ func (s *Sessions) Create(ctx context.Context, userID string, email *string, sc 
 		return "", err
 	}
 	s.mu.Lock()
-	s.active[id] = s.now().Add(activeCacheTTL)
+	s.active[id] = activeSession{until: s.now().Add(activeCacheTTL)}
 	s.mu.Unlock()
 	return id, nil
 }
 
 // IsActive reports whether sid maps to a live session.
 func (s *Sessions) IsActive(ctx context.Context, sid string) bool {
+	_, live := s.Lookup(ctx, sid)
+	return live
+}
+
+// Lookup reports whether sid maps to a live session and the tenant pinned
+// on it ("" = none chosen).
+func (s *Sessions) Lookup(ctx context.Context, sid string) (tenant string, live bool) {
 	if sid == "" {
-		return false
+		return "", false
 	}
 	s.mu.Lock()
-	until, ok := s.active[sid]
+	e, ok := s.active[sid]
 	s.mu.Unlock()
-	if ok && until.After(s.now()) {
-		return true
+	if ok && e.until.After(s.now()) {
+		return e.tenant, true
 	}
-	var revoked sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT revoked_at FROM sessions WHERE id = ? LIMIT 1`, sid).Scan(&revoked)
-	live := err == nil && !revoked.Valid
+	var revoked, pinned sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT revoked_at, tenant_id FROM sessions WHERE id = ? LIMIT 1`, sid).Scan(&revoked, &pinned)
+	live = err == nil && !revoked.Valid
 	s.mu.Lock()
 	if live {
-		s.active[sid] = s.now().Add(activeCacheTTL)
+		s.active[sid] = activeSession{until: s.now().Add(activeCacheTTL), tenant: pinned.String}
 	} else {
 		delete(s.active, sid)
 	}
 	s.mu.Unlock()
-	return live
+	return pinned.String, live
+}
+
+// SetTenant pins tenantID on one of the user's own live sessions (the
+// caller checked the membership); false when there is no such session.
+func (s *Sessions) SetTenant(ctx context.Context, userID, sid, tenantID string) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `UPDATE sessions SET tenant_id = ?
+          WHERE id = ? AND user_id = ? AND revoked_at IS NULL`, tenantID, sid, userID)
+	if err != nil {
+		return false, err
+	}
+	s.mu.Lock()
+	delete(s.active, sid)
+	s.mu.Unlock()
+	n, _ := res.RowsAffected()
+	return n > 0, nil
 }
 
 // Touch bumps last_seen at most once a minute per sid (best effort).
@@ -189,9 +224,10 @@ func (s *Sessions) RevokeOthers(ctx context.Context, userID, exceptSID string) (
 	res, err := s.db.ExecContext(ctx, `UPDATE sessions SET revoked_at = datetime('now')
           WHERE user_id = ? AND revoked_at IS NULL AND id <> ?`, userID, exceptSID)
 	s.mu.Lock()
-	s.active = map[string]time.Time{}
-	if exceptSID != "" {
-		s.active[exceptSID] = s.now().Add(activeCacheTTL)
+	kept, cached := s.active[exceptSID]
+	s.active = map[string]activeSession{}
+	if exceptSID != "" && cached {
+		s.active[exceptSID] = kept
 	}
 	s.mu.Unlock()
 	if err != nil {

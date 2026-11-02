@@ -165,6 +165,22 @@
     "saving": "Saving…",
     "save": "Save S3",
     "saveBlocked": "Confirm the warning to enable public access.",
-    "saved": "Saved · S3 client re-initialized."
+    "saved": "Saved · S3 client re-initialized.",
+    "storageClassLabel": "Storage class",
+    "storageClassHint": "S3 storage class every upload (recordings, VODs, snapshots) is written with. Wasabi/MinIO usually accept only STANDARD; GLACIER/DEEP_ARCHIVE objects need a restore before playback.",
+    "storageClassDefault": "Provider default"
+  },
+  "publishGuard": {
+    "title": "Publisher restrictions",
+    "subtitle": "Limit who may publish to this app and how much bitrate an ingress may push. Empty = no restriction.",
+    "cidrLabel": "Allowed publisher networks (CIDR)",
+    "cidrInvalid": "Not an IP/CIDR: {{entries}}",
+    "cidrHint": "One IPv4/IPv6 address or CIDR per line (e.g. 203.0.113.0/24). Applies to publisher tokens and to RTMP/SRT pushes through the single-port :1935 front.",
+    "bitrateLabel": "Max accepted bitrate (kbps)",
+    "bitrateHint": "An RTMP/WHIP/URL ingress measured above this (video + audio) is cut. 0 = no cap.",
+    "limits": "The bitrate cut is reactive (checked every ~15 s; the stream key is kept and the encoder can reconnect). A direct push to the LiveKit ingress port (without the MediaMTX front) or WHIP never reaches the core, so the network list cannot be applied there — use a firewall.",
+    "save": "Save restrictions",
+    "saving": "Saving…",
+    "saveError": "Could not save the restrictions."
   }
 }

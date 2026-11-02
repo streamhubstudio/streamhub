@@ -586,6 +586,14 @@
         "min": 1,
         "max": 10,
         "help": "Consecutive clean samples required before health.recovered fires (hysteresis against flapping)."
+      },
+      {
+        "key": "edge_hls_bases",
+        "type": "string",
+        "label": "Edge/CDN bases to probe",
+        "default": "",
+        "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+        "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only."
       }
     ],
     "worker": {
@@ -660,13 +668,6 @@
         "min": 1,
         "max": 100000,
         "help": "Per-app rate limit so a hot event cannot flood the engine. Extra triggers within the window are dropped (logged)."
-      },
-      {
-        "key": "dangerousNodes",
-        "type": "boolean",
-        "label": "Enable execution nodes (code / ssh / shell / db)",
-        "default": false,
-        "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators."
       }
     ]
   },

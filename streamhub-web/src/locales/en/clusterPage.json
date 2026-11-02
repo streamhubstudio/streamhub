@@ -40,6 +40,14 @@
     "edit": "Edit",
     "delete": "Delete"
   },
+  "cdn": {
+    "title": "CDN edges",
+    "subtitle": "HLS cache nodes registered with install.sh --cdn-edge and their last heartbeat.",
+    "total": "{{count}} of {{of}} reporting",
+    "gbpsOut": "Gbps out",
+    "conns": "Connections",
+    "badge": "CDN edge"
+  },
   "relative": {
     "now": "just now",
     "seconds_one": "{{count}}s ago",

@@ -7,11 +7,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authn"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authn"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // Register implements api.Module: POST /apps/:app/smtp/test
@@ -57,14 +57,25 @@ type AuthMailer struct{ S *Service }
 
 var _ authn.Mailer = AuthMailer{}
 
-// SendMagicLink implements authn.Mailer.
-func (m AuthMailer) SendMagicLink(ctx context.Context, email, url string, sc authn.SendContext) authn.SendResult {
-	return m.S.SendMagicLink(ctx, email, url, &SendContext{UserID: sc.UserID})
+// SendMagicLink implements authn.Mailer. Authentication mail resolves the
+// global SMTP only: never a per-user override (its owner would read the link).
+func (m AuthMailer) SendMagicLink(ctx context.Context, email, url string) authn.SendResult {
+	return m.S.SendMagicLink(ctx, email, url, nil)
 }
 
-// SendInvite implements authn.Mailer.
-func (m AuthMailer) SendInvite(ctx context.Context, email, url string, o authn.InviteOptions, sc authn.SendContext) authn.SendResult {
-	return m.S.SendInvite(ctx, email, url, InviteOptions{TeamName: o.TeamName, Role: o.Role, InvitedBy: o.InvitedBy}, &SendContext{UserID: sc.UserID})
+// SendInvite implements authn.Mailer (global SMTP only, as SendMagicLink).
+func (m AuthMailer) SendInvite(ctx context.Context, email, url string, o authn.InviteOptions) authn.SendResult {
+	return m.S.SendInvite(ctx, email, url, InviteOptions{TeamName: o.TeamName, Role: o.Role, InvitedBy: o.InvitedBy, Existing: o.Existing}, nil)
+}
+
+// SendEmailChange implements authn.Mailer (global SMTP only).
+func (m AuthMailer) SendEmailChange(ctx context.Context, newEmail, url string) authn.SendResult {
+	return m.S.SendEmailChange(ctx, newEmail, url, nil)
+}
+
+// SendEmailChangeNotice implements authn.Mailer (global SMTP only).
+func (m AuthMailer) SendEmailChangeNotice(ctx context.Context, oldEmail, newEmail string) authn.SendResult {
+	return m.S.SendEmailChangeNotice(ctx, oldEmail, newEmail, nil)
 }
 
 // TestUserSMTP implements authn.Mailer.

@@ -2,7 +2,7 @@
 # raíz del repo). No comparte ciclo de vida ni red con `redis/livekit/ingress/
 # egress/core/caddy`: se levanta y se destruye de forma independiente.
 #
-# Diseño completo: https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP (§4).
+# Diseño completo: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md (§4).
 # Fase 1 — un solo nodo (`stream01`, 8 GB RAM + 8 GB swap, compartido con el
 # media stack). Objetivo: caber en ~800 MB de RAM sin competir con el headroom
 # de los `egress` (cada uno es un Chrome headless).

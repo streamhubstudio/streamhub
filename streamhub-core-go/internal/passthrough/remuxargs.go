@@ -21,6 +21,10 @@ const (
 	SrtLatencyMs = 120
 	// HlsPlaylist is the playlist filename in the room's HLS dir.
 	HlsPlaylist = "index.m3u8"
+	// HlsFMP4HEVC is the fMP4/hvc1 HLS variant of an H.265 source (E1);
+	// HlsInitFile its init segment next to the playlist.
+	HlsFMP4HEVC = "fmp4-hevc"
+	HlsInitFile = "init.mp4"
 	hlsTime     = 4
 	hlsListSize = 6
 	// listenHost binds the -listen acceptor; pullHost is the front MediaMTX.
@@ -42,10 +46,13 @@ type RemuxArgs struct {
 	Transport string // rtmp (default) | srt | mpegts
 	Mode      string // listen (default) | pull
 	SourceURL string // mpegts only
-	BindHost  string
-	PullHost  string
-	HlsTime   int
-	ListSize  int
+	// HlsVariant "" = MPEG-TS segments (the Node argv, byte-identical);
+	// HlsFMP4HEVC = fMP4 segments + init.mp4 with the hvc1 tag (E1).
+	HlsVariant string
+	BindHost   string
+	PullHost   string
+	HlsTime    int
+	ListSize   int
 }
 
 // BuildRemuxArgs is the ffmpeg argv (without the binary) of a passthrough
@@ -66,8 +73,12 @@ func BuildRemuxArgs(o RemuxArgs) []string {
 		// PULL: connect OUT to the multicast group / unicast port; -f mpegts
 		// forces the demuxer so a silent group never mis-probes.
 		input = []string{"-f", "mpegts", "-i", o.SourceURL}
+	case o.Mode == "pull" && o.Transport == TransportSRT:
+		// PULL an SRT publish off the front MediaMTX (E2): an SRT reader, so
+		// any codec MPEG-TS carries (HEVC included) survives the hop.
+		input = []string{"-i", MediamtxSrtReadURL(or(o.PullHost, pullHost), o.Port, o.App, o.StreamKey)}
 	case o.Mode == "pull":
-		// PULL off the front MediaMTX (single-port switch, RTMP only).
+		// PULL off the front MediaMTX (single-port switch, RTMP).
 		input = []string{"-i", "rtmp://" + or(o.PullHost, pullHost) + ":" + strconv.Itoa(o.Port) + "/" + o.App + "/" + o.StreamKey}
 	case o.Transport == TransportSRT:
 		input = []string{"-i", "srt://" + bind + ":" + strconv.Itoa(o.Port) + "?mode=listener"}
@@ -76,6 +87,21 @@ func BuildRemuxArgs(o RemuxArgs) []string {
 		input = []string{"-listen", "1", "-i", "rtmp://" + bind + ":" + strconv.Itoa(o.Port) + "/" + o.App + "/" + o.StreamKey}
 	}
 	args := append([]string{"-hide_banner", "-loglevel", "warning"}, input...)
+	if o.HlsVariant == HlsFMP4HEVC {
+		// Apple (and MSE players) need HEVC in fMP4 tagged hvc1, not hev1/TS.
+		return append(args,
+			"-c", "copy",
+			"-tag:v", "hvc1",
+			"-f", "hls",
+			"-hls_time", strconv.Itoa(t),
+			"-hls_list_size", strconv.Itoa(ls),
+			"-hls_flags", "delete_segments+append_list",
+			"-hls_segment_type", "fmp4",
+			"-hls_fmp4_init_filename", HlsInitFile,
+			"-hls_segment_filename", filepath.Join(o.HlsDir, "seg_%05d.m4s"),
+			filepath.Join(o.HlsDir, HlsPlaylist),
+		)
+	}
 	return append(args,
 		"-c", "copy",
 		"-f", "hls",
@@ -98,6 +124,17 @@ func BuildForwardArgs(key string, sourcePort, destPort int, host string) []strin
 		"-f", "flv",
 		"rtmp://" + host + ":" + strconv.Itoa(destPort) + "/live/" + key,
 	}
+}
+
+// MediamtxSrtReadURL is the loopback SRT reader of a MediaMTX path.
+func MediamtxSrtReadURL(host string, port int, app, key string) string {
+	return "srt://" + host + ":" + strconv.Itoa(port) + "?streamid=read:" + app + "/" + key
+}
+
+// MediamtxSrtPublishURL is what an encoder pushes to (E2): MediaMTX maps
+// streamid publish:<app>/<key> to the path <app>/<key> the auth hook checks.
+func MediamtxSrtPublishURL(host string, port int, app, key string) string {
+	return "srt://" + host + ":" + strconv.Itoa(port) + "?streamid=publish:" + app + "/" + key
 }
 
 func or(s, def string) string {

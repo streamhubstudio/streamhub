@@ -1,0 +1,18 @@
+# /etc/default/streamhub-encoder — environment of encoderd (systemd EnvironmentFile)
+#
+# Listen address of the REST API + web UI + /metrics.
+ENCODERD_LISTEN=:8090
+# State (config JSON, API token). Created by systemd (StateDirectory).
+ENCODERD_DATA_DIR=/var/lib/streamhub-encoder
+# Bearer token of the local API. Empty → generated on first start into
+# $ENCODERD_DATA_DIR/api-token (read it with: sudo encoderd token).
+#ENCODERD_API_TOKEN=
+# Loopback UDP ports for the internal TS buses (1 per channel + 1 per output).
+ENCODERD_PORT_RANGE=41000-41999
+# /metrics without token (read-only, no secrets). true|false
+ENCODERD_METRICS_PUBLIC=true
+# Let a paired StreamHub reboot the box (command "reboot"). Needs a polkit rule
+# or sudoers entry allowing the encoder user to run `systemctl reboot`.
+ENCODERD_ALLOW_REBOOT=false
+# debug|info
+ENCODERD_LOG_LEVEL=info

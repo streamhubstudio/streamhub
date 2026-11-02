@@ -87,3 +87,12 @@ test('toQueryRecord: flattens URLSearchParams into a plain record', () => {
   const rec = toQueryRecord(buildVodsQuery({ status: 'ready', limit: 20 }))
   assert.deepEqual(rec, { status: 'ready', limit: '20' })
 })
+
+test('buildVodsQuery: G6 source filter (recording | clip)', () => {
+  assert.equal(buildVodsQuery({ source: 'clip' }).toString(), 'source=clip')
+  assert.equal(
+    buildVodsQuery({ status: 'ready', source: 'recording', limit: 5 }).toString(),
+    'status=ready&source=recording&limit=5',
+  )
+  assert.equal(buildVodsQuery({ source: '' }).get('source'), null)
+})

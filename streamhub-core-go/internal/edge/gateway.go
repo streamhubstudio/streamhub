@@ -13,9 +13,9 @@ import (
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cluster"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Heartbeater is the cluster heartbeat path (ClusterService.heartbeat).
@@ -43,7 +43,7 @@ type conn struct {
 // wins), JSON frame routing, JSON keepalive pings and request→reply.
 type Gateway struct {
 	db      *sql.DB
-	token   func() string
+	auth    *cluster.NodeAuth
 	cluster Heartbeater
 	repo    *Repo
 	framer  *Framer
@@ -57,10 +57,11 @@ type Gateway struct {
 	lastDisconnect map[string]time.Time
 }
 
-// NewGateway builds the gateway. token returns STREAMHUB_CLUSTER_TOKEN.
-func NewGateway(global *sql.DB, token func() string, hb Heartbeater, repo *Repo, framer *Framer, log *slog.Logger) *Gateway {
+// NewGateway builds the gateway. auth verifies the node credentials
+// (cluster.Service.NodeAuth).
+func NewGateway(global *sql.DB, auth *cluster.NodeAuth, hb Heartbeater, repo *Repo, framer *Framer, log *slog.Logger) *Gateway {
 	return &Gateway{
-		db: global, token: token, cluster: hb, repo: repo, framer: framer, log: log, now: time.Now,
+		db: global, auth: auth, cluster: hb, repo: repo, framer: framer, log: log, now: time.Now,
 		PingEvery: PingInterval, conns: map[string]*conn{}, lastDisconnect: map[string]time.Time{},
 	}
 }
@@ -99,22 +100,26 @@ type Decision struct {
 	Message string
 }
 
-// Authorize is authorizeUpgrade: disabled → 503, bad token → 401 (header or
-// ?token=), missing nodeId → 400, unknown node → 404.
+// Authorize is authorizeUpgrade: disabled → 503, bad credential → 401,
+// missing nodeId → 400, unknown node → 404.
+//
+// GO-DIVERGENCE (security, 3.3.4 — C5.3): the credential is the node's own
+// secret for ?nodeId= (X-Node-Secret, else X-Cluster-Token, else ?token=);
+// the raw cluster token only passes in legacy mode (warned). A node's
+// secret never opens another node's channel.
 func (g *Gateway) Authorize(r *http.Request) Decision {
 	q := r.URL.Query()
 	token := r.Header.Get("X-Cluster-Token")
 	if _, ok := r.Header["X-Cluster-Token"]; !ok {
 		token = q.Get("token")
 	}
-	expected := g.token()
-	if expected == "" {
+	if !g.auth.Enabled() {
 		return Decision{Code: 503, Message: "cluster disabled"}
 	}
-	if !cluster.TokenMatches(token, expected) {
+	nodeID := q.Get("nodeId")
+	if g.auth.Check("edge ws", nodeID, r.Header.Get(cluster.NodeSecretHeader), token) == cluster.CredNone {
 		return Decision{Code: 401, Message: "invalid cluster token"}
 	}
-	nodeID := q.Get("nodeId")
 	if nodeID == "" {
 		return Decision{Code: 400, Message: "nodeId required"}
 	}
@@ -306,7 +311,7 @@ func (g *Gateway) onFrame(c *conn, f *Frame) {
 		if d, ok := f.Str("detail"); ok {
 			detail = &d
 		}
-		_ = g.repo.UpdateStatus(ctx, id, status, detail)
+		_ = g.repo.UpdateStatusForNode(ctx, id, c.nodeID, status, detail)
 	case "cmd_result":
 		id, ok := f.Str("cmdId")
 		if !ok || id == "" {

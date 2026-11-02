@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Port of appstore/plugin-version.service.ts: per-app pin / rollback /

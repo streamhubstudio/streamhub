@@ -27,7 +27,8 @@
     "desync": "Desfase A/V",
     "ccErrors": "Errores CC",
     "lastSegment": "Último segmento",
-    "noAudio": "sin audio"
+    "noAudio": "sin audio",
+    "noAudioSource": "fuente sin audio"
   },
   "tiles": {
     "today": "{{count}} eventos hoy",
@@ -62,5 +63,9 @@
     "roomTitle": "Eventos recientes de este stream"
   },
   "noStreams": "No hay streams en vivo con salida HLS en este momento. Empezá a publicar para ver la salud acá.",
-  "noFeed": "Sin feed del worker. Instalá y activá la app (y revisá el estado del worker en el Marketplace) — el monitor necesita el worker de stream-health corriendo."
+  "noFeed": "Sin feed del worker. Instalá y activá la app (y revisá el estado del worker en el Marketplace) — el monitor necesita el worker de stream-health corriendo.",
+  "edges": {
+    "title": "A través de los edges / CDN",
+    "via": "vía {{edge}}"
+  }
 }

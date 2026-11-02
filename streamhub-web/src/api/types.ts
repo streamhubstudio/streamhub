@@ -115,6 +115,20 @@ export interface SessionInfo {
   current: boolean
 }
 
+/**
+ * A team invitation waiting for my answer (GET /account/invitations). Since
+ * 3.3.4 an existing account is never attached to a team without accepting.
+ */
+export interface TeamInvitation {
+  tenantId: string
+  tenantName: string
+  plan: string
+  role: TenantRole
+  /** The inviter's email (null when unknown, e.g. an API token). */
+  invitedBy: string | null
+  createdAt: string
+}
+
 /** POST /auth/signup — create an account (and optionally its team). */
 export interface SignupRequest {
   email: string
@@ -214,6 +228,12 @@ export interface AccountInfo {
   user: {
     id: string
     email: string | null
+    /**
+     * A requested email change awaiting confirmation (3.3.3): PATCH /account
+     * {email} mails a link to the NEW address; `email` only changes once it
+     * is followed. Absent when nothing is pending.
+     */
+    pendingEmail?: string
     name: string | null
     isSuperadmin: boolean
     /** True when a password is set (magic-link accounts sign in without one). */
@@ -230,7 +250,7 @@ export interface AccountInfo {
   } | null
 }
 
-/** PATCH /account — partial profile update. */
+/** PATCH /account — partial profile update (an email change is confirmed by mail). */
 export interface UpdateAccountRequest {
   name?: string
   email?: string
@@ -439,13 +459,24 @@ export interface GpuInfo {
 // Apps (tenants) — camelCase
 // ---------------------------------------------------------------------------
 
-export interface AppFeatures {
+/** The boolean feature toggles (the Integraciones features card). */
+export interface AppFeatureFlags {
   rtmpPassword?: boolean
   viewerCounter?: boolean
   chat?: boolean
   reactions?: boolean
   hiddenQc?: boolean
   adaptivePlayer?: boolean
+}
+
+export interface AppFeatures extends AppFeatureFlags {
+  /**
+   * features.allowed_publisher_cidr (AntMedia allowedPublisherCIDR): source
+   * networks a publisher may come from. Absent/[] = unrestricted.
+   */
+  allowedPublisherCidr?: string[]
+  /** features.max_bitrate_accept in bits/s (AntMedia maxBitrateAccept). Absent/0 = no cap. */
+  maxBitrateAccept?: number
 }
 
 export interface App {
@@ -660,6 +691,8 @@ export interface S3Config {
   secret?: string
   /** Whether real credentials exist in secrets.json. */
   configured?: boolean
+  /** s3.storage_class (STANDARD_IA, INTELLIGENT_TIERING…). Absent = provider default. */
+  storageClass?: string
   [k: string]: unknown
 }
 
@@ -676,6 +709,8 @@ export interface UpdateS3Request {
   public_url?: string
   key?: string
   secret?: string
+  /** '' clears it (provider default); omit to keep the stored one. */
+  storageClass?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -861,6 +896,28 @@ export interface SignedPlayback {
   embedUrl: string
   /** `<iframe>` snippet over embedUrl — the full player widget. */
   iframe: string
+  /**
+   * G2 (3.4.0): only for an app with public_playback:false — the `st` token its
+   * /hls needs, its expiry, and the playlist URL with `?st=` already appended.
+   * Absent for a public app (its HLS needs no token).
+   */
+  hlsToken?: string
+  hlsExp?: number
+  hlsUrl?: string
+}
+
+/**
+ * GET /apps/:app/hls-token/:room — PUBLIC, gated like play-token. `required`
+ * false (public app) means `st` is "" and the bare playlist plays as is.
+ */
+export interface HlsToken {
+  app: string
+  room: string
+  required: boolean
+  st: string
+  exp: number
+  ttlSeconds: number
+  playlistUrl: string
 }
 
 // ---------------------------------------------------------------------------
@@ -1159,7 +1216,40 @@ export interface Vod {
   snapshotUrl?: string
   createdAt?: string
   startedAt?: string
+  /** How the VOD was made: an egress recording, or a G6 clip cut from HLS/DVR. */
+  source?: 'recording' | 'clip'
   [k: string]: unknown
+}
+
+/** G6 clip request: an explicit range, or an event instant framed by seconds. */
+export type ClipRequest =
+  | { from: number | string; to: number | string }
+  | { eventTs: number | string; before?: number; after?: number }
+
+/** A clip job (features/dvr-clips.md). */
+export interface Clip {
+  id: string
+  app: string
+  streamId: string | null
+  room: string
+  from: string
+  to: string
+  durationS: number
+  status: 'queued' | 'running' | 'ready' | 'failed'
+  vodId: number | null
+  error: string | null
+  origin: {
+    kind: 'api' | 'streamflow'
+    event?: string
+    eventTs?: number
+    workflowId?: string
+    runId?: string
+    data?: unknown
+  } | null
+  createdAt: string
+  updatedAt: string
+  /** Presigned/public MP4 URL once ready (GET /apps/:app/clips/:id only). */
+  url?: string
 }
 
 /** Sortable VOD columns accepted by GET /apps/:app/vods?order=. */
@@ -1170,6 +1260,8 @@ export type SortDir = 'asc' | 'desc'
 export interface VodListParams {
   room?: string
   status?: string
+  /** G6: only recordings (incl. pre-3.4 rows) or only clips. */
+  source?: 'recording' | 'clip'
   since?: string
   until?: string
   order?: VodOrder
@@ -1362,7 +1454,15 @@ export interface HlsSession {
   egressId?: string
   /** Server-provided <iframe> embed snippet, if any. */
   embedIframe?: string
+  /** Set when the app has features.dvr: the playlist is a rewindable window. */
+  dvr?: HlsDvrInfo
   [k: string]: unknown
+}
+
+/** DVR window of a live HLS (G5 — features/dvr-clips.md). */
+export interface HlsDvrInfo {
+  windowSeconds: number
+  segmentSeconds: number
 }
 
 /** Status of a stream's HLS egress (GET .../hls). May be inactive. */
@@ -1371,6 +1471,7 @@ export interface HlsStatus {
   status?: string
   playlistUrl?: string
   egressId?: string
+  dvr?: HlsDvrInfo
   [k: string]: unknown
 }
 
@@ -2326,4 +2427,82 @@ export interface OsTuningReport {
   knobs: OsTuningKnob[]
   /** Operator note (install.sh applies these on a real host). */
   note: string
+}
+
+// --- devices (field encoders: pairing + control, features/devices.md) -------
+
+/** One device channel linked to a room (the core owns its ingress). */
+export interface DeviceChannel {
+  id: string
+  name?: string
+  room: string
+  protocol: 'rtmp' | 'srt' | string
+  ingressId?: string
+  publishUrl: string
+  streamKey: string
+  createdAt: string
+}
+
+/** Per-channel state of the device's last `status` frame. */
+export interface DeviceChannelStatus {
+  id: string
+  state?: string
+  bitrateKbps?: number
+  fps?: number
+  input?: string
+  error?: string | null
+}
+
+/** The device's last `status` frame (free-form beyond these fields). */
+export interface DeviceStatusFrame {
+  cpu?: number
+  gpu?: number
+  temperature?: number
+  uptimeSec?: number
+  channels?: DeviceChannelStatus[]
+  errors?: string[]
+  receivedAt?: string
+  [k: string]: unknown
+}
+
+/** GET /apps/:app/devices[/:id]. */
+export interface Device {
+  id: string
+  app: string
+  name: string
+  model: string | null
+  version: string | null
+  serial: string | null
+  /** The device picked its credential up (claimed AND paired). */
+  paired: boolean
+  online: boolean
+  lastSeenAt: string | null
+  lastIp: string | null
+  capabilities: { channels?: { id: string; name?: string }[]; [k: string]: unknown } | null
+  status: DeviceStatusFrame | null
+  configRev: number
+  createdAt: string
+  createdBy: string | null
+  channels: DeviceChannel[]
+}
+
+export type DeviceAction = 'start' | 'stop' | 'restart' | 'apply_preset' | 'reboot'
+
+export interface DeviceCommandRequest {
+  action: DeviceAction
+  channel?: string
+  preset?: string
+  confirm?: boolean
+}
+
+export interface DeviceCommandResult {
+  id: string
+  ok: boolean
+  message?: string
+}
+
+export interface LinkDeviceChannelRequest {
+  room: string
+  protocol: 'rtmp' | 'srt'
+  name?: string
 }

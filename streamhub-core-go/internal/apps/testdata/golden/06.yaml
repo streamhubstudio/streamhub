@@ -99,7 +99,7 @@ features:
       - widevine
     scheme: cenc
     key_server_url: https://keys.example.com
-    key_server_token_env: DRM_TOKEN
+    key_server_token_env: APP_GOLD_A_DRM_TOKEN
     license_urls:
       widevine: https://wv
       playready: ''

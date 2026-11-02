@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamhealth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamhealth"
 )
 
 // Port of main.js: the orchestration loop (every decision lives in the pure
@@ -27,7 +27,8 @@ import (
 //	HEALTH_APP             app slug
 //	HEALTH_HLS_DIR         <appDir>/hls (one sub-dir per room, index.m3u8)
 //	HEALTH_DATA_DIR        <appDir>/stream-health (stream-health.db lives here)
-//	HEALTH_CONFIG_JSON     app-level thresholds (install config)
+//	HEALTH_CONFIG_JSON     app-level thresholds (install config; its
+//	                       edge_hls_bases turns on the remote probes, remote.go)
 //	HEALTH_FFPROBE / HEALTH_FFMPEG   binaries (default ffprobe / ffmpeg)
 //	STREAMHUB_INGEST_URL   POST live-data (overview snapshot)
 //	STREAMHUB_EVENTS_URL   POST domain events
@@ -53,6 +54,8 @@ type Options struct {
 }
 
 type roomRT struct {
+	origin        string    // the on-disk room (== the key for an origin probe)
+	edge          *EdgeBase // nil = origin probe; set = remote probe via that edge
 	state         *RoomState
 	prev          *Playlist
 	lastAdvanceMs *float64
@@ -68,6 +71,7 @@ type worker struct {
 	eventsURL, ingestURL string
 	token                string
 	appConfig            *y.Map
+	edges                []EdgeBase
 	order                []string // rooms Map insertion order
 	rooms                map[string]*roomRT
 	events               chan []byte
@@ -111,6 +115,7 @@ func Run(ctx context.Context, o Options) int {
 		eventsURL: get("STREAMHUB_EVENTS_URL", ""), ingestURL: get("STREAMHUB_INGEST_URL", ""),
 		token: get("STREAMHUB_INGEST_TOKEN", ""), appConfig: ParseAppConfig(cfgRaw, cfgSet),
 		rooms: map[string]*roomRT{}, events: make(chan []byte, 256)}
+	w.edges = ParseEdgeBases(w.appConfig.Get(EdgeBasesKey))
 	if w.app == "" || w.hlsDir == "" {
 		fmt.Fprintln(o.Stderr, "[health-worker] HEALTH_APP / HEALTH_HLS_DIR missing — exiting")
 		return 2
@@ -183,13 +188,20 @@ func (w *worker) post(ctx context.Context, url string, body []byte) {
 	}
 }
 
-func (w *worker) postEvent(room string, e Event) {
-	data, _ := y.Stringify(e.Data)
-	w.log(fmt.Sprintf("event %s room=%s %s", e.Event, room, data))
+// postEvent posts one event of the probe rt (logged under its key). A remote
+// probe's event names the ORIGIN room — webhook consumers map rooms to
+// streams — and carries the edge as data.via.
+func (w *worker) postEvent(key string, rt *roomRT, e Event) {
+	payload := e.Data
+	if rt.edge != nil {
+		payload = withVia(e.Data, rt.edge.Name)
+	}
+	data, _ := y.Stringify(payload)
+	w.log(fmt.Sprintf("event %s room=%s %s", e.Event, key, data))
 	body := y.NewMap()
 	body.Set("event", e.Event)
-	body.Set("room", room)
-	body.Set("data", e.Data)
+	body.Set("room", rt.origin)
+	body.Set("data", payload)
 	js, _ := y.Stringify(body)
 	select {
 	case w.events <- []byte(js):
@@ -242,6 +254,10 @@ type snapshotFacts struct {
 	SampleRate  *float64 `json:"sampleRate"`
 	Channels    *float64 `json:"channels"`
 	BitrateKbps *float64 `json:"bitrateKbps"`
+	// AudioSource is what the core knows of the room's publishers (3.4):
+	// "none" (no audio track published — the egress's injected silent AAC
+	// is not a fault), "track", or absent when the core reported nothing.
+	AudioSource string `json:"audioSource,omitempty"`
 }
 
 type snapshotMetrics struct {
@@ -262,48 +278,72 @@ type snapshot struct {
 	Facts   *snapshotFacts  `json:"facts"`
 	Metrics snapshotMetrics `json:"metrics"`
 	TS      float64         `json:"ts"`
+	// remote probes only (3.4; absent on origin probes): the on-disk room,
+	// the edge name, the probed playlist URL and the last fetch failure.
+	Origin string `json:"origin,omitempty"`
+	Via    string `json:"via,omitempty"`
+	URL    string `json:"url,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
-// probeRoom samples one room; false = the stream ended (forget the room).
-func (w *worker) probeRoom(ctx context.Context, room string, rt *roomRT, t streamhealth.HealthThresholds, nowMs float64) bool {
-	roomDir := filepath.Join(w.hlsDir, room)
-	text, err := os.ReadFile(filepath.Join(roomDir, "index.m3u8"))
-	if err != nil {
-		return false // playlist gone → stream ended
+// probeRoom samples one probe (origin or remote); false = the stream ended
+// (forget the room). audioSource is the core's word on the room's
+// publishers ("" unknown, "none", "track").
+func (w *worker) probeRoom(ctx context.Context, key string, rt *roomRT, t streamhealth.HealthThresholds, nowMs float64, audioSource string) bool {
+	var diff Diff
+	var infos []SegInfo
+	newestPath, newestURI, fetchErr, playlistURL := "", "", "", ""
+	if rt.edge == nil {
+		roomDir := filepath.Join(w.hlsDir, rt.origin)
+		text, err := os.ReadFile(filepath.Join(roomDir, "index.m3u8"))
+		if err != nil {
+			return false // playlist gone → stream ended
+		}
+		pl := ParsePlaylist(string(text))
+		if pl.Endlist {
+			return false // converted to VOD → done
+		}
+		diff = DiffPlaylist(rt.prev, pl)
+		rt.prev = &pl
+		// stat() the new segments for the measured delivery bitrate
+		for _, seg := range diff.NewSegments {
+			p := segmentPath(roomDir, seg.URI)
+			if p == "" {
+				continue
+			}
+			fi, err := os.Stat(p)
+			if err != nil {
+				continue // already rotated out
+			}
+			infos = append(infos, SegInfo{Bytes: float64(fi.Size()), Duration: seg.Duration})
+			newestPath, newestURI = p, seg.URI
+		}
+	} else {
+		playlistURL = rt.edge.PlaylistURL(w.app, rt.origin)
+		if text, _, err := w.fetch(ctx, playlistURL, remotePlaylistCap); err != nil {
+			fetchErr = err.Error() // no advance this cycle (prev kept: no false "dropped")
+		} else {
+			pl := ParsePlaylist(string(text))
+			diff = DiffPlaylist(rt.prev, pl)
+			rt.prev = &pl
+			infos, newestPath, newestURI = w.remoteNewest(ctx, playlistURL, diff.NewSegments)
+			if newestPath != "" {
+				defer os.Remove(newestPath)
+			}
+		}
 	}
-	pl := ParsePlaylist(string(text))
-	if pl.Endlist {
-		return false // converted to VOD → done
-	}
-	diff := DiffPlaylist(rt.prev, pl)
-	rt.prev = &pl
 	if rt.lastAdvanceMs == nil || diff.Advanced {
 		v := nowMs
 		rt.lastAdvanceMs = &v
 	}
 	sinceAdvance := (nowMs - *rt.lastAdvanceMs) / 1000
-
-	// stat() the new segments for the measured delivery bitrate
-	var infos []SegInfo
-	newestPath, newestURI := "", ""
-	for _, seg := range diff.NewSegments {
-		p := segmentPath(roomDir, seg.URI)
-		if p == "" {
-			continue
-		}
-		fi, err := os.Stat(p)
-		if err != nil {
-			continue // already rotated out
-		}
-		infos = append(infos, SegInfo{Bytes: float64(fi.Size()), Duration: seg.Duration})
-		newestPath, newestURI = p, seg.URI
-	}
 	kbps := MeasuredKbps(infos)
 
 	// deep-probe only when a NEW segment landed
 	var hasAudio *bool
 	var meanDb, desyncMs *float64
 	ccErrors := 0
+	noAudioSource := audioSource == "none"
 	if newestPath != "" {
 		out, _ := w.o.Run(ctx, w.ffprobe, FfprobeArgs(newestPath))
 		if facts := ParseFfprobe(out); facts != nil {
@@ -315,7 +355,8 @@ func (w *worker) probeRoom(ctx context.Context, room string, rt *roomRT, t strea
 				ccErrors = AnalyzeTSContinuity(buf).CCErrors
 			}
 		}
-		if hasAudio != nil && *hasAudio {
+		// no audio source: the track (if any) is the egress's filler — skip the decode
+		if hasAudio != nil && *hasAudio && !noAudioSource {
 			_, stderr := w.o.Run(ctx, w.ffmpeg, VolumeArgs(newestPath))
 			if v := ParseVolumeDetect(stderr); v != nil {
 				m := v.MeanDb
@@ -326,12 +367,12 @@ func (w *worker) probeRoom(ctx context.Context, room string, rt *roomRT, t strea
 
 	res := Evaluate(rt.state, Sample{SecondsSinceAdvance: sinceAdvance, DroppedSegments: diff.DroppedSegments,
 		CCErrors: float64(ccErrors), NewDiscontinuityTags: float64(diff.NewDiscontinuityTags), HasAudioTrack: hasAudio,
-		MeanDb: meanDb, DesyncMs: desyncMs, MeasuredKbps: kbps}, t, nowMs)
+		MeanDb: meanDb, DesyncMs: desyncMs, MeasuredKbps: kbps, NoAudioSource: noAudioSource}, t, nowMs)
 	for _, e := range res.Events {
-		w.postEvent(room, e)
+		w.postEvent(key, rt, e)
 	}
 
-	snap := &snapshot{Room: room, Status: res.Status, Reasons: res.Reasons, TS: nowMs, Metrics: snapshotMetrics{
+	snap := &snapshot{Room: key, Status: res.Status, Reasons: res.Reasons, TS: nowMs, Metrics: snapshotMetrics{
 		MeasuredKbps: kbps, SecondsSinceAdvance: jsRound(sinceAdvance), MeanDb: meanDb, DesyncMs: desyncMs,
 		CCErrors: float64(ccErrors), DroppedSegments: diff.DroppedSegments, DiscontinuityTags: float64(diff.NewDiscontinuityTags),
 		BaselineKbps: rt.state.BaselineKbps}}
@@ -346,6 +387,15 @@ func (w *worker) probeRoom(ctx context.Context, room string, rt *roomRT, t strea
 			sf.AudioCodec, sf.SampleRate, sf.Channels = &c, f.Audio.SampleRate, f.Audio.Channels
 		}
 		snap.Facts = sf
+	}
+	if audioSource != "" {
+		if snap.Facts == nil {
+			snap.Facts = &snapshotFacts{}
+		}
+		snap.Facts.AudioSource = audioSource
+	}
+	if rt.edge != nil {
+		snap.Origin, snap.Via, snap.URL, snap.Error = rt.origin, rt.edge.Name, playlistURL, fetchErr
 	}
 	rt.snapshot = snap
 	return true
@@ -370,14 +420,44 @@ func (w *worker) listRooms() []string {
 	return out
 }
 
-func (w *worker) forget(room string) {
-	delete(w.rooms, room)
+func (w *worker) forget(key string) {
+	delete(w.rooms, key)
 	for i, r := range w.order {
-		if r == room {
+		if r == key {
 			w.order = append(w.order[:i], w.order[i+1:]...)
 			break
 		}
 	}
+}
+
+// forgetRoom drops an on-disk room and every remote probe of it.
+func (w *worker) forgetRoom(room string) {
+	for _, key := range append([]string{}, w.order...) {
+		if rt := w.rooms[key]; rt != nil && rt.origin == room {
+			w.forget(key)
+		}
+	}
+}
+
+// sample probes one key when its interval elapsed: probed = a probe ran,
+// keep = false when the stream ended.
+func (w *worker) sample(ctx context.Context, key, room string, edge *EdgeBase, t streamhealth.HealthThresholds, nowMs float64, audioSource string) (probed, keep bool) {
+	rt := w.rooms[key]
+	if rt == nil {
+		rt = &roomRT{origin: room, edge: edge, state: NewRoomState()}
+		w.rooms[key] = rt
+		w.order = append(w.order, key)
+		if edge == nil {
+			w.log("room discovered: " + room)
+		} else {
+			w.log("room discovered: " + key + " via " + edge.PlaylistURL(w.app, room))
+		}
+	}
+	if nowMs-rt.lastSampleMs < t.SampleIntervalSec*1000 {
+		return false, true
+	}
+	rt.lastSampleMs = nowMs
+	return true, w.probeRoom(ctx, key, rt, t, nowMs, audioSource)
 }
 
 type overview struct {
@@ -394,15 +474,16 @@ func (w *worker) tick(ctx context.Context) {
 	}()
 	nowMs := w.nowMs()
 	overrides := ReadRoomOverrides(ctx, w.dbFile)
+	sources := ReadRoomSources(ctx, w.dbFile)
 	live := w.listRooms()
 	liveSet := map[string]bool{}
 	for _, r := range live {
 		liveSet[r] = true
 	}
-	for _, room := range append([]string{}, w.order...) {
-		if !liveSet[room] {
-			w.forget(room)
-			w.log("room gone: " + room)
+	for _, key := range append([]string{}, w.order...) {
+		if rt := w.rooms[key]; rt != nil && !liveSet[rt.origin] {
+			w.forget(key)
+			w.log("room gone: " + key)
 		}
 	}
 	sampled := false
@@ -410,23 +491,28 @@ func (w *worker) tick(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		rt := w.rooms[room]
-		if rt == nil {
-			rt = &roomRT{state: NewRoomState()}
-			w.rooms[room] = rt
-			w.order = append(w.order, room)
-			w.log("room discovered: " + room)
-		}
 		t := streamhealth.ResolveThresholds(w.appConfig, overrides[room])
-		if nowMs-rt.lastSampleMs < t.SampleIntervalSec*1000 {
+		audioSource := ""
+		if has, ok := sources[room]; ok {
+			audioSource = "track"
+			if !has {
+				audioSource = "none"
+			}
+		}
+		probed, keep := w.sample(ctx, room, room, nil, t, nowMs, audioSource)
+		if !keep {
+			w.forgetRoom(room)
 			continue
 		}
-		rt.lastSampleMs = nowMs
-		if !w.probeRoom(ctx, room, rt, t, nowMs) {
-			w.forget(room)
-			continue
+		sampled = sampled || probed
+		for i := range w.edges {
+			e := &w.edges[i]
+			if ctx.Err() != nil {
+				return
+			}
+			probed, _ := w.sample(ctx, room+"@"+e.Name, room, e, t, nowMs, audioSource)
+			sampled = sampled || probed
 		}
-		sampled = true
 	}
 	if sampled || len(w.rooms) > 0 {
 		ov := overview{Room: "overview", TS: w.nowMs(), Streams: []*snapshot{}}

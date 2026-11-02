@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/callbacks"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/dbadmin"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/recording"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/s3"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/transcoding"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/callbacks"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/dbadmin"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/recording"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/transcoding"
 )
 
 // The recording plane: recording (egress start/stop, split/snapshot

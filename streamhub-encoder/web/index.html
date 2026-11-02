@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamHub Encoder</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--fg:#e6e8ee;--mut:#8a93a6;--ok:#2fbf71;--warn:#e0a526;--bad:#e5534b;--acc:#4c8dff}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2;flex-wrap:wrap}
+header h1{font-size:16px;margin:0}.sp{flex:1}main{padding:16px;max-width:1400px;margin:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.k{color:var(--mut);font-size:12px}.v{font-variant-numeric:tabular-nums;font-size:15px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#333}
+.live,.running{background:#173d2a;color:var(--ok)}.degraded,.starting,.backoff,.resolving,.reconnecting,.minor,.warning{background:#3d3317;color:var(--warn)}.error,.critical,.major{background:#3d1a17;color:var(--bad)}.stopped{background:#262b36;color:var(--mut)}
+button,select,input,textarea{background:#0f1115;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:inherit}
+button{cursor:pointer}button.p{background:var(--acc);border-color:var(--acc);color:#fff}button.d{border-color:var(--bad);color:var(--bad)}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:500;font-size:12px}
+code,pre{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace}pre{background:#0b0d11;border:1px solid var(--line);border-radius:6px;padding:10px;max-height:360px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.mut{color:var(--mut)}.code{font-size:34px;letter-spacing:4px;font-weight:700;font-family:ui-monospace,monospace}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;width:min(720px,95vw)}textarea{width:100%;min-height:280px}
+.thumb{width:320px;max-width:100%;aspect-ratio:16/9;background:#000;border-radius:6px;border:1px solid var(--line);object-fit:contain}
+.meters{display:flex;gap:4px;align-items:flex-end;height:90px}.meter{width:10px;height:100%;background:#0b0d11;border:1px solid var(--line);position:relative;border-radius:2px}
+.meter i{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,var(--ok) 70%,var(--warn) 85%,var(--bad));}
+#login{max-width:360px;margin:12vh auto}#login input{width:100%;margin:6px 0}
+</style>
+</head>
+<body>
+<div id="login" class="card" hidden><h2>StreamHub Encoder</h2><p class="mut" id="lmsg">Iniciá sesión</p>
+<input id="lu" placeholder="usuario" autocomplete="username"><input id="lp" type="password" placeholder="contraseña" autocomplete="current-password">
+<div id="pwchange" hidden><input id="lp2" type="password" placeholder="nueva contraseña (≥10)"></div>
+<button class="p" onclick="login()">Entrar</button></div>
+<div id="app" hidden>
+<header><h1>StreamHub Encoder</h1><span id="sys" class="mut"></span><span class="sp"></span><span id="me" class="mut"></span>
+<button onclick="newChannel()">+ Canal</button><button onclick="showCaps()">Capacidades</button><button onclick="logout()">Salir</button></header>
+<main><div class="card" id="alarms"></div><div class="card" id="pair"></div><div id="channels"></div></main></div>
+<dialog id="dlg"><h3 id="dlgT"></h3><div id="dlgB"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button onclick="dlg.close()">Cerrar</button><button class="p" id="dlgOk">Guardar</button></div></dialog>
+<script>
+const $=s=>document.querySelector(s);let PRESETS=null,ME=null,TICK=0;
+async function api(m,p,b){const r=await fetch('/api/v1'+p,{method:m,credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'encoder-ui'},body:b===undefined?undefined:JSON.stringify(b)});
+ if(r.status===401){showLogin();throw new Error('no autorizado')} if(r.status===204)return null; const j=await r.json().catch(()=>({}));
+ if(!r.ok){const d=(j.errors||[]).map(e=>e.location+': '+e.message).join('\n');throw new Error((j.detail||j.title||r.status)+(d?'\n'+d:''))} return j}
+function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;if(msg)$('#lmsg').textContent=msg}
+async function login(){try{const r=await api('POST','/auth/login',{user:$('#lu').value,password:$('#lp').value});
+ if(r.mustChangePassword){if(!$('#lp2').value){$('#pwchange').hidden=false;$('#lmsg').textContent='Tenés que cambiar la contraseña';return}
+  await api('POST','/auth/password',{current:$('#lp').value,new:$('#lp2').value})} start()}catch(e){$('#lmsg').textContent=e.message}}
+async function logout(){await api('POST','/auth/logout').catch(()=>{});showLogin('Sesión cerrada')}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const badge=s=>`<span class="badge ${esc(s)}">${esc(s)}</span>`;const can=r=>ME&&({viewer:0,operator:1,admin:2}[ME.role]>={viewer:0,operator:1,admin:2}[r]);
+function fmtUp(s){s=Math.floor(s||0);return Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m'}
+async function refresh(){try{TICK++;const [sys,chs,pair,al]=await Promise.all([api('GET','/system'),api('GET','/channels'),api('GET','/streamhub'),api('GET','/alarms')]);
+ $('#sys').textContent=`${sys.hostname} · v${sys.version} · ${sys.cpus} CPUs · up ${fmtUp(sys.uptimeSeconds)}`;renderAlarms(al);renderPair(pair);renderChannels(chs)}catch(e){console.warn(e)}}
+function renderAlarms(al){const a=al.active||[];$('#alarms').innerHTML=`<div class="row"><b>Alarmas</b> ${a.length?badge(a.length+' activas'):'<span class="mut">sin alarmas activas</span>'}</div>`+
+ (a.length?`<table><tr><th>Sev.</th><th>Canal</th><th>Tipo</th><th>Mensaje</th><th>Desde</th><th></th></tr>${a.map(x=>`<tr><td>${badge(x.severity)}</td><td>${esc(x.channel)}${x.output?'/'+esc(x.output):''}</td><td>${esc(x.type)}</td><td>${esc(x.message)}</td><td>${new Date(x.raisedAt).toLocaleTimeString()}</td><td>${x.acked?'<span class="mut">ack '+esc(x.ackedBy)+'</span>':(can('operator')?`<button onclick="ack('${x.id}')">Ack</button>`:'')}</td></tr>`).join('')}</table>`:'')}
+async function ack(id){await api('POST',`/alarms/${id}/ack`);refresh()}
+function renderPair(p){const st=p.state;let h=`<div class="row"><b>StreamHub nativo</b> ${badge(st==='connected'?'live':st==='pending'?'starting':st==='revoked'?'error':'stopped')} <span class="mut">${esc(st)} ${esc(p.link||'')}</span><span class="sp"></span>`;
+ if(can('admin')){if(st==='unpaired'||st==='revoked'||!st)h+=`<input id="pairUrl" placeholder="https://streamhub.ejemplo.com" size="34" value="${esc(p.baseUrl||'')}"><button class="p" onclick="pair()">Emparejar</button>`;else h+=`<button class="d" onclick="unpair()">Desemparejar</button>`}
+ h+='</div>';if(st==='pending')h+=`<p>Reclamá este código en StreamHub (app → Encoders → Reclamar):</p><div class="code">${esc(p.displayCode)}</div><p class="mut">vence ${esc(p.expiresAt)}</p>`;
+ if(p.deviceId&&st!=='pending')h+=`<p class="mut">device ${esc(p.deviceId)} · app ${esc(p.app||'?')} · ${esc(p.baseUrl)} · config rev ${p.configRev||0}</p>`;
+ if(p.lastError)h+=`<p style="color:var(--bad)">${esc(p.lastError)}</p>`;$('#pair').innerHTML=h}
+async function pair(){try{await api('POST','/streamhub/pair',{baseUrl:$('#pairUrl').value});refresh()}catch(e){alert(e.message)}}
+async function unpair(){if(confirm('¿Desemparejar de StreamHub? Se quitan las salidas gestionadas.')){await api('POST','/streamhub/unpair');refresh()}}
+function meters(mo){const l=mo&&mo.loudness;if(!l)return '<span class="mut">sin audio</span>';
+ const bars=(l.samplePeakDbfs||[]).map(p=>`<div class="meter" title="${p.toFixed(1)} dBFS"><i style="height:${Math.max(0,Math.min(100,(p+60)/60*100))}%"></i></div>`).join('');
+ return `<div class="row"><div class="meters">${bars}</div><div><div class="k">LUFS M / S / I</div><div class="v">${l.momentaryLufs.toFixed(1)} / ${l.shortTermLufs.toFixed(1)} / ${l.integratedLufs.toFixed(1)}</div><div class="k">LRA ${l.loudnessRangeLu.toFixed(1)} LU</div></div></div>`}
+function renderChannels(list){if(!list.length){$('#channels').innerHTML='<div class="card mut">Sin canales. Creá uno con “+ Canal”.</div>';return}
+ $('#channels').innerHTML=list.map(({config:c,status:s})=>{const st=s.stats||{};const v=c.video;const adm=can('admin'),op=can('operator');
+ return `<div class="card"><div class="row"><h3 style="margin:0">${esc(c.name)} <span class="mut">(${esc(c.id)})</span></h3>${badge(s.state)}<span class="mut">${esc(s.encoder||'')}</span><span class="sp"></span>
+ ${op?(c.enabled?`<button onclick="act('${c.id}','stop')">Detener</button><button onclick="act('${c.id}','restart')">Reiniciar</button>`:`<button class="p" onclick="act('${c.id}','start')">Iniciar</button>`):''}
+ ${op&&c.scte35&&c.scte35.enabled?`<button onclick="cue('${c.id}')">SCTE-35</button>`:''}${adm?`<button onclick="editChannel('${c.id}')">Editar</button>`:''}<button onclick="logs('${c.id}','engine')">Logs</button><button onclick="pipe('${c.id}')">Pipeline</button>${adm?`<button class="d" onclick="delChannel('${c.id}')">Borrar</button>`:''}</div>
+ ${s.error?`<p style="color:var(--bad)">${esc(s.error)}</p>`:''}
+ <div class="row" style="margin:10px 0;align-items:flex-start">${s.state!=='stopped'?`<img class="thumb" src="/api/v1/channels/${c.id}/thumbnail.jpg?t=${TICK}" onerror="this.style.visibility='hidden'" onload="this.style.visibility='visible'">`:''}
+ <div style="flex:1;min-width:280px"><div class="grid"><div><div class="k">Entrada</div><div class="v">${esc(c.input.type)} ${esc(c.input.uri||c.input.pattern||c.input.devicePath||'')}</div></div>
+ <div><div class="k">Encode</div><div class="v">${esc(v.codec)}${v.bitDepth==10?' 10-bit':''}${v.hdr?' '+esc(v.hdr).toUpperCase():''} ${v.width}×${v.height}${v.interlaced?'i':'p'}${esc(v.fps)} ${v.bitrateKbps} kbps${(v.renditions||[]).length?' +'+v.renditions.length+' rend.':''}</div></div>
+ <div><div class="k">FPS</div><div class="v">${st.fps??'–'}</div></div><div><div class="k">Bitrate TS</div><div class="v">${st.bitrateKbps??'–'} kbps</div></div>
+ <div><div class="k">Errores CC</div><div class="v">${st.ccErrors??0}</div></div><div><div class="k">Deriva PCR</div><div class="v">${st.pcrDriftMs??'–'} ms</div></div>
+ <div><div class="k">Reinicios</div><div class="v">${s.engine?s.engine.restarts:0} (stalls ${s.stalls})</div></div><div><div class="k">Uptime</div><div class="v">${fmtUp(s.uptimeSeconds)}</div></div></div>
+ <div style="margin-top:8px">${meters(s.monitor)}</div></div></div>
+ <table><tr><th>Salida</th><th>Tipo</th><th>Estado</th><th>Destino</th><th>Reinicios</th><th></th></tr>
+ ${s.outputs.map(o=>`<tr><td>${esc(o.name)}<div class="mut">${esc(o.id)}</div></td><td>${esc(o.type)}</td><td>${badge(o.state)}${o.error?`<div style="color:var(--bad);font-size:12px">${esc(o.error).slice(0,200)}</div>`:''}</td>
+ <td><code>${esc(o.target||(c.outputs.find(x=>x.id===o.id)||{}).url||'')}</code></td><td>${o.process?o.process.restarts:0}</td>
+ <td>${o.enabled?`<button onclick="logs('${c.id}','${o.id}')">Logs</button>${op?`<button onclick="restartOut('${c.id}','${o.id}')">Reconectar</button>`:''}`:''}${adm?`<button class="d" onclick="delOut('${c.id}','${o.id}')">Quitar</button>`:''}</td></tr>`).join('')}
+ </table>${adm?`<div class="row" style="margin-top:10px"><button onclick="addOut('${c.id}')">+ Salida</button><select id="prof-${c.id}"><option value="">Perfil de encode…</option>${(PRESETS?.profiles||[]).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select><button onclick="applyProf('${c.id}')">Aplicar perfil</button></div>`:''}</div>`}).join('')}
+async function act(id,a){try{await api('POST',`/channels/${id}/${a}`);refresh()}catch(e){alert(e.message)}}
+async function cue(id){const d=prompt('Duración del corte en segundos (0 = cue-in):','30');if(d===null)return;try{const r=await api('POST',`/channels/${id}/scte35`,{kind:'splice_insert',outOfNetwork:+d>0,durationMs:(+d)*1000,preRollMs:4000});alert('Cue '+r.eventId+' programado (PTS '+r.scheduledPts+')')}catch(e){alert(e.message)}}
+async function delChannel(id){if(confirm('¿Borrar el canal '+id+'?')){await api('DELETE','/channels/'+id);refresh()}}
+async function delOut(id,o){if(confirm('¿Quitar la salida '+o+'? (las demás siguen al aire)')){try{await api('DELETE',`/channels/${id}/outputs/${o}`);refresh()}catch(e){alert(e.message)}}}
+async function restartOut(id,o){await api('POST',`/channels/${id}/outputs/${o}/restart`);refresh()}
+async function applyProf(id){const p=$('#prof-'+id).value;if(!p)return;try{await api('POST',`/channels/${id}/profile`,{profile:p});refresh()}catch(e){alert(e.message)}}
+async function logs(id,p){const l=await api('GET',`/channels/${id}/logs?proc=${p}`);dialog('Logs '+id+'/'+p,`<pre>${esc(l.join('\n'))}</pre>`)}
+async function pipe(id){const r=await api('GET',`/channels/${id}/pipeline`);dialog('Pipeline '+id,`<pre>${esc(JSON.stringify(r,null,2))}</pre>`)}
+async function showCaps(){const [r,t]=await Promise.all([api('GET','/system/capabilities'),api('GET','/system/time')]);dialog('Capacidades del host',`<pre>${esc(JSON.stringify({time:t,...r},null,2))}</pre>`)}
+function dialog(t,b,ok){$('#dlgT').textContent=t;$('#dlgB').innerHTML=b;$('#dlgOk').style.display=ok?'':'none';$('#dlgOk').onclick=ok;dlg.showModal()}
+const TPL={id:'ch1',name:'Canal 1',enabled:true,input:{type:'test',pattern:'smpte'},video:{codec:'h264',encoder:'auto',width:1920,height:1080,fps:'30',bitrateKbps:6000,rateControl:'cbr'},audio:{channels:2,bitrateKbps:128},overlay:{timecode:true},mux:{},scte35:{enabled:true},outputs:[]};
+function newChannel(){dialog('Nuevo canal (JSON)',`<textarea id="js">${esc(JSON.stringify(TPL,null,2))}</textarea>`,async()=>{try{await api('POST','/channels',JSON.parse($('#js').value));dlg.close();refresh()}catch(e){alert(e.message)}})}
+async function editChannel(id){const v=await api('GET','/channels/'+id);dialog('Editar '+id+' (JSON; cambios solo de salidas se aplican en caliente; los secretos se ven como *** y se conservan si no cambia el destino)',`<textarea id="js">${esc(JSON.stringify(v.config,null,2))}</textarea>`,async()=>{try{await api('PUT','/channels/'+id,JSON.parse($('#js').value));dlg.close();refresh()}catch(e){alert(e.message)}})}
+function addOut(id){const d=PRESETS?.destinations||[];dialog('Agregar salida',`<p><select id="dp" onchange="paramsFor()"><option value="">— JSON manual —</option>${d.map(x=>`<option value="${x.id}">${esc(x.vendor)} · ${esc(x.name)}</option>`).join('')}</select></p><div id="dpp"></div><textarea id="js" placeholder='{"id":"srt1","type":"srt","enabled":true,"url":"srt://host:9000","srt":{"latencyMs":200}}'></textarea>`,async()=>{
+ const p=$('#dp').value;let body;if(p){const params={};document.querySelectorAll('[data-p]').forEach(i=>params[i.dataset.p]=i.value);body={preset:p,params,id:$('#oid').value||undefined}}else body=JSON.parse($('#js').value);
+ try{const r=await api('POST',`/channels/${id}/outputs`,body);if(r.warnings&&r.warnings.length)alert('Atención:\n'+r.warnings.join('\n'));dlg.close();refresh()}catch(e){alert(e.message)}})}
+function paramsFor(){const d=(PRESETS.destinations||[]).find(x=>x.id===$('#dp').value);$('#js').style.display=d?'none':'';if(!d){$('#dpp').innerHTML='';return}
+ $('#dpp').innerHTML=`<p class="mut">${esc(d.notes||'')}</p><p>id <input id="oid" placeholder="auto"></p>`+d.params.map(p=>`<p>${esc(p.label)} <input data-p="${p.name}" value="${esc(p.default||'')}" ${p.secret?'type="password"':''}></p>`).join('')}
+async function start(){try{ME=await api('GET','/auth/me')}catch(e){return}if(ME.mustChangePassword){showLogin('Cambiá la contraseña para continuar');$('#pwchange').hidden=false;return}
+ $('#login').hidden=true;$('#app').hidden=false;$('#me').textContent=`${ME.name} (${ME.role})`;try{PRESETS=await api('GET','/presets')}catch(e){}refresh()}
+setInterval(()=>{if(!$('#app').hidden)refresh()},2000);start();
+</script>
+</body>
+</html>

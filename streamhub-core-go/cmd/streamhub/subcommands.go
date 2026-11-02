@@ -14,12 +14,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/appstool"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/healthworker"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/mcpserver"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/opsfmt"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/appstool"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/healthworker"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/mcpserver"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/opsfmt"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
 )
 
 // Operator subcommands of the core binary (no subcommand = serve):

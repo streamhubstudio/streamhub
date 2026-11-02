@@ -110,8 +110,11 @@ func (w *Watchdog) reconcileApp(ctx context.Context, appName string, now time.Ti
 	if err != nil {
 		return
 	}
-	linear := cfg.Features.Linear
-	if linear == nil || (!linear.AlwaysOnHls && !linear.Dvr) {
+	// The plan folds features.linear (QW-2/QW-4) with features.dvr /
+	// features.hls (G5): DVR implies always-on, a window implies the
+	// dvr.m3u8 writer, and the prune window/protected playlist follow.
+	plan := PlanForSegments(cfg, w.s.cfg.HLSSegmentS)
+	if !plan.AlwaysOn && plan.PruneSeconds <= 0 && plan.WindowSegments <= 0 {
 		return
 	}
 	streams, err := w.s.List(ctx, appName)
@@ -127,7 +130,7 @@ func (w *Watchdog) reconcileApp(ctx context.Context, appName string, now time.Ti
 		seen[st.Room] = true
 		res.Checked++
 
-		if linear.AlwaysOnHls && !w.hasActiveHls(ctx, st.Room) {
+		if plan.AlwaysOn && !w.hasActiveHls(ctx, appName, st.Room, plan.SegmentSeconds) {
 			if _, err := w.hls.Start(ctx, appName, st.StreamID, strings.TrimRight(w.s.cfg.PublicBaseURL, "/")); err != nil {
 				w.warn(appName, "hls relaunch failed", err)
 			} else {
@@ -135,31 +138,35 @@ func (w *Watchdog) reconcileApp(ctx context.Context, appName string, now time.Ti
 				w.log("info", "relaunched dead HLS egress", relaunchMeta{appName, st.Room, st.StreamID})
 			}
 		}
-		if linear.Dvr {
-			res.Pruned += w.pruneRoom(appName, st.Room, linear.DvrWindowSeconds, now)
+		if plan.WindowSegments > 0 && w.hls.Windows != nil {
+			w.hls.Windows.Track(w.hls.roomDir(appName, st.Room), plan.WindowSegments)
+		}
+		if plan.PruneSeconds > 0 {
+			res.Pruned += w.pruneRoom(appName, st.Room, plan.PruneSeconds, plan.Protect, now)
 		}
 	}
 }
 
 // hasActiveHls errs on the safe side: a failed listing counts as alive so a
-// LiveKit hiccup never double-launches.
-func (w *Watchdog) hasActiveHls(ctx context.Context, room string) bool {
-	list, err := w.hls.egressOrMissing().ListHlsEgress(ctx, room)
+// LiveKit hiccup never double-launches. An egress LiveKit lists but whose
+// playlist froze (Hls.stale) is dead: Hls.Start then replaces it.
+func (w *Watchdog) hasActiveHls(ctx context.Context, appName, room string, segS int) bool {
+	live, err := w.hls.liveForRoom(ctx, room)
 	if err != nil {
 		w.warn("", "listHlsEgress failed", err)
 		return true
 	}
-	for _, e := range list {
-		if e.RoomName == room {
-			return true
-		}
+	e := newestEgress(live)
+	if e == nil {
+		return false
 	}
-	return false
+	_, stale := w.hls.stale(*e, w.hls.roomDir(appName, room), segS)
+	return !stale
 }
 
-func (w *Watchdog) pruneRoom(appName, room string, windowSeconds float64, now time.Time) int {
+func (w *Watchdog) pruneRoom(appName, room string, windowSeconds float64, protect string, now time.Time) int {
 	dir := filepath.Join(w.s.apps.AppDir(appName), "hls", Safe(room))
-	r := PruneDvrDir(dir, windowSeconds, PruneOptions{Now: float64(now.UnixNano()) / 1e6})
+	r := PruneDvrDir(dir, windowSeconds, PruneOptions{LivePlaylist: protect, Now: float64(now.UnixNano()) / 1e6})
 	if len(r.Deleted) > 0 {
 		w.log("info", "pruned DVR segments", pruneMeta{appName, room, len(r.Deleted), windowSeconds})
 	}

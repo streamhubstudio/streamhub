@@ -10,12 +10,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of plugin-grid.service.ts (origin side: grid node selection from the
@@ -37,14 +42,16 @@ type GridNodeView struct {
 	Capabilities []string `json:"capabilities"`
 }
 
-// GridSpawnRequest is the body POSTed to a node's grid agent.
+// GridSpawnRequest is the body POSTed to a node's grid agent: WHAT to run
+// (plugin + app + validated config + the per-start ingest token), never HOW.
+// GO-DIVERGENCE (security, 3.3.3): Node sent the resolved command/args/env,
+// so anyone holding the cluster token ran arbitrary commands on every node;
+// the node now resolves the spawn from its own registry (gridSpawn).
 type GridSpawnRequest struct {
-	PluginID    string   `json:"pluginId"`
-	AppName     string   `json:"appName"`
-	Command     string   `json:"command"`
-	Args        []string `json:"args"`
-	Env         *y.Map   `json:"env"`
-	IngestToken string   `json:"ingestToken,omitempty"`
+	PluginID    string `json:"pluginId"`
+	AppName     string `json:"appName"`
+	Config      *y.Map `json:"config"`
+	IngestToken string `json:"ingestToken,omitempty"`
 }
 
 // GridDispatchResult is a dispatch outcome.
@@ -200,7 +207,11 @@ func normalizeNodeURL(raw *string) string {
 	return u.Scheme + "://" + u.Host
 }
 
-func (g *Grid) call(ctx context.Context, method, target string, body any) (*http.Response, error) {
+// call signs with the TARGET node's secret, never the shared cluster token
+// (GO-DIVERGENCE, security 3.3.4 — C5.3): a grid node learns only its own
+// credential. A pre-3.3.4 agent (which checks the raw token) answers 401 and
+// the worker falls back to a local spawn until that node is upgraded.
+func (g *Grid) call(ctx context.Context, node NodeInfo, method, target string, body any) (*http.Response, error) {
 	var rd *bytes.Reader
 	if body != nil {
 		b, err := y.Stringify(body)
@@ -216,7 +227,7 @@ func (g *Grid) call(ctx context.Context, method, target string, body any) (*http
 		return nil, err
 	}
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("x-cluster-token", g.clusterToken)
+	req.Header.Set(cluster.NodeSecretHeader, cluster.NodeSecret(g.clusterToken, node.ID))
 	return g.client.Do(req)
 }
 
@@ -230,7 +241,7 @@ func (g *Grid) Dispatch(ctx context.Context, node NodeInfo, req GridSpawnRequest
 	if g.clusterToken == "" {
 		return GridDispatchResult{Node: node, Reason: "STREAMHUB_CLUSTER_TOKEN unset"}
 	}
-	res, err := g.call(ctx, http.MethodPost, base+"/api/v1/grid/workers", req)
+	res, err := g.call(ctx, node, http.MethodPost, base+"/api/v1/grid/workers", req)
 	if err != nil {
 		return GridDispatchResult{Node: node, Reason: "dispatch error: " + err.Error()}
 	}
@@ -268,7 +279,7 @@ func (g *Grid) StopRemote(ctx context.Context, node NodeInfo, remoteID string) b
 	if base == "" || g.clusterToken == "" {
 		return false
 	}
-	res, err := g.call(ctx, http.MethodPost, base+"/api/v1/grid/workers/"+jsx.EncodeURIComponent(remoteID)+"/stop", nil)
+	res, err := g.call(ctx, node, http.MethodPost, base+"/api/v1/grid/workers/"+jsx.EncodeURIComponent(remoteID)+"/stop", nil)
 	if err != nil {
 		return false
 	}
@@ -282,7 +293,7 @@ func (g *Grid) RemoteStatus(ctx context.Context, node NodeInfo, remoteID string)
 	if base == "" || g.clusterToken == "" {
 		return nil
 	}
-	res, err := g.call(ctx, http.MethodGet, base+"/api/v1/grid/workers/"+jsx.EncodeURIComponent(remoteID)+"/status", nil)
+	res, err := g.call(ctx, node, http.MethodGet, base+"/api/v1/grid/workers/"+jsx.EncodeURIComponent(remoteID)+"/status", nil)
 	if err != nil {
 		return nil
 	}
@@ -315,43 +326,129 @@ type GridWorkerView struct {
 	Error     string          `json:"error,omitempty"`
 }
 
-// Agent is GridAgentService.
-type Agent struct{ workers *Manager }
+// GridNode is the node-role view the agent needs (cluster.NodeRole).
+type GridNode interface {
+	Role(ctx context.Context) string
+	MasterURL(ctx context.Context) *string
+	MasterNodeID(ctx context.Context) *string
+	// NodeSecret is the per-node credential the master signs with.
+	NodeSecret(ctx context.Context) *string
+}
 
-// NewAgent builds the agent.
-func NewAgent(m *Manager) *Agent { return &Agent{workers: m} }
+// gridAgentRole is the only role that serves /grid: a node joined to a
+// master. A master or standalone core never runs dispatched workers.
+const gridAgentRole = "edge"
+
+// Agent is GridAgentService.
+type Agent struct {
+	workers    *Manager
+	registry   *Registry
+	node       func() GridNode
+	legacyOnce sync.Once
+}
+
+// NewAgent builds the agent. reg resolves dispatched plugins; node is looked
+// up lazily (nil, or a non-edge role, = agent off → /grid 404).
+func NewAgent(m *Manager, reg *Registry, node func() GridNode) *Agent {
+	return &Agent{workers: m, registry: reg, node: node}
+}
+
+// Enabled reports that this node serves /grid (role edge).
+func (a *Agent) Enabled(ctx context.Context) bool {
+	n := a.gridNode()
+	return n != nil && n.Role(ctx) == gridAgentRole
+}
+
+func (a *Agent) gridNode() GridNode {
+	if a == nil || a.node == nil {
+		return nil
+	}
+	return a.node()
+}
+
+// warnLegacy logs (once) that the master still signs with the raw token.
+func (a *Agent) warnLegacy() {
+	a.legacyOnce.Do(func() {
+		if a.registry != nil && a.registry.log != nil {
+			a.registry.log.Warn("grid: master authenticated with the shared STREAMHUB_CLUSTER_TOKEN — legacy mode; " +
+				"upgrade the master to 3.3.4+ and re-join this node, then set STREAMHUB_CLUSTER_LEGACY_TOKEN=off")
+		}
+	})
+}
 
 // GridWorkerInput is the validated GridWorkerDto.
 type GridWorkerInput struct {
-	PluginID, AppName, Command string
-	Args                       []string
-	Env                        *y.Map
-	IngestToken                string
+	PluginID, AppName string
+	Config            *y.Map
+	IngestToken       string
 }
+
+// gridAppName keeps the app name path-safe (it names the worker's app dir).
+var gridAppName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 
 func gridView(id string, s WorkerState) GridWorkerView {
 	return GridWorkerView{ID: id, PluginID: s.PluginID, AppName: s.App, Status: s.Status, PID: s.PID,
 		StartedAt: s.StartedAt, StoppedAt: s.StoppedAt, ExitCode: s.ExitCode, Error: s.Error}
 }
 
-// Spawn runs a dispatched worker under a fresh id.
-func (a *Agent) Spawn(in GridWorkerInput) GridWorkerView {
+// Spawn runs a dispatched worker under a fresh id. The spec comes from THIS
+// node's registry exactly as a local spawn (the plugin's own spawn builder /
+// declarative template over the validated config), with the remote context:
+// the master as origin (ingest feed-back) and this node as ctx.node. Only
+// plugins declaring `placement: grid` can be dispatched.
+func (a *Agent) Spawn(ctx context.Context, in GridWorkerInput) (GridWorkerView, error) {
+	spec, err := a.gridSpawn(ctx, in)
+	if err != nil {
+		return GridWorkerView{}, err
+	}
 	id := uuid()
-	var env []EnvVar
-	hasToken := false
-	if in.Env != nil {
-		for _, k := range in.Env.Keys() {
-			if v, ok := in.Env.Get(k).(string); ok {
-				env = append(env, EnvVar{k, v})
-				hasToken = hasToken || (k == "STREAMHUB_INGEST_TOKEN" && v != "")
-			}
+	return gridView(id, a.workers.StartSpec(id, in.AppName, in.PluginID, spec)), nil
+}
+
+func (a *Agent) gridSpawn(ctx context.Context, in GridWorkerInput) (WorkerSpec, error) {
+	if !gridAppName.MatchString(in.AppName) {
+		return WorkerSpec{}, httpx.BadRequest(fmt.Sprintf("invalid app name '%s'", in.AppName))
+	}
+	var meta *Meta
+	if a.registry != nil {
+		meta = a.registry.GetMeta(in.PluginID)
+	}
+	if meta == nil {
+		return WorkerSpec{}, httpx.NotFound(fmt.Sprintf("plugin '%s' not found", in.PluginID))
+	}
+	if !meta.NeedsWorker || meta.Worker == nil || meta.Worker.Spawn == nil || meta.Worker.Placement != "grid" {
+		return WorkerSpec{}, httpx.BadRequest(fmt.Sprintf("plugin '%s' is not a grid worker", in.PluginID))
+	}
+	cfg, err := ValidateConfig(meta, in.Config, true)
+	if err != nil {
+		return WorkerSpec{}, badRequestOnConfig(err)
+	}
+	origin, nodeID := "", ""
+	var n GridNode
+	if a.node != nil {
+		n = a.node()
+	}
+	if n != nil {
+		if u := n.MasterURL(ctx); u != nil {
+			origin = *u
+		}
+		if id := n.MasterNodeID(ctx); id != nil {
+			nodeID = *id
 		}
 	}
-	if in.IngestToken != "" && !hasToken {
+	dataDir := a.workers.cfg.DataDir
+	spec := meta.Worker.Spawn(WorkerContext{App: in.AppName, Config: cfg, AppDir: filepath.Join(dataDir, "apps", in.AppName),
+		DataDir: dataDir, LivekitURL: a.workers.cfg.LivekitURL, Node: &NodeInfo{ID: nodeID}, OriginURL: origin})
+	env := []EnvVar{{"STREAMHUB_APP", in.AppName}, {"STREAMHUB_PLUGIN_ID", meta.ID}}
+	if origin != "" {
+		base := strings.TrimRight(origin, "/") + "/api/v1/apps/" + jsx.EncodeURIComponent(in.AppName) + "/plugins/" + jsx.EncodeURIComponent(meta.ID)
+		env = append(env, EnvVar{"STREAMHUB_INGEST_URL", base + "/live"}, EnvVar{"STREAMHUB_EVENTS_URL", base + "/events"})
+	}
+	if in.IngestToken != "" {
 		env = append(env, EnvVar{"STREAMHUB_INGEST_TOKEN", in.IngestToken})
 	}
-	state := a.workers.StartSpec(id, in.AppName, in.PluginID, WorkerSpec{Command: in.Command, Args: orEmpty(in.Args), Env: env})
-	return gridView(id, state)
+	spec.Args, spec.Env = orEmpty(spec.Args), append(env, spec.Env...)
+	return spec, nil
 }
 
 func gridNotFound(id string) error {

@@ -38,11 +38,18 @@ function probeResponse(status: number, lastModified?: Date) {
   return { ok: status >= 200 && status < 300, status, headers } as Response
 }
 
-function renderEmbed() {
+/** The plain playlist answers `index`; the DVR window (dvr.m3u8) `dvr` (404 = none). */
+function routeProbes(index: Response, dvr: Response = probeResponse(404)) {
+  fetchMock.mockImplementation((url: string) =>
+    Promise.resolve(url.endsWith('/dvr.m3u8') ? dvr : index),
+  )
+}
+
+function renderEmbed(entry = '/embed/live/ch1') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/embed/live/ch1']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/embed/:app/:room" element={<Embed />} />
         </Routes>
@@ -64,7 +71,7 @@ afterEach(() => {
 
 describe('Embed — HLS fallback', () => {
   it('fresh playlist → renders the public HlsPlayer (passthrough embeddable)', async () => {
-    fetchMock.mockResolvedValue(probeResponse(200, new Date()))
+    routeProbes(probeResponse(200, new Date()))
     renderEmbed()
 
     expect(await screen.findByTestId('hls-player')).toBeTruthy()
@@ -73,14 +80,27 @@ describe('Embed — HLS fallback', () => {
     const props = hlsPlayerProps.mock.calls.at(-1)![0]
     expect(props.src).toBe('/hls/live/ch1/index.m3u8')
     expect(props.access).toBe('public')
-    expect(fetchMock).toHaveBeenCalledTimes(1) // one probe, no polling
+    expect(props.dvr).toBe(false)
+    expect(props.startAt).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2) // one probe per playlist, no polling
   })
 
   it('no playlist (404) → the WebRTC LivePlayer, unchanged', async () => {
-    fetchMock.mockResolvedValue(probeResponse(404))
+    routeProbes(probeResponse(404))
     renderEmbed()
 
     expect(await screen.findByTestId('live-player')).toBeTruthy()
     expect(screen.queryByTestId('hls-player')).toBeNull()
+  })
+
+  it('live DVR window → dvr.m3u8 with the DVR bar; ?t= is forwarded', async () => {
+    routeProbes(probeResponse(200, new Date()), probeResponse(200, new Date()))
+    renderEmbed('/embed/live/ch1?t=1793282400')
+
+    expect(await screen.findByTestId('hls-player')).toBeTruthy()
+    const props = hlsPlayerProps.mock.calls.at(-1)![0]
+    expect(props.src).toBe('/hls/live/ch1/dvr.m3u8')
+    expect(props.dvr).toBe(true)
+    expect(props.startAt).toBe('1793282400')
   })
 })

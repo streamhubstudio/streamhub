@@ -15,17 +15,17 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authn"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/server"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authn"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/server"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 const (
@@ -34,24 +34,36 @@ const (
 	adminPass = "rootpass"
 )
 
-// fakeMailer records sends and answers with result.
+// fakeMailer records sends (recipient + link) and answers with result.
 type fakeMailer struct {
-	mu       sync.Mutex
-	result   authn.SendResult
-	urls     []string
-	contexts []authn.SendContext
-	tests    []string
+	mu      sync.Mutex
+	result  authn.SendResult
+	urls    []string
+	to      []string
+	notices []string // email-change notices: "old→new"
+	tests   []string
 }
 
-func (f *fakeMailer) SendMagicLink(_ context.Context, _, url string, sc authn.SendContext) authn.SendResult {
+func (f *fakeMailer) SendMagicLink(_ context.Context, to, url string) authn.SendResult {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.urls, f.contexts = append(f.urls, url), append(f.contexts, sc)
+	f.urls, f.to = append(f.urls, url), append(f.to, to)
 	return f.result
 }
 
-func (f *fakeMailer) SendInvite(_ context.Context, _, url string, _ authn.InviteOptions, sc authn.SendContext) authn.SendResult {
-	return f.SendMagicLink(context.Background(), "", url, sc)
+func (f *fakeMailer) SendInvite(_ context.Context, to, url string, _ authn.InviteOptions) authn.SendResult {
+	return f.SendMagicLink(context.Background(), to, url)
+}
+
+func (f *fakeMailer) SendEmailChange(_ context.Context, to, url string) authn.SendResult {
+	return f.SendMagicLink(context.Background(), to, url)
+}
+
+func (f *fakeMailer) SendEmailChangeNotice(_ context.Context, old, next string) authn.SendResult {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.notices = append(f.notices, old+"→"+next)
+	return f.result
 }
 
 func (f *fakeMailer) TestUserSMTP(_ context.Context, userID, to string) authn.SendResult {
@@ -98,7 +110,15 @@ type stack struct {
 // over a fresh DATA_DIR, behind server.Handler.
 func newStack(t *testing.T) *stack {
 	t.Helper()
+	return newStackThrottled(t, nil)
+}
+
+// newStackThrottled is newStack with the auth throttle injected (nil = from
+// env, whose per-IP limit is lifted here: the suites log in a lot from one IP).
+func newStackThrottled(t *testing.T, th *authn.Throttle) *stack {
+	t.Helper()
 	t.Setenv("AUTH_RATE_LIMIT_MAX", "100000")
+	t.Setenv("STREAMHUB_AUTH_IP_LIMIT", "100000")
 	store, g, dir := testutil.Store(t)
 	ctx := context.Background()
 	cfg := &config.Config{DataDir: dir, NodeEnv: "test", JWTSecret: jwtSecret, AdminUser: adminUser, AdminPass: adminPass, LogRetentionDays: 30}
@@ -115,7 +135,7 @@ func newStack(t *testing.T) *stack {
 	quo := quotas.New(g, store.App, log)
 	mail := &fakeMailer{result: authn.SendResult{OK: true}}
 	role := &fakeRole{role: "standalone"}
-	svc := authn.New(authn.Deps{Config: cfg, DB: g, Tenancy: ten, Quotas: quo, Audit: aud, Reputation: rep, NodeRole: role, Mailer: mail, Log: log})
+	svc := authn.New(authn.Deps{Config: cfg, DB: g, Tenancy: ten, Quotas: quo, Audit: aud, Reputation: rep, NodeRole: role, Mailer: mail, Log: log, Throttle: th})
 	svc.Init(ctx)
 	limiter := httpx.NewAuthRateLimiter(cfg.Env)
 	h := server.Handler(server.Deps{

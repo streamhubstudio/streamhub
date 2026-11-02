@@ -13,13 +13,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logsink"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logsink"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // Port of streamflow.runner.ts. The BullMQ queue `streamhub-streamflow`
@@ -59,6 +59,9 @@ type Dispatcher interface {
 // Snapshotter is StreamsService.snapshot.
 type Snapshotter func(ctx context.Context, app, room string, participant *string) (key, url string, err error)
 
+// ClipMaker is the clips service seam (G6 action.clip).
+type ClipMaker func(ctx context.Context, in ClipInput) (*ClipOutput, error)
+
 // MQTTPublisher is MqttService.publishRaw.
 type MQTTPublisher func(ctx context.Context, app, topic string, payload any, qos int, retain bool)
 
@@ -78,6 +81,7 @@ type RunnerDeps struct {
 	Plugin        PluginState
 	Callbacks     Dispatcher // optional
 	Snapshot      Snapshotter
+	Clip          ClipMaker
 	MQTT          MQTTPublisher
 	Notify        Notifier
 	S3            S3
@@ -85,6 +89,8 @@ type RunnerDeps struct {
 	Secrets       *Secrets
 	Logs          logsink.Writer
 	PublicBaseURL string
+	// Env reads the operator environment (DangerousEnv); nil = os.Getenv.
+	Env func(string) string
 	// Dangerous seams (defaults: RunCode/RunShell/RunSSH/RunDB).
 	RunCode  func(ctx context.Context, in CodeInput) *y.Map
 	RunShell func(ctx context.Context, in ShellInput) *y.Map
@@ -124,7 +130,15 @@ func NewRunner(d RunnerDeps) *Runner {
 	if d.RunDB == nil {
 		d.RunDB = RunDB
 	}
-	return &Runner{d: d, HTTP: &http.Client{}, Resolve: security.DefaultHostResolver, queue: make(chan job, queueBacklog)}
+	if d.Env == nil {
+		d.Env = os.Getenv
+	}
+	r := &Runner{d: d, Resolve: security.DefaultHostResolver, queue: make(chan job, queueBacklog)}
+	// Egress-guarded: the dial re-checks the resolved IP (through the same
+	// Resolve seam) and re-vets redirects — postJSON's URL guard alone let
+	// DNS rebinding and a 302 to an internal address through.
+	r.HTTP = security.SafeHTTPClient(func(ctx context.Context, host string) ([]string, error) { return r.Resolve(ctx, host) })
+	return r
 }
 
 // Start launches the workers (c.starters; skipped in shadow mode).
@@ -200,8 +214,9 @@ func (r *Runner) Execute(ctx context.Context, j job) {
 	r.lifecycle(ctx, j.app, "streamflow.run_started", obj("run", j.runID, "workflow", j.workflowID, "event", j.trigger.Event))
 
 	bc := &BoxContext{
-		App: j.app, AppDir: dir, DangerousEnabled: r.dangerousEnabled(ctx, j.app),
+		App: j.app, AppDir: dir, DangerousEnabled: r.dangerousEnabled(j.app),
 		Trigger: j.trigger, Bag: newBag(j.trigger.Event, j.trigger.Payload),
+		WorkflowID: j.workflowID, RunID: j.runID,
 	}
 	deps := r.buildDeps(j.app)
 	seq := 0
@@ -269,9 +284,11 @@ func (r *Runner) pluginConfig(ctx context.Context, app string) (bool, bool, *y.M
 	return inst, en, cfg
 }
 
-func (r *Runner) dangerousEnabled(ctx context.Context, app string) bool {
-	_, _, cfg := r.pluginConfig(ctx, app)
-	return cfg.Get("dangerousNodes") == true
+// dangerousEnabled is the operator allowlist (DangerousEnv), read per call so
+// the run-time check never trusts what was validated at save time. The
+// tenant plugin config plays no part (a legacy `dangerousNodes` is inert).
+func (r *Runner) dangerousEnabled(app string) bool {
+	return DangerousAllowed(r.d.Env(DangerousEnv))(app)
 }
 
 // lifecycle dispatches a streamflow.run_* event, fire-and-forget.
@@ -318,6 +335,12 @@ func (r *Runner) buildDeps(app string) *Deps {
 				return "", "", errors.New("streams service not available")
 			}
 			return r.d.Snapshot(ctx, a, room, participant)
+		},
+		Clip: func(ctx context.Context, in ClipInput) (*ClipOutput, error) {
+			if r.d.Clip == nil {
+				return nil, errors.New("clips service not available")
+			}
+			return r.d.Clip(ctx, in)
 		},
 		S3Upload: func(ctx context.Context, a, key string, body []byte, contentType string) (string, string, error) {
 			if r.d.S3 == nil {

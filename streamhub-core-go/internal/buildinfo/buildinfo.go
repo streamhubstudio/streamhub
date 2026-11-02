@@ -1,7 +1,7 @@
 // Package buildinfo serves "About / Build": the running core's version, VCS
 // stamp and Go toolchain (GET /system/build) and the embedded product
 // changelog (GET /system/changelog). Both are additive 3.x routes with no 2.x
-// Node counterpart (internal design notes).
+// Node counterpart (planning/GO-DIVERGENCES.md).
 package buildinfo
 
 //go:generate cp ../../../CHANGELOG.md changelog/CHANGELOG.md
@@ -15,7 +15,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
 )
 
 //go:embed changelog

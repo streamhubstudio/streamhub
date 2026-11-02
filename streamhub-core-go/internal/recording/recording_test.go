@@ -15,12 +15,12 @@ import (
 
 	lkproto "github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
 )
 
 // recording.service.spec / recording.trackmode.spec / vod-probe.spec /
@@ -888,9 +888,35 @@ func TestVodsRepository(t *testing.T) {
 	if !strings.Contains(string(b), `"sizeBytes":30,`) || !strings.Contains(string(b), `"endedAt":null`) {
 		t.Fatal(string(b))
 	}
+	if !strings.Contains(string(b), `"source":"recording"`) {
+		t.Fatal("a NULL source reads as recording:", string(b))
+	}
 	_ = r.Delete(ctx, "a", 1)
 	if v, _ := r.FindByID(ctx, "a", 1); v != nil {
 		t.Fatal("not deleted")
+	}
+
+	// G6: clip rows carry source=clip; ?source filters (recording ⊇ NULL rows).
+	clipID, err := r.Insert(ctx, "a", VodInsert{AppID: 1, Room: str("r1"), Name: "clip.mp4", Status: "ready", Source: VodSourceClip})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := r.FindByID(ctx, "a", clipID); v.Source != VodSourceClip {
+		t.Fatalf("%+v", v)
+	}
+	clip, rec := VodSourceClip, VodSourceRecording
+	if n, _ := r.Count(ctx, "a", VodFilters{Source: &clip}); n != 1 {
+		t.Fatal("clips", n)
+	}
+	if n, _ := r.Count(ctx, "a", VodFilters{Source: &rec}); n != 2 {
+		t.Fatal("recordings (NULL source)", n)
+	}
+	if _, err := parseListQuery(map[string][]string{"source": {"bogus"}}); err == nil ||
+		!strings.Contains(err.Error(), "source must be one of the following values: recording, clip") {
+		t.Fatal(err)
+	}
+	if q, err := parseListQuery(map[string][]string{"source": {"clip"}}); err != nil || q.Source == nil || *q.Source != "clip" {
+		t.Fatal(q, err)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
 )
 
 // Port of sample-pages.ts: the publish/play/embed demo pages written to
@@ -84,7 +86,7 @@ func (s *Service) writeSamplePages(name, room string) error {
 		AppName: name, RoomName: room, PublicBaseURL: base, PublicWsURL: ws, APIBase: apiBase + "/api/v1",
 	})
 	dir := filepath.Join(s.AppDir(name), "samples")
-	if err := os.MkdirAll(dir, 0o777); err != nil {
+	if err := os.MkdirAll(dir, fsperm.Private); err != nil {
 		return err
 	}
 	for file, body := range map[string]string{"publish.html": pages.Publish, "play.html": pages.Play, "embed.html": pages.Embed} {

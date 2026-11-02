@@ -14,7 +14,7 @@
 package plugins
 
 import (
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Field is one typed config field of a plugin's configSchema. Raw keeps the
@@ -26,7 +26,11 @@ type Field struct {
 	Required bool
 	Options  []any // select option values (JS values)
 	Min, Max *float64
-	Raw      *y.Map
+	// Format is an optional value format; "url" (string/secret fields) = an
+	// outbound target the worker calls: a PATCH runs it through the SSRF
+	// egress guard.
+	Format string
+	Raw    *y.Map
 }
 
 // NodeInfo identifies the node a worker is (to be) placed on.

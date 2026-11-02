@@ -100,6 +100,16 @@ export default definePlugin({
         step: 1,
         description: 'Consecutive clean samples before health.recovered (anti-flapping).',
       },
+      {
+        key: 'edge_hls_bases',
+        type: 'string',
+        label: 'Edge/CDN bases to probe',
+        default: '',
+        placeholder: 'edge1=https://cdn1.example.com, https://cdn2.example.com',
+        description:
+          'Also probe every live room through each edge/CDN (<base>/hls/<app>/<room>/index.m3u8), ' +
+          'shown as <room>@<edge>. Comma-separated; name=url names an edge. Empty = origin only.',
+      },
     ],
   },
   TabComponent: HealthTab,

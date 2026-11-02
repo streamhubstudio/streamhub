@@ -1,6 +1,6 @@
 # Loki single-binary — almacén de logs del cluster. Corre SOLO en el master
 # (stream01) dentro del overlay cluster/docker-compose.cluster.yml.
-# Diseño: https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY §Logs.
+# Diseño: streamhub-docs/operations/CLUSTER-OBSERVABILITY.md §Logs.
 #
 # Bindea a 127.0.0.1 (network_mode: host en el compose): NO se expone directo a
 # Internet. Los Promtail de los nodos remotos empujan vía el nginx del master

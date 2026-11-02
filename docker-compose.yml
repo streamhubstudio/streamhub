@@ -28,7 +28,7 @@
 #     core, which classifies by stream key — `ptk_` → passthrough remux, else →
 #     forward to the LiveKit ingress (moved to the INTERNAL :11935 via
 #     STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT). MediaMTX API is loopback :9997.
-#     See https://streamhub.studio/docs/features/rtmp-single-port.
+#     See streamhub-docs/features/rtmp-single-port.md.
 # =============================================================================
 
 services:
@@ -54,6 +54,11 @@ services:
     # not *_CONFIG_BODY like ingress/egress). Compose substitutes ${LIVEKIT_*} from
     # .env. Single UDP mux port (7882) keeps the firewall simple; use_external_ip
     # autodetects the public IP; the webhook feeds StreamHub core.
+    # Cloud 1:1 NAT (AWS/GCP/Azure: the public IP is NOT on any interface): the
+    # installer sets LIVEKIT_USE_EXTERNAL_IP=false + LIVEKIT_NODE_IP=<private IP>
+    # (--node-ip, or detected from the instance metadata) — with the STUN-detected
+    # public IP the egress' headless Chrome on the same VPC can't reach LiveKit
+    # (black / no HLS; seen in two AWS load tests). Unset = the old behaviour.
     environment:
       LIVEKIT_CONFIG: |
         port: 7880
@@ -61,7 +66,8 @@ services:
         rtc:
           tcp_port: 7881
           udp_port: 7882
-          use_external_ip: true
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-true}
+          node_ip: ${LIVEKIT_NODE_IP:-}
         # Edge nodes joining a cluster point this at the ORIGIN's redis and
         # core (install.sh --join sets LIVEKIT_REDIS_ADDRESS / _PASSWORD /
         # LIVEKIT_WEBHOOK_URL in .env).
@@ -82,7 +88,7 @@ services:
         # 3478/udp. LiveKit terminates the TURN TLS itself, reading the certbot PEMs
         # from the read-only /etc/letsencrypt mount below (the cert_file path derives
         # from the domain). The client needs nothing — ICE servers arrive in the
-        # JoinResponse. See https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT, TURN.
+        # JoinResponse. See streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md, TURN.
         turn:
           enabled: ${STREAMHUB_TURN_ENABLE:-false}
           domain: ${STREAMHUB_TURN_DOMAIN:-turn.localhost}
@@ -177,6 +183,10 @@ services:
       # the secret from .env here). Both must match the core's hook secret.
       STREAMHUB_MEDIAMTX_HOOK_SECRET: ${STREAMHUB_MEDIAMTX_HOOK_SECRET:-}
       MTX_AUTHHTTPADDRESS: http://127.0.0.1:3020/api/v1/internal/mediamtx/auth?secret=${STREAMHUB_MEDIAMTX_HOOK_SECRET:-}
+      # E2 — SRT ingest with stream-key auth (srt://host:8890?streamid=publish:<app>/<key>).
+      # Off by default. MediaMTX parses this value too: use ONLY true|false.
+      MTX_SRT: ${STREAMHUB_MEDIAMTX_SRT_ENABLE:-false}
+      MTX_SRTADDRESS: :${STREAMHUB_MEDIAMTX_SRT_PORT:-8890}
     volumes:
       - ./deploy/mediamtx.yml:/mediamtx.yml:ro
 
@@ -190,7 +200,7 @@ services:
   # (bind-mounted read-only): nginx+certbot → STREAMHUB_RTMPS_CERT_DIR=
   # /etc/letsencrypt/live/<domain>; else drop fullchain.pem+privkey.pem into
   # data/certs/rtmps. Also set STREAMHUB_RTMPS_ENABLE=true so core surfaces
-  # rtmps_url. See deploy/rtmps/ and https://streamhub.studio/docs/operations/ENV.
+  # rtmps_url. See deploy/rtmps/ and streamhub-docs/operations/ENV.md.
   rtmps:
     profiles: ["rtmps"]
     build:
@@ -242,6 +252,12 @@ services:
         log_level: info
         # Prometheus metrics on the host — separate port from livekit/ingress.
         prometheus_port: 6791
+        # CPU the egress RESERVES per live-HLS/recording composite before it
+        # accepts a job. LiveKit's default (4) let an 8-vCPU origin take ONE
+        # live HLS while the 720p30 composite really used ~0.9 CPU (max 1.7) —
+        # LOADTEST-4-REPORT.md. See STREAMHUB_EGRESS_COMPOSITE_CPU in ENV.md.
+        cpu_cost:
+          room_composite_cpu_cost: ${STREAMHUB_EGRESS_COMPOSITE_CPU:-2.0}
     # CRITICAL: egress must see the data dir at the SAME path the core hands it,
     # so the MP4 it writes lands exactly where core looks to upload it to S3.
     volumes:
@@ -284,7 +300,13 @@ services:
       retries: 12
       start_period: 20s
 
+  # Caddy front (auto-TLS) — only under the `caddy` compose profile, so a plain
+  # `docker compose up -d` on an nginx-fronted host never starts it (it used to
+  # crash-loop against nginx on :80). install.sh --proxy caddy writes
+  # COMPOSE_PROFILES=caddy into .env (compose reads it from there), and the
+  # streamhub CLI passes --profile caddy on a caddy origin.
   caddy:
+    profiles: ["caddy"]
     image: caddy:2-alpine
     container_name: streamhub-caddy
     network_mode: host

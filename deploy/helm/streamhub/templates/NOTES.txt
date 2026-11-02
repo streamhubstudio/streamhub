@@ -1,0 +1,22 @@
+StreamHub {{ .Chart.AppVersion }} — release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Dashboard / API : {{ include "streamhub.publicUrl" . }}/   (Swagger: /api/v1/docs)
+WebRTC signaling: {{ include "streamhub.publicWsUrl" . }}/rtc   (through the Ingress)
+RTMP publish    : rtmp://{{ include "streamhub.mediaHost" . }}:{{ .Values.livekitIngress.rtmpPort }}/x    WHIP: http://{{ include "streamhub.mediaHost" . }}:{{ .Values.livekitIngress.whipPort }}
+                  (media nodes' IPs — point {{ include "streamhub.mediaHost" . }} at them)
+
+Wait for the core:
+  kubectl -n {{ .Release.Namespace }} rollout status statefulset/{{ include "streamhub.fullname" . }}-core
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Credentials (from the Secret {{ include "streamhub.secretName" . }}):
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "streamhub.secretName" . }} -o jsonpath='{.data.ADMIN_USER}' | base64 -d; echo
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "streamhub.secretName" . }} -o jsonpath='{.data.ADMIN_PASS}' | base64 -d; echo
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "streamhub.secretName" . }} -o jsonpath='{.data.STREAMHUB_API_TOKEN}' | base64 -d; echo
+
+Open on every media node's firewall / security group:
+  {{ .Values.livekit.rtcTcpPort }}/tcp + {{ .Values.livekit.rtcUdpPort }}/udp (WebRTC){{ if .Values.livekitIngress.enabled }}, {{ .Values.livekitIngress.rtmpPort }}/tcp (RTMP), {{ .Values.livekitIngress.whipPort }}/tcp (WHIP){{ end }}
+
+Limits of this chart (streamhub-docs/operations/HELM.md): one LiveKit/ingress pod per node
+(host networking), a single core replica (SQLite), and egress pinned to the core's node
+because it shares the core's ReadWriteOnce DATA_DIR volume.

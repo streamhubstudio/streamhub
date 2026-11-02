@@ -1,0 +1,29 @@
+# StreamHub marketplace image — first-boot setup (installed by Packer into
+# /etc/systemd/system). Runs once cloud-init has finished (user-data is readable
+# then) and installs the stack when STREAMHUB_DOMAIN came in the user-data or in
+# /etc/streamhub/first-boot.env. Without a domain it exits immediately and the
+# setup stays PENDING for the first SSH login (MOTD + /etc/profile.d hook).
+# Re-runs on every boot until the setup is done, then it's a no-op
+# (ConditionPathExists) — the installer itself is idempotent anyway.
+#
+# Ordered after cloud-final and pulled in by cloud-init.target (NOT
+# multi-user.target: cloud-final is After=multi-user.target, so that would be a
+# cycle).
+[Unit]
+Description=StreamHub first-boot setup (domain/email from user-data)
+Wants=network-online.target
+After=network-online.target docker.service cloud-final.service
+ConditionPathExists=!/var/lib/streamhub/first-boot.done
+ConditionPathExists=/opt/streamhub/first-boot.sh
+
+[Service]
+Type=oneshot
+ExecStart=/opt/streamhub/first-boot.sh --cloud-init
+StandardOutput=append:/var/log/streamhub-first-boot.log
+StandardError=inherit
+# The images are pre-pulled and the core build is a cache hit, but the nginx
+# shape still runs apt and certbot — give it room.
+TimeoutStartSec=45min
+
+[Install]
+WantedBy=cloud-init.target

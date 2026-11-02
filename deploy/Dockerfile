@@ -53,7 +53,7 @@ RUN go generate ./internal/buildinfo
 # the commit comes from the STREAMHUB_GIT_COMMIT build arg (compose passes it
 # through from the environment; empty = unknown).
 ARG STREAMHUB_GIT_COMMIT=""
-RUN V=github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version && \
+RUN V=gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version && \
     CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -w -X $V.Override=$(head -1 /VERSION | tr -d '[:space:]') -X $V.Commit=${STREAMHUB_GIT_COMMIT} -X $V.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       -o /out/streamhub-core ./cmd/streamhub

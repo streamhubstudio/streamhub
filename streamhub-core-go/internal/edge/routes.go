@@ -10,15 +10,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cluster"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // staleAfter marks a node stale in the manager view.
@@ -54,6 +54,13 @@ type Module struct {
 	now     func() time.Time
 	// CommandTimeout / LogTimeout are the request→reply timeouts (5s).
 	CommandTimeout, LogTimeout time.Duration
+	// Quotas caps the app-scoped schedule route (nil = no cap; tests).
+	Quotas Quotas
+}
+
+// Quotas is QuotasService.enforceAppEdgeAssignments (security 3.3.4, M5).
+type Quotas interface {
+	EnforceAppEdgeAssignments(ctx context.Context, app string, p *auth.Principal) error
 }
 
 // NewModule builds the REST surface.
@@ -70,8 +77,8 @@ func global(ctx context.Context) error { return api.RequireGlobal(ctx, api.Globa
 
 // Register implements api.Module.
 func (m *Module) Register(a huma.API) {
-	huma.Register(a, *op("EdgeController_listNodes", http.MethodGet, "/edge/nodes",
-		"List cluster nodes with type/weight, live WS liveness and last stats."),
+	huma.Register(a, *api.Global(op("EdgeController_listNodes", http.MethodGet, "/edge/nodes",
+		"List cluster nodes with type/weight, live WS liveness and last stats.")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[[]NodeView]], error) {
 			if err := global(ctx); err != nil {
 				return nil, err
@@ -87,8 +94,8 @@ func (m *Module) Register(a huma.API) {
 		ID      string `path:"id"`
 		RawBody []byte
 	}
-	huma.Register(a, *op("EdgeController_patchNode", http.MethodPatch, "/edge/nodes/{id}",
-		"Set a node's type and/or scheduling weight."),
+	huma.Register(a, *api.Global(op("EdgeController_patchNode", http.MethodPatch, "/edge/nodes/{id}",
+		"Set a node's type and/or scheduling weight.")),
 		func(ctx context.Context, in *idBody) (*api.Out[api.Envelope[NodeView]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -134,8 +141,8 @@ func (m *Module) Register(a huma.API) {
 		Command string `json:"command"`
 		By      string `json:"by"`
 	}
-	huma.Register(a, *op("EdgeController_command", http.MethodPost, "/edge/nodes/{id}/command",
-		"Send a command (restart|reboot|ping) to a connected node over the WS channel."),
+	huma.Register(a, *api.Global(op("EdgeController_command", http.MethodPost, "/edge/nodes/{id}/command",
+		"Send a command (restart|reboot|ping) to a connected node over the WS channel.")),
 		func(ctx context.Context, in *idBody) (*statusOut[api.Envelope[CommandResult]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -169,8 +176,8 @@ func (m *Module) Register(a huma.API) {
 	type nodeLogLines struct {
 		Lines []string `json:"lines"`
 	}
-	huma.Register(a, *op("EdgeController_logs_", http.MethodGet, "/edge/nodes/{id}/logs",
-		"Tail a connected node's edge-runtime log over the WS channel."),
+	huma.Register(a, *api.Global(op("EdgeController_logs_", http.MethodGet, "/edge/nodes/{id}/logs",
+		"Tail a connected node's edge-runtime log over the WS channel.")),
 		func(ctx context.Context, in *logsIn) (*api.Out[api.Envelope[nodeLogLines]], error) {
 			if err := global(ctx); err != nil {
 				return nil, err
@@ -194,8 +201,8 @@ func (m *Module) Register(a huma.API) {
 	type listIn struct {
 		App string `query:"app"`
 	}
-	huma.Register(a, *op("EdgeController_listAssignments", http.MethodGet, "/edge/assignments",
-		"List edge assignments (optionally by app)."),
+	huma.Register(a, *api.Global(op("EdgeController_listAssignments", http.MethodGet, "/edge/assignments",
+		"List edge assignments (optionally by app).")),
 		func(ctx context.Context, in *listIn) (*api.Out[api.Envelope[[]Assignment]], error) {
 			if err := global(ctx); err != nil {
 				return nil, err
@@ -207,8 +214,8 @@ func (m *Module) Register(a huma.API) {
 			return api.OK(list), nil
 		})
 
-	huma.Register(a, *op("EdgeController_createAssignment", http.MethodPost, "/edge/assignments",
-		"Schedule a worker workload onto an edge node."),
+	huma.Register(a, *api.Global(op("EdgeController_createAssignment", http.MethodPost, "/edge/assignments",
+		"Schedule a worker workload onto an edge node.")),
 		func(ctx context.Context, in *api.RawBodyInput) (*statusOut[api.Envelope[*Assignment]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -237,8 +244,8 @@ func (m *Module) Register(a huma.API) {
 	type idIn struct {
 		ID string `path:"id"`
 	}
-	huma.Register(a, *op("EdgeController_revokeAssignment", http.MethodDelete, "/edge/assignments/{id}",
-		"Revoke an assignment."),
+	huma.Register(a, *api.Global(op("EdgeController_revokeAssignment", http.MethodDelete, "/edge/assignments/{id}",
+		"Revoke an assignment.")),
 		func(ctx context.Context, in *idIn) (*api.Out[api.Envelope[assignmentRevoked]], error) {
 			if err := global(ctx); err != nil {
 				return nil, err
@@ -296,6 +303,11 @@ func (m *Module) Register(a huma.API) {
 			pluginID := b.String("pluginId")
 			if err := m.requireEdgePlugin(ctx, in.App, pluginID); err != nil {
 				return nil, err
+			}
+			if m.Quotas != nil {
+				if err := m.Quotas.EnforceAppEdgeAssignments(ctx, in.App, auth.From(ctx)); err != nil {
+					return nil, err
+				}
 			}
 			cfg := orderedObject(in.RawBody, "config")
 			a, err := m.sched.Schedule(ctx, ScheduleInput{App: in.App, PluginID: pluginID, StreamID: b.StringPtr("streamId"), Config: cfg, Policy: b.String("policy")})

@@ -1,5 +1,5 @@
 # Scrape config del stack de observabilidad — MODO CLUSTER (3 nodos).
-# Diseño: https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY.
+# Diseño: streamhub-docs/operations/CLUSTER-OBSERVABILITY.md.
 #
 # NO reemplaza a prometheus.yml (single-node, Fase 1). Este archivo lo usa SOLO
 # el master (stream01) cuando corre en modo cluster — lo monta el overlay

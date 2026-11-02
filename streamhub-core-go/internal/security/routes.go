@@ -7,11 +7,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // Routes is the superadmin /security admin API (security.controller.ts).
@@ -55,8 +55,8 @@ func guard(ctx context.Context) error { return api.RequireGlobal(ctx, api.Global
 
 // Register implements api.Module.
 func (m *Routes) Register(a huma.API) {
-	huma.Register(a, *op("SecurityController_status", http.MethodGet, "/security/status",
-		"Network-security overview: mode, allowlist-only flag, auto-ban config and counts."),
+	huma.Register(a, *api.Global(op("SecurityController_status", http.MethodGet, "/security/status",
+		"Network-security overview: mode, allowlist-only flag, auto-ban config and counts.")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[SecurityStatus]], error) {
 			if err := guard(ctx); err != nil {
 				return nil, err
@@ -71,8 +71,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(st), nil
 		})
 
-	huma.Register(a, *op("SecurityController_listRules", http.MethodGet, "/security/ip-rules",
-		"List the global IP allow/block rules (newest first)."),
+	huma.Register(a, *api.Global(op("SecurityController_listRules", http.MethodGet, "/security/ip-rules",
+		"List the global IP allow/block rules (newest first).")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[[]IPRule]], error) {
 			if err := guard(ctx); err != nil {
 				return nil, err
@@ -92,7 +92,7 @@ func (m *Routes) Register(a huma.API) {
 	addOp := op("SecurityController_addRule", http.MethodPost, "/security/ip-rules",
 		"Add an allow/block rule (IPv4/IPv6 CIDR or bare IP).")
 	addOp.DefaultStatus = http.StatusCreated
-	huma.Register(a, *addOp, func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[*IPRule]], error) {
+	huma.Register(a, *api.Global(addOp), func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[*IPRule]], error) {
 		b, err := validate.Parse(in.RawBody)
 		if err != nil {
 			return nil, err
@@ -126,8 +126,8 @@ func (m *Routes) Register(a huma.API) {
 		ID      int64 `json:"id"`
 		Deleted bool  `json:"deleted"`
 	}
-	huma.Register(a, *op("SecurityController_removeRule", http.MethodDelete, "/security/ip-rules/{id}",
-		"Delete a rule. 404 when unknown."),
+	huma.Register(a, *api.Global(op("SecurityController_removeRule", http.MethodDelete, "/security/ip-rules/{id}",
+		"Delete a rule. 404 when unknown.")),
 		func(ctx context.Context, in *idInput) (*api.Out[api.Envelope[ipRuleDeleted]], error) {
 			id, err := api.ParseIntParam(in.ID)
 			if err != nil {
@@ -147,8 +147,8 @@ func (m *Routes) Register(a huma.API) {
 		Active []BanView `json:"active"`
 		Recent []BanView `json:"recent"`
 	}
-	huma.Register(a, *op("SecurityController_bans", http.MethodGet, "/security/bans",
-		"Auto-ban state: active bans plus recently expired ones (7-day history)."),
+	huma.Register(a, *api.Global(op("SecurityController_bans", http.MethodGet, "/security/bans",
+		"Auto-ban state: active bans plus recently expired ones (7-day history).")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[securityBans]], error) {
 			if err := guard(ctx); err != nil {
 				return nil, err
@@ -167,8 +167,8 @@ func (m *Routes) Register(a huma.API) {
 		IP       string `json:"ip"`
 		Unbanned bool   `json:"unbanned"`
 	}
-	huma.Register(a, *op("SecurityController_unban", http.MethodPost, "/security/bans/{ip}/unban",
-		"Lift a ban immediately (also resets its escalation level)."),
+	huma.Register(a, *api.Global(op("SecurityController_unban", http.MethodPost, "/security/bans/{ip}/unban",
+		"Lift a ban immediately (also resets its escalation level).")),
 		func(ctx context.Context, in *ipInput) (*api.Out[api.Envelope[ipUnbanned]], error) {
 			if err := guard(ctx); err != nil {
 				return nil, err
@@ -180,8 +180,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(ipUnbanned{in.IP, true}), nil
 		})
 
-	huma.Register(a, *op("SecurityController_offenses", http.MethodGet, "/security/offenses",
-		"Recent offenders inside the sliding window (heaviest first)."),
+	huma.Register(a, *api.Global(op("SecurityController_offenses", http.MethodGet, "/security/offenses",
+		"Recent offenders inside the sliding window (heaviest first).")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[[]OffenderView]], error) {
 			if err := guard(ctx); err != nil {
 				return nil, err

@@ -61,7 +61,7 @@ trap 'rm -rf "$STAGE"' EXIT
 GIT_COMMIT="${STREAMHUB_GIT_COMMIT:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)}"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 export STREAMHUB_GIT_COMMIT="$GIT_COMMIT"   # read by streamhub-web/vite.config.ts
-VPKG=github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version
+VPKG=gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version
 
 log "building the Go core ($VERSION, linux/$GOARCH, commit ${GIT_COMMIT:0:12})"
 # go generate embeds the repo-root CHANGELOG.md (GET /system/changelog).

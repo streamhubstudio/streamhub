@@ -15,7 +15,7 @@ import (
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of plugin-registry.service.ts. The in-tree (built-in) metas are
@@ -37,6 +37,10 @@ var (
 	idSlug     = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 	semverRe   = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$`)
 )
+
+// fieldFormats are the configSchema `format` values: "url" = an outbound
+// target the worker calls, SSRF-guarded on PATCH (Service.assertURLFields).
+var fieldFormats = set("url")
 
 func set(vals ...string) map[string]bool {
 	m := map[string]bool{}
@@ -266,6 +270,14 @@ func validateField(raw any, seen map[string]bool) string {
 			return fmt.Sprintf("select field '%s' needs options", key)
 		}
 	}
+	if v := f.Get("format"); !y.IsUndefined(v) {
+		if s, ok := v.(string); !ok || !fieldFormats[s] {
+			return fmt.Sprintf("field '%s' has invalid format '%s'", key, jsString(v))
+		}
+		if t := f.Get("type"); t != "string" && t != "secret" {
+			return fmt.Sprintf("field '%s': format 'url' needs type string or secret", key)
+		}
+	}
 	return ""
 }
 
@@ -460,6 +472,7 @@ func parseFields(schema []any) []Field {
 			Key: jsString(f.Get("key")), Type: jsString(f.Get("type")), Default: f.Get("default"),
 			Required: y.Truthy(f.Get("required")), Min: numPtr(f.Get("min")), Max: numPtr(f.Get("max")), Raw: f,
 		}
+		field.Format, _ = f.Get("format").(string)
 		if y.IsUndefined(field.Default) {
 			field.Default = nil
 		}

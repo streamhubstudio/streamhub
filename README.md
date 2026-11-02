@@ -106,10 +106,14 @@ Per-app S3 credentials are set in `data/secrets.json` (chmod 600) referenced fro
 | `streamhub-adaptor/` | TypeScript | browser SDK (`WebRTCAdaptor` shim over `livekit-client`) |
 | `plugins-vendor/`, `streamhub-web/src/plugins-vendor/` | Python + TS | the 12 worker-backed Studio Apps, pre-composed |
 | `streamhub-core-go/cmd/streamhub-mcp/` | Go | MCP server exposing the REST API to AI clients (`streamhub-mcp`) |
+| `streamhub-encoder/` | Go + GStreamer | **StreamHub Encoder**: software live encoder for Linux (SDI/NDI/SRT/RTSP in → RTMP/SRT/WHIP/HLS/UDP out), pairs with the core; `.deb` + Docker |
+| `streamhub-app-sdk/` | Python | SDK for writing worker-backed Studio Apps |
+| `examples/` | HTML + JS | runnable sample apps: WebRTC publish/play, HLS player, conference, CCTV grid, live shopping, telemedicine, radio |
+| `streamhub-docs/` | Markdown | the full documentation (same text as [streamhub.studio/docs](https://streamhub.studio/docs)) |
 
 ## Documentation
 
-Everything lives on the website: **[streamhub.studio/docs](https://streamhub.studio/docs)**.
+The full docs ship in [`streamhub-docs/`](streamhub-docs/README.md) and are published at **[streamhub.studio/docs](https://streamhub.studio/docs)**.
 
 - [Architecture](https://streamhub.studio/docs/architecture/README) — components, data model, request routing, cluster.
 - [Operations](https://streamhub.studio/docs/operations/README) — deploy, runbook, environment variables, observability, backups.
@@ -118,7 +122,23 @@ Everything lives on the website: **[streamhub.studio/docs](https://streamhub.stu
 - [API reference](https://streamhub.studio/docs/api/README) — every route and permission (Swagger also at `/api/v1/docs` on your instance).
 - [Features](https://streamhub.studio/docs/features/README) and [integrations](https://streamhub.studio/docs/integrations/README).
 - [INSTALL.md](INSTALL.md) — the manual bare-metal runbook (systemd + nginx, no Docker).
+- [StreamHub Encoder](streamhub-encoder/README.md) — operator guide, pairing with the core, hardware acceptance ([`streamhub-encoder/docs/`](streamhub-encoder/docs/)).
+- [Examples](examples/README.md) — sample apps you can open against your own instance.
+- [Testing](streamhub-docs/testing/TESTING-STRATEGY.md) — the test layers, the [unit-test catalogue](streamhub-docs/testing/UNIT-TESTS.md) and the [functional simulations](streamhub-docs/testing/FUNCTIONAL-SIMULATIONS.md).
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each version (also at [streamhub.studio/changelog](https://streamhub.studio/changelog)).
+
+## Running the tests
+
+Every suite runs without infrastructure: Redis, LiveKit, S3, SMTP and HTTP sit behind small interfaces with fakes.
+
+```bash
+cd streamhub-core-go && go test ./...            # core: unit + integration
+go build -o bin/streamhub ./cmd/streamhub && go run ./cmd/parity -go ./bin/streamhub   # HTTP contract vs the recorded oracle
+cd streamhub-web && npm ci && npm test           # dashboard
+cd streamhub-encoder && go test ./...            # encoder (test/unit.sh; test/e2e and test/real need GStreamer/hardware)
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [`streamhub-docs/testing/`](streamhub-docs/testing/TESTING-STRATEGY.md).
 
 ## License
 

@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
 )
 
 const app = "live"
@@ -283,6 +283,31 @@ func TestPublicBaseURL(t *testing.T) {
 	if info.HlsURL != "https://tv.example.com/hls/live/room%20a/index.m3u8" || info.PlayerURL != "https://tv.example.com/play/live/room%20a" ||
 		!strings.HasPrefix(info.RtmpURL, "rtmp://"+livekit.DefaultRtmpHost+":1937/live/") {
 		t.Fatalf("info = %+v", info)
+	}
+}
+
+// fakeEdge stands in for cluster.HLSEdgeSelector.
+type fakeEdge struct{ base string }
+
+func (f fakeEdge) HLSBase(_ context.Context, _, origin string) string {
+	if f.base != "" {
+		return f.base
+	}
+	return origin
+}
+
+// STREAMHUB_HLS_EDGE_SELECT: hlsUrl uses the selected edge, playerUrl stays on
+// the origin (the player page is not cached).
+func TestHlsURLUsesSelectedEdge(t *testing.T) {
+	f := newSvc(t, func(c *config.Config) { c.PublicBaseURL = "https://tv.example.com" })
+	f.svc.HLSEdge = func() livekit.HLSEdge { return fakeEdge{"https://cdn1.example.com"} }
+	info := f.create(t, "room a", "rtmp", "")
+	if info.HlsURL != "https://cdn1.example.com/hls/live/room%20a/index.m3u8" || info.PlayerURL != "https://tv.example.com/play/live/room%20a" {
+		t.Fatalf("info = %+v", info)
+	}
+	f.svc.HLSEdge = func() livekit.HLSEdge { return fakeEdge{} }
+	if got, _ := f.svc.Get(bg, "live", info.IngressID); got == nil || got.HlsURL != "https://tv.example.com/hls/live/room%20a/index.m3u8" {
+		t.Fatalf("fallback = %+v", got)
 	}
 }
 

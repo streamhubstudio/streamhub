@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cluster"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/edge"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/edge"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/playback"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // The cluster plane: the node registry + node role (cluster) and the edge
@@ -20,10 +22,13 @@ import (
 // (scheduler retry, watchdog, reconcile) are starters.
 //
 // Provides: "cluster" (*cluster.Service), "noderole" (*cluster.NodeRole),
-// "edge.gateway", "edge.scheduler", "edge.repo".
+// "cluster.hlsedge" (*cluster.HLSEdgeSelector — the cdn-edge base of the
+// HLS playlist URLs, STREAMHUB_HLS_EDGE_SELECT; read lazily by streams,
+// livekit and passthrough), "edge.gateway", "edge.scheduler", "edge.repo".
 // Optional (resolved lazily): "plugins.registry", "plugins.repo",
 // "appstore" (spawn specs, edge-capability, pinned bundles), "logs",
-// "notifications", "callbacks", "security.reputation", "apps".
+// "notifications", "callbacks", "security.reputation", "apps", "quotas"
+// (the per-app edge-assignment cap).
 func init() {
 	registerPlane(50, "cluster", func(ctx context.Context, c *core) error {
 		role := cluster.NewNodeRole(c.global, c.cfg.Env, c.log)
@@ -55,21 +60,33 @@ func init() {
 		repo := edge.NewRepo(c.global)
 		resolver := edge.NewGenericResolver(c.cfg, catalog, appDirs)
 		framer := &edge.Framer{Resolver: resolver}
-		gw := edge.NewGateway(c.global, func() string { return c.cfg.ClusterToken }, svc, repo, framer, c.log)
+		gw := edge.NewGateway(c.global, svc.NodeAuth(), svc, repo, framer, c.log)
 		notifier := edge.NewDefaultNotifier(c.global, c.cfg.DataDir, c.log)
 		alerter := edge.NewAlerter(notifier, logs(), c.log)
 		sched := edge.NewScheduler(c.cfg, c.global, gw, repo, framer, alerter, logs(), c.log)
 		watchdog := edge.NewWatchdog(c.global, gw, sched, notifier)
 		reconciler := edge.NewReconciler(sched, repo, gw, catalog, c.store, c.global, apps, c.log)
 
+		// Only public apps without geo rules may be steered to a cdn-edge
+		// (it serves cache hits without asking the core).
+		var cacheable func(context.Context, string) bool
+		if g, ok := maybe[*playback.Guard](c, "playback"); ok && g != nil {
+			cacheable = g.EdgeCacheable
+		}
+
 		provide(c, "cluster", svc)
 		provide(c, "noderole", role)
+		provide(c, "cluster.hlsedge", cluster.NewHLSEdgeSelector(c.global, c.cfg.Env, cacheable, c.log))
 		provide(c, "edge.gateway", gw)
 		provide(c, "edge.scheduler", sched)
 		provide(c, "edge.repo", repo)
 
 		c.middleware = append(c.middleware, gw.Middleware)
-		c.modules = append(c.modules, cluster.NewRoutes(svc, offense), edge.NewModule(c.global, gw, sched, repo, catalog, apps, logs))
+		edgeMod := edge.NewModule(c.global, gw, sched, repo, catalog, apps, logs)
+		if q, ok := maybe[*quotas.Service](c, "quotas"); ok && q != nil {
+			edgeMod.Quotas = q
+		}
+		c.modules = append(c.modules, cluster.NewRoutes(svc, offense), edgeMod)
 		c.binds = append(c.binds, func() {
 			fanout, _ := maybe[edge.FanOut](c, "notifications")
 			callbacks, _ := maybe[edge.Callbacks](c, "callbacks")

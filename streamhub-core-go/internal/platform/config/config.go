@@ -6,6 +6,7 @@
 package config
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 	"strings"
 )
 
-// Config holds every core setting. See https://streamhub.studio/docs/operations/ENV.
+// Config holds every core setting. See streamhub-docs/operations/ENV.md.
 type Config struct {
 	Port     int
 	Host     string
@@ -41,6 +42,13 @@ type Config struct {
 	MediamtxAPIURL         string
 	LivekitIngressRtmpPort int
 	MediamtxHookSecret     string
+	// SRT on the MediaMTX front (E2): srt://host:<port>?streamid=publish:<app>/<key>,
+	// authorized by the auth hook against minted keys. Off by default.
+	MediamtxSrtEnable bool
+	MediamtxSrtPort   int
+	// PassthroughHEVC (E1): a passthrough publish whose video MediaMTX reports
+	// as H.265 is segmented as fMP4 HLS (hvc1) so it plays. Off by default.
+	PassthroughHEVC bool
 
 	// IngestProfile is "livekit" (default) or "efficient".
 	IngestProfile string
@@ -55,6 +63,14 @@ type Config struct {
 	// origin (and sample:write stays superadmin-only). An invalid value, or
 	// one equal to PublicBaseURL's origin, is treated as unset.
 	SamplesURL string
+
+	// Live HLS latency knobs (operations/ENV.md). HLSSegmentS is
+	// STREAMHUB_HLS_SEGMENT_S: the egress segment length and the base of the
+	// CDN playlist cache math (1–10, default 4; 0 in a hand-built Config =
+	// the default). HLSPlaylistMaxAge is STREAMHUB_HLS_PLAYLIST_MAX_AGE: the
+	// live playlist max-age under STREAMHUB_HLS_CDN (0–10, default 1).
+	HLSSegmentS       int
+	HLSPlaylistMaxAge int
 
 	RedisURL  string
 	JWTSecret string
@@ -74,6 +90,10 @@ type Config struct {
 	NotifyDiscordWebhook   string
 	NotifyTelegramBotToken string
 	NotifyTelegramChatID   string
+
+	// Warnings are the invalid values Load replaced by their default; the
+	// boot logs them (this package has no logger).
+	Warnings []string
 }
 
 // Load reads the process environment.
@@ -88,6 +108,9 @@ func Load() *Config {
 	if samples != "" && samples == Origin(publicBase) {
 		samples = ""
 	}
+	var warns []string
+	hlsSeg := ranged("STREAMHUB_HLS_SEGMENT_S", 4, 1, 10, &warns)
+	hlsMaxAge := ranged("STREAMHUB_HLS_PLAYLIST_MAX_AGE", 1, 0, 10, &warns)
 	return &Config{
 		Port:     integer("PORT", 3020),
 		Host:     str("HOST", "127.0.0.1"),
@@ -112,10 +135,16 @@ func Load() *Config {
 		MediamtxAPIURL:         str("STREAMHUB_MEDIAMTX_API_URL", "http://127.0.0.1:9997"),
 		LivekitIngressRtmpPort: integer("STREAMHUB_LIVEKIT_INGRESS_RTMP_PORT", 11935),
 		MediamtxHookSecret:     str("STREAMHUB_MEDIAMTX_HOOK_SECRET", ""),
+		MediamtxSrtEnable:      boolean("STREAMHUB_MEDIAMTX_SRT_ENABLE", false),
+		MediamtxSrtPort:        integer("STREAMHUB_MEDIAMTX_SRT_PORT", 8890),
+		PassthroughHEVC:        boolean("STREAMHUB_PASSTHROUGH_HEVC", false),
 
 		IngestProfile: profile,
 		PublicBaseURL: publicBase,
 		SamplesURL:    samples,
+
+		HLSSegmentS:       hlsSeg,
+		HLSPlaylistMaxAge: hlsMaxAge,
 
 		RedisURL:  str("REDIS_URL", "redis://localhost:6379"),
 		JWTSecret: str("STREAMHUB_JWT_SECRET", ""),
@@ -133,6 +162,8 @@ func Load() *Config {
 		NotifyDiscordWebhook:   str("STREAMHUB_NOTIFY_DISCORD_WEBHOOK", ""),
 		NotifyTelegramBotToken: str("STREAMHUB_NOTIFY_TELEGRAM_BOT_TOKEN", ""),
 		NotifyTelegramChatID:   str("STREAMHUB_NOTIFY_TELEGRAM_CHAT_ID", ""),
+
+		Warnings: warns,
 	}
 }
 
@@ -183,6 +214,21 @@ func integer(name string, fallback int) int {
 		return n
 	}
 	return fallback
+}
+
+// ranged is a strict integer in [lo, hi]: unset → fallback; anything else
+// (junk, fractions, out of range) → fallback plus a warning.
+func ranged(name string, fallback, lo, hi int, warns *[]string) int {
+	v := strings.TrimSpace(os.Getenv(name))
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < lo || n > hi {
+		*warns = append(*warns, fmt.Sprintf("%s=%q is not an integer in %d–%d; using %d", name, v, lo, hi, fallback))
+		return fallback
+	}
+	return n
 }
 
 var truthy = regexp.MustCompile(`(?i)^(1|true|on|yes)$`)

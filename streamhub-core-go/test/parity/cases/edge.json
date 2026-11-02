@@ -26,7 +26,10 @@
       "expectStatus": 201,
       "capture": {
         "edgeNode": "data.nodeId"
-      }
+      },
+      "mask": [
+        "data.nodeSecret"
+      ]
     },
     {
       "name": "edge-nodes-no-auth",

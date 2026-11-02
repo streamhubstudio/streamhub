@@ -12,9 +12,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Runner executes a shell command line (exec in Node); tests inject a fake.
@@ -52,14 +52,21 @@ type Restarted struct {
 	Unit      string `json:"unit"`
 }
 
+const restartScopeMessage = "restart requires a global-scope token"
+
 // Register implements api.Module.
 func (m *Module) Register(a huma.API) {
-	huma.Register(a, *api.Bearer(&huma.Operation{
+	huma.Register(a, *api.Global(api.Bearer(&huma.Operation{
 		OperationID: "AdminController_restart", Method: http.MethodPost, Path: api.Prefix + "/admin/restart",
 		Summary:       "Restart the streamhub-core process via systemd (best-effort). Requires a global-scope token (wave-4 §1).",
 		Tags:          []string{"admin"},
 		DefaultStatus: http.StatusCreated,
-	}), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[Restarted]], error) {
+	})), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[Restarted]], error) {
+		// Same verdict and text as Restart's own check (a superadmin is
+		// always global-scope); here so the route's guard is declarative.
+		if err := api.RequireGlobal(ctx, restartScopeMessage); err != nil {
+			return nil, err
+		}
 		unit, err := m.Restart(auth.From(ctx))
 		if err != nil {
 			return nil, err
@@ -73,7 +80,7 @@ func (m *Module) Register(a huma.API) {
 // reply. Returns the unit name.
 func (m *Module) Restart(p *auth.Principal) (string, error) {
 	if p != nil && p.LegacyScope() != auth.ScopeGlobal {
-		return "", httpx.Forbidden("restart requires a global-scope token")
+		return "", httpx.Forbidden(restartScopeMessage)
 	}
 	unit := m.env("SYSTEMD_UNIT")
 	if unit == "" {

@@ -8,25 +8,29 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
 )
 
-// INVARIANT: media dirs follow the umask like Node's mkdirSync (0777 &^ umask).
-// deploy/core-entrypoint.sh sets umask 002 so the egress container (uid 1001,
-// gid 0) can write MP4s/HLS into dirs the root core creates; a hardcoded 0755
-// made egress fail with "permission denied" (e2e on .50, 2026-10-27).
-func TestCreateDirsFollowUmask(t *testing.T) {
+// INVARIANT (security 3.3.4): app dirs are no longer 0777 &^ umask (775 in
+// prod, listable/readable by every local user). Under the prod umask 002:
+// the app root is 751 (egress, gid 0, traverses via group; nginx HLS
+// direct-serve traverses as other, no listing), the dirs egress writes into
+// (recordings, snapshots) are 770 — group write is load-bearing: a 0755
+// made egress fail with "permission denied" (e2e on .50, 2026-10-27) — and
+// core-only dirs (samples) are 750.
+func TestCreateDirModes(t *testing.T) {
 	old := syscall.Umask(0o002)
 	defer syscall.Umask(old)
 	s, _ := newTestService(t)
 	mustCreate(t, s, contracts.CreateAppInput{Name: "umaskapp"})
-	for _, d := range []string{"recordings", "snapshots", "samples"} {
-		fi, err := os.Stat(filepath.Join(s.AppDir("umaskapp"), d))
+	root := s.AppDir("umaskapp")
+	for d, want := range map[string]os.FileMode{"": 0o751, "recordings": 0o770, "snapshots": 0o770, "samples": 0o750} {
+		fi, err := os.Stat(filepath.Join(root, d))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := fi.Mode().Perm(); got != 0o775 {
-			t.Errorf("%s mode = %o, want 775", d, got)
+		if got := fi.Mode().Perm(); got != want {
+			t.Errorf("%q mode = %o, want %o", d, got, want)
 		}
 	}
 }

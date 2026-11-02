@@ -1,8 +1,9 @@
 /**
  * Mi cuenta — self-service account panel.
  *
- *  - "Perfil": my own profile (name/email) + the tenant/role of the session
- *    (GET/PATCH /account).
+ *  - "Perfil": pending team invitations (accept/decline, GET
+ *    /account/invitations) + my own profile (name/email) + the tenant/role of
+ *    the session (GET/PATCH /account).
  *  - "Seguridad": password change + 2FA (TOTP) enrolment/disable.
  *  - "Equipo": my tenant + quota usage + members + email invitations
  *    (GET /teams/mine, /tenant/invites — owner-only mutations).
@@ -11,6 +12,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/auth/useAuth'
+import { InvitationsCard } from './Account/InvitationsCard'
 import { ProfileCard } from './Account/ProfileCard'
 import { SecurityCard } from './Account/SecurityCard'
 import { SmtpCard } from './Account/SmtpCard'
@@ -80,7 +82,12 @@ export default function Account() {
         })}
       </div>
 
-      {active === 'profile' && <ProfileCard />}
+      {active === 'profile' && (
+        <div className="space-y-5">
+          <InvitationsCard />
+          <ProfileCard />
+        </div>
+      )}
       {active === 'security' && (
         <div className="space-y-5">
           <SecurityCard />

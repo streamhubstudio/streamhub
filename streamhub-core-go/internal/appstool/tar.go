@@ -1,7 +1,7 @@
 // Package appstool is the decoupled-apps tooling (formerly scripts/apps-*.mjs
 // + scripts/lib/{tar,appcompose}.mjs): `streamhub-core apps pack|pull|bump`.
 //
-// The package format is in https://streamhub.studio/docs/development/PACKAGE-FORMAT. The
+// The package format is in streamhub-docs/development/PACKAGE-FORMAT.md. The
 // contract that matters is the CONTENT hash — the sha256 of the UNCOMPRESSED
 // tar — which apps.lock.json pins: the tar written here is byte-identical to
 // the one the Node tar.mjs wrote (locked by testdata vectors), so every pin

@@ -58,21 +58,23 @@ type SendResult struct {
 	Skipped   bool   `json:"skipped,omitempty"`
 }
 
-// SendContext selects the per-user SMTP override (owner item 29).
-type SendContext struct{ UserID string }
-
 // InviteOptions are the invite email's template fields.
 type InviteOptions struct {
 	TeamName  string
 	Role      string
 	InvitedBy string
+	Existing  bool // an existing account: url is the account page, not a sign-in link (M2)
 }
 
 // Mailer is the slice of modules/email the auth plane uses. Sends never
 // return an error: failures are carried in the result, as in Node.
+// Authentication mail carries no SMTP context on purpose: it never rides on
+// a per-user SMTP override (whoever runs that server would read the links).
 type Mailer interface {
-	SendMagicLink(ctx context.Context, email, url string, sc SendContext) SendResult
-	SendInvite(ctx context.Context, email, url string, opts InviteOptions, sc SendContext) SendResult
+	SendMagicLink(ctx context.Context, email, url string) SendResult
+	SendInvite(ctx context.Context, email, url string, opts InviteOptions) SendResult
+	SendEmailChange(ctx context.Context, newEmail, url string) SendResult
+	SendEmailChangeNotice(ctx context.Context, oldEmail, newEmail string) SendResult
 	TestUserSMTP(ctx context.Context, userID, to string) SendResult
 }
 
@@ -80,13 +82,22 @@ type Mailer interface {
 // every send as skipped (what Node returns when SMTP is not configured).
 type LogMailer struct{ Log *slog.Logger }
 
-func (m LogMailer) SendMagicLink(_ context.Context, email, _ string, _ SendContext) SendResult {
+func (m LogMailer) SendMagicLink(_ context.Context, email, _ string) SendResult {
 	m.Log.Warn("email not configured: magic link not sent", "to", maskEmail(email))
 	return SendResult{OK: false, Skipped: true}
 }
 
-func (m LogMailer) SendInvite(_ context.Context, email, _ string, _ InviteOptions, _ SendContext) SendResult {
+func (m LogMailer) SendInvite(_ context.Context, email, _ string, _ InviteOptions) SendResult {
 	m.Log.Warn("email not configured: invite not sent", "to", maskEmail(email))
+	return SendResult{OK: false, Skipped: true}
+}
+
+func (m LogMailer) SendEmailChange(_ context.Context, email, _ string) SendResult {
+	m.Log.Warn("email not configured: email-change confirmation not sent", "to", maskEmail(email))
+	return SendResult{OK: false, Skipped: true}
+}
+
+func (m LogMailer) SendEmailChangeNotice(_ context.Context, email, _ string) SendResult {
 	return SendResult{OK: false, Skipped: true}
 }
 

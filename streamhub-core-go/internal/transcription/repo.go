@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
 )
 
 // Port of transcripts.repository.ts: per-app app.db `vod_transcripts`

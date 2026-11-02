@@ -15,10 +15,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // Service is the port of LiveKitService: every SDK call is guarded (logged +
@@ -242,6 +242,9 @@ type HlsEgressInfo struct {
 	Status           string `json:"status"`
 	RoomName         string `json:"roomName"`
 	PlaylistLocation string `json:"playlistLocation,omitempty"`
+	// StartedAtNs is EgressInfo.started_at (unix ns, 0 = not yet): the
+	// streams liveness check's startup grace. Not part of the Node shape.
+	StartedAtNs int64 `json:"-"`
 }
 
 // EgressStatusString is EgressStatus[status] ?? EGRESS_UNKNOWN_<n>.
@@ -943,7 +946,7 @@ func (s *Service) StartHlsEgress(ctx context.Context, in StartHlsEgressInput) (H
 	if room == "" {
 		room = in.RoomName
 	}
-	return HlsEgressInfo{info.GetEgressId(), EgressStatusString(info.GetStatus()), room, extractPlaylistLocation(info)}, nil
+	return HlsEgressInfo{info.GetEgressId(), EgressStatusString(info.GetStatus()), room, extractPlaylistLocation(info), info.GetStartedAt()}, nil
 }
 
 // ListHlsEgress lists active HLS egresses of rooms under roomPrefix.
@@ -955,7 +958,7 @@ func (s *Service) ListHlsEgress(ctx context.Context, roomPrefix string) ([]HlsEg
 	out := []HlsEgressInfo{}
 	for _, info := range list {
 		if isHlsEgress(info) && roomBelongsToPrefix(info.GetRoomName(), roomPrefix) {
-			out = append(out, HlsEgressInfo{info.GetEgressId(), EgressStatusString(info.GetStatus()), info.GetRoomName(), extractPlaylistLocation(info)})
+			out = append(out, HlsEgressInfo{info.GetEgressId(), EgressStatusString(info.GetStatus()), info.GetRoomName(), extractPlaylistLocation(info), info.GetStartedAt()})
 		}
 	}
 	return out, nil

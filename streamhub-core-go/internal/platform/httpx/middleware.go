@@ -77,7 +77,8 @@ func AccessLog(log *slog.Logger) func(http.Handler) http.Handler {
 			rec := &statusRecorder{ResponseWriter: w}
 			next.ServeHTTP(rec, r)
 			level := slog.LevelInfo
-			if len(r.URL.Path) >= 5 && r.URL.Path[:5] == "/hls/" {
+			// /hls-auth is the per-segment subrequest of direct-serve (G2).
+			if len(r.URL.Path) >= 5 && r.URL.Path[:5] == "/hls/" || r.URL.Path == "/hls-auth" {
 				level = slog.LevelDebug
 			}
 			if rec.status >= 500 {

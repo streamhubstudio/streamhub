@@ -14,9 +14,10 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 const (
@@ -110,7 +111,7 @@ func (s *Service) GenerateFiles(ctx context.Context, app string) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(dir, 0o777); err != nil {
+	if err := os.MkdirAll(dir, fsperm.Private); err != nil {
 		return nil, err
 	}
 	pctx := s.context(ctx, app)
@@ -176,7 +177,7 @@ func (s *Service) Write(ctx context.Context, app, file, content string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(full), 0o777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(full), fsperm.Private); err != nil {
 		return err
 	}
 	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {

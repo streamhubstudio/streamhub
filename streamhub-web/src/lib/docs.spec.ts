@@ -43,8 +43,8 @@ test('every mapped page exists in streamhub-docs/ (no dangling help links)', (t)
   // The repo layout: streamhub-web/ and streamhub-docs/ are siblings. When the
   // web package is checked out standalone there is nothing to verify against.
   const docsRoot = resolve(import.meta.dirname, '..', '..', '..', 'streamhub-docs')
-  if (!existsSync(resolve(docsRoot, 'architecture'))) {
-    t.skip('streamhub-docs/ pages not present (published at https://streamhub.studio/docs)')
+  if (!existsSync(docsRoot)) {
+    t.skip('streamhub-docs/ not present (standalone checkout)')
     return
   }
   for (const section of SECTIONS) {

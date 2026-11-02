@@ -37,7 +37,7 @@ if [ -n "${E2E_BINARY:-}" ]; then   # pre-built linux/amd64 binary (e.g. an unco
   echo "[run] using E2E_BINARY=$E2E_BINARY instead"; cp "$E2E_BINARY" "$OUT/streamhub"
 else
 ( cd "$WT/streamhub-core-go" && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags "-s -w -X github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version.Override=e2e-$SHA" \
+    go build -trimpath -ldflags "-s -w -X gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version.Override=e2e-$SHA" \
     -o "$OUT/streamhub" ./cmd/streamhub )
 fi
 # The webhook receiver is harness, not product: built from this checkout.

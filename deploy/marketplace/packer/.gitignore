@@ -1,0 +1,3 @@
+packer-manifest.json
+*.auto.pkrvars.hcl
+local.pkrvars.hcl

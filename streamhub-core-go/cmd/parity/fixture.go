@@ -49,6 +49,9 @@ func baseEnv() map[string]string {
 		"STREAMHUB_IP_ACCESS_MODE":      "off",
 		"AUTH_RATE_LIMIT_MAX":           "50",
 		"AUTH_RATE_LIMIT_WINDOW_MS":     "900000",
+		// The Go-only auth throttle (3.3.4, M3): the corpus logs in far more
+		// than 10 times a minute from 127.0.0.1. Node ignores it.
+		"STREAMHUB_AUTH_IP_LIMIT": "100000",
 		// Node's backup scheduler runs a boot catch-up through BullMQ, which
 		// never executes here (dead Redis); Go's in-process scheduler would.
 		// Disable both so the snapshot list is deterministic.

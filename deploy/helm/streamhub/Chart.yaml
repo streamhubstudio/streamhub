@@ -1,0 +1,26 @@
+apiVersion: v2
+name: streamhub
+description: >-
+  StreamHub — self-hosted media server (management layer over a LiveKit SFU):
+  the Go core (REST API + dashboard + HLS) as a StatefulSet with its DATA_DIR
+  on a PVC, LiveKit + ingress (RTMP/WHIP) + egress on host-networked media
+  nodes, and redis.
+type: application
+# Chart version (bump on any template/values change) and the StreamHub release
+# it targets by default (core image tag when core.image.tag is empty). Keep
+# appVersion in step with the repo's VERSION when cutting a release.
+version: 0.1.0
+appVersion: "3.4.0"
+kubeVersion: ">=1.25.0-0"
+home: https://www.streamhub.studio
+sources:
+  - https://gitlab.com/digitalhub_com_ar/vision-media-server
+keywords:
+  - streaming
+  - webrtc
+  - livekit
+  - rtmp
+  - hls
+  - media-server
+annotations:
+  category: Media

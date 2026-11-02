@@ -68,5 +68,15 @@
     "you": "Me",
     "anonymous": "Anonymous",
     "someone": "Someone"
+  },
+  "dvr": {
+    "goLive": "Go live",
+    "atLive": "Live",
+    "behind": "{{behind}} behind live",
+    "timeline": "DVR timeline",
+    "window": "Rewind up to {{minutes}} min",
+    "copyMoment": "Copy link to this moment",
+    "copied": "Link copied",
+    "clamped": "That moment is outside the DVR window — playing the closest available point."
   }
 }

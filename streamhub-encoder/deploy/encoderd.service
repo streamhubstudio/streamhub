@@ -1,0 +1,40 @@
+[Unit]
+Description=StreamHub Encoder (encoderd)
+Documentation=https://gitlab.com/digitalhub_com_ar/vision-media-server/-/tree/main/streamhub-encoder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=encoder
+Group=encoder
+# video: V4L2/DeckLink/DRI render nodes; audio: ALSA capture
+SupplementaryGroups=video audio render
+EnvironmentFile=-/etc/default/streamhub-encoder
+ExecStart=/usr/bin/encoderd serve
+# reload = re-probe capabilities (new driver/plugin) and reconcile channels
+ExecReload=/bin/kill -HUP $MAINPID
+# encoderd supervises one gst-launch per channel and one process per output;
+# stop them all with it (KillMode=control-group is the default).
+Restart=always
+RestartSec=2
+TimeoutStopSec=15
+LimitNOFILE=65536
+# Real-time-ish scheduling for media threads without being RT.
+Nice=-5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=2
+StateDirectory=streamhub-encoder
+StateDirectoryMode=0750
+WorkingDirectory=/var/lib/streamhub-encoder
+# Hardening that keeps capture devices and GPUs reachable.
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

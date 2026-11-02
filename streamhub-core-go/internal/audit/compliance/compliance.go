@@ -16,11 +16,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
 )
 
 // ComplianceControl is one row of the report.
@@ -258,13 +258,13 @@ func (s *Service) newestFileAgeHours(dir string) (float64, bool) {
 
 // Register implements api.Module (GET /system/compliance, global scope only).
 func (s *Service) Register(a huma.API) {
-	huma.Register(a, *api.Bearer(&huma.Operation{
+	huma.Register(a, *api.Global(api.Bearer(&huma.Operation{
 		OperationID: "ComplianceController_report",
 		Method:      http.MethodGet,
 		Path:        api.Prefix + "/system/compliance",
 		Summary:     "Security/compliance posture: each product control → live state → ISO 27002:2022 §8 control.",
 		Tags:        []string{"system"},
-	}), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[ComplianceReport]], error) {
+	})), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[ComplianceReport]], error) {
 		if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 			return nil, err
 		}

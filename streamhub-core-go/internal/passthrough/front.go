@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
 )
 
 const (
@@ -66,8 +66,12 @@ func (f *Front) Start(ctx context.Context) {
 		f.svc.remux.Close()
 	}()
 	if cfg.MediamtxEnable {
+		srt := "SRT keeps its own listener"
+		if cfg.MediamtxSrtEnable {
+			srt = fmt.Sprintf("SRT on MediaMTX :%d, key-checked", cfg.MediamtxSrtPort)
+		}
 		f.log.Info(fmt.Sprintf("RTMP passthrough front ON — MediaMTX single-port on :%d "+
-			"(RTMP arming driven by MediaMTX hooks; SRT keeps its own listener)", cfg.MediamtxRtmpPort))
+			"(RTMP arming driven by MediaMTX hooks; %s)", cfg.MediamtxRtmpPort, srt))
 		go f.RearmAll(ctx)
 		go f.RearmFromMediamtx(ctx)
 		return
@@ -97,8 +101,8 @@ func (f *Front) RearmAll(ctx context.Context) int {
 			if row.StreamKey == nil || *row.StreamKey == "" {
 				continue
 			}
-			if f.svc.cfg.MediamtxEnable && livekit.PassthroughTransportOf(row.IngressID) == TransportRTMP {
-				continue
+			if f.svc.pullDriven(livekit.PassthroughTransportOf(row.IngressID)) {
+				continue // its MediaMTX ready hook (or RearmFromMediamtx) arms it
 			}
 			if f.svc.HandlePublish(ctx, app, *row.StreamKey, nil).Accepted {
 				armed++
@@ -139,6 +143,49 @@ func (f *Front) RearmFromMediamtx(ctx context.Context) (int, int) {
 		f.log.Info(fmt.Sprintf("re-armed %d pull remux(es) + %d forward(s) from MediaMTX", pull, fwd))
 	}
 	return pull, fwd
+}
+
+// TrackProber returns the track codecs MediaMTX reports for a path
+// ("H264", "H265", "MPEG-4 Audio", …).
+type TrackProber func(ctx context.Context, path string) ([]string, error)
+
+// IsHEVCTrack matches MediaMTX's codec name of an H.265 track.
+func IsHEVCTrack(codec string) bool {
+	switch strings.ToUpper(strings.TrimSpace(codec)) {
+	case "H265", "H.265", "HEVC":
+		return true
+	}
+	return false
+}
+
+// mediamtxTracks is the MediaMTX API prober: GET /v3/paths/get/<path>.
+func mediamtxTracks(apiURL string) TrackProber {
+	client := &http.Client{}
+	return func(ctx context.Context, path string) ([]string, error) {
+		ctx, cancel := context.WithTimeout(ctx, mediamtxAPITimeout)
+		defer cancel()
+		url := strings.TrimRight(apiURL, "/") + "/v3/paths/get/" + path
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("accept", "application/json")
+		res, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+		if res.StatusCode < 200 || res.StatusCode > 299 {
+			return nil, fmt.Errorf("HTTP %d", res.StatusCode)
+		}
+		var body struct {
+			Tracks []string `json:"tracks"`
+		}
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+			return nil, err
+		}
+		return body.Tracks, nil
+	}
 }
 
 func (f *Front) fetchPaths(ctx context.Context) ([]MediamtxPath, error) {

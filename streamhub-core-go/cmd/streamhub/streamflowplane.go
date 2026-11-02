@@ -2,20 +2,22 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"os"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/callbacks"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logsink"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/mqtt"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/notifications"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/s3"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamflow"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/callbacks"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/clips"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logsink"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/mqtt"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/notifications"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamflow"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
 )
 
 // The streamflow plane: the Streamflow engine (store + runner + trigger
@@ -25,7 +27,8 @@ import (
 // within 50 does not matter): "plugins.repo" (install state + config),
 // "callbacks" (trigger tap + emit + lifecycle), "mqtt" (action.mqtt),
 // "streams" (action.snapshot), "notifications" (action.notify), "s3" +
-// "s3.secrets" (action.s3 + the AI key ref), "logsink".
+// "s3.secrets" (action.s3 + the AI key ref), "logsink", "audit" (the boot
+// quarantine of execution boxes outside STREAMHUB_STREAMFLOW_DANGEROUS).
 //
 // Provides: "streamflow" (*streamflow.Service). Background work — the 4 run
 // workers, the trigger subscription, the 60 s reconcile and the schedule
@@ -50,14 +53,15 @@ func init() {
 			}
 			return true, row.Enabled, row.Config
 		}
-		ai := &streamflow.AIClient{Usage: store, HTTP: &http.Client{}, Resolve: security.DefaultHostResolver, Now: time.Now}
+		ai := &streamflow.AIClient{Usage: store, Resolve: security.DefaultHostResolver, Now: time.Now}
 		if sec, ok := maybe[*s3.SecretsStore](c, "s3.secrets"); ok {
-			ai.Secrets = sec
+			ai.Secrets = aiKeyResolver{sec}
 		}
 		secrets := streamflow.NewSecrets(store, apps, c.cfg.JWTSecret)
 
 		deps := streamflow.RunnerDeps{
 			Store: store, Apps: apps, Plugin: plugin, AI: ai, Secrets: secrets, Logs: logw, PublicBaseURL: c.cfg.PublicBaseURL,
+			Env: c.cfg.Env,
 			Snapshot: func(ctx context.Context, app, room string, participant *string) (string, string, error) {
 				svc, ok := maybe[*streams.Service](c, "streams")
 				if !ok {
@@ -68,6 +72,13 @@ func init() {
 					return "", "", err
 				}
 				return r.Key, r.URL, nil
+			},
+			Clip: func(ctx context.Context, in streamflow.ClipInput) (*streamflow.ClipOutput, error) {
+				svc, ok := maybe[*clips.Service](c, "clips")
+				if !ok {
+					return nil, errUnavailable("clips")
+				}
+				return streamflowClip(ctx, svc, in)
 			},
 			MQTT: func(ctx context.Context, app, topic string, payload any, qos int, retain bool) {
 				if m, ok := maybe[*mqtt.Service](c, "mqtt"); ok {
@@ -88,6 +99,9 @@ func init() {
 		}
 		runner := streamflow.NewRunner(deps)
 		svc := streamflow.NewService(store, runner, apps, plugin, logw)
+		if a, ok := maybe[*audit.Service](c, "audit"); ok {
+			svc.Audit = a
+		}
 
 		provide(c, "streamflow", svc)
 		c.modules = append(c.modules, &streamflow.Routes{Svc: svc, Secrets: secrets})
@@ -107,8 +121,61 @@ func init() {
 	})
 }
 
+// clipWait bounds action.clip's `wait` inside the 60 s run budget.
+const clipWait = 45 * time.Second
+
+// streamflowClip is the action.clip seam: a clips job whose origin links
+// back to the triggering event and run (clip.ready carries it).
+func streamflowClip(ctx context.Context, svc *clips.Service, in streamflow.ClipInput) (*streamflow.ClipOutput, error) {
+	before, after := in.Before, in.After
+	origin := &clips.Origin{Kind: "streamflow", Event: in.Event, WorkflowID: in.WorkflowID, RunID: in.RunID}
+	if ms, ok := clips.ParseInstant(in.EventTs); ok {
+		origin.EventTs = &ms
+	}
+	if in.Payload != nil {
+		if raw, err := y.Stringify(in.Payload); err == nil {
+			origin.Data = []byte(raw)
+		}
+	}
+	clip, err := svc.Create(ctx, clips.CreateInput{
+		App: in.App, Room: in.Room, Origin: origin,
+		Request: clips.Request{EventTs: in.EventTs, Before: &before, After: &after},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if in.Wait {
+		if done, err := svc.WaitDone(ctx, in.App, clip.ID, clipWait); err == nil {
+			clip = done
+		}
+	}
+	return &streamflow.ClipOutput{
+		ClipID: clip.ID, Status: clip.Status, From: clip.From, To: clip.To, VodID: clip.VodID, URL: clip.URL, Error: clip.Error,
+	}, nil
+}
+
 type unavailableErr string
 
 func (e unavailableErr) Error() string { return string(e) + " service not available" }
 
 func errUnavailable(name string) error { return unavailableErr(name) }
+
+// aiKeyRef is the one ref the runner hands the AI client (runner.go).
+const aiKeyRef = "STREAMFLOW_AI_API_KEY"
+
+// aiKeyResolver keeps the operator-level AI key working now that the
+// secrets store never reads env (security 3.3.3): secrets.json first, then
+// os.Getenv — for that one fixed name only.
+type aiKeyResolver struct{ store *s3.SecretsStore }
+
+func (r aiKeyResolver) Get(ref string) (string, bool) {
+	if v, ok := r.store.Get(ref); ok {
+		return v, true
+	}
+	if ref == aiKeyRef {
+		if v := os.Getenv(ref); v != "" {
+			return v, true
+		}
+	}
+	return "", false
+}

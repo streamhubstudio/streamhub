@@ -68,5 +68,15 @@
     "you": "Yo",
     "anonymous": "Anónimo",
     "someone": "Alguien"
+  },
+  "dvr": {
+    "goLive": "Ir al vivo",
+    "atLive": "En vivo",
+    "behind": "{{behind}} detrás del vivo",
+    "timeline": "Línea de tiempo DVR",
+    "window": "Rebobinable hasta {{minutes}} min",
+    "copyMoment": "Copiar enlace a este momento",
+    "copied": "Enlace copiado",
+    "clamped": "Ese momento está fuera de la ventana DVR — se reproduce el punto disponible más cercano."
   }
 }

@@ -9,6 +9,7 @@
         "path": "/api/v1/apps/live/db/health",
         "auth": "globalToken"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -27,6 +28,11 @@
             {
               "bytes": "<masked>",
               "name": "app_plugins",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "clips",
               "rows": 0
             },
             {
@@ -82,6 +88,7 @@
         "path": "/api/v1/apps/live/db/health",
         "auth": "appToken"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -100,6 +107,11 @@
             {
               "bytes": "<masked>",
               "name": "app_plugins",
+              "rows": 0
+            },
+            {
+              "bytes": "<masked>",
+              "name": "clips",
               "rows": 0
             },
             {

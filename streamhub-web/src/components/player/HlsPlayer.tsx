@@ -2,7 +2,7 @@
  * <HlsPlayer> — live HLS playback for a `.m3u8` playlist using video.js.
  *
  * This is the SEPARATE livestreaming player (≈6-15s latency, AntMedia-style,
- * embeddable) described in https://streamhub.studio/docs/history/WAVE3 §1b. It is NOT the WebRTC <LivePlayer>
+ * embeddable) described in streamhub-docs/history/WAVE3.md §1b. It is NOT the WebRTC <LivePlayer>
  * (sub-second, used for "Ver" en vivo) nor the <VodPlayer> (recorded MP4).
  *
  * video.js v8 ships @videojs/http-streaming (VHS), so an HLS source plays with
@@ -24,7 +24,44 @@ import 'video.js/dist/video-js.css'
 import { Button, Spinner } from '@/ui'
 import { PluginSlot, usePlayerProvider } from '@/plugins'
 import { applyInlinePlayback, isAutoplayBlockedError } from '@/lib/browserCompat'
+import {
+  formatBehindLive,
+  formatDvrStartAt,
+  formatWallClock,
+  isAtLiveEdge,
+  mediaTimeToEpoch,
+  parseDvrStartAt,
+  pdtEpochAtZero,
+  resolveSeekTarget,
+  withStartAt,
+  type SeekWindow,
+  type TimedSegmentLike,
+} from '@/lib/dvr'
 import { ProviderPlayer } from './ProviderPlayer'
+
+/** What the DVR bar renders: the seekable window, the position, the PDT anchor. */
+interface DvrView {
+  win: SeekWindow
+  current: number
+  epochAtZero: number | null
+}
+
+/** Read the DVR view off video.js/VHS (null until the window is known). */
+function readDvrView(player: Player): DvrView | null {
+  const range = player.seekable()
+  if (!range || range.length === 0) return null
+  const win = { start: range.start(0), end: range.end(range.length - 1) }
+  let segments: TimedSegmentLike[] | null = null
+  try {
+    const tech = player.tech({ IWillNotUseThisInPlugins: true }) as unknown as {
+      vhs?: { playlists?: { media?: () => { segments?: TimedSegmentLike[] } | undefined } }
+    }
+    segments = tech?.vhs?.playlists?.media?.()?.segments ?? null
+  } catch {
+    segments = null
+  }
+  return { win, current: player.currentTime() ?? win.end, epochAtZero: pdtEpochAtZero(segments) }
+}
 
 export interface HlsPlayerProps {
   /** Live HLS playlist URL (`.m3u8`). */
@@ -61,6 +98,19 @@ export interface HlsPlayerProps {
    * Powers the Live view's Vidstack | video.js dual-player selector.
    */
   forcePlayer?: 'auto' | 'provider' | 'builtin'
+  /**
+   * DVR/timeshift (G5, features/dvr-clips.md): `src` is a rewindable window
+   * (`dvr.m3u8`). Adds a seek bar over the window, an "Ir al vivo" button, the
+   * wall clock of the playing position and a copy-link-to-this-moment
+   * (`?t=<epoch>`). `true` when the window length is unknown (public embed —
+   * the bar follows the player's seekable range either way). Under 'auto' a
+   * DVR source renders the built-in player (the provider has no `?t=` seam).
+   */
+  dvr?: boolean | { windowSeconds?: number }
+  /** `?t=` deep link into the DVR window (lib/dvr parseDvrStartAt forms). */
+  startAt?: string | null
+  /** IANA zone for the DVR wall clock (default: the viewer's). */
+  timeZone?: string
 }
 
 /**
@@ -87,7 +137,8 @@ export function HlsPlayer(props: HlsPlayerProps) {
   // 'builtin' forces video.js even when a provider is active (the selector's
   // video.js choice); 'auto'/'provider' use the provider whenever one is active.
   const forced = props.forcePlayer ?? 'auto'
-  if (provider && forced !== 'builtin') {
+  const dvrAuto = Boolean(props.dvr) && forced === 'auto'
+  if (provider && forced !== 'builtin' && !dvrAuto) {
     return (
       <ProviderPlayer
         provider={provider}
@@ -116,6 +167,9 @@ function VideoJsHlsPlayer({
   app,
   room,
   access = 'auth',
+  dvr,
+  startAt,
+  timeZone,
 }: HlsPlayerProps) {
   const { t } = useTranslation(['playerComponents', 'common'])
   const containerRef = useRef<HTMLDivElement>(null)
@@ -125,6 +179,8 @@ function VideoJsHlsPlayer({
   const attempts = useRef(0)
   const [status, setStatus] = useState<Status>('loading')
   const statusRef = useRef<Status>(status)
+  // DVR `?t=` is applied once per source.
+  const startApplied = useRef(false)
 
   // Always read the freshest src/status from the (stable, init-once) callbacks.
   srcRef.current = src
@@ -240,7 +296,62 @@ function VideoJsHlsPlayer({
     setStatus('loading')
     player.poster(poster ?? '')
     loadSrc()
+    startApplied.current = false
   }, [src, poster, loadSrc, clearRetry])
+
+  // --- DVR (G5) ---------------------------------------------------------------
+  // Polled (1 s) rather than evented: the seekable window slides while paused.
+  const [dvrView, setDvrView] = useState<DvrView | null>(null)
+  const [dvrNote, setDvrNote] = useState<string | null>(null)
+  useEffect(() => {
+    if (!dvr) return
+    const tick = () => {
+      const player = playerRef.current
+      if (!player || player.isDisposed()) return
+      const view = readDvrView(player)
+      setDvrView(view)
+      // Apply the `?t=` deep link once, as soon as the window is known.
+      if (view && !startApplied.current && statusRef.current === 'playing') {
+        startApplied.current = true
+        const at = parseDvrStartAt(startAt)
+        const target = at && resolveSeekTarget(at, view.win, view.epochAtZero, Date.now())
+        if (target) {
+          player.currentTime(target.time)
+          if (target.clamped) setDvrNote(t('playerComponents:dvr.clamped'))
+        }
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [dvr, startAt, t])
+
+  const seekTo = useCallback((time: number) => {
+    const player = playerRef.current
+    if (player && !player.isDisposed()) player.currentTime(time)
+  }, [])
+  const goLive = useCallback(() => {
+    const player = playerRef.current as (Player & { liveTracker?: { seekToLiveEdge(): void } }) | null
+    if (!player || player.isDisposed()) return
+    if (player.liveTracker) player.liveTracker.seekToLiveEdge()
+    else if (dvrView) player.currentTime(dvrView.win.end)
+  }, [dvrView])
+  const copyMoment = useCallback(() => {
+    const epoch = dvrView ? mediaTimeToEpoch(dvrView.current, dvrView.epochAtZero) : null
+    if (epoch === null || typeof window === 'undefined') return
+    const url = withStartAt(window.location.href, formatDvrStartAt(epoch))
+    void navigator.clipboard?.writeText(url).then(
+      () => setDvrNote(t('playerComponents:dvr.copied')),
+      () => {},
+    )
+  }, [dvrView, t])
+
+  const windowMinutes =
+    typeof dvr === 'object' && dvr.windowSeconds ? Math.round(dvr.windowSeconds / 60) : null
+  const atLive = dvrView ? isAtLiveEdge(dvrView.current, dvrView.win) : true
+  const clock = dvrView
+    ? formatWallClock(mediaTimeToEpoch(dvrView.current, dvrView.epochAtZero), timeZone)
+    : ''
 
   return (
     <div
@@ -249,6 +360,47 @@ function VideoJsHlsPlayer({
       <div data-vjs-player>
         <div ref={containerRef} />
       </div>
+
+      {dvr && dvrView && dvrView.win.end - dvrView.win.start > 1 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/10 bg-black/80 px-3 py-2 text-xs text-gray-200">
+          <input
+            type="range"
+            aria-label={t('playerComponents:dvr.timeline')}
+            min={dvrView.win.start}
+            max={dvrView.win.end}
+            step={0.5}
+            value={Math.min(Math.max(dvrView.current, dvrView.win.start), dvrView.win.end)}
+            onChange={(e) => seekTo(Number(e.currentTarget.value))}
+            className="min-w-[8rem] flex-1 accent-primary-500"
+          />
+          {clock && <span className="font-mono tabular-nums text-gray-100">{clock}</span>}
+          <span className={atLive ? 'font-semibold text-red-400' : 'text-gray-300'}>
+            {atLive
+              ? t('playerComponents:dvr.atLive')
+              : t('playerComponents:dvr.behind', {
+                  behind: formatBehindLive(dvrView.win.end - dvrView.current),
+                })}
+          </span>
+          <Button type="button" size="sm" variant="solid" disabled={atLive} onClick={goLive}>
+            {t('playerComponents:dvr.goLive')}
+          </Button>
+          {dvrView.epochAtZero !== null && (
+            <button
+              type="button"
+              onClick={copyMoment}
+              className="text-gray-300 underline-offset-2 hover:text-white hover:underline"
+            >
+              {t('playerComponents:dvr.copyMoment')}
+            </button>
+          )}
+          {windowMinutes !== null && (
+            <span className="text-gray-400">
+              {t('playerComponents:dvr.window', { minutes: windowMinutes })}
+            </span>
+          )}
+          {dvrNote && <span className="basis-full text-amber-300">{dvrNote}</span>}
+        </div>
+      )}
 
       {/* Player-overlay plugins (e.g. Timestamp CCTV) — auto-mounted for any
           installed + active overlay plugin of this app. No-op when none match

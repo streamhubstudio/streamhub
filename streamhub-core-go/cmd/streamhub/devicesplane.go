@@ -5,18 +5,19 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/callbacks"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cameras"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/fleet"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/iot"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamhealth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/wsingest"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/callbacks"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cameras"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/fleet"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/iot"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamhealth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/wsingest"
 )
 
 // The devices plane: direct WS MJPEG ingest (camera/viewer WebSockets + the
@@ -26,7 +27,8 @@ import (
 // App server side.
 //
 // Provides: "wsingest" (*wsingest.Service), "framehub" (*wsingest.FrameHub),
-// "fleet", "iot", "cameras", "streamhealth".
+// "fleet", "iot", "cameras", "streamhealth", "streamhealth.sources" (the
+// livekit.SourceTracks the LiveKit plane resolves lazily).
 //
 // Order 50 sorts BEFORE the plugins plane (same order, file-name order), so
 // "plugins.repo" is resolved lazily at call time. Background work (boot
@@ -93,11 +95,22 @@ func init() {
 		provide(c, "iot", io)
 		provide(c, "cameras", cams)
 		provide(c, "streamhealth", health)
+		provide[livekit.SourceTracks](c, "streamhealth.sources", healthSources{health})
 
 		c.modules = append(c.modules, ws, fl, cams, health) // iot has no routes
 		c.starters = append(c.starters, ws.Start, fl.Start, battery.Start, io.Start, cams.Start)
 		return nil
 	})
+}
+
+// healthSources adapts streamhealth.Service to livekit.SourceTracks: the
+// worker knows rooms by their HLS dir, the slugged LiveKit room name.
+type healthSources struct{ s *streamhealth.Service }
+
+func (h healthSources) Watching(ctx context.Context, app string) bool { return h.s.Watching(ctx, app) }
+
+func (h healthSources) RoomTracks(ctx context.Context, app, room string, audio, video bool) {
+	h.s.RecordSource(ctx, app, streams.Safe(room), audio, video)
 }
 
 // upgradeGuard adapts security.NetworkGuard to wsingest.UpgradeGuard.

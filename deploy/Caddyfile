@@ -35,15 +35,20 @@
 	}
 
 	# HLS direct-serve (STREAMHUB_HLS_DIRECT_SERVE, operations/SCALING.md). Opt-in:
-	# with the flag on (1/true/on/yes), Caddy serves live .ts/.m3u8 STRAIGHT FROM
+	# with the flag on (1/true/on/yes), Caddy serves live SEGMENTS STRAIGHT FROM
 	# DISK (sendfile) out of the read-only DATA_DIR mount (compose: /srv/streamhub-
-	# data; STREAMHUB_HLS_ROOT overrides) — the core never touches segment bytes.
+	# data; STREAMHUB_HLS_ROOT overrides) — the core never touches segment bytes —
+	# but only after a forward_auth to the core's /hls-auth (apps with
+	# public_playback:false need ?st=, features.geo): direct-serve never exposes a
+	# private app. Playlists (.m3u8) are never served from disk: the core rewrites
+	# a private app's playlist with the token, so they always go to the core.
 	# Public /hls/<app>/<room>/<file> maps to <root>/apps/<app>/hls/<room>/<file>.
 	# Anything not on disk falls back to the core with the ORIGINAL path (the
 	# rewrite only happens inside @disk). Flag off/unset -> @disk never matches ->
 	# everything proxied: zero change.
 	# CORS/Cache-Control are set only on disk hits, so proxied answers keep the
-	# core's own headers (no duplicated Access-Control-Allow-Origin).
+	# core's own headers (no duplicated Access-Control-Allow-Origin). A private
+	# app's segment is marked `private` (the /hls-auth X-StreamHub-HLS-Scope).
 	# Segments starting with '.' (incl. '..') never match — same rule as the
 	# core's safeJoin — so a crafted path can't climb out of <app>/hls/<room>.
 	@hls path_regexp hls ^/hls/([^/.][^/]*)/([^/.][^/]*)/((?:[^/.][^/]*/)*[^/.][^/]*)$
@@ -51,17 +56,29 @@
 		root * {$STREAMHUB_HLS_ROOT:/srv/streamhub-data}/apps
 		@disk {
 			expression `{env.STREAMHUB_HLS_DIRECT_SERVE}.matches('^(?i)(1|true|on|yes)$')`
+			not path *.m3u8
 			file /{re.hls.1}/hls/{re.hls.2}/{re.hls.3}
 		}
 		handle @disk {
-			rewrite * {file_match.relative}
-			header Access-Control-Allow-Origin "*"
-			header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-			@ts path *.ts
-			@m3u8 path *.m3u8
-			header @ts Cache-Control "public, max-age=31536000, immutable"
-			header @m3u8 Cache-Control "no-cache"
-			file_server
+			# `route` keeps this literal order: authorize, then serve.
+			route {
+				# 2xx = serve; anything else is relayed to the client (the
+				# core's 403 JSON). X-Original-URI carries the pre-rewrite URI
+				# with its ?st=; copy_headers hands the scope to the matchers.
+				forward_auth 127.0.0.1:3020 {
+					uri /hls-auth
+					header_up X-Original-URI {http.request.orig_uri}
+					copy_headers X-StreamHub-HLS-Scope
+				}
+				rewrite * {file_match.relative}
+				header Access-Control-Allow-Origin "*"
+				header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+				@ts path *.ts *.m4s
+				@private header X-StreamHub-HLS-Scope private
+				header @ts Cache-Control "public, max-age=31536000, immutable"
+				header @private Cache-Control "private, max-age=31536000, immutable"
+				file_server
+			}
 		}
 		handle {
 			reverse_proxy 127.0.0.1:3020

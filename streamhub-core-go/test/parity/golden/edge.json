@@ -3,7 +3,7 @@
   "cases": [
     {
       "name": "edge-join-node",
-      "fingerprint": "sha256:f5f48f279ece14ce",
+      "fingerprint": "sha256:218fb2a0eace3288",
       "request": {
         "method": "POST",
         "path": "/api/v1/cluster/join",
@@ -16,6 +16,7 @@
           "type": "edge"
         }
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "cache-control": null,
@@ -31,6 +32,7 @@
           },
           "name": "parity-edge-e",
           "nodeId": "{{edgeNode}}",
+          "nodeSecret": "<masked>",
           "publicWsUrl": null,
           "redisUrl": null
         },

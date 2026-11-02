@@ -63,3 +63,17 @@ export function isValidCidr(raw: string): boolean {
   const prefix = Number(prefixPart)
   return prefix >= 0 && prefix <= (v4 ? 32 : 128)
 }
+
+/**
+ * Splits a free-text list (one entry per line, or comma/space separated) for
+ * features.allowedPublisherCidr: `entries` keeps every non-empty item in
+ * order, `invalid` the ones isValidCidr rejects (the core answers 400 on
+ * those, so the form blocks saving instead).
+ */
+export function parseCidrList(text: string): { entries: string[]; invalid: string[] } {
+  const entries = (text || '')
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return { entries, invalid: entries.filter((e) => !isValidCidr(e)) }
+}

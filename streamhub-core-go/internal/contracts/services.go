@@ -3,7 +3,7 @@ package contracts
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
 )
 
 // AppsService is the narrow surface other modules use from the apps module
@@ -161,6 +161,11 @@ type FeaturesPatch struct {
 	PublicPlayback *bool
 	WsIngest       *WsIngestPatch
 	Drm            *DrmFeatures
+	// AllowedPublisherCidr nil = untouched; a non-nil (even empty) slice
+	// replaces the list (empty = restriction off).
+	AllowedPublisherCidr []string
+	// MaxBitrateAccept nil = untouched; 0 = cap off.
+	MaxBitrateAccept *float64
 }
 
 // WsIngestPatch replaces features.ws_ingest (nil fields are omitted on disk).

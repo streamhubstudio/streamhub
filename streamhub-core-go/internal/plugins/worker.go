@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of plugin-worker.manager.ts: the worker hook. The core owns the
@@ -372,21 +372,14 @@ func mergeEnv(parent []string, layers ...[]EnvVar) []string {
 	return out
 }
 
+// dispatchRemote hands the worker to a grid node: plugin + app + validated
+// config + the per-start ingest token. The node resolves the spawn spec
+// itself (Agent.Spawn) from its own registry, with this master as origin.
 func (m *Manager) dispatchRemote(e *workerEntry, meta *Meta, app, appDir string, config *y.Map, appID *int64, node NodeInfo, appTimezone string) {
-	origin := m.cfg.PublicBaseURL
-	wctx := WorkerContext{App: app, Config: config, AppDir: appDir, DataDir: m.cfg.DataDir, LivekitURL: m.cfg.LivekitURL, Node: &node, OriginURL: origin, AppTimezone: appTimezone}
-	spec := meta.Worker.Spawn(wctx)
 	m.mu.Lock()
 	token := e.ingestToken
 	m.mu.Unlock()
-	env := []EnvVar{{"STREAMHUB_APP", app}, {"STREAMHUB_PLUGIN_ID", meta.ID}}
-	if origin != "" {
-		base := strings.TrimRight(origin, "/") + "/api/v1/apps/" + jsx.EncodeURIComponent(app) + "/plugins/" + jsx.EncodeURIComponent(meta.ID)
-		env = append(env, EnvVar{"STREAMHUB_INGEST_URL", base + "/live"}, EnvVar{"STREAMHUB_EVENTS_URL", base + "/events"}, EnvVar{"STREAMHUB_INGEST_TOKEN", token})
-	} else {
-		m.system(e, meta.ID, app, appID, "grid placement: PUBLIC_BASE_URL is unset — a remote worker cannot reach the origin ingest channel (live result feed-back disabled)")
-	}
-	req := GridSpawnRequest{PluginID: meta.ID, AppName: app, Command: spec.Command, Args: orEmpty(spec.Args), Env: envObject(append(env, spec.Env...)), IngestToken: token}
+	req := GridSpawnRequest{PluginID: meta.ID, AppName: app, Config: config, IngestToken: token}
 	m.system(e, meta.ID, app, appID, fmt.Sprintf("grid placement: dispatching worker to node '%s'…", node.Name))
 	key := workerKey(app, meta.ID)
 	go func() {
@@ -427,15 +420,6 @@ func orEmpty(s []string) []string {
 		return []string{}
 	}
 	return s
-}
-
-// envObject renders ordered env pairs as a JSON object (later keys win).
-func envObject(env []EnvVar) *y.Map {
-	m := y.NewMap()
-	for _, e := range env {
-		m.Set(e.Key, e.Value)
-	}
-	return m
 }
 
 // StartSpec runs a resolved spec under an opaque key (grid agent).

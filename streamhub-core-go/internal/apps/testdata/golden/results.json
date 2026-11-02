@@ -419,7 +419,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -568,7 +568,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -721,7 +721,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -870,7 +870,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1014,7 +1014,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1154,7 +1154,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1298,7 +1298,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1438,7 +1438,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1601,7 +1601,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1747,7 +1747,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -1912,7 +1912,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2077,7 +2077,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2246,7 +2246,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2415,7 +2415,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2570,7 +2570,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2725,7 +2725,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -2880,7 +2880,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -5787,7 +5787,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",
@@ -5934,7 +5934,7 @@
           ],
           "scheme": "cenc",
           "keyServerUrl": "https://keys.example.com",
-          "keyServerTokenEnv": "DRM_TOKEN",
+          "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
           "licenseUrls": {
             "widevine": "https://wv",
             "playready": "",

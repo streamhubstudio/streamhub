@@ -81,8 +81,11 @@
       "capture": {
         "edgeNode": "data.nodeId"
       },
-      "note": "loopback client: secrets vended",
-      "expectStatus": 201
+      "note": "loopback client: secrets vended; nodeSecret = HMAC(token, node:<random nodeId>) masked (3.3.4)",
+      "expectStatus": 201,
+      "mask": [
+        "data.nodeSecret"
+      ]
     },
     {
       "name": "join-refresh",
@@ -97,7 +100,10 @@
         "url": "https://edge1.example.com",
         "region": "eu-central"
       },
-      "expectStatus": 200
+      "expectStatus": 200,
+      "mask": [
+        "data.nodeSecret"
+      ]
     },
     {
       "name": "join-plaintext-withheld",
@@ -114,8 +120,11 @@
       "capture": {
         "edgeNode2": "data.nodeId"
       },
-      "note": "non-loopback client over plaintext: apiSecret/redis withheld + hint",
-      "expectStatus": 201
+      "note": "non-loopback client over plaintext: apiSecret/redis withheld + hint; nodeSecret = HMAC(token, node:<random nodeId>) masked (3.3.4)",
+      "expectStatus": 201,
+      "mask": [
+        "data.nodeSecret"
+      ]
     },
     {
       "name": "join-forwarded-https",
@@ -130,7 +139,10 @@
         "name": "parity-edge-2",
         "ip": "2001:db8::2"
       },
-      "expectStatus": 200
+      "expectStatus": 200,
+      "mask": [
+        "data.nodeSecret"
+      ]
     },
     {
       "name": "heartbeat-empty",

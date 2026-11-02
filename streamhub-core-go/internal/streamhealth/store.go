@@ -13,8 +13,8 @@ import (
 
 	_ "modernc.org/sqlite" // "sqlite" driver
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // RetentionDays is the health_events history horizon.
@@ -38,6 +38,18 @@ CREATE TABLE IF NOT EXISTS stream_settings (
   config_json TEXT NOT NULL DEFAULT '{}',
   updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (room)
+);`
+
+// ddlSources (3.4, not in the Node store): what the room's LiveKit
+// publishers carry, keyed by the HLS dir name the worker sees; the worker
+// reads it read-only every cycle to tell "the source has no audio" from
+// "the audio went silent".
+const ddlSources = `
+CREATE TABLE IF NOT EXISTS stream_sources (
+  room       TEXT NOT NULL PRIMARY KEY,
+  has_audio  INTEGER NOT NULL,
+  has_video  INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
 );`
 
 // HealthEventRow is one recorded health.* transition.
@@ -99,7 +111,7 @@ func (s *Store) DB(app, appDir string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := h.Exec(ddl); err != nil {
+	if _, err := h.Exec(ddl + ddlSources); err != nil {
 		_ = h.Close()
 		return nil, err
 	}
@@ -312,4 +324,48 @@ func parseObject(s string) *y.Map {
 		}
 	}
 	return y.NewMap()
+}
+
+// SourceRow is one room's publisher media kinds.
+type SourceRow struct {
+	Room         string
+	Audio, Video bool
+	UpdatedAt    string
+}
+
+// PutSource upserts a room's publisher media kinds; nothing published at
+// all (audio and video false) deletes the row — back to "unknown".
+func (s *Store) PutSource(ctx context.Context, app, appDir, room string, audio, video bool) error {
+	h, err := s.DB(app, appDir)
+	if err != nil {
+		return err
+	}
+	if !audio && !video {
+		_, err = h.ExecContext(ctx, "DELETE FROM stream_sources WHERE room = ?", room)
+		return err
+	}
+	_, err = h.ExecContext(ctx, `INSERT INTO stream_sources (room, has_audio, has_video, updated_at)
+           VALUES (?, ?, ?, ?)
+         ON CONFLICT(room) DO UPDATE SET
+           has_audio = excluded.has_audio,
+           has_video = excluded.has_video,
+           updated_at = excluded.updated_at`, room, audio, video, jsx.ISO(s.now()))
+	return err
+}
+
+// GetSource is one room's publisher media kinds (nil when unknown).
+func (s *Store) GetSource(ctx context.Context, app, appDir, room string) (*SourceRow, error) {
+	h, err := s.DB(app, appDir)
+	if err != nil {
+		return nil, err
+	}
+	r := SourceRow{Room: room}
+	err = h.QueryRowContext(ctx, "SELECT has_audio, has_video, updated_at FROM stream_sources WHERE room = ?", room).Scan(&r.Audio, &r.Video, &r.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }

@@ -13,8 +13,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
 )
 
 // AdminUserID is the stable synthetic id of the break-glass admin principal.
@@ -27,6 +27,14 @@ const (
 	RoleOwner  MembershipRole = "owner"
 	RoleEditor MembershipRole = "editor"
 	RoleViewer MembershipRole = "viewer"
+)
+
+// memberships.status (3.3.4, M2): an invitation of an account that already
+// exists is `pending` until that account accepts it; only `active` rows
+// grant a role.
+const (
+	MembershipActive  = "active"
+	MembershipPending = "pending"
 )
 
 // Tenant is a tenants row.
@@ -98,16 +106,55 @@ func New(global *sql.DB, adminUser string, log *slog.Logger) *Service {
 
 // Init is onModuleInit: never fails boot (errors are logged).
 func (s *Service) Init(ctx context.Context) {
-	err := s.ensureUserAuthColumns(ctx)
+	err := s.ensureColumns(ctx, "users", userAuthColumns)
+	if err == nil {
+		err = s.ensureColumns(ctx, "memberships", membershipColumns)
+	}
 	if err == nil {
 		err = s.ensurePlatformTenant(ctx)
 	}
 	if err == nil {
 		err = s.ensureAdminSuperadmin(ctx)
 	}
+	if err == nil {
+		err = s.ensureEmailUnique(ctx)
+	}
 	if err != nil {
 		s.log.Error("tenancy bootstrap failed (continuing)", "err", err)
 	}
+}
+
+// ensureEmailUnique adds the case-insensitive UNIQUE index on users.email
+// (3.3.3). Pre-existing duplicates (the email change used to be unverified)
+// block it: they are logged by user id and the index is left out until an
+// operator resolves them — boot goes on either way.
+func (s *Service) ensureEmailUnique(ctx context.Context) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT GROUP_CONCAT(id, ',') AS ids FROM users
+       WHERE email IS NOT NULL AND email != '' GROUP BY lower(email) HAVING COUNT(*) > 1`)
+	if err != nil {
+		return err
+	}
+	var dups []string
+	for rows.Next() {
+		var ids string
+		if err := rows.Scan(&ids); err != nil {
+			rows.Close()
+			return err
+		}
+		dups = append(dups, "["+ids+"]")
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(dups) > 0 {
+		s.log.Error("users with the same email (case-insensitive): UNIQUE index on users.email NOT applied — "+
+			"give each a distinct email and restart", "users", strings.Join(dups, " "))
+		return nil
+	}
+	_, err = s.db.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower
+       ON users(lower(email)) WHERE email IS NOT NULL AND email != ''`)
+	return err
 }
 
 func (s *Service) ensurePlatformTenant(ctx context.Context) error {
@@ -150,19 +197,26 @@ var userAuthColumns = []struct{ name, ddl string }{
 	{"smtp_pass_enc", "smtp_pass_enc TEXT"},
 }
 
-func (s *Service) ensureUserAuthColumns(ctx context.Context) error {
-	for _, c := range userAuthColumns {
-		has, err := db.HasColumn(ctx, s.db, "users", c.name)
+// membershipColumns (3.3.4, M2): pre-existing rows stay active; invited_by
+// is the inviting user, NULL for a team of one's own.
+var membershipColumns = []struct{ name, ddl string }{
+	{"status", "status TEXT NOT NULL DEFAULT 'active'"},
+	{"invited_by", "invited_by TEXT"},
+}
+
+func (s *Service) ensureColumns(ctx context.Context, table string, cols []struct{ name, ddl string }) error {
+	for _, c := range cols {
+		has, err := db.HasColumn(ctx, s.db, table, c.name)
 		if err != nil {
 			return err
 		}
 		if has {
 			continue
 		}
-		if _, err := s.db.ExecContext(ctx, "ALTER TABLE users ADD COLUMN "+c.ddl); err != nil {
+		if _, err := s.db.ExecContext(ctx, "ALTER TABLE "+table+" ADD COLUMN "+c.ddl); err != nil {
 			return err
 		}
-		s.log.Info("migrated users: added " + c.name)
+		s.log.Info("migrated " + table + ": added " + c.name)
 	}
 	return nil
 }
@@ -200,9 +254,10 @@ func (s *Service) TenantForAppID(ctx context.Context, id int64) string {
 	return *v
 }
 
-// RoleInTenant is the user's role in a tenant ("" when not a member).
+// RoleInTenant is the user's role in a tenant ("" when not an active member:
+// a pending invitation grants nothing).
 func (s *Service) RoleInTenant(ctx context.Context, userID, tenantID string) MembershipRole {
-	v, _ := s.nullableString(ctx, `SELECT role FROM memberships WHERE user_id = ? AND tenant_id = ?`, userID, tenantID)
+	v, _ := s.nullableString(ctx, `SELECT role FROM memberships WHERE user_id = ? AND tenant_id = ? AND status = 'active'`, userID, tenantID)
 	if v == nil {
 		return ""
 	}
@@ -478,10 +533,22 @@ func (s *Service) CreateTeam(ctx context.Context, name, plan string) (string, er
 	return s.EnsureTenant(ctx, "tnt_"+uuid(), name, plan)
 }
 
-// AddMembership adds or upgrades a membership. Idempotent on (user, tenant).
+// AddMembership adds or upgrades an ACTIVE membership (a team of one's own,
+// the platform tenant). Idempotent on (user, tenant).
 func (s *Service) AddMembership(ctx context.Context, userID, tenantID string, role MembershipRole) error {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO memberships (user_id, tenant_id, role) VALUES (?, ?, ?)
-         ON CONFLICT(user_id, tenant_id) DO UPDATE SET role = excluded.role`, userID, tenantID, string(role))
+         ON CONFLICT(user_id, tenant_id) DO UPDATE SET role = excluded.role, status = 'active'`, userID, tenantID, string(role))
+	return err
+}
+
+// InviteMembership records invitedBy's invitation of userID into tenantID
+// with the given status (MembershipPending for an account that already
+// exists). An existing membership only takes the new role: its status is
+// never changed here, so an invitation can't activate itself.
+func (s *Service) InviteMembership(ctx context.Context, userID, tenantID string, role MembershipRole, invitedBy, status string) error {
+	_, err := s.db.ExecContext(ctx, `INSERT INTO memberships (user_id, tenant_id, role, status, invited_by) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(user_id, tenant_id) DO UPDATE SET role = excluded.role`,
+		userID, tenantID, string(role), status, nullIfEmpty(invitedBy))
 	return err
 }
 
@@ -489,19 +556,97 @@ func (s *Service) AddMembership(ctx context.Context, userID, tenantID string, ro
 type Membership struct {
 	TenantID string
 	Role     MembershipRole
+	Status   string
 }
 
-// PrimaryMembership is the owner membership if any, else the earliest one.
+// GetMembership returns the (user, tenant) membership in any status, or nil.
+func (s *Service) GetMembership(ctx context.Context, userID, tenantID string) *Membership {
+	m := Membership{TenantID: tenantID}
+	err := s.db.QueryRowContext(ctx, `SELECT role, status FROM memberships WHERE user_id = ? AND tenant_id = ?`,
+		userID, tenantID).Scan(&m.Role, &m.Status)
+	if err != nil {
+		return nil
+	}
+	return &m
+}
+
+// PrimaryMembership is the default tenant of a user who made no explicit
+// choice: among ACTIVE memberships, a team of their own they own first
+// (never an accepted invitation, even as owner), else the earliest. So
+// accepting an invitation doesn't move anybody's tenant (M2). created_at
+// has 1 s resolution: rowid (insertion order; the upsert keeps it) breaks
+// the tie, or two memberships of the same second would flip at random.
 func (s *Service) PrimaryMembership(ctx context.Context, userID string) *Membership {
-	var m Membership
+	m := Membership{Status: MembershipActive}
 	err := s.db.QueryRowContext(ctx, `SELECT tenant_id, role FROM memberships
-          WHERE user_id = ?
-          ORDER BY (role = 'owner') DESC, created_at ASC
+          WHERE user_id = ? AND status = 'active'
+          ORDER BY (role = 'owner' AND invited_by IS NULL) DESC, created_at ASC, rowid ASC
           LIMIT 1`, userID).Scan(&m.TenantID, &m.Role)
 	if err != nil {
 		return nil
 	}
 	return &m
+}
+
+// AcceptMembership activates the user's pending invitation into tenantID;
+// false when there is none.
+func (s *Service) AcceptMembership(ctx context.Context, userID, tenantID string) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `UPDATE memberships SET status = 'active'
+          WHERE user_id = ? AND tenant_id = ? AND status = 'pending'`, userID, tenantID)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+// DeclineMembership drops the user's pending invitation into tenantID;
+// false when there is none (an active membership is never touched).
+func (s *Service) DeclineMembership(ctx context.Context, userID, tenantID string) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM memberships
+          WHERE user_id = ? AND tenant_id = ? AND status = 'pending'`, userID, tenantID)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+// UserTenant is one of a user's memberships, with its tenant.
+type UserTenant struct {
+	TenantID   string         `json:"tenantId"`
+	TenantName string         `json:"tenantName"`
+	Plan       string         `json:"plan"`
+	Role       MembershipRole `json:"role"`
+	InvitedBy  *string        `json:"invitedBy"` // the inviter's email; null for a team of one's own
+	CreatedAt  string         `json:"createdAt"`
+}
+
+// UserTenants lists the user's memberships in the given status, oldest first.
+func (s *Service) UserTenants(ctx context.Context, userID, status string) ([]UserTenant, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT m.tenant_id, t.name, t.plan, m.role, inv.email, m.created_at
+           FROM memberships m
+           JOIN tenants t ON t.id = m.tenant_id
+           LEFT JOIN users inv ON inv.id = m.invited_by
+          WHERE m.user_id = ? AND m.status = ?
+          ORDER BY m.created_at ASC`, userID, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []UserTenant{}
+	for rows.Next() {
+		var (
+			x  UserTenant
+			by sql.NullString
+		)
+		if err := rows.Scan(&x.TenantID, &x.TenantName, &x.Plan, &x.Role, &by, &x.CreatedAt); err != nil {
+			return nil, err
+		}
+		x.InvitedBy = ptr(by)
+		out = append(out, x)
+	}
+	return out, rows.Err()
 }
 
 // RemoveMembership deletes a membership; true when a row was removed.
@@ -529,8 +674,11 @@ func (s *Service) DeleteUser(ctx context.Context, userID string) error {
 
 // ListMembers returns a team's members, oldest first.
 func (s *Service) ListMembers(ctx context.Context, tenantID string) ([]TeamMember, error) {
+	// A pending membership (M2) reads as a pending member, whatever the
+	// account's own status.
 	rows, err := s.db.QueryContext(ctx, `SELECT u.id AS userId, u.email AS email, u.name AS name, m.role AS role,
-                u.status AS status, u.is_superadmin AS isSuperadmin,
+                CASE WHEN m.status = 'pending' THEN 'pending' ELSE u.status END AS status,
+                u.is_superadmin AS isSuperadmin,
                 m.created_at AS createdAt
            FROM memberships m
            JOIN users u ON u.id = m.user_id
@@ -574,6 +722,13 @@ func (s *Service) FindMember(ctx context.Context, tenantID, userID string) (*Tea
 		}
 	}
 	return nil, nil
+}
+
+func nullIfEmpty(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
 }
 
 func boolInt(b bool) int {

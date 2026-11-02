@@ -1,6 +1,6 @@
 package tags
 
-import y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+import y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 
 // Port of settings-merge.ts: a stream's EFFECTIVE settings are a deep merge of
 // model defaults → tag configs (in order) → per-stream overrides. Objects

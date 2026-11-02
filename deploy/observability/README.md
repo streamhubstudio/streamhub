@@ -3,7 +3,7 @@
 Stack Prometheus + Grafana + node_exporter, **separado** del media stack
 (`docker-compose.yml` en la raíz del repo — ciclo de vida independiente, no se
 tocan sus servicios). Materializa la Fase 1 de
-[operations/OBSERVABILITY-ROADMAP](https://streamhub.studio/docs/operations/OBSERVABILITY-ROADMAP)
+[`streamhub-docs/operations/OBSERVABILITY-ROADMAP.md`](../../streamhub-docs/operations/OBSERVABILITY-ROADMAP.md)
 (§4). Leé ese documento para el diseño completo (inventario de métricas,
 tableros panel-por-panel, alerting, fases 2/3) — acá sólo el **cómo desplegar**.
 
@@ -31,7 +31,7 @@ cp .env.example .env
 $EDITOR .env    # setear GRAFANA_ADMIN_PASSWORD
 
 # Token de streamhub-core para el job de scrape (si METRICS_TOKEN está seteado
-# en el core — ver https://streamhub.studio/docs/operations/ENV). Si el core corre con
+# en el core — ver streamhub-docs/operations/ENV.md). Si el core corre con
 # METRICS_TOKEN unset (endpoint público), este archivo puede quedar con el
 # placeholder: el header Bearer de más no rompe nada.
 cp secrets/metrics_token.example secrets/metrics_token
@@ -138,7 +138,7 @@ set **aditivo** de assets bajo `cluster/` + `prometheus.cluster.yml` + `alerts.c
 stack single-node de arriba **no se toca**: el modo cluster es un overlay opcional.
 
 Guía completa (arquitectura, firewall port-by-port, cómo agregar/quitar un nodo, seguridad):
-[operations/CLUSTER-OBSERVABILITY](https://streamhub.studio/docs/operations/CLUSTER-OBSERVABILITY).
+[`streamhub-docs/operations/CLUSTER-OBSERVABILITY.md`](../../streamhub-docs/operations/CLUSTER-OBSERVABILITY.md).
 
 **En el master** (levanta prom-cluster + grafana + node_exporter + Loki + Promtail):
 

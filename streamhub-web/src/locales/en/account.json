@@ -30,6 +30,7 @@
     "namePlaceholder": "Your name",
     "emailLabel": "Email",
     "emailAdminHint": "The break-glass admin email is managed via ADMIN_USER (env).",
+    "emailPending": "Pending confirmation: {{email}} — follow the link we mailed there to apply the change.",
     "roleLabel": "Role",
     "save": "Save changes",
     "saving": "Saving…",
@@ -103,6 +104,15 @@
       "testFailed": "Could not send the test email.",
       "testNotConfigured": "SMTP is not fully configured (host + password required)."
     }
+  },
+  "invitations": {
+    "title": "Team invitations",
+    "subtitle": "You were invited to join these teams. Accepting adds the team to your account; your current team doesn't change.",
+    "invitedBy": "Invited by {{email}}",
+    "invited": "Invited",
+    "accept": "Accept",
+    "decline": "Decline",
+    "answerError": "Couldn't answer the invitation. Please try again."
   },
   "sessions": {
     "title": "Active sessions",

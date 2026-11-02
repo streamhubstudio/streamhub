@@ -52,13 +52,20 @@ function probeResponse(status: number, lastModified?: Date) {
   return { ok: status >= 200 && status < 300, status, headers } as Response
 }
 
-function renderPlay() {
+/** The plain playlist answers `index`; the DVR window (dvr.m3u8) `dvr` (404 = none). */
+function routeProbes(index: Response, dvr: Response = probeResponse(404)) {
+  fetchMock.mockImplementation((url: string) =>
+    Promise.resolve(url.endsWith('/dvr.m3u8') ? dvr : index),
+  )
+}
+
+function renderPlay(entry = '/play/live/ch1') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/play/live/ch1']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/play/:app/:room" element={<PlayPublic />} />
         </Routes>
@@ -81,7 +88,7 @@ afterEach(() => {
 
 describe('PlayPublic — HLS fallback', () => {
   it('(a) playlist 200 + fresh → defaults to the public HlsPlayer with the toggle', async () => {
-    fetchMock.mockResolvedValue(probeResponse(200, new Date()))
+    routeProbes(probeResponse(200, new Date()))
     renderPlay()
 
     // The HLS player mounts (this is where the player provider gets a chance).
@@ -99,14 +106,16 @@ describe('PlayPublic — HLS fallback', () => {
     expect(hlsBtn.getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'mode.webrtc' })).toBeTruthy()
 
-    // Exactly ONE probe — no polling loops.
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0][0]).toBe('/hls/live/ch1/index.m3u8')
+    // One probe per playlist (plain + DVR window) — no polling loops.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const urls = fetchMock.mock.calls.map((c) => c[0]).sort()
+    expect(urls).toEqual(['/hls/live/ch1/dvr.m3u8', '/hls/live/ch1/index.m3u8'])
     expect(fetchMock.mock.calls[0][1]?.method).toBe('HEAD')
+    expect(props.dvr).toBe(false)
   })
 
   it('(b) the toggle swaps players; choosing HLS re-probes once', async () => {
-    fetchMock.mockResolvedValue(probeResponse(200, new Date()))
+    routeProbes(probeResponse(200, new Date()))
     renderPlay()
     await screen.findByTestId('hls-player')
 
@@ -116,12 +125,12 @@ describe('PlayPublic — HLS fallback', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'mode.hls' }))
     expect(await screen.findByTestId('hls-player')).toBeTruthy()
-    // Initial probe + the retry triggered by the toggle.
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    // Initial probes + the retry triggered by the toggle (plain + DVR each).
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
   })
 
   it('(c) no playlist (404) → WebRTC only, no toggle (behavior unchanged)', async () => {
-    fetchMock.mockResolvedValue(probeResponse(404))
+    routeProbes(probeResponse(404))
     renderPlay()
 
     expect(await screen.findByTestId('live-player')).toBeTruthy()
@@ -131,9 +140,7 @@ describe('PlayPublic — HLS fallback', () => {
   })
 
   it('(d) stale playlist → WebRTC default but HLS still offered on demand', async () => {
-    fetchMock.mockResolvedValue(
-      probeResponse(200, new Date(Date.now() - 60 * 60_000)),
-    )
+    routeProbes(probeResponse(200, new Date(Date.now() - 60 * 60_000)))
     renderPlay()
 
     // Stale leftover playlist must not hide the sub-second player…
@@ -141,5 +148,18 @@ describe('PlayPublic — HLS fallback', () => {
     // …but the viewer may still opt into HLS explicitly.
     fireEvent.click(screen.getByRole('button', { name: 'mode.hls' }))
     expect(await screen.findByTestId('hls-player')).toBeTruthy()
+  })
+
+  it('(e) live DVR window → plays dvr.m3u8 with the DVR bar and forwards ?t=', async () => {
+    routeProbes(probeResponse(404), probeResponse(200, new Date()))
+    renderPlay('/play/live/ch1?t=-5m')
+
+    expect(await screen.findByTestId('hls-player')).toBeTruthy()
+    const props = hlsPlayerProps.mock.calls.at(-1)![0]
+    expect(props.src).toBe('/hls/live/ch1/dvr.m3u8')
+    expect(props.dvr).toBe(true)
+    expect(props.startAt).toBe('-5m')
+    // The toggle is still offered (WebRTC stays one click away).
+    expect(screen.getByRole('button', { name: 'mode.webrtc' })).toBeTruthy()
   })
 })

@@ -15,24 +15,22 @@ import (
 
 // Port of secrets.store.ts — credentials persisted in
 // ${DATA_DIR}/data/secrets.json (chmod 600), never in config.yaml. Refs
-// resolve against the file first, then the environment. Values are never
-// logged.
+// resolve against the file ONLY: since 3.3.3 the store never falls back to
+// the process environment (a ref could otherwise name STREAMHUB_JWT_SECRET
+// & co.); a caller with an explicit env allowlist does that itself. Values
+// are never logged.
 
 // SecretsStore is the cached secrets.json store.
 type SecretsStore struct {
 	dataDir string
-	env     func(string) string
 
 	mu    sync.Mutex
 	cache *secretsMap // nil = re-read on next access
 }
 
-// NewSecretsStore builds a store over dataDir; env nil = os.Getenv.
-func NewSecretsStore(dataDir string, env func(string) string) *SecretsStore {
-	if env == nil {
-		env = os.Getenv
-	}
-	return &SecretsStore{dataDir: dataDir, env: env}
+// NewSecretsStore builds a store over dataDir.
+func NewSecretsStore(dataDir string) *SecretsStore {
+	return &SecretsStore{dataDir: dataDir}
 }
 
 // Path is the absolute secrets.json path.
@@ -55,9 +53,8 @@ func (s *SecretsStore) Invalidate() {
 	s.mu.Unlock()
 }
 
-// Get resolves a ref: store first, then env; ok=false when neither has a
-// non-empty value. A JSON null in the store is returned as missing without
-// the env fallback (Node returns that null as-is).
+// Get resolves a ref from the store; ok=false when it holds no non-empty
+// value (a JSON null reads as missing).
 func (s *SecretsStore) Get(ref string) (string, bool) {
 	if ref == "" {
 		return "", false
@@ -66,16 +63,8 @@ func (s *SecretsStore) Get(ref string) (string, bool) {
 	m := s.load()
 	v, present := m.get(ref)
 	s.mu.Unlock()
-	if present {
-		if v.null {
-			return "", false
-		}
-		if v.text() != "" || !v.isStr {
-			return v.text(), true
-		}
-	}
-	if e := s.env(ref); e != "" {
-		return e, true
+	if present && !v.null && (v.text() != "" || !v.isStr) {
+		return v.text(), true
 	}
 	return "", false
 }
@@ -168,7 +157,7 @@ func (s *SecretsStore) WriteSecret(ref, value string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	file := s.Path()
-	if err := os.MkdirAll(filepath.Dir(file), 0o777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
 		return err
 	}
 	m := readSecretsFile(file)

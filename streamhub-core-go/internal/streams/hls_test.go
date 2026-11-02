@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 const hourMs = 3600_000.0
@@ -86,6 +86,7 @@ func TestPruneDvrDir(t *testing.T) {
 type fakeEgress struct {
 	live    []HlsEgressInfo
 	listErr error
+	stopErr error // every StopEgress fails (a corpse LiveKit cannot reach)
 	started []StartHlsEgressInput
 	stopped []string
 }
@@ -99,6 +100,9 @@ func (f *fakeEgress) ListHlsEgress(context.Context, string) ([]HlsEgressInfo, er
 }
 func (f *fakeEgress) StopEgress(_ context.Context, id string) (*EgressInfo, error) {
 	f.stopped = append(f.stopped, id)
+	if f.stopErr != nil {
+		return nil, f.stopErr
+	}
 	return &EgressInfo{EgressID: id, Status: "EGRESS_ENDING"}, nil
 }
 
@@ -137,7 +141,7 @@ func TestHlsStartStopStatus(t *testing.T) {
 	}
 
 	// Idempotent: an active egress for the exact room is reused.
-	eg.live = []HlsEgressInfo{{"EG_other", "EGRESS_ACTIVE", "live/ch 10"}, {"EG_live", "EGRESS_ACTIVE", "live/ch 1"}}
+	eg.live = []HlsEgressInfo{{EgressID: "EG_other", Status: "EGRESS_ACTIVE", RoomName: "live/ch 10"}, {EgressID: "EG_live", Status: "EGRESS_ACTIVE", RoomName: "live/ch 1"}}
 	res, _ = hls.Start(bg, testApp, "live/ch 1/cam", "https://x")
 	if res.EgressID != "EG_live" || len(eg.started) != 1 {
 		t.Fatalf("%+v", res)
@@ -169,6 +173,25 @@ func TestHlsStartStopStatus(t *testing.T) {
 	// start propagates a listing failure (Node does not catch it there).
 	_, err = hls.Start(bg, testApp, "live/ch 1/cam", "")
 	wantStatus(t, err, 503, "LiveKit listHlsEgress failed: fetch failed")
+}
+
+// LT4 #9: STREAMHUB_HLS_SEGMENT_S reaches the egress input; an app's
+// features.hls.segment_seconds still wins.
+func TestHlsStartUsesConfiguredSegment(t *testing.T) {
+	h := newHarness(t, nil)
+	h.svc.cfg.HLSSegmentS = 2
+	eg := &fakeEgress{}
+	hls := withEgress(h, eg)
+	h.insertActive("live-ch1/a", "rtmp", "live-ch1", "a", 0)
+	if _, err := hls.Start(bg, testApp, "live-ch1/a", ""); err != nil || eg.started[0].SegmentDurationS != 2 {
+		t.Fatalf("%v %+v", err, eg.started)
+	}
+	h.apps.cfg = func(string) (*contracts.AppConfig, error) {
+		return &contracts.AppConfig{Features: contracts.AppFeatures{Hls: &contracts.HlsFeatures{SegmentSeconds: 6}}}, nil
+	}
+	if _, err := hls.Start(bg, testApp, "live-ch1/a", ""); err != nil || eg.started[1].SegmentDurationS != 6 {
+		t.Fatalf("%v %+v", err, eg.started)
+	}
 }
 
 func TestHlsDvrManifestAndNoRoom(t *testing.T) {
@@ -209,7 +232,7 @@ func TestWatchdogReconcileOnce(t *testing.T) {
 		wantRelaunched int
 	}{
 		{"relaunches a dead egress exactly once", linearCfg(true, false), nil, nil, [][2]string{{"live-ch1/a", "live-ch1"}}, 1, 1, 1},
-		{"leaves a live egress alone", linearCfg(true, false), []HlsEgressInfo{{"EG", "EGRESS_ACTIVE", "live-ch1"}}, nil, [][2]string{{"live-ch1/a", "live-ch1"}}, 0, 1, 0},
+		{"leaves a live egress alone", linearCfg(true, false), []HlsEgressInfo{{EgressID: "EG", Status: "EGRESS_ACTIVE", RoomName: "live-ch1"}}, nil, [][2]string{{"live-ch1/a", "live-ch1"}}, 0, 1, 0},
 		{"skips apps without features.linear", nil, nil, nil, [][2]string{{"live-ch1/a", "live-ch1"}}, 0, 0, 0},
 		{"skips alwaysOn:false + dvr:false", linearCfg(false, false), nil, nil, [][2]string{{"live-ch1/a", "live-ch1"}}, 0, 0, 0},
 		{"one start per distinct room", linearCfg(true, false), nil, nil, [][2]string{{"live-ch1/a", "live-ch1"}, {"live-ch1/b", "live-ch1"}}, 1, 1, 1},
@@ -234,7 +257,7 @@ func TestWatchdogReconcileOnce(t *testing.T) {
 
 func TestWatchdogDvrPrune(t *testing.T) {
 	h := newHarness(t, nil)
-	hls := withEgress(h, &fakeEgress{live: []HlsEgressInfo{{"EG", "EGRESS_ACTIVE", "live-ch1"}}})
+	hls := withEgress(h, &fakeEgress{live: []HlsEgressInfo{{EgressID: "EG", Status: "EGRESS_ACTIVE", RoomName: "live-ch1"}}})
 	h.apps.cfg = linearCfg(false, true)
 	h.insertActive("live-ch1/a", "rtmp", "live-ch1", "a", 0)
 	dir := filepath.Join(h.dir, "apps", testApp, "hls", "live-ch1")

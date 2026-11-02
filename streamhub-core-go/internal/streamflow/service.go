@@ -11,16 +11,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logsink"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logsink"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 const (
@@ -39,6 +42,11 @@ func requireApp(ctx context.Context, apps AppSource, app string) (string, error)
 	return apps.AppDir(app), nil
 }
 
+// Audit is the audit sink for the execution-box quarantine (audit.Service).
+type Audit interface {
+	Record(ctx context.Context, e audit.Event)
+}
+
 // Service is StreamflowService.
 type Service struct {
 	store  *Store
@@ -46,6 +54,8 @@ type Service struct {
 	apps   AppSource
 	plugin PluginState
 	logs   logsink.Writer
+	// Audit records the boot quarantine (nil = not recorded).
+	Audit Audit
 
 	mu    sync.Mutex
 	rate  map[string][]time.Time
@@ -60,9 +70,11 @@ func NewService(store *Store, runner *Runner, apps AppSource, plugin PluginState
 		rate: map[string][]time.Time{}, sched: newScheduler(runner), Now: time.Now}
 }
 
-// Start subscribes the trigger hook, reconciles now and every 60 s, and runs
-// the schedule triggers (c.starters only — never in shadow mode).
+// Start quarantines execution boxes the operator did not allow, subscribes
+// the trigger hook, reconciles now and every 60 s, and runs the schedule
+// triggers (c.starters only — never in shadow mode).
 func (s *Service) Start(ctx context.Context, subscribe func(func(app, event string, payload any)) func()) {
+	s.QuarantineDangerous(ctx)
 	if subscribe != nil {
 		unsub := subscribe(func(app, event string, payload any) { s.OnEvent(ctx, app, event, payload) })
 		go func() { <-ctx.Done(); unsub() }()
@@ -225,6 +237,9 @@ func (s *Service) CreateWorkflow(ctx context.Context, app, name string, enabled 
 	if err != nil {
 		return nil, err
 	}
+	if err := s.guardDangerous(ctx, app, graph); err != nil {
+		return nil, err
+	}
 	return s.store.CreateWorkflow(ctx, app, dir, name, enabled, graph)
 }
 
@@ -254,6 +269,17 @@ func (s *Service) UpdateWorkflow(ctx context.Context, app, id string, p Workflow
 	}
 	if wf == nil {
 		return nil, httpx.NotFound(fmt.Sprintf("workflow '%s' not found", id))
+	}
+	// A new graph is checked; so is switching an existing one back on (a
+	// quarantined workflow keeps its execution boxes).
+	if p.HasGraph {
+		if err := s.guardDangerous(ctx, app, p.Graph); err != nil {
+			return nil, err
+		}
+	} else if p.HasEnabled && y.Truthy(p.Enabled) && !wf.Enabled {
+		if err := s.guardDangerous(ctx, app, wf.Graph); err != nil {
+			return nil, err
+		}
 	}
 	return s.store.UpdateWorkflow(ctx, app, dir, id, p)
 }
@@ -306,22 +332,87 @@ func (s *Service) GetRun(ctx context.Context, app, id string) (*RunDetail, error
 	return &RunDetail{Run: run, Steps: steps}, nil
 }
 
-// Boxes is the palette (execution boxes only with dangerousNodes).
+// Boxes is the palette: execution boxes only for a superadmin in an app the
+// operator allowed (the only caller who could save them).
 func (s *Service) Boxes(ctx context.Context, app string) []json.RawMessage {
-	_, cfg := s.pluginCfg(ctx, app)
-	return boxCatalogue(cfg.Get("dangerousNodes") == true)
+	p := auth.From(ctx)
+	return boxCatalogue(s.runner.dangerousEnabled(app) && p != nil && p.IsSuperadmin)
 }
 
-// pluginCfg reads the install config regardless of the enabled flag.
-func (s *Service) pluginCfg(ctx context.Context, app string) (bool, *y.Map) {
-	if s.plugin == nil {
-		return false, y.NewMap()
+// guardDangerous gates saving a graph with execution boxes (create, import
+// — which the UI's duplicate also goes through — graph update, re-enable):
+// the operator allowlist for the app (400), then a superadmin caller (403).
+// The runner checks the allowlist again on every run.
+func (s *Service) guardDangerous(ctx context.Context, app string, graph any) error {
+	types := dangerousBoxTypes(graph)
+	if len(types) == 0 {
+		return nil
 	}
-	inst, _, cfg := s.plugin(ctx, app)
-	if cfg == nil {
-		cfg = y.NewMap()
+	if !s.runner.dangerousEnabled(app) {
+		return httpx.BadRequest(fmt.Sprintf("execution nodes (%s) are disabled for app '%s' (operator setting %s)",
+			strings.Join(types, ", "), app, DangerousEnv))
 	}
-	return inst, cfg
+	if p := auth.From(ctx); p == nil || !p.IsSuperadmin {
+		return httpx.Forbidden(fmt.Sprintf("execution nodes (%s) can only be saved by a superadmin", strings.Join(types, ", ")))
+	}
+	return nil
+}
+
+// quarantineEvent is the audit meta of a quarantined workflow.
+type quarantineEvent struct {
+	App      string   `json:"app"`
+	Workflow string   `json:"workflow"`
+	Name     string   `json:"name"`
+	Boxes    []string `json:"boxes"`
+	Reason   string   `json:"reason"`
+}
+
+// QuarantineDangerous is the 3.3.3 boot step: every ENABLED workflow holding
+// execution boxes in an app outside the operator allowlist is disabled with
+// a reason (DisabledReason), a warn log and a
+// `streamflow.workflow_quarantined` audit event. Idempotent: a disabled
+// workflow is left alone. Apps without a streamflow.db are skipped (never
+// created here). Best-effort; returns how many were disabled.
+func (s *Service) QuarantineDangerous(ctx context.Context) int {
+	apps, err := s.apps.List(ctx, nil)
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, a := range apps {
+		if s.runner.dangerousEnabled(a.Name) {
+			continue
+		}
+		dir := s.apps.AppDir(a.Name)
+		if _, err := os.Stat(s.store.FileFor(dir)); err != nil {
+			continue
+		}
+		wfs, err := s.store.ListEnabled(ctx, a.Name, dir)
+		if err != nil {
+			continue
+		}
+		for _, wf := range wfs {
+			types := dangerousBoxTypes(wf.Graph)
+			if len(types) == 0 {
+				continue
+			}
+			reason := fmt.Sprintf("execution nodes (%s) are not enabled for this app (operator setting %s)", strings.Join(types, ", "), DangerousEnv)
+			if changed, err := s.store.DisableWorkflow(ctx, a.Name, dir, wf.ID, reason); err != nil || !changed {
+				continue
+			}
+			n++
+			if s.logs != nil {
+				s.logs.Write("warn", "streamflow", fmt.Sprintf("workflow '%s' in app '%s' disabled: %s", wf.ID, a.Name, reason),
+					map[string]any{"app": a.Name, "workflow": wf.ID})
+			}
+			if s.Audit != nil {
+				s.Audit.Record(ctx, audit.Event{Action: "streamflow.workflow_quarantined", ActorType: audit.ActorSystem,
+					TargetType: audit.Str("streamflow_workflow"), TargetID: audit.Str(a.Name + "/" + wf.ID),
+					Meta: quarantineEvent{App: a.Name, Workflow: wf.ID, Name: wf.Name, Boxes: types, Reason: reason}})
+			}
+		}
+	}
+	return n
 }
 
 // ExportWorkflow is the portable JSON of one workflow.
@@ -347,6 +438,9 @@ func (s *Service) ImportWorkflow(ctx context.Context, app string, raw any, name 
 	final := parsedName
 	if n, ok := name.(string); ok && strings.TrimSpace(n) != "" {
 		final = strings.TrimSpace(n)
+	}
+	if err := s.guardDangerous(ctx, app, graph); err != nil {
+		return nil, err
 	}
 	return s.store.CreateWorkflow(ctx, app, dir, final, nil, graph)
 }

@@ -2,16 +2,17 @@ package plugins
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
 )
 
 // Port of plugins.service.ts: the catalog × per-app install state, config
@@ -61,6 +62,9 @@ type Service struct {
 	// edgeIngest accepts the scoped ingest token of a live edge assignment
 	// (bound late by the cluster plane; nil = local workers only).
 	edgeIngest EdgeIngestVerifier
+	// Resolve is the DNS seam of the `format: "url"` config guard (nil =
+	// system resolver; urlfields.go).
+	Resolve func(ctx context.Context, host string) ([]string, error)
 }
 
 // EdgeIngestVerifier reports whether token is the ingest token of one of the
@@ -358,6 +362,9 @@ func (s *Service) Patch(ctx context.Context, app, id string, p Patch) (View, err
 		if next, err = ValidateConfig(meta, merged, willEnable); err != nil {
 			return View{}, badRequestOnConfig(err)
 		}
+		if err := s.assertURLFields(ctx, meta, p.Config, next); err != nil {
+			return View{}, err
+		}
 	} else if p.Enabled != nil && *p.Enabled {
 		if _, err := ValidateConfig(meta, row.Config, true); err != nil {
 			return View{}, badRequestOnConfig(err)
@@ -472,7 +479,8 @@ func (s *Service) checkIngest(ctx context.Context, app, id, token string, meta *
 		return httpx.BadRequest(fmt.Sprintf("plugin '%s' has no worker — %s ingest is worker-only", id, what))
 	}
 	expected := s.workers.IngestToken(app, id)
-	if token != "" && expected != "" && token == expected {
+	// constant-time (security 3.3.4): the token is the worker's only credential
+	if token != "" && expected != "" && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 {
 		return nil
 	}
 	if token != "" && s.edgeIngest != nil && s.edgeIngest(ctx, app, id, token) {

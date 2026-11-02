@@ -9,6 +9,7 @@
         "path": "/api/v1/apps/live/plugins/streamflow/boxes",
         "auth": "adminJwt"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -124,6 +125,50 @@
               "out"
             ],
             "type": "action.snapshot"
+          },
+          {
+            "description": "Cut a clip of the room around the event from its HLS/DVR segments (MP4 to the app S3, a VOD with source clip; clip.ready when done). Needs features.clips.",
+            "fields": [
+              {
+                "help": "Defaults to the trigger room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              },
+              {
+                "help": "Epoch s/ms or ISO-8601; templated. Defaults to trigger.ts, else now.",
+                "key": "eventTs",
+                "label": "Event time",
+                "type": "string"
+              },
+              {
+                "help": "Default 10.",
+                "key": "before",
+                "label": "Seconds before",
+                "type": "number"
+              },
+              {
+                "help": "Default 10.",
+                "key": "after",
+                "label": "Seconds after",
+                "type": "number"
+              },
+              {
+                "help": "Block (up to 45 s) so later boxes get vodId/url.",
+                "key": "wait",
+                "label": "Wait until ready",
+                "type": "boolean"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Clip",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.clip"
           },
           {
             "description": "Upload an in-memory blob (text/JSON/base64) to the app bucket.",
@@ -538,6 +583,7 @@
         "path": "/api/v1/apps/live/plugins/streamflow/boxes",
         "auth": "appToken"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -653,6 +699,50 @@
               "out"
             ],
             "type": "action.snapshot"
+          },
+          {
+            "description": "Cut a clip of the room around the event from its HLS/DVR segments (MP4 to the app S3, a VOD with source clip; clip.ready when done). Needs features.clips.",
+            "fields": [
+              {
+                "help": "Defaults to the trigger room.",
+                "key": "room",
+                "label": "Room",
+                "type": "string"
+              },
+              {
+                "help": "Epoch s/ms or ISO-8601; templated. Defaults to trigger.ts, else now.",
+                "key": "eventTs",
+                "label": "Event time",
+                "type": "string"
+              },
+              {
+                "help": "Default 10.",
+                "key": "before",
+                "label": "Seconds before",
+                "type": "number"
+              },
+              {
+                "help": "Default 10.",
+                "key": "after",
+                "label": "Seconds after",
+                "type": "number"
+              },
+              {
+                "help": "Block (up to 45 s) so later boxes get vodId/url.",
+                "key": "wait",
+                "label": "Wait until ready",
+                "type": "boolean"
+              }
+            ],
+            "group": "action",
+            "inputs": [
+              "in"
+            ],
+            "label": "Clip",
+            "outputs": [
+              "out"
+            ],
+            "type": "action.clip"
           },
           {
             "description": "Upload an in-memory blob (text/JSON/base64) to the app bucket.",
@@ -2311,33 +2401,16 @@
           }
         }
       },
-      "status": 201,
+      "source": "go",
+      "status": 400,
       "headers": {
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "data": {
-          "createdAt": "<sql-ts>",
-          "enabled": true,
-          "graph": {
-            "boxes": [
-              {
-                "config": {
-                  "command": "ls",
-                  "dsn": "postgres://u:p@h/db"
-                },
-                "id": "a",
-                "type": "action.shell"
-              }
-            ],
-            "edges": []
-          },
-          "id": "<uuid#1>",
-          "name": "Imported workflow",
-          "updatedAt": "<sql-ts>"
-        },
-        "error": null
+        "error": "Bad Request",
+        "message": "execution nodes (action.shell) are disabled for app 'live' (operator setting STREAMHUB_STREAMFLOW_DANGEROUS)",
+        "statusCode": 400
       }
     },
     {
@@ -2853,6 +2926,7 @@
         "path": "/api/v1/apps/live/plugins/streamflow/workflows",
         "auth": "adminJwt"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -3010,26 +3084,6 @@
               "edges": []
             },
             "id": "<uuid#2>",
-            "name": "Imported workflow",
-            "updatedAt": "<sql-ts>"
-          },
-          {
-            "createdAt": "<sql-ts>",
-            "enabled": true,
-            "graph": {
-              "boxes": [
-                {
-                  "config": {
-                    "command": "ls",
-                    "dsn": "postgres://u:p@h/db"
-                  },
-                  "id": "a",
-                  "type": "action.shell"
-                }
-              ],
-              "edges": []
-            },
-            "id": "<uuid#3>",
             "name": "Imported workflow",
             "updatedAt": "<sql-ts>"
           }

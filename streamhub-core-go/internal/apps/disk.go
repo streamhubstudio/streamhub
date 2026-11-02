@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // The on-disk config.yaml (snake_case, secret REFS only — SPEC §7) is kept as
@@ -43,12 +43,12 @@ func sub(m *y.Map, k string) *y.Map {
 
 var nonEnvChars = regexp.MustCompile(`[^A-Z0-9]+`)
 
-// envSlug is name.toUpperCase().replace(/[^A-Z0-9]+/g, '_').
+// envSlug is name.toUpperCase().replace(/[^A-Z0-9]+/g, '_'): the pre-3.3.3
+// ref slug, kept only to recognise legacy refs (legacySecretRef).
 func envSlug(name string) string { return nonEnvChars.ReplaceAllString(strings.ToUpper(name), "_") }
 
 // defaultDisk is defaultDiskConfig(): the scaffold of a new app.
 func defaultDisk(name, displayName, roomPrefix string) *y.Map {
-	slug := envSlug(name)
 	return obj(
 		"name", name,
 		"display_name", displayName,
@@ -74,8 +74,8 @@ func defaultDisk(name, displayName, roomPrefix string) *y.Map {
 			"force_path_style", false,
 			"prefix", "streamhub/"+name,
 			"public_url", "",
-			"access_key_env", "APP_"+slug+"_S3_KEY",
-			"secret_key_env", "APP_"+slug+"_S3_SECRET",
+			"access_key_env", SecretRef(name, SecretS3Key),
+			"secret_key_env", SecretRef(name, SecretS3Secret),
 		),
 		"webrtc", obj(
 			"adaptive", true,
@@ -93,7 +93,7 @@ func defaultDisk(name, displayName, roomPrefix string) *y.Map {
 			"enabled", false,
 			"url", "",
 			"username", "",
-			"password_env", "APP_"+slug+"_MQTT_PASSWORD",
+			"password_env", SecretRef(name, SecretMqttPassword),
 			"topic_prefix", "streamhub/"+name,
 			"qos", 0.0,
 			"tls", false,
@@ -107,7 +107,7 @@ func defaultDisk(name, displayName, roomPrefix string) *y.Map {
 			"port", 587.0,
 			"user", "",
 			"from", "",
-			"pass_env", "APP_"+slug+"_SMTP_PASS",
+			"pass_env", SecretRef(name, SecretSmtpPass),
 		),
 		"features", obj(
 			"rtmp_password", false,
@@ -221,7 +221,7 @@ func mergeDisk(base *y.Map, over any) *y.Map {
 
 // applyResolvedPatch applies a camelCase AppConfig patch onto the snake_case
 // disk tree. Secret values go to secrets.json via writeSecret, never the yaml.
-func (s *Service) applyResolvedPatch(disk *y.Map, patch *contracts.AppConfigPatch) {
+func (s *Service) applyResolvedPatch(name string, disk *y.Map, patch *contracts.AppConfigPatch) {
 	if patch == nil {
 		return
 	}
@@ -265,10 +265,10 @@ func (s *Service) applyResolvedPatch(disk *y.Map, patch *contracts.AppConfigPatc
 			s3.Set("public_url", trimTrailingSlashes(*p.PublicURL))
 		}
 		if p.AccessKey != "" {
-			s.writeSecret(s3.Get("access_key_env"), p.AccessKey)
+			s.writeSecret(name, SecretS3Key, p.AccessKey)
 		}
 		if p.SecretKey != "" {
-			s.writeSecret(s3.Get("secret_key_env"), p.SecretKey)
+			s.writeSecret(name, SecretS3Secret, p.SecretKey)
 		}
 	}
 	if p := patch.Webrtc; p != nil {
@@ -336,7 +336,7 @@ func (s *Service) applyResolvedPatch(disk *y.Map, patch *contracts.AppConfigPatc
 			setStr(logs, "level", p.Logs.Level)
 		}
 		if p.Password != "" {
-			s.writeSecret(m.Get("password_env"), p.Password)
+			s.writeSecret(name, SecretMqttPassword, p.Password)
 		}
 	}
 	if p := patch.LatencyAlert; p != nil {
@@ -366,8 +366,28 @@ func (s *Service) applyResolvedPatch(disk *y.Map, patch *contracts.AppConfigPatc
 			feat.Set("ws_ingest", ws)
 		}
 		if f.Drm != nil {
-			// Sanitized through the resolver so garbage never reaches the yaml.
-			feat.Set("drm", DrmFeaturesToDisk(ResolveDrmFeatures(DrmFeaturesToDisk(*f.Drm))))
+			// Sanitized through the resolver so garbage never reaches the yaml;
+			// a token ref is pinned to the derived one.
+			drm := DrmFeaturesToDisk(ResolveDrmFeatures(DrmFeaturesToDisk(*f.Drm)))
+			if y.Trim(y.ToString(drm.Get("key_server_token_env"))) != "" {
+				drm.Set("key_server_token_env", SecretRef(name, SecretDrmToken))
+			}
+			feat.Set("drm", drm)
+		}
+		// Off = key absent, so an untouched app keeps a byte-identical yaml.
+		if f.AllowedPublisherCidr != nil {
+			if len(f.AllowedPublisherCidr) == 0 {
+				feat.Delete("allowed_publisher_cidr")
+			} else {
+				feat.Set("allowed_publisher_cidr", stringsToAny(f.AllowedPublisherCidr))
+			}
+		}
+		if f.MaxBitrateAccept != nil {
+			if v := resolveMaxBitrateAccept(*f.MaxBitrateAccept); v > 0 {
+				feat.Set("max_bitrate_accept", v)
+			} else {
+				feat.Delete("max_bitrate_accept")
+			}
 		}
 	}
 

@@ -3,7 +3,7 @@ package authn
 import (
 	"regexp"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // Request DTOs of the auth module (dto/*.ts). Rules are listed in the order

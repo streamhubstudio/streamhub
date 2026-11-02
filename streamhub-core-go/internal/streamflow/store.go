@@ -15,7 +15,8 @@ import (
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite" // the "sqlite" database/sql driver
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of streamflow.store.ts: the per-app apps/<app>/streamflow/streamflow.db
@@ -82,6 +83,10 @@ type StreamflowWorkflow struct {
 	Graph     any    `json:"graph"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
+	// DisabledReason is set when the core (not the user) disabled the
+	// workflow — the 3.3.3 boot quarantine of execution boxes. Absent
+	// otherwise; cleared by any explicit enable/disable.
+	DisabledReason *string `json:"disabledReason,omitempty"`
 }
 
 // Run is a runs row.
@@ -171,6 +176,13 @@ func (s *Store) DB(ctx context.Context, app, appDir string) (*sql.DB, error) {
 		h.Close()
 		return nil, err
 	}
+	// Go-only column (3.3.3 quarantine reason), added idempotently.
+	if has, err := db.HasColumn(ctx, h, "workflows", "disabled_reason"); err == nil && !has {
+		if _, err := h.ExecContext(ctx, `ALTER TABLE workflows ADD COLUMN disabled_reason TEXT`); err != nil {
+			h.Close()
+			return nil, err
+		}
+	}
 	s.dbs[app] = h
 	return h, nil
 }
@@ -222,16 +234,19 @@ func safeJSON(v any) string {
 // Workflows
 // ---------------------------------------------------------------------------
 
-const workflowCols = `id, name, enabled, graph_json, created_at, updated_at`
+const workflowCols = `id, name, enabled, graph_json, created_at, updated_at, disabled_reason`
 
 func scanWorkflow(row interface{ Scan(...any) error }) (*Workflow, error) {
 	var w Workflow
 	var enabled int64
-	var graph sql.NullString
-	if err := row.Scan(&w.ID, &w.Name, &enabled, &graph, &w.CreatedAt, &w.UpdatedAt); err != nil {
+	var graph, reason sql.NullString
+	if err := row.Scan(&w.ID, &w.Name, &enabled, &graph, &w.CreatedAt, &w.UpdatedAt, &reason); err != nil {
 		return nil, err
 	}
 	w.Enabled = enabled == 1
+	if reason.Valid && reason.String != "" {
+		w.DisabledReason = &reason.String
+	}
 	w.Graph = parseJSON(graph)
 	if y.IsNullish(w.Graph) {
 		w.Graph = emptyGraph()
@@ -326,7 +341,7 @@ func (s *Store) UpdateWorkflow(ctx context.Context, app, appDir, id string, p Wo
 		params = append(params, y.ToString(p.Name))
 	}
 	if p.HasEnabled {
-		sets = append(sets, "enabled = ?")
+		sets = append(sets, "enabled = ?", "disabled_reason = NULL")
 		v := 0
 		if y.Truthy(p.Enabled) {
 			v = 1
@@ -345,6 +360,22 @@ func (s *Store) UpdateWorkflow(ctx context.Context, app, appDir, id string, p Wo
 		}
 	}
 	return s.GetWorkflow(ctx, app, appDir, id)
+}
+
+// DisableWorkflow disables a workflow on the core's behalf, recording why
+// (DisabledReason). Reports whether an enabled row was changed.
+func (s *Store) DisableWorkflow(ctx context.Context, app, appDir, id, reason string) (bool, error) {
+	h, err := s.DB(ctx, app, appDir)
+	if err != nil {
+		return false, err
+	}
+	res, err := h.ExecContext(ctx, `UPDATE workflows SET enabled = 0, disabled_reason = ?, updated_at = datetime('now')
+           WHERE id = ? AND enabled = 1`, reason, id)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
 }
 
 // DeleteWorkflow removes a workflow and cascades its run history.

@@ -53,6 +53,11 @@ export interface LivePlayerProps {
    */
   exp?: string | number
   sig?: string
+  /**
+   * The viewer's own `?token=` (public access only), forwarded to the app's
+   * play-auth webhook (features.play_auth, G2). Opaque to StreamHub.
+   */
+  viewerToken?: string
   /** Which addons to overlay. Omit to show a bare player. */
   addons?: PlayerAddonFeatures
   /** Display name used by the chat/reactions addons. */
@@ -120,6 +125,7 @@ export function LivePlayer({
   access = 'auth',
   exp,
   sig,
+  viewerToken,
   addons,
   identity,
   controls = true,
@@ -143,14 +149,14 @@ export function LivePlayer({
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['live-player-token', access, app, room, exp ?? '', sig ?? ''],
+    queryKey: ['live-player-token', access, app, room, exp ?? '', sig ?? '', viewerToken ?? ''],
     enabled: Boolean(app && room),
     staleTime: 5 * 60_000,
     retry: (count, err) =>
       !(err instanceof ApiRequestError && err.status === 401) && count < 2,
     queryFn: () =>
       access === 'public'
-        ? api.playToken(app, room, { exp, sig })
+        ? api.playToken(app, room, { exp, sig, token: viewerToken })
         : api.tokens.mint(app, { room, canSubscribe: true, canPublish: false }),
   })
 

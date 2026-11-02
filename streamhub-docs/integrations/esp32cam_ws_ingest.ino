@@ -3,7 +3,7 @@
  * ==========================================================================================
  * Empuja frames JPEG (1 mensaje binario WS = 1 frame) a wss://<dominio>/ingest/ws,
  * autenticado con una stream key de StreamHub. SIN relay ffmpeg, SIN RTMP, SIN WebRTC.
- * Protocolo: https://streamhub.studio/docs/integrations/ESP32-WS-INGEST (§3).
+ * Protocolo: streamhub-docs/integrations/ESP32-WS-INGEST.md (§3).
  *
  * Implementado en el core (paquete streamhub-core-go/internal/wsingest). Protocolo
  * verificado en 3.1.0 con un simulador que replica este sketch byte a byte

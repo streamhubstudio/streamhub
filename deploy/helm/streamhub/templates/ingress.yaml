@@ -1,0 +1,45 @@
+{{- if .Values.ingress.enabled }}
+{{- $fullname := include "streamhub.fullname" . -}}
+# One host, two routes — the same split Caddy/nginx do in the compose shape:
+#   /rtc  → LiveKit signaling (websocket upgrade)
+#   /     → streamhub-core (API, dashboard, HLS, /sdk, samples)
+# Media (UDP 7882, RTMP 1935, WHIP 8080) never goes through here: it hits the
+# media nodes' IPs directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.global.tls }}
+  tls:
+    - hosts: [{{ .Values.global.domain | quote }}]
+      secretName: {{ .Values.ingress.tlsSecretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.global.domain | quote }}
+      http:
+        paths:
+          - path: /rtc
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-livekit
+                port:
+                  number: {{ .Values.livekit.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-core
+                port:
+                  number: {{ .Values.core.service.port }}
+{{- end }}

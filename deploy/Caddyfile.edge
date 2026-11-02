@@ -12,7 +12,7 @@
 #   xcaddy build --with github.com/caddyserver/cache-handler
 #
 # The cache HONORS the origin's Cache-Control (StreamHub sends them when
-# STREAMHUB_HLS_CDN=on — see https://streamhub.studio/docs/features/HLS-CDN):
+# STREAMHUB_HLS_CDN=on — see streamhub-docs/features/HLS-CDN.md):
 #   * .ts  segments  -> public, max-age=1y, immutable  (cached ~forever)
 #   * .m3u8 playlist -> public, max-age=1, stale-while-revalidate=2 (live edge)
 #   * .m3u8 finished -> public, max-age=3600            (ended stream / replay)
@@ -50,8 +50,11 @@ edge.example.com {                        # >>> your edge hostname (gets auto-TL
 			header_up Host {upstream_hostport}         # match the origin vhost/cert
 			header_up X-Forwarded-For {remote_host}
 			header_up X-Forwarded-Proto {scheme}
+			# Keep players cross-origin. Set it HERE (replaces the origin's own
+			# ACAO:*) — a site-level `header` would add a second copy and
+			# browsers reject `*, *` (LOADTEST-4-REPORT.md).
+			header_down Access-Control-Allow-Origin "*"
 		}
-		header Access-Control-Allow-Origin "*"        # keep players cross-origin
 	}
 
 	handle {

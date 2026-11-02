@@ -11,9 +11,9 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // OffenseSink feeds a failed X-Cluster-Token to the auto-ban
@@ -54,7 +54,7 @@ func (m *Routes) Register(a huma.API) {
 			b.Field("ip").Check(IsIP(b.Raw("ip")), "ip must be a valid IPv4 or IPv6 address").IsString()
 			b.Optional("region").MaxLength(64).IsString()
 			b.Optional("url").MaxLength(255).IsString()
-			b.Optional("type").IsIn("common", "edge")
+			b.Optional("type").IsIn("common", "edge", NodeTypeCDNEdge)
 			if err := b.Err(); err != nil {
 				return nil, err
 			}
@@ -79,7 +79,7 @@ func (m *Routes) Register(a huma.API) {
 		OK bool `json:"ok"`
 	}
 	huma.Register(a, *api.Public(op("ClusterController_heartbeat", http.MethodPost, "/cluster/heartbeat",
-		"Node liveness ping (X-Cluster-Token).", http.StatusOK)),
+		"Node liveness ping (the node's X-Node-Secret; legacy: X-Cluster-Token).", http.StatusOK)),
 		func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[heartbeatOK]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -90,7 +90,7 @@ func (m *Routes) Register(a huma.API) {
 			if err := b.Err(); err != nil {
 				return nil, err
 			}
-			if err := m.assertToken(api.Request(ctx)); err != nil {
+			if err := m.assertNode(api.Request(ctx), b.String("nodeId")); err != nil {
 				return nil, err
 			}
 			if err := m.svc.Heartbeat(ctx, b.String("nodeId"), orderedObject(in.RawBody, "stats")); err != nil {
@@ -99,8 +99,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(heartbeatOK{true}), nil
 		})
 
-	huma.Register(a, *api.Bearer(op("ClusterController_info", http.MethodGet, "/cluster/info",
-		"Cluster overview for the dashboard manager.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_info", http.MethodGet, "/cluster/info",
+		"Cluster overview for the dashboard manager.", http.StatusOK))),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[ClusterInfo]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err
@@ -112,8 +112,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(info), nil
 		})
 
-	huma.Register(a, *api.Bearer(op("ClusterController_listNodes", http.MethodGet, "/cluster/nodes",
-		"List registered cluster nodes.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_listNodes", http.MethodGet, "/cluster/nodes",
+		"List registered cluster nodes.", http.StatusOK))),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[[]NodeRow]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err
@@ -129,8 +129,8 @@ func (m *Routes) Register(a huma.API) {
 		ID      string `path:"id"`
 		RawBody []byte
 	}
-	huma.Register(a, *api.Bearer(op("ClusterController_patchNode", http.MethodPatch, "/cluster/nodes/{id}",
-		"Update a node's name/region/status.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_patchNode", http.MethodPatch, "/cluster/nodes/{id}",
+		"Update a node's name/region/status.", http.StatusOK))),
 		func(ctx context.Context, in *patchIn) (*api.Out[api.Envelope[NodeRow]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -159,8 +159,8 @@ func (m *Routes) Register(a huma.API) {
 		ID      string `json:"id"`
 		Deleted bool   `json:"deleted"`
 	}
-	huma.Register(a, *api.Bearer(op("ClusterController_removeNode", http.MethodDelete, "/cluster/nodes/{id}",
-		"Remove a node from the registry.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_removeNode", http.MethodDelete, "/cluster/nodes/{id}",
+		"Remove a node from the registry.", http.StatusOK))),
 		func(ctx context.Context, in *idIn) (*api.Out[api.Envelope[nodeDeleted]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err
@@ -171,8 +171,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(nodeDeleted{in.ID, true}), nil
 		})
 
-	huma.Register(a, *api.Bearer(op("ClusterController_joinMaster", http.MethodPost, "/cluster/join-master",
-		"Convert this node into a cluster EDGE of a remote master.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_joinMaster", http.MethodPost, "/cluster/join-master",
+		"Convert this node into a cluster EDGE of a remote master.", http.StatusOK))),
 		func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[JoinMasterResult]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -200,8 +200,8 @@ func (m *Routes) Register(a huma.API) {
 			return api.OK(res), nil
 		})
 
-	huma.Register(a, *api.Bearer(op("ClusterController_leave", http.MethodPost, "/cluster/leave",
-		"Leave the cluster: revert this node to standalone.", http.StatusOK)),
+	huma.Register(a, *api.Global(api.Bearer(op("ClusterController_leave", http.MethodPost, "/cluster/leave",
+		"Leave the cluster: revert this node to standalone.", http.StatusOK))),
 		func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[LeaveResult]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {
@@ -228,6 +228,29 @@ func (m *Routes) assertToken(r *http.Request) error {
 			m.offense(ClientIP(r))
 		}
 	})
+}
+
+// assertNode gates a heartbeat (GO-DIVERGENCE, security 3.3.4): nodeId's own
+// secret (X-Node-Secret or X-Cluster-Token), or the raw cluster token in
+// legacy mode. The origin's own row always takes the raw token — only the
+// master holds it, and its heartbeat agent pings its local core with it.
+// Same 503/401 bodies as the join gate.
+func (m *Routes) assertNode(r *http.Request, nodeID string) error {
+	auth := m.svc.auth
+	if !auth.Enabled() {
+		return ObjErr(http.StatusServiceUnavailable, DisabledMessage)
+	}
+	raw := r.Header.Get("X-Cluster-Token")
+	if nodeID == OriginNodeID && TokenMatches(raw, m.svc.cfg.ClusterToken) {
+		return nil
+	}
+	if auth.Check("heartbeat", nodeID, r.Header.Get(NodeSecretHeader), raw) != CredNone {
+		return nil
+	}
+	if m.offense != nil {
+		m.offense(ClientIP(r))
+	}
+	return ObjErr(http.StatusUnauthorized, "invalid cluster token")
 }
 
 // orderedObject re-reads a top-level object property of a JSON body with JS

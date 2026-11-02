@@ -17,13 +17,14 @@ import (
 
 	"github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	lk "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	lk "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of recording.service.ts (SPEC §5 recording, §8 flow):
@@ -334,13 +335,32 @@ type metatags struct {
 	SnapshotPrefix  string  `json:"snapshotPrefix,omitempty"`
 }
 
-// launchPart starts one egress part (one MP4) and persists its VOD row.
-func (s *Service) launchPart(ctx context.Context, sess *session, cfg *contracts.AppConfig) (int64, string, error) {
-	localDir := cfg.Recording.LocalDir
+// recordingDir is <appDir>/<local_dir> (default "recordings"). local_dir is
+// tenant config (raw YAML editor): it must be one plain directory name and
+// the joined path must stay inside the app dir, or egress would write
+// anywhere DATA_DIR's owner can.
+func recordingDir(appDir, localDir string) (string, error) {
 	if localDir == "" {
 		localDir = "recordings"
 	}
-	dir := filepath.Join(s.apps.AppDir(sess.app), localDir)
+	bad := httpx.BadRequest(fmt.Sprintf(`invalid recording.local_dir "%s": must be a single directory name ([A-Za-z0-9._-], 1-64 chars, no "..")`, localDir))
+	if !contracts.ValidLocalDir(localDir) {
+		return "", bad
+	}
+	dir := filepath.Join(appDir, localDir)
+	if rel, err := filepath.Rel(appDir, dir); err != nil || rel == "." || rel == ".." ||
+		strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return "", bad
+	}
+	return dir, nil
+}
+
+// launchPart starts one egress part (one MP4) and persists its VOD row.
+func (s *Service) launchPart(ctx context.Context, sess *session, cfg *contracts.AppConfig) (int64, string, error) {
+	dir, err := recordingDir(s.apps.AppDir(sess.app), cfg.Recording.LocalDir)
+	if err != nil {
+		return 0, "", err
+	}
 	tag := ""
 	splitting := sess.splitMinutes > 0
 	if splitting {
@@ -348,12 +368,12 @@ func (s *Service) launchPart(ctx context.Context, sess *session, cfg *contracts.
 	}
 	filename := sess.fileStem + tag + ".mp4"
 	out := filepath.Join(dir, filename)
-	if err := os.MkdirAll(dir, 0o777); err != nil {
+	if err := os.MkdirAll(dir, fsperm.EgressWritable); err != nil {
 		return 0, "", httpx.Internal("cannot create recordings dir: " + nodeFsMessage(err))
 	}
 	var snapPrefix string
 	if sess.snapshotSeconds > 0 && sess.snapsDir != "" {
-		if err := os.MkdirAll(sess.snapsDir, 0o777); err != nil {
+		if err := os.MkdirAll(sess.snapsDir, fsperm.EgressWritable); err != nil {
 			s.warn("cannot create snapshots dir: " + err.Error())
 		}
 		base := strings.TrimSuffix(filename, nodeExtname(filename))
@@ -364,7 +384,6 @@ func (s *Service) launchPart(ctx context.Context, sess *session, cfg *contracts.
 	}
 
 	var info lk.EgressInfo
-	var err error
 	if sess.mode == "track" || sess.mode == "audio" {
 		info, err = s.lk.StartTrackCompositeEgress(ctx, lk.TrackCompositeInput{
 			AppName: sess.app, RoomName: sess.room, ParticipantIdentity: sess.participant,
@@ -835,7 +854,7 @@ func ptrVal[T any](p *T) any {
 // buildSnapshot extracts + uploads a JPEG (best-effort: nil on failure).
 func (s *Service) buildSnapshot(ctx context.Context, app string, cfg *contracts.AppConfig, vod *VodRecord, local string) (*string, string) {
 	dir := filepath.Join(s.apps.AppDir(app), "snapshots")
-	if err := os.MkdirAll(dir, 0o777); err != nil {
+	if err := os.MkdirAll(dir, fsperm.EgressWritable); err != nil {
 		s.warn("snapshot failed: " + err.Error())
 		return nil, ""
 	}

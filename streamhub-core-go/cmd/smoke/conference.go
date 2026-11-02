@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/devtools/cdp"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/samples"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/devtools/cdp"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/samples"
 )
 
 // conferenceCtx renders conference.html the way the samples service does.

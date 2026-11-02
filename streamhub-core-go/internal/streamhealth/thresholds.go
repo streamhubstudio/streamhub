@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // HealthThresholds are the detector knobs (JSON key order = Node's interface).

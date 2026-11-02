@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // selfStats is the origin's resource snapshot for its registry row, in

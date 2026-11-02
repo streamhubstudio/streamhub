@@ -10,10 +10,10 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dlclark/regexp2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Page is the paginated viewer response (LogsPageResponse).
@@ -26,13 +26,19 @@ type Page struct {
 
 // Register implements api.Module: GET /logs and GET /apps/:app/logs.
 func (s *Service) Register(a huma.API) {
-	huma.Register(a, *api.Bearer(&huma.Operation{
+	// GET /logs is the server-wide feed (every app, every tenant): Node let
+	// any authenticated principal read it; Go requires a global-scope
+	// credential (A2, GO-DIVERGENCES).
+	huma.Register(a, *api.Global(api.Bearer(&huma.Operation{
 		OperationID: "LogsController_query",
 		Method:      http.MethodGet,
 		Path:        api.Prefix + "/logs",
 		Summary:     "List server logs",
 		Tags:        []string{"logs"},
-	}), func(ctx context.Context, _ *struct{}) (*api.Out[Page], error) {
+	})), func(ctx context.Context, _ *struct{}) (*api.Out[Page], error) {
+		if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
+			return nil, err
+		}
 		f, err := parseQuery(api.Request(ctx).URL.Query(), true)
 		if err != nil {
 			return nil, err

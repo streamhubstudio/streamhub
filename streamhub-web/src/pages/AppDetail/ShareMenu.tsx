@@ -8,6 +8,11 @@
  *   - the public HLS playlist (`/hls/<app>/<room>/index.m3u8`),
  *   - a self-contained video.js embed over that playlist.
  *
+ * Private-playback apps (G2): their /hls needs a `?st=` token, so the plain
+ * HLS URL above only plays for public apps; "Signed HLS URL" mints it through
+ * api.playTokenSign (the core returns `hlsUrl` with the token for a private
+ * app, nothing for a public one — then the plain URL is copied).
+ *
  * URLs derive from window.location.origin (same convention as the Player
  * SharePanel — the core returns relative URLs unless PUBLIC_BASE_URL is set,
  * and the dashboard knows its own origin). Works for passthrough rows too:
@@ -26,11 +31,16 @@ import {
 } from '@/lib/share'
 import { Button, useCopy } from './ui'
 
+/** The core returns relative URLs unless PUBLIC_BASE_URL is set. */
+function absolutize(origin: string, url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `${origin.replace(/\/+$/, '')}${url}`
+}
+
 export function ShareMenu({ app, room }: { app: string; room: string }) {
   const { t } = useTranslation(['streamsTab', 'common'])
   const [open, setOpen] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  const [signing, setSigning] = useState(false)
+  const [signing, setSigning] = useState<'signed' | 'signedHls' | null>(null)
   const [signError, setSignError] = useState(false)
   const [copied, copy] = useCopy()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -53,17 +63,23 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
   // Signed (expiring) embed — required to embed a PRIVATE-playback app. Mints a
   // scoped capability server-side (api.playTokenSign, stream:read) and copies a
   // tokenized <iframe>. The token is an app+room HMAC, NEVER an sk_/JWT bearer.
-  async function copySignedEmbed() {
+  async function copySigned(kind: 'signed' | 'signedHls') {
     setSignError(false)
-    setSigning(true)
+    setSigning(kind)
     try {
       const signed = await api.playTokenSign(app, room)
-      copy(signedEmbedIframe(origin, app, room, signed.exp, signed.sig))
-      setCopiedKey('signed')
+      copy(
+        kind === 'signed'
+          ? signedEmbedIframe(origin, app, room, signed.exp, signed.sig)
+          : signed.hlsUrl
+            ? absolutize(origin, signed.hlsUrl)
+            : hlsUrl,
+      )
+      setCopiedKey(kind)
     } catch {
       setSignError(true)
     } finally {
-      setSigning(false)
+      setSigning(null)
     }
   }
 
@@ -110,25 +126,30 @@ export function ShareMenu({ app, room }: { app: string; room: string }) {
             </button>
           ))}
 
-          {/* Signed embed (expiring) — for private-playback apps. */}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={signing}
-            onClick={copySignedEmbed}
-            className="mt-1 flex w-full items-center justify-between gap-2 rounded-md border-t px-3 py-1.5 text-xs transition disabled:opacity-60 border-gray-700 text-gray-100 hover:bg-gray-700"
-          >
-            <span className="truncate">{t('share.signedEmbed')}</span>
-            <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">
-              {signing
-                ? t('share.signing')
-                : signError
-                  ? t('share.signError')
-                  : copied && copiedKey === 'signed'
-                    ? t('common:actions.copied')
-                    : t('common:actions.copy')}
-            </span>
-          </button>
+          {/* Signed embed / HLS URL (expiring) — for private-playback apps. */}
+          {(['signed', 'signedHls'] as const).map((kind, i) => (
+            <button
+              key={kind}
+              type="button"
+              role="menuitem"
+              disabled={signing !== null}
+              onClick={() => void copySigned(kind)}
+              className={`${i === 0 ? 'mt-1 border-t ' : ''}flex w-full items-center justify-between gap-2 rounded-md px-3 py-1.5 text-xs transition disabled:opacity-60 border-gray-700 text-gray-100 hover:bg-gray-700`}
+            >
+              <span className="truncate">
+                {t(kind === 'signed' ? 'share.signedEmbed' : 'share.signedHls')}
+              </span>
+              <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">
+                {signing === kind
+                  ? t('share.signing')
+                  : signError
+                    ? t('share.signError')
+                    : copied && copiedKey === kind
+                      ? t('common:actions.copied')
+                      : t('common:actions.copy')}
+              </span>
+            </button>
+          ))}
           <p className="px-3 py-1 text-[10px] text-gray-500">
             {t('share.signedEmbedHelp')}
           </p>

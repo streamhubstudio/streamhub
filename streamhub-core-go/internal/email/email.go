@@ -10,11 +10,13 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authn"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authn"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // SendResult is the outcome of a send attempt (the auth plane's type: one
@@ -22,6 +24,7 @@ import (
 type SendResult = authn.SendResult
 
 // SendContext selects an override SMTP: UserID beats App beats global.
+// Authentication mail (AuthMailer) always passes nil: global only.
 type SendContext struct {
 	UserID string
 	App    string
@@ -63,6 +66,9 @@ type Service struct {
 	apps      contracts.AppsService // optional
 	tenancy   Tenancy               // optional
 	log       *slog.Logger
+
+	// Resolve is the DNS seam of the tenant-SMTP dial guard (nil = system).
+	Resolve security.HostResolver
 }
 
 // New resolves the global SMTP settings from env once (constructor time, as
@@ -99,14 +105,59 @@ func (s *Service) SendMagicLink(ctx context.Context, email, url string, sc *Send
 	return s.Send(ctx, Message{To: email, Subject: subject, Text: text, HTML: html}, sc)
 }
 
+// SendEmailChange mails the confirmation link of an email change to the NEW
+// address; the change only applies once it is followed.
+func (s *Service) SendEmailChange(ctx context.Context, email, url string, sc *SendContext) SendResult {
+	subject := "Confirm your new StreamHub email"
+	text := "Confirm your new email\n\n" +
+		"Someone (hopefully you) asked to use this address for a StreamHub account. " +
+		"Click the link below to confirm it and sign in. It works once and expires in 24 hours:\n\n" +
+		url + "\n\n" +
+		"If you did not request this, ignore this email: nothing changes."
+	u := escapeHTML(url)
+	html := `<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto">` +
+		`<h2 style="margin:0 0 16px">Confirm your new email</h2>` +
+		`<p style="color:#334155;line-height:1.5">Someone (hopefully you) asked to use this address for a StreamHub account. ` +
+		`Click the button below to confirm it and sign in. This link works once and expires in 24 hours.</p>` +
+		`<p style="margin:24px 0"><a href="` + u + `" ` +
+		`style="background:#4f46e5;color:#fff;padding:12px 20px;border-radius:8px;` +
+		`text-decoration:none;display:inline-block">Confirm email</a></p>` +
+		`<p style="color:#64748b;font-size:13px;line-height:1.5">Or paste this URL into your browser:<br>` +
+		`<a href="` + u + `">` + u + `</a></p>` +
+		`<p style="color:#94a3b8;font-size:12px;margin-top:24px">` +
+		`If you did not request this, ignore this email: nothing changes.</p></div>`
+	return s.Send(ctx, Message{To: email, Subject: subject, Text: text, HTML: html}, sc)
+}
+
+// SendEmailChangeNotice warns the CURRENT address that a change to newEmail
+// was requested (no link: it only applies when the new address confirms).
+func (s *Service) SendEmailChangeNotice(ctx context.Context, email, newEmail string, sc *SendContext) SendResult {
+	subject := "Your StreamHub email is about to change"
+	text := "Email change requested\n\n" +
+		"A change of your StreamHub account email to " + mask(newEmail) + " was requested. " +
+		"It only applies once the new address confirms it.\n\n" +
+		"If this was not you, sign in, change your password and review your active sessions."
+	html := `<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:480px;margin:0 auto">` +
+		`<h2 style="margin:0 0 16px">Email change requested</h2>` +
+		`<p style="color:#334155;line-height:1.5">A change of your StreamHub account email to <strong>` +
+		escapeHTML(mask(newEmail)) + `</strong> was requested. It only applies once the new address confirms it.</p>` +
+		`<p style="color:#94a3b8;font-size:12px;margin-top:24px">` +
+		`If this was not you, sign in, change your password and review your active sessions.</p></div>`
+	return s.Send(ctx, Message{To: email, Subject: subject, Text: text, HTML: html}, sc)
+}
+
 // InviteOptions are the invite template fields.
 type InviteOptions struct {
 	TeamName  string
 	Role      string
 	InvitedBy string
+	// Existing: the invitee already has an account — url is the dashboard's
+	// account page (no token), where the invitation is accepted (3.3.4, M2).
+	Existing bool
 }
 
-// SendInvite sends a team invitation carrying a sign-in link.
+// SendInvite sends a team invitation carrying a sign-in link (or, for an
+// existing account, the link of the page where it is accepted).
 func (s *Service) SendInvite(ctx context.Context, email, url string, opts InviteOptions, sc *SendContext) SendResult {
 	team := opts.TeamName
 	if team == "" {
@@ -119,11 +170,18 @@ func (s *Service) SendInvite(ctx context.Context, email, url string, opts Invite
 	if opts.Role != "" {
 		roleLine = " as " + opts.Role
 	}
+	howText := "Click the link below to accept the invitation and sign in. " +
+		"It works once and expires in 72 hours:"
+	howHTML := `Click the button below to accept the invitation and sign in. ` +
+		`This link works once and expires in 72 hours.`
+	if opts.Existing {
+		howText = "Sign in to your account and accept (or decline) it from your account page:"
+		howHTML = `Sign in to your account and accept (or decline) it from your account page.`
+	}
 	subject := "You've been invited to " + team + " on StreamHub"
 	text := "Join " + team + " on StreamHub\n\n" +
 		"You have been invited" + by + " to join " + team + roleLine + ". " +
-		"Click the link below to accept the invitation and sign in. " +
-		"It works once and expires in 72 hours:\n\n" +
+		howText + "\n\n" +
 		url + "\n\n" +
 		"If you did not expect this invitation, you can safely ignore this email."
 	u := escapeHTML(url)
@@ -131,8 +189,7 @@ func (s *Service) SendInvite(ctx context.Context, email, url string, opts Invite
 		`<h2 style="margin:0 0 16px">Join ` + escapeHTML(team) + ` on StreamHub</h2>` +
 		`<p style="color:#334155;line-height:1.5">You have been invited` + escapeHTML(by) + ` ` +
 		`to join <strong>` + escapeHTML(team) + `</strong>` + escapeHTML(roleLine) + `. ` +
-		`Click the button below to accept the invitation and sign in. ` +
-		`This link works once and expires in 72 hours.</p>` +
+		howHTML + `</p>` +
 		`<p style="margin:24px 0"><a href="` + u + `" ` +
 		`style="background:#4f46e5;color:#fff;padding:12px 20px;border-radius:8px;` +
 		`text-decoration:none;display:inline-block">Accept invitation</a></p>` +
@@ -151,6 +208,9 @@ func (s *Service) Send(ctx context.Context, msg Message, sc *SendContext) SendRe
 		s.log.Warn("email not sent to <" + mask(msg.To) + ">: SMTP not configured " +
 			"(set STREAMHUB_SMTP_HOST + STREAMHUB_SMTP_PASS, or a per-app/per-user override)")
 		return SendResult{OK: false, Skipped: true, Error: "smtp_not_configured"}
+	}
+	if smtp != s.settings {
+		ctx = s.guarded(ctx)
 	}
 	id, err := s.transport.Send(ctx, smtp, smtp.From, msg)
 	if err != nil {
@@ -195,15 +255,36 @@ func (s *Service) TestUserSmtp(ctx context.Context, userID, to string) SendResul
 
 func (s *Service) sendProbe(ctx context.Context, smtp SMTP, to string) SendResult {
 	text := "This is a test email from StreamHub confirming this SMTP configuration works."
-	id, err := s.transport.Send(ctx, smtp, smtp.From, Message{
+	id, err := s.transport.Send(s.guarded(ctx), smtp, smtp.From, Message{
 		To: to, Subject: "StreamHub SMTP test", Text: text, HTML: "<p>" + escapeHTML(text) + "</p>",
 	})
 	if err != nil {
-		s.log.Error("test email to <" + mask(to) + "> failed: " + err.Error())
-		return SendResult{OK: false, Error: err.Error()}
+		s.log.Error("test email to <" + mask(to) + "> via " + smtp.Host + " failed: " + err.Error())
+		return SendResult{OK: false, Error: probeError(err)}
 	}
 	s.log.Info("test email sent to <" + mask(to) + "> (id=" + id + ")")
 	return SendResult{OK: true, MessageID: id}
+}
+
+// guarded marks a send through a tenant (per-app / per-user) SMTP: its dial
+// goes through the SSRF guard (SMTPTransport). Any resolved SMTP other than
+// the global env one is tenant input; STREAMHUB_ALLOW_PRIVATE_SMTP_HOST opts
+// out of the private check, as the S3/MQTT knobs do.
+func (s *Service) guarded(ctx context.Context) context.Context {
+	return withEgressGuard(ctx, &httpx.EgressGuard{
+		AllowPrivate: security.EnvFlag(s.cfg.Env(security.AllowPrivateSMTPHostEnv)),
+		Resolve:      httpx.Resolver(s.Resolve),
+	})
+}
+
+// probeError is the caller-facing error of an SMTP probe: a fixed code, never
+// the dial/SMTP text — "connection refused" vs "i/o timeout" vs a banner made
+// smtp/test a port scanner. The detail goes to the server log only.
+func probeError(err error) string {
+	if httpx.IsEgressBlocked(err) {
+		return "smtp_host_not_allowed"
+	}
+	return "smtp_send_failed"
 }
 
 // resolve picks the SMTP for one send. Each tier is best-effort: a failed

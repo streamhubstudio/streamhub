@@ -91,7 +91,7 @@ export interface ConfigValidation {
  *    `PlayerComponent` instead of the built-in video.js player; otherwise it
  *    falls back to video.js. Resolved by `usePlayerProvider` + `<ProviderPlayer>`
  *    (NOT `<PluginSlot>`, which is for tab/panel/overlay surfaces). Sub-second
- *    WebRTC live keeps using LiveKit. See https://streamhub.studio/docs/features/players.
+ *    WebRTC live keeps using LiveKit. See streamhub-docs/features/players.md.
  */
 export type PluginPlacement = 'app-tab' | 'panel' | 'player-overlay' | 'player'
 

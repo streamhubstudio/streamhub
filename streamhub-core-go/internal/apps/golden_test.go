@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // TestNodeGolden replays testdata/steps.json — the scenario testdata/gen.js

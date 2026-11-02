@@ -6,12 +6,13 @@ import (
 
 	"github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/playback"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // Narrow views of the modules this package calls. Node resolves most of them
@@ -123,6 +124,15 @@ type Optional struct {
 	NetMetrics  func() NetMetrics
 	Passthrough func() Passthrough
 	HwAccel     func() HwAccel
+	// SourceTracks (3.4) is stream-health's source-audio sink (sourcetracks.go).
+	SourceTracks func() SourceTracks
+	HLSEdge      func() HLSEdge
+}
+
+// HLSEdge picks the base of the HLS playlist URLs the token routes hand out:
+// a cdn-edge's URL when STREAMHUB_HLS_EDGE_SELECT is on, else origin.
+type HLSEdge interface {
+	HLSBase(ctx context.Context, app, origin string) string
 }
 
 func get[T any](f func() T) T {
@@ -131,6 +141,13 @@ func get[T any](f func() T) T {
 		return zero
 	}
 	return f()
+}
+
+// PlaybackGuard is the slice of playback.Guard the anonymous token routes
+// call (G2): geo + the play-auth webhook on every grant, and the HLS token.
+type PlaybackGuard interface {
+	CheckPlayback(ctx context.Context, in playback.PlaybackRequest) error
+	MintHLS(ctx context.Context, app, dir string) (playback.HLSGrant, error)
 }
 
 // Deps wires the module.
@@ -146,4 +163,6 @@ type Deps struct {
 	// Resolve nil → system DNS (pull-URL SSRF guard).
 	Resolve  security.HostResolver
 	Optional Optional
+	// Playback nil → no geo / play-auth / HLS tokens (the pre-3.4 routes).
+	Playback PlaybackGuard
 }

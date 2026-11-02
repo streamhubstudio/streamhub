@@ -989,7 +989,7 @@ export function RecordingStorageCard({ app }: { app: string }) {
  * server/host local time; the same value is also the DEFAULT any
  * timezone-flavoured plugin/schedule config falls back to when its own field
  * is left empty (e.g. Scheduled-live events, or a future presence/perimeter
- * arm/disarm schedule) — see `https://streamhub.studio/docs/features/timezone`.
+ * arm/disarm schedule) — see `streamhub-docs/features/timezone.md`.
  */
 const TIMEZONE_OPTIONS = listTimezones()
 

@@ -6,11 +6,11 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // purgePage is the page size when cascading a purge over an app's VODs.
@@ -104,8 +104,8 @@ func (d *Module) Register(a huma.API) {
 			return api.OK(res), nil
 		})
 
-	huma.Register(a, *authz.Require(op("DbAdminController_systemHealth", http.MethodGet, "/system/db/health",
-		"Health of the GLOBAL registry DB (data/streamhub.db). Requires a global-scope token.", http.StatusOK), "usage", "read"),
+	huma.Register(a, *api.Global(authz.Require(op("DbAdminController_systemHealth", http.MethodGet, "/system/db/health",
+		"Health of the GLOBAL registry DB (data/streamhub.db). Requires a global-scope token.", http.StatusOK), "usage", "read")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[Health]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err

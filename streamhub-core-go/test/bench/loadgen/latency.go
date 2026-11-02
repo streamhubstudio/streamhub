@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/devtools/cdp"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/devtools/cdp"
 )
 
 // latencyMode drives the G1 glass-to-glass harness page (test/bench/latency)

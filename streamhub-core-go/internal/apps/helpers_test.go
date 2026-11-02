@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/s3"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
 )
 
 // fakeSamples records the wave-4 samples hand-off.
@@ -38,7 +38,7 @@ func newTestService(t *testing.T) (*Service, *harness) {
 	store, global, dir := testutil.Store(t)
 	h := &harness{dataDir: dir, env: map[string]string{}, samples: &fakeSamples{}, mqtt: &fakeMqtt{}}
 	env := func(k string) string { return h.env[k] }
-	h.secrets = s3.NewSecretsStore(dir, env)
+	h.secrets = s3.NewSecretsStore(dir)
 	s := New(Deps{
 		Config: &config.Config{DataDir: dir}, Store: store, Global: global,
 		S3: s3.New(), Secrets: h.secrets, Samples: h.samples, Mqtt: h.mqtt, Log: testutil.Log(), Env: env,

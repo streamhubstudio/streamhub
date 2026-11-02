@@ -3,6 +3,11 @@
 // shapes match the Node core exactly; only additive changes are safe.
 package contracts
 
+import (
+	"regexp"
+	"strings"
+)
+
 // S3Provider is aws | wasabi | minio.
 type S3Provider = string
 
@@ -26,6 +31,9 @@ type S3Config struct {
 	PublicURL string `json:"publicUrl,omitempty"`
 	AccessKey string `json:"accessKey"`
 	SecretKey string `json:"secretKey"`
+	// StorageClass pins every PutObject to an S3 storage class (STANDARD_IA,
+	// INTELLIGENT_TIERING…); "" = the bucket/provider default (absent in JSON).
+	StorageClass string `json:"storageClass,omitempty"`
 }
 
 // S3UploadResult is the result of an S3 upload.
@@ -94,6 +102,31 @@ type LinearChannelFeatures struct {
 	DvrWindowSeconds        float64 `json:"dvrWindowSeconds"`
 }
 
+// DvrFeatures is features.dvr (G5): a rewindable window on the live HLS of
+// every stream of the app. Present only when config.yaml carries the block.
+type DvrFeatures struct {
+	Enabled       bool    `json:"enabled"`
+	WindowMinutes float64 `json:"windowMinutes"`
+}
+
+// HlsFeatures is features.hls (G5, the AMS hlsTime/hlsListSize settings):
+// the live HLS egress segment length and the served playlist window.
+type HlsFeatures struct {
+	// SegmentSeconds ↔ hlsTime (1..30, default 4).
+	SegmentSeconds float64 `json:"segmentSeconds"`
+	// ListSize ↔ hlsListSize: segments in the served playlist (0 = all).
+	ListSize float64 `json:"listSize"`
+}
+
+// ClipsFeatures is features.clips (G6): instant/event clips cut from the
+// HLS/DVR segments into the app's VODs.
+type ClipsFeatures struct {
+	Enabled       bool    `json:"enabled"`
+	MaxSeconds    float64 `json:"maxSeconds"`
+	MaxConcurrent float64 `json:"maxConcurrent"`
+	MaxQueued     float64 `json:"maxQueued"`
+}
+
 // AppFeatures are the per-app feature flags (always fully resolved).
 type AppFeatures struct {
 	RtmpPassword   bool                   `json:"rtmpPassword"`
@@ -106,6 +139,48 @@ type AppFeatures struct {
 	WsIngest       *WsIngestFeatures      `json:"wsIngest,omitempty"`
 	Drm            *DrmFeatures           `json:"drm,omitempty"`
 	Linear         *LinearChannelFeatures `json:"linear,omitempty"`
+	// AllowedPublisherCidr is features.allowed_publisher_cidr (↔ AntMedia
+	// allowedPublisherCIDR): the source networks a publisher may come from.
+	// Empty/absent = no restriction. Entries are kept as written — an
+	// invalid one matches nothing (fail closed).
+	AllowedPublisherCidr []string `json:"allowedPublisherCidr,omitempty"`
+	// MaxBitrateAccept is features.max_bitrate_accept in bits/s (↔
+	// maxBitrateAccept): an ingress publishing above it is cut. 0 = no cap.
+	MaxBitrateAccept float64 `json:"maxBitrateAccept,omitempty"`
+	// Dvr / Hls / Clips are nil unless config.yaml has the block, so an app
+	// that never opted in resolves (and serializes) exactly as before.
+	Dvr   *DvrFeatures   `json:"dvr,omitempty"`
+	Hls   *HlsFeatures   `json:"hls,omitempty"`
+	Clips *ClipsFeatures `json:"clips,omitempty"`
+	// The G2 (3.4.0) blocks below are config.yaml-only and omitted from the
+	// JSON when unset, so an app that never configured them reads exactly
+	// like before.
+	// HlsTokenTTLSeconds is features.hls_token_ttl_seconds: the lifetime of
+	// the ?st= HLS token of a private app (0 = the default, see hlsauth).
+	HlsTokenTTLSeconds int64             `json:"hlsTokenTtlSeconds,omitempty"`
+	Geo                *GeoFeatures      `json:"geo,omitempty"`
+	PlayAuth           *PlayAuthFeatures `json:"playAuth,omitempty"`
+}
+
+// GeoFeatures is features.geo: country allow/deny lists (ISO 3166-1 alpha-2,
+// upper-cased) checked against the local GeoLite2 base (STREAMHUB_GEOIP_DB).
+// A non-empty Allow admits only those countries; Deny always wins. Publish
+// extends the check to the RTMP publishes that pass through the core.
+type GeoFeatures struct {
+	Allow   []string `json:"allow"`
+	Deny    []string `json:"deny"`
+	Publish bool     `json:"publish"`
+}
+
+// Active reports whether the lists restrict anything.
+func (g *GeoFeatures) Active() bool { return g != nil && (len(g.Allow) > 0 || len(g.Deny) > 0) }
+
+// PlayAuthFeatures is features.play_auth: an external webhook consulted on
+// every anonymous playback grant (AntMedia's webhookPlayAuthUrl).
+type PlayAuthFeatures struct {
+	WebhookURL string `json:"webhookUrl"`
+	TimeoutMs  int64  `json:"timeoutMs"`
+	FailOpen   bool   `json:"failOpen"`
 }
 
 // MqttLogsConfig is the mqtt.logs block.
@@ -164,6 +239,15 @@ type RecordingConfig struct {
 	FilenameTemplate       string        `json:"filenameTemplate"`
 	SnapshotTemplate       string        `json:"snapshotTemplate"`
 	RetentionDays          float64       `json:"retentionDays"`
+}
+
+var localDirRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+
+// ValidLocalDir: recording.local_dir is ONE plain directory name under the
+// app dir — no separators, no "..", not "." (it is joined onto the app dir
+// and egress writes there; "../x" or "/etc" escaped it).
+func ValidLocalDir(dir string) bool {
+	return localDirRe.MatchString(dir) && dir != "." && !strings.Contains(dir, "..")
 }
 
 // WebrtcConfig is AppConfig.webrtc.

@@ -41,6 +41,7 @@
           "type": "gpu"
         }
       },
+      "source": "go",
       "status": 400,
       "headers": {
         "cache-control": null,
@@ -56,7 +57,7 @@
           "region must be a string",
           "url must be shorter than or equal to 255 characters",
           "url must be a string",
-          "type must be one of the following values: common, edge"
+          "type must be one of the following values: common, edge, cdn-edge"
         ],
         "statusCode": 400
       }
@@ -133,7 +134,7 @@
     },
     {
       "name": "join-create",
-      "fingerprint": "sha256:f5dd025139124fd8",
+      "fingerprint": "sha256:0b735ed9d602fa26",
       "request": {
         "method": "POST",
         "path": "/api/v1/cluster/join",
@@ -147,6 +148,7 @@
           "type": "edge"
         }
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "cache-control": null,
@@ -162,6 +164,7 @@
           },
           "name": "parity-edge-1",
           "nodeId": "{{edgeNode}}",
+          "nodeSecret": "<masked>",
           "publicWsUrl": null,
           "redisUrl": null
         },
@@ -170,7 +173,7 @@
     },
     {
       "name": "join-refresh",
-      "fingerprint": "sha256:ee69b9ba17267dea",
+      "fingerprint": "sha256:202ab06c2dedc739",
       "request": {
         "method": "POST",
         "path": "/api/v1/cluster/join",
@@ -184,6 +187,7 @@
           "region": "eu-central"
         }
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -199,6 +203,7 @@
           },
           "name": "parity-edge-1",
           "nodeId": "{{edgeNode}}",
+          "nodeSecret": "<masked>",
           "publicWsUrl": null,
           "redisUrl": null
         },
@@ -207,7 +212,7 @@
     },
     {
       "name": "join-plaintext-withheld",
-      "fingerprint": "sha256:5c542e83c1ad9e55",
+      "fingerprint": "sha256:605b83768901e264",
       "request": {
         "method": "POST",
         "path": "/api/v1/cluster/join",
@@ -220,6 +225,7 @@
           "ip": "2001:db8::2"
         }
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "cache-control": null,
@@ -236,6 +242,7 @@
           },
           "name": "parity-edge-2",
           "nodeId": "{{edgeNode2}}",
+          "nodeSecret": "<masked>",
           "publicWsUrl": null,
           "redisUrl": null,
           "secretsWithheld": true
@@ -245,7 +252,7 @@
     },
     {
       "name": "join-forwarded-https",
-      "fingerprint": "sha256:90f060f20da157ab",
+      "fingerprint": "sha256:c21154c2c17898dc",
       "request": {
         "method": "POST",
         "path": "/api/v1/cluster/join",
@@ -259,6 +266,7 @@
           "ip": "2001:db8::2"
         }
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -274,6 +282,7 @@
           },
           "name": "parity-edge-2",
           "nodeId": "{{edgeNode2}}",
+          "nodeSecret": "<masked>",
           "publicWsUrl": null,
           "redisUrl": null
         },

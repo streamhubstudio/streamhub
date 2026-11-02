@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authn"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/backups"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/buildinfo"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/dbadmin"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/email"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/notifications"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authn"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/backups"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/buildinfo"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/dbadmin"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/email"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/notifications"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 // The ops plane: logs (+ the per-app app.log sink), email (binds the auth

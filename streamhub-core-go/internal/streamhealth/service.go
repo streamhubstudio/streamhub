@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -17,11 +18,11 @@ import (
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // PluginID is the stream-health plugin/app id.
@@ -60,6 +61,34 @@ func (s *Service) OnEvent(app, event string, payload any) {
 	data := toMap(payload)
 	room, _ := data.Get("room").(string)
 	_ = s.store.Record(context.Background(), app, s.appDir(app), room, event, data)
+}
+
+// Watching reports whether the app has stream-health installed (so the
+// LiveKit plane only lists participants for apps that use the answer).
+func (s *Service) Watching(ctx context.Context, app string) (ok bool) {
+	if s.install == nil {
+		return false
+	}
+	defer func() {
+		if recover() != nil {
+			ok = false
+		}
+	}()
+	return s.install(ctx, app) != nil
+}
+
+// RecordSource stores what a room's publishers carry (the LiveKit plane
+// calls it after every track publish/unpublish and participant leave): the
+// worker then reports `audioSource: none` instead of a permanent
+// audio_silent/audio_missing for a video-only source. room is the HLS dir
+// name (the slugged LiveKit room). Best-effort, like OnEvent.
+func (s *Service) RecordSource(ctx context.Context, app, room string, audio, video bool) {
+	if app == "" || room == "" || !s.Watching(ctx, app) {
+		return
+	}
+	if err := s.store.PutSource(ctx, app, s.appDir(app), room, audio, video); err != nil {
+		s.log.Debug("stream-health: source not recorded", "app", app, "room", room, "err", err)
+	}
 }
 
 // toMap converts a dispatch payload (struct, map or *Map) into a JS object.
@@ -222,6 +251,39 @@ func jsParseInt(s string) (float64, bool) {
 	return n, true
 }
 
+// ParseSettingsBody reads the PUT settings body: {"config":{…thresholds}}.
+// An empty body, `null`, `{}` and {"config":null|{}} all clear the override.
+// GO-DIVERGENCE (3.4, planning/GO-DIVERGENCES.md): Node only looked at
+// body.config, so an unwrapped {"silence_db":-100} (or an array / scalar
+// body) answered 200 and silently stored an EMPTY override, wiping the
+// previous one; now any other top-level key, or a non-object body, is a 400.
+func ParseSettingsBody(raw []byte) (any, error) {
+	// No DTO class: the body reaches the handler as parsed (JS order).
+	var config any = y.Undefined
+	if len(strings.TrimSpace(string(raw))) > 0 {
+		v, err := y.ParseJSON(raw)
+		if err != nil {
+			return nil, httpx.BadRequest("Unexpected token in JSON body")
+		}
+		if v != nil {
+			m, ok := v.(*y.Map)
+			if !ok {
+				return nil, httpx.BadRequest(`settings body must be a JSON object: {"config":{…thresholds}}`)
+			}
+			for _, k := range m.Keys() {
+				if k != "config" {
+					return nil, httpx.BadRequest(fmt.Sprintf(`unknown top-level key '%s': thresholds go inside {"config":{…}}`, k))
+				}
+			}
+			config = m.Get("config")
+		}
+	}
+	if y.IsNullish(config) {
+		config = y.NewMap()
+	}
+	return config, nil
+}
+
 // Register implements api.Module.
 func (s *Service) Register(a huma.API) {
 	op := func(id, method, path, summary, action string) *huma.Operation {
@@ -290,21 +352,9 @@ func (s *Service) Register(a huma.API) {
 	huma.Register(a, *op("StreamHealthController_putSettings", http.MethodPut, "/streams/{room}/settings",
 		"Set a per-room threshold override (picked up live, no restart).", "write"),
 		func(ctx context.Context, in *roomBodyIn) (*api.Out[api.Envelope[*HealthSettingsView]], error) {
-			// No DTO class: the body reaches the handler as parsed (JS order).
-			var config any = y.Undefined
-			if len(strings.TrimSpace(string(in.RawBody))) > 0 {
-				v, err := y.ParseJSON(in.RawBody)
-				if err != nil {
-					return nil, httpx.BadRequest("Unexpected token in JSON body")
-				}
-				if m, ok := v.(*y.Map); ok {
-					config = m.Get("config")
-				} else if arr, ok := v.([]any); ok {
-					_ = arr // arrays have no `config` property
-				}
-			}
-			if y.IsNullish(config) {
-				config = y.NewMap()
+			config, err := ParseSettingsBody(in.RawBody)
+			if err != nil {
+				return nil, err
 			}
 			view, err := s.PutSettings(ctx, in.App, in.Room, config)
 			var se *SettingsError

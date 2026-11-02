@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
 )
 
 // transcoding.service.spec invariants.
@@ -169,5 +169,26 @@ func TestPatchValidation(t *testing.T) {
 		if got := b.Messages(); !reflect.DeepEqual(got, want) {
 			t.Errorf("%s:\n got  %q\n want %q", body, got, want)
 		}
+	}
+}
+
+// The dashboard saves the publisher restrictions through this PATCH (3.4.0):
+// same rules and mapping as PATCH /apps/:app (apps.PublisherFeature*).
+func TestPatchPublisherRestrictions(t *testing.T) {
+	apps := &fakeApps{cfg: base()}
+	s := New(apps, nil, nil)
+	patch(t, s, `{"features":{"allowedPublisherCidr":["203.0.113.0/24"],"maxBitrateAccept":6000000}}`)
+	f := apps.patches[0].Features
+	if !reflect.DeepEqual(f.AllowedPublisherCidr, []string{"203.0.113.0/24"}) || f.MaxBitrateAccept == nil || *f.MaxBitrateAccept != 6000000 || f.Chat != nil {
+		t.Fatalf("%+v", f)
+	}
+	patch(t, s, `{"features":{"chat":true}}`)
+	if f := apps.patches[1].Features; f.AllowedPublisherCidr != nil || f.MaxBitrateAccept != nil {
+		t.Fatalf("a toggle-only patch touched the restrictions: %+v", f)
+	}
+	b := validate.MustParse(`{"features":{"allowedPublisherCidr":["nope"],"maxBitrateAccept":-1}}`)
+	patchRules(b)
+	if got := b.Messages(); len(got) != 2 {
+		t.Fatalf("invalid restrictions accepted: %q", got)
 	}
 }

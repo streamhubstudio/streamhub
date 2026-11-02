@@ -30,6 +30,7 @@
     "namePlaceholder": "Tu nombre",
     "emailLabel": "Email",
     "emailAdminHint": "El email del admin de emergencia se gestiona vía ADMIN_USER (env).",
+    "emailPending": "Pendiente de confirmar: {{email}} — seguí el link que te mandamos a esa dirección para aplicar el cambio.",
     "roleLabel": "Rol",
     "save": "Guardar cambios",
     "saving": "Guardando…",
@@ -103,6 +104,15 @@
       "testFailed": "No se pudo enviar el email de prueba.",
       "testNotConfigured": "El SMTP no está completamente configurado (hacen falta host + contraseña)."
     }
+  },
+  "invitations": {
+    "title": "Invitaciones a equipos",
+    "subtitle": "Te invitaron a sumarte a estos equipos. Al aceptar, el equipo se agrega a tu cuenta; tu equipo actual no cambia.",
+    "invitedBy": "Invitación de {{email}}",
+    "invited": "Invitación",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "answerError": "No se pudo responder la invitación. Probá de nuevo."
   },
   "sessions": {
     "title": "Sesiones activas",

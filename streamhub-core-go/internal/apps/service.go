@@ -22,16 +22,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/s3"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // DefaultApp is seeded on boot (SPEC §2).
@@ -61,7 +62,8 @@ type Deps struct {
 	Samples SampleGenerator
 	Mqtt    MqttDisconnector
 	Log     *slog.Logger
-	// Env reads ad-hoc variables (secret refs); nil = os.Getenv.
+	// Env reads ad-hoc variables (the callback allowlist and the platform
+	// apps' env-fallback secrets); nil = os.Getenv.
 	Env func(string) string
 	// Resolve is the DNS seam of the callback SSRF guard (tests inject).
 	Resolve security.HostResolver
@@ -128,6 +130,7 @@ func (s *Service) Init(ctx context.Context) {
 	if err != nil {
 		s.log.Error("failed seeding default app: " + err.Error())
 	}
+	s.MigrateSecretRefs(ctx)
 }
 
 // AppDir is apps/<name>/ under DATA_DIR.
@@ -248,20 +251,26 @@ func (s *Service) Create(ctx context.Context, in contracts.CreateAppInput) (*con
 		roomPrefix = name
 	}
 	roomPrefix = strings.ToLower(roomPrefix)
+	if err := validateDrmTokenRef(name, in.Config); err != nil {
+		return nil, err
+	}
 
 	dir := s.AppDir(name)
 	dirCreated := false
 	var rowID int64
 	rec, err := func() (*contracts.AppRecord, error) {
-		for _, d := range []string{"recordings", "snapshots", "samples"} {
-			if err := os.MkdirAll(filepath.Join(dir, d), 0o777); err != nil {
+		if err := os.MkdirAll(dir, fsperm.AppRoot); err != nil {
+			return nil, err
+		}
+		for d, mode := range map[string]os.FileMode{"recordings": fsperm.EgressWritable, "snapshots": fsperm.EgressWritable, "samples": fsperm.Private} {
+			if err := os.MkdirAll(filepath.Join(dir, d), mode); err != nil {
 				return nil, err
 			}
 		}
 		dirCreated = true
 
 		disk := defaultDisk(name, displayName, roomPrefix)
-		s.applyResolvedPatch(disk, in.Config)
+		s.applyResolvedPatch(name, disk, in.Config)
 		if err := s.writeDisk(name, disk); err != nil {
 			return nil, err
 		}
@@ -362,7 +371,7 @@ func (s *Service) GetConfig(ctx context.Context, name string) (*contracts.AppCon
 	if err != nil {
 		return nil, err
 	}
-	return s.toResolved(disk), nil
+	return s.toResolved(name, disk), nil
 }
 
 // UpdateConfig persists a partial config and syncs the registry row.
@@ -371,6 +380,9 @@ func (s *Service) UpdateConfig(ctx context.Context, name string, patch contracts
 	defer s.mu.Unlock()
 	rec, err := s.mustGet(ctx, name)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateDrmTokenRef(name, &patch); err != nil {
 		return nil, err
 	}
 	// Save-time SSRF guard: a private/metadata callback target never lands on disk.
@@ -383,7 +395,7 @@ func (s *Service) UpdateConfig(ctx context.Context, name string, patch contracts
 	if err != nil {
 		return nil, err
 	}
-	s.applyResolvedPatch(disk, &patch)
+	s.applyResolvedPatch(name, disk, &patch)
 	if err := s.writeDisk(name, disk); err != nil {
 		return nil, err
 	}
@@ -404,7 +416,7 @@ func (s *Service) UpdateConfig(ctx context.Context, name string, patch contracts
 	} else if _, err := s.global.ExecContext(ctx, `UPDATE apps SET updated_at = datetime('now') WHERE id = ?`, rec.ID); err != nil {
 		return nil, err
 	}
-	return s.toResolved(disk), nil
+	return s.toResolved(name, disk), nil
 }
 
 // bindable mirrors better-sqlite3's binding rules for a raw YAML value.

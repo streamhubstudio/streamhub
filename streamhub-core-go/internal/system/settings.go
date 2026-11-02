@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/version"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/version"
 )
 
 // Well-known LiveKit/media ports (host-networked, not env-driven).
@@ -24,9 +24,8 @@ const (
 	rtmpPort             = 1935
 	whipPort             = 8080
 
-	smtpHostDefault        = "mail.wipermax.online"
-	superadminEmailDefault = "info@streamhub.studio"
-	restartHint            = "reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`)."
+	smtpHostDefault = "mail.wipermax.online"
+	restartHint     = "reiniciá el core: `systemctl restart streamhub-core` (alias en prod: `skyline-core`)."
 )
 
 // started approximates process.uptime().
@@ -223,12 +222,9 @@ func (s *Settings) smtpConfigured() bool {
 	return isSet(host) && isSet(s.cfg.Env("STREAMHUB_SMTP_PASS"))
 }
 
+// superadminEmail mirrors authn: no default ("" = no superadmin email).
 func (s *Settings) superadminEmail() string {
-	v := strings.TrimSpace(s.cfg.Env("STREAMHUB_SUPERADMIN_EMAIL"))
-	if v == "" {
-		v = superadminEmailDefault
-	}
-	return strings.ToLower(v)
+	return strings.ToLower(strings.TrimSpace(s.cfg.Env("STREAMHUB_SUPERADMIN_EMAIL")))
 }
 
 func (s *Settings) nodesCount(ctx context.Context) int64 {

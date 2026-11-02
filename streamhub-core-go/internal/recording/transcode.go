@@ -11,8 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of vod-transcode.service.ts: the VOD post-transcode pipeline. The
@@ -250,7 +251,7 @@ func (t *VodTranscode) run(ctx context.Context, job TranscodeJob, cfg *contracts
 	if len(plan.Renditions) == 0 && !plan.Webm {
 		return nil
 	}
-	if err := os.MkdirAll(workDir, 0o777); err != nil {
+	if err := os.MkdirAll(workDir, fsperm.Private); err != nil {
 		return err
 	}
 	media := ProbeMedia(ctx, t.d.Runner, src)

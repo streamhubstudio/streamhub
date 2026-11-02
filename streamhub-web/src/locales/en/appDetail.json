@@ -39,6 +39,10 @@
       "label": "Tokens",
       "hint": "API and room tokens"
     },
+    "devices": {
+      "label": "Encoders",
+      "hint": "Pair field encoders by code, see their status and send commands"
+    },
     "samples": {
       "label": "Samples",
       "hint": "Integration snippets"

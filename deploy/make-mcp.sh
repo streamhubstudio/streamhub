@@ -8,7 +8,7 @@
 #   dist/streamhub-mcp-<version>-<os>-<arch>[.exe]   + .sha256
 #
 # for darwin/linux/windows × amd64/arm64. Point Claude Desktop / Claude Code
-# at the binary (https://streamhub.studio/docs/integrations/MCP).
+# at the binary (streamhub-docs/integrations/MCP.md).
 #
 # Usage:
 #   deploy/make-mcp.sh [version]          # default: repo-root VERSION

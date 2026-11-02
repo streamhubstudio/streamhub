@@ -493,7 +493,7 @@
     },
     {
       "name": "sign-ok",
-      "fingerprint": "sha256:bae40a694d98fa18",
+      "fingerprint": "sha256:9e0ba20ce36af64a",
       "request": {
         "method": "POST",
         "path": "/api/v1/apps/par-lk/play-token/demo/sign",
@@ -502,6 +502,7 @@
           "ttlSeconds": 120
         }
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -512,6 +513,9 @@
           "app": "par-lk",
           "embedUrl": "<masked>",
           "exp": "<masked>",
+          "hlsExp": "<masked>",
+          "hlsToken": "<masked>",
+          "hlsUrl": "<masked>",
           "iframe": "<masked>",
           "playUrl": "<masked>",
           "room": "demo",
@@ -523,13 +527,14 @@
     },
     {
       "name": "sign-default-ttl",
-      "fingerprint": "sha256:e3637ac83ca7abbb",
+      "fingerprint": "sha256:76b9a7da949a93fb",
       "request": {
         "method": "POST",
         "path": "/api/v1/apps/par-lk/play-token/demo/sign",
         "auth": "globalToken",
         "rawBody": ""
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -540,6 +545,9 @@
           "app": "par-lk",
           "embedUrl": "<masked>",
           "exp": "<masked>",
+          "hlsExp": "<masked>",
+          "hlsToken": "<masked>",
+          "hlsUrl": "<masked>",
           "iframe": "<masked>",
           "playUrl": "<masked>",
           "room": "demo",
@@ -2351,6 +2359,7 @@
         "path": "/api/v1/stats",
         "auth": "viewerJwt"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "content-type": "application/json;charset=utf-8"
@@ -2359,24 +2368,10 @@
       "body": {
         "counts": {
           "activeStreams": 0,
-          "apps": 2,
-          "rooms": 0
-        },
-        "egress": {
-          "active": 0,
-          "reachable": false,
-          "total": 0
-        },
-        "ingress": {
-          "active": 0,
-          "reachable": false,
-          "total": 0
+          "apps": 0
         },
         "livekitReachable": false,
-        "storage": {
-          "vodCount": 0,
-          "vodTotalBytes": 0
-        }
+        "scope": "tenant"
       }
     },
     {

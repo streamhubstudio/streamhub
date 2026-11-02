@@ -13,6 +13,8 @@ export type SortDir = 'asc' | 'desc'
 export interface VodsQueryInput {
   room?: string
   status?: string
+  /** recording | clip (G6). */
+  source?: string
   since?: string
   until?: string
   order?: VodOrder
@@ -58,6 +60,7 @@ export function buildVodsQuery(input: VodsQueryInput = {}): URLSearchParams {
   return appendAll(new URLSearchParams(), [
     ['room', input.room?.trim()],
     ['status', input.status],
+    ['source', input.source],
     ['since', input.since],
     ['until', input.until],
     ['order', input.order],

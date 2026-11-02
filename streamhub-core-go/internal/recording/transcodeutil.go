@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/fsperm"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Port of vod-transcode.util.ts: ffmpeg helpers for the VOD post-transcode
@@ -155,7 +156,7 @@ func TranscodeHlsRendition(ctx context.Context, run Runner, source, outDir strin
 	if segSeconds == 0 {
 		segSeconds = 4
 	}
-	if os.MkdirAll(outDir, 0o777) != nil {
+	if os.MkdirAll(outDir, fsperm.Private) != nil {
 		return false
 	}
 	if _, err := run.Run(ctx, "ffmpeg", HlsRenditionArgs(source, outDir, r, segSeconds), transcodeTimeout); err != nil {
@@ -166,7 +167,7 @@ func TranscodeHlsRendition(ctx context.Context, run Runner, source, outDir strin
 
 // TranscodeRenditionMp4 writes one mezzanine MP4 (DRM path).
 func TranscodeRenditionMp4(ctx context.Context, run Runner, source, outPath string, r contracts.VodRendition) bool {
-	if os.MkdirAll(filepath.Dir(outPath), 0o777) != nil {
+	if os.MkdirAll(filepath.Dir(outPath), fsperm.Private) != nil {
 		return false
 	}
 	if _, err := run.Run(ctx, "ffmpeg", RenditionMp4Args(source, outPath, r), transcodeTimeout); err != nil {
@@ -180,7 +181,7 @@ func TranscodeWebmVp8(ctx context.Context, run Runner, source, outPath string, k
 	if kbps == 0 {
 		kbps = 2500
 	}
-	if os.MkdirAll(filepath.Dir(outPath), 0o777) != nil {
+	if os.MkdirAll(filepath.Dir(outPath), fsperm.Private) != nil {
 		return false
 	}
 	if _, err := run.Run(ctx, "ffmpeg", WebmVp8Args(source, outPath, kbps), transcodeTimeout); err != nil {

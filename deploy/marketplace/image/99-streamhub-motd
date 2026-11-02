@@ -1,0 +1,8 @@
+#!/bin/sh
+# StreamHub marketplace image — MOTD fragment (/etc/update-motd.d/99-streamhub).
+# Shows whether the first-boot setup is pending, running or done.
+[ -x /opt/streamhub/first-boot.sh ] || exit 0
+echo
+echo " StreamHub — self-hosted media server   https://www.streamhub.studio"
+/opt/streamhub/first-boot.sh --status 2>/dev/null || true
+echo

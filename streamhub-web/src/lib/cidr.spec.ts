@@ -4,7 +4,20 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidCidr, normalizeIp } from './cidr.ts'
+import { isValidCidr, normalizeIp, parseCidrList } from './cidr.ts'
+
+test('parseCidrList: lines, commas and blanks; invalid entries surfaced', () => {
+  assert.deepEqual(parseCidrList(''), { entries: [], invalid: [] })
+  assert.deepEqual(parseCidrList('  \n , '), { entries: [], invalid: [] })
+  assert.deepEqual(parseCidrList('203.0.113.0/24\n198.51.100.7, 2001:db8::/32\n'), {
+    entries: ['203.0.113.0/24', '198.51.100.7', '2001:db8::/32'],
+    invalid: [],
+  })
+  assert.deepEqual(parseCidrList('10.0.0.0/8\n203.0.113.0/33\nnope'), {
+    entries: ['10.0.0.0/8', '203.0.113.0/33', 'nope'],
+    invalid: ['203.0.113.0/33', 'nope'],
+  })
+})
 
 test('isValidCidr: accepts bare IPv4 and IPv4 CIDRs', () => {
   for (const ok of ['203.0.113.9', '10.0.0.0/8', '0.0.0.0/0', '192.168.1.1/32']) {

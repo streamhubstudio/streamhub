@@ -40,3 +40,30 @@ func TestPublicBaseURLFallsBackToStreamhubPublicURL(t *testing.T) {
 		}
 	}
 }
+
+// LT4 #9: the HLS latency knobs are strict ranged integers; anything invalid
+// keeps the historical default (4 s segments, max-age=1) and warns.
+func TestHLSLatencyKnobs(t *testing.T) {
+	cases := []struct {
+		seg, maxAge      string
+		wantSeg, wantAge int
+		warns            int
+	}{
+		{"", "", 4, 1, 0},
+		{"2", "0", 2, 0, 0},
+		{" 1 ", "10", 1, 10, 0},
+		{"10", "3", 10, 3, 0},
+		{"0", "-1", 4, 1, 2},
+		{"11", "11", 4, 1, 2},
+		{"2.5", "1s", 4, 1, 2},
+		{"abc", "", 4, 1, 1},
+	}
+	for _, c := range cases {
+		t.Setenv("STREAMHUB_HLS_SEGMENT_S", c.seg)
+		t.Setenv("STREAMHUB_HLS_PLAYLIST_MAX_AGE", c.maxAge)
+		cfg := Load()
+		if cfg.HLSSegmentS != c.wantSeg || cfg.HLSPlaylistMaxAge != c.wantAge || len(cfg.Warnings) != c.warns {
+			t.Errorf("seg=%q maxAge=%q: got %d/%d warnings=%q", c.seg, c.maxAge, cfg.HLSSegmentS, cfg.HLSPlaylistMaxAge, cfg.Warnings)
+		}
+	}
+}

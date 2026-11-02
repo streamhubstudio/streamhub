@@ -9,9 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cluster"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Ports of plugins.service.spec, plugins-public.spec, plugin-livedata.spec,
@@ -182,6 +183,12 @@ func TestWorkerLifecycleThroughService(t *testing.T) {
 	token := st.workers.IngestToken("live", "det")
 	_, err = st.svc.IngestLive(bg, "live", "det", "nope", cfg(t, `{"room":"r"}`))
 	want(t, err, 401, "invalid or missing ingest token")
+	// constant-time compare (3.3.4) keeps exact-match semantics: a prefix or an
+	// extension of the token is not it
+	for _, near := range []string{token[:len(token)-1], token + "x"} {
+		_, err = st.svc.IngestLive(bg, "live", "det", near, cfg(t, `{"room":"r"}`))
+		want(t, err, 401, "invalid or missing ingest token")
+	}
 	_, err = st.svc.IngestLive(bg, "live", "det", token, cfg(t, `{"x":1}`))
 	want(t, err, 400, "live payload must carry a 'room'")
 	if _, err := st.svc.IngestLive(bg, "live", "det", token, cfg(t, `{"room":" r ","boxes":[1]}`)); err != nil {
@@ -543,9 +550,10 @@ func TestGridMatchAndService(t *testing.T) {
 }
 
 func TestGridDispatchWire(t *testing.T) {
-	var gotToken, gotBody string
+	var gotToken, gotSecret, gotBody string
 	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		gotToken = r.Header.Get("x-cluster-token")
+		gotSecret = r.Header.Get(cluster.NodeSecretHeader)
 		b := make([]byte, r.ContentLength)
 		_, _ = r.Body.Read(b)
 		gotBody = string(b)
@@ -562,9 +570,10 @@ func TestGridDispatchWire(t *testing.T) {
 	node := NodeInfo{ID: "n", Name: "n", URL: &srv}
 	env := y.NewMap()
 	env.Set("A", "1")
-	r := g.Dispatch(bg, node, GridSpawnRequest{PluginID: "p", AppName: "live", Command: "py", Args: []string{"-m"}, Env: env, IngestToken: "it"})
-	if !r.Dispatched || r.RemoteID != "w-1" || gotToken != "tok" ||
-		gotBody != `{"pluginId":"p","appName":"live","command":"py","args":["-m"],"env":{"A":"1"},"ingestToken":"it"}` {
+	r := g.Dispatch(bg, node, GridSpawnRequest{PluginID: "p", AppName: "live", Config: env, IngestToken: "it"})
+	// C5.3: signed with node "n"'s own secret; the shared token never leaves the master
+	if !r.Dispatched || r.RemoteID != "w-1" || gotToken != "" || gotSecret != cluster.NodeSecret("tok", "n") ||
+		gotBody != `{"pluginId":"p","appName":"live","config":{"A":"1"},"ingestToken":"it"}` {
 		t.Errorf("dispatch = %+v token=%s body=%s", r, gotToken, gotBody)
 	}
 	if !g.StopRemote(bg, node, "w-1") || g.StopRemote(bg, node, "other") {
@@ -588,19 +597,17 @@ func TestGridFallbackAndRemote(t *testing.T) {
 }
 
 func TestAgentAndClusterGate(t *testing.T) {
-	st := newStack(t)
-	a := NewAgent(st.workers)
-	env := y.NewMap()
-	env.Set("A", "1")
-	env.Set("N", 5.0)
-	v := a.Spawn(GridWorkerInput{PluginID: "p", AppName: "live", Command: "/bin/sh", Args: []string{"-c", "echo $STREAMHUB_INGEST_TOKEN-$A-$N; sleep 30"}, Env: env, IngestToken: "itok"})
-	if v.ID == "" || v.Status != "running" || v.PID == nil {
-		t.Fatalf("spawn = %+v", v)
+	m := gridShellMeta("p", "echo $STREAMHUB_INGEST_TOKEN-$STREAMHUB_INGEST_URL-$PLUGIN_APP; sleep 30")
+	st := newStack(t, m)
+	a := NewAgent(st.workers, st.reg, edgeNode("https://master.example/"))
+	v, err := a.Spawn(bg, GridWorkerInput{PluginID: "p", AppName: "live", IngestToken: "itok"})
+	if err != nil || v.ID == "" || v.Status != "running" || v.PID == nil {
+		t.Fatalf("spawn = %+v %v", v, err)
 	}
 	eventually(t, "agent output", func() bool {
 		l, _ := a.Logs(v.ID, 10)
 		for _, x := range l {
-			if x.Line == "itok-1-" {
+			if x.Line == "itok-https://master.example/api/v1/apps/live/plugins/p/live-live" {
 				return true
 			}
 		}
@@ -609,7 +616,7 @@ func TestAgentAndClusterGate(t *testing.T) {
 	if s, _ := a.Stop(v.ID); s.Status != "stopped" {
 		t.Error("stop")
 	}
-	_, err := a.Status("nope")
+	_, err = a.Status("nope")
 	want(t, err, 404, "grid worker 'nope' not found")
 
 	r, _ := http.NewRequest(http.MethodGet, "/", nil)

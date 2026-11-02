@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 func setup(t *testing.T) *Service {
@@ -76,12 +76,17 @@ func TestEnforceCreateApp(t *testing.T) {
 	for _, p := range []*auth.Principal{
 		nil,
 		{IsSuperadmin: true, TenantID: "tnt_a"},
-		{Via: auth.ViaAPIToken, Scope: auth.ScopeApp, TenantID: "tnt_a"},
+		{Via: auth.ViaAPIToken, Scope: auth.ScopeGlobal, IsSuperadmin: true, TenantID: "tnt_a"},
 		{Via: auth.ViaUserJWT, Role: auth.RoleOwner},
 	} {
 		if s.EnforceCreateApp(ctx, p) != nil {
 			t.Errorf("bypass failed for %+v", p)
 		}
+	}
+	// security 3.3.4: an app-scoped token is held to its tenant's quotas
+	appToken := &auth.Principal{Via: auth.ViaAPIToken, Scope: auth.ScopeApp, Role: auth.RoleService, TenantID: "tnt_a"}
+	if status(s.EnforceCreateApp(ctx, appToken)) != 429 {
+		t.Fatal("app token exempt from the tenant quota")
 	}
 	m := int64(3)
 	s.SetQuotas(ctx, "tnt_a", UpdateInput{MaxApps: &m})
@@ -146,8 +151,11 @@ func TestScopedQuotas(t *testing.T) {
 		t.Fatal("under limit")
 	}
 	if s.EnforceAppConcurrentStreams(ctx, "a1", 3, &auth.Principal{IsSuperadmin: true}) != nil ||
-		s.EnforceAppConcurrentStreams(ctx, "a1", 3, &auth.Principal{Via: auth.ViaAPIToken}) != nil {
+		s.EnforceAppConcurrentStreams(ctx, "a1", 3, &auth.Principal{Via: auth.ViaAPIToken, Scope: auth.ScopeGlobal}) != nil {
 		t.Fatal("bypass")
+	}
+	if status(s.EnforceAppConcurrentStreams(ctx, "a1", 3, &auth.Principal{Via: auth.ViaAPIToken, Scope: auth.ScopeApp, TenantID: "tnt_a"})) != 429 {
+		t.Fatal("app token exempt from the app quota (3.3.4)")
 	}
 	t.Setenv(authz.EnforceEnv, "log")
 	if s.EnforceAppConcurrentStreams(ctx, "a1", 3, owner) != nil {

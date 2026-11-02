@@ -3,18 +3,19 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/broadcast"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livekit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/netmetrics"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/notifications"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/passthrough"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/pipeline"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/quotas"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/restream"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/scheduledlive"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streams"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/system"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/broadcast"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livekit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/netmetrics"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/notifications"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/passthrough"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/pipeline"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/playback"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/quotas"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/restream"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/scheduledlive"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streams"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/system"
 )
 
 // The media plane: restream (multi-destination RTMP forwarding), passthrough
@@ -43,7 +44,8 @@ func init() {
 		// MediaMTX hook sink and the boot re-arm front.
 		remux := passthrough.NewRemuxManager(c.cfg.Env("STREAMHUB_FFMPEG_BIN"), nil, lazy[passthrough.Logs](c, "logs"), c.log)
 		pt := passthrough.NewService(c.cfg, keys, remux, func() passthrough.Streams { return streamsSvc }, c.log)
-		front := passthrough.NewFront(pt, keys, func(ctx context.Context) ([]string, error) {
+		pt.HLSEdge = lazy[livekit.HLSEdge](c, "cluster.hlsedge")
+		appNames := func(ctx context.Context) ([]string, error) {
 			list, err := appsSvc.List(ctx, nil)
 			if err != nil {
 				return nil, err
@@ -53,10 +55,20 @@ func init() {
 				names = append(names, a.Name)
 			}
 			return names, nil
-		}, c.log)
+		}
+		front := passthrough.NewFront(pt, keys, appNames, c.log)
 		provide(c, "passthrough", pt)
 
-		c.modules = append(c.modules, restream.NewModule(rs, need[*quotas.Service](c, "quotas")), &passthrough.Module{Svc: pt})
+		// features.allowed_publisher_cidr on the MediaMTX auth hook.
+		guard := &passthrough.PublishGuard{Apps: appNames, Keys: keys, CIDRs: func(ctx context.Context, app string) []string {
+			cfg, err := appsSvc.GetConfig(ctx, app)
+			if err != nil || cfg == nil {
+				return nil
+			}
+			return cfg.Features.AllowedPublisherCidr
+		}}
+
+		c.modules = append(c.modules, restream.NewModule(rs, need[*quotas.Service](c, "quotas")), &passthrough.Module{Svc: pt, Guard: guard, Geo: need[*playback.Guard](c, "playback")})
 		// Background work (retry-timer teardown, streams-table sync, boot
 		// re-arm of remuxes/MediaMTX paths) only via starters: STREAMHUB_SHADOW
 		// must not spawn ffmpeg beside the live Node core.

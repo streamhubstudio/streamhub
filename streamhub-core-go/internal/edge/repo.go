@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Repo is EdgeAssignmentsRepository over the global edge_assignments table.
@@ -111,6 +111,16 @@ func (r *Repo) UpdateStatus(ctx context.Context, id, status string, detail *stri
 	_, err := r.db.ExecContext(ctx, `UPDATE edge_assignments
             SET status = ?, detail = ?, updated_at = datetime('now')
           WHERE id = ?`, status, detail, id)
+	return err
+}
+
+// UpdateStatusForNode is UpdateStatus restricted to the row's owning node:
+// an edge's assignment_status frame may only move its own assignments
+// (security 3.3.4). A foreign or unknown id is a silent no-op.
+func (r *Repo) UpdateStatusForNode(ctx context.Context, id, nodeID, status string, detail *string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE edge_assignments
+            SET status = ?, detail = ?, updated_at = datetime('now')
+          WHERE id = ? AND node_id = ?`, status, detail, id, nodeID)
 	return err
 }
 

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 const (
@@ -185,7 +185,9 @@ func TestDrmDecide(t *testing.T) {
 		return drmJSON(200, `{"keys":[{"key_id":"`+drmKeyID+`","key":"`+drmSecret+`"}],"hls_key_uri":"skd://k"}`), nil
 	})}
 	run := &tcRunner{}
-	s := NewDrmService(drmSecretsFake{"KS_TOKEN": "tok-1"}, run, nil)
+	// A configured ref only switches the token on: it is read from the app's
+	// derived ref, never from the name the config gives.
+	s := NewDrmService(drmSecretsFake{"KS_TOKEN": "foreign", "APP_LIVE_DRM_TOKEN": "tok-1"}, run, nil)
 	s.Client = client
 
 	// disabled → clear (no probe, no dial)

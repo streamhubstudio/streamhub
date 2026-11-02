@@ -9,6 +9,7 @@ export type TabId =
   | 'streams'
   | 'vods'
   | 'ingress'
+  | 'devices'
   | 'streamflow'
   | 'samples'
   | 'plugins'
@@ -29,6 +30,7 @@ export const TAB_IDS: TabId[] = [
   'streams',
   'vods',
   'ingress',
+  'devices',
   'samples',
   'plugins',
   'sistema',

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://streamhub.studio/schemas/streamhub.app.schema.json",
   "title": "StreamHub App Manifest",
-  "description": "The declarative package descriptor (`streamhub.app.json`) a decoupled StreamHub Studio App ships instead of a plugin.meta.ts. It carries everything the core needs to register and run the app WITHOUT executing any JavaScript the package brought: identity, the typed config schema, declared events, and a pure spawn TEMPLATE for the worker. See https://streamhub.studio/docs/development/EXTENDING-STUDIO-APPS and internal design notes §3.",
+  "description": "The declarative package descriptor (`streamhub.app.json`) a decoupled StreamHub Studio App ships instead of a plugin.meta.ts. It carries everything the core needs to register and run the app WITHOUT executing any JavaScript the package brought: identity, the typed config schema, declared events, and a pure spawn TEMPLATE for the worker. See streamhub-docs/development/EXTENDING-STUDIO-APPS.md and planning/APP-DECOUPLING-PLAN.md §3.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "name", "description", "category", "ui", "version", "configSchema"],

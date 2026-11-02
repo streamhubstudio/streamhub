@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/timezone"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/timezone"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Raw config editor (wave-4 §1) + safe editor (wave-5 fold-2): validate,
@@ -338,6 +338,9 @@ func validateRaw(name, raw string) ([]string, error) {
 	if v := obj.Get("recording"); !y.IsUndefined(v) && !y.IsObject(v) {
 		return nil, httpx.BadRequest(`"recording" must be a mapping if present`)
 	}
+	if err := validateRawLocalDir(obj); err != nil {
+		return nil, err
+	}
 	// `(obj.x as Record) || {}` then `.key !== undefined`.
 	has := func(block, key string) bool { return !y.IsUndefined(prop(orObject(obj.Get(block)), key)) }
 	if has("s3", "key") || has("s3", "secret") {
@@ -348,6 +351,9 @@ func validateRaw(name, raw string) ([]string, error) {
 	}
 	if has("smtp", "pass") {
 		warnings = append(warnings, "smtp.pass in the yaml is ignored; use PUT /apps/:app/smtp to set the SMTP password")
+	}
+	if err := validateSecretRefs(name, obj); err != nil {
+		return nil, err
 	}
 	if y.IsUndefined(obj.Get("room_prefix")) {
 		warnings = append(warnings, "room_prefix missing; defaulting to the app name on reload")

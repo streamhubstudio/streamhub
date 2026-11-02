@@ -3,10 +3,11 @@ package apps
 import (
 	"regexp"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/timezone"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/timezone"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
 )
 
 // Request DTOs (apps/dto/*.dto.ts) under Nest's ValidationPipe
@@ -73,6 +74,7 @@ func parseUpdateAppConfig(raw []byte) (*configPatch, error) {
 		for _, k := range featureFlags {
 			f.Optional(k).IsBoolean()
 		}
+		PublisherFeatureRules(f)
 	})
 	b.Optional("variables").IsObject()
 	if err := b.Err(); err != nil {
@@ -124,6 +126,7 @@ func parseUpdateAppConfig(raw []byte) (*configPatch, error) {
 			Reactions: fb("reactions"), HiddenQc: fb("hiddenQc"), AdaptivePlayer: fb("adaptivePlayer"),
 			PublicPlayback: fb("publicPlayback"),
 		}
+		PublisherFeaturePatch(f, p.Features)
 		touch("features")
 	} else if _, isArr := b.Raw("features").([]any); isArr {
 		p.Features = &contracts.FeaturesPatch{}
@@ -199,6 +202,9 @@ func parseSetS3(raw []byte) (*setS3Dto, error) {
 	b.Optional("key").MaxLength(512).IsString()
 	b.Optional("secret").MaxLength(512).IsString()
 	b.Optional("confirmPublic").IsBoolean()
+	sc := b.Optional("storageClass")
+	_, scOK := s3.NormalizeStorageClass(b.String("storageClass"))
+	sc.Check(scOK, storageClassMessage).IsString()
 	if err := b.Err(); err != nil {
 		return nil, err
 	}
@@ -208,7 +214,7 @@ func parseSetS3(raw []byte) (*setS3Dto, error) {
 			Provider: b.StringPtr("provider"), Bucket: b.StringPtr("bucket"), Region: b.StringPtr("region"),
 			Endpoint: b.StringPtr("endpoint"), ForcePathStyle: b.Bool("forcePathStyle"), Prefix: b.StringPtr("prefix"),
 			PublicURL: b.StringPtr("public_url"), Key: b.String("key"), Secret: b.String("secret"),
-			ConfirmPublic: confirm != nil && *confirm,
+			ConfirmPublic: confirm != nil && *confirm, StorageClass: b.StringPtr("storageClass"),
 		},
 		bucket: b.StringPtr("bucket"), endpoint: b.StringPtr("endpoint"),
 	}, nil

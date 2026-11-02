@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // The orchestration loop (main.js) over a temp HLS tree, a fake
@@ -82,6 +82,7 @@ func newTestWorker(t *testing.T, env map[string]string, media *fakeMedia, out io
 		ffprobe: "ffprobe", ffmpeg: "ffmpeg", eventsURL: env["STREAMHUB_EVENTS_URL"], ingestURL: env["STREAMHUB_INGEST_URL"],
 		token: env["STREAMHUB_INGEST_TOKEN"], appConfig: ParseAppConfig(env["HEALTH_CONFIG_JSON"], true), rooms: map[string]*roomRT{},
 		events: make(chan []byte, 256)}
+	w.edges = ParseEdgeBases(w.appConfig.Get(EdgeBasesKey))
 	go func() {
 		for body := range w.events {
 			w.post(context.Background(), w.eventsURL, body)

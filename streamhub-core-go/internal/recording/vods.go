@@ -35,7 +35,16 @@ type VodRecord struct {
 	EndedAt      *string  `json:"endedAt"`
 	MetatagsJSON *string  `json:"metatagsJson"`
 	SnapshotKey  *string  `json:"snapshotKey"`
+	// Source is how the VOD was produced: "recording" (an egress — every row
+	// before 3.4.0, NULL in the column) or "clip" (G6, cut from HLS/DVR).
+	Source string `json:"source"`
 }
+
+// VOD sources.
+const (
+	VodSourceRecording = "recording"
+	VodSourceClip      = "clip"
+)
 
 // VodInsert is a new `recording` row.
 type VodInsert struct {
@@ -47,6 +56,8 @@ type VodInsert struct {
 	LocalPath    *string
 	StartedAt    *string
 	MetatagsJSON *string
+	// Source "" = recording (stored NULL, like every pre-3.4.0 row).
+	Source string
 }
 
 // VodPatch is a partial update: only Set columns are written (nil values
@@ -67,9 +78,10 @@ func (p *VodPatch) Set(col string, value any) *VodPatch {
 // Empty reports a no-op patch.
 func (p *VodPatch) Empty() bool { return len(p.cols) == 0 }
 
-// VodFilters filter list/count (nil = no filter).
+// VodFilters filter list/count (nil = no filter). Source "recording" also
+// matches the NULL rows written before 3.4.0.
 type VodFilters struct {
-	Room, Status, Since, Until *string
+	Room, Status, Since, Until, Source *string
 }
 
 // VodListOptions page/sort a listing.
@@ -90,14 +102,18 @@ type Vods struct{ appDB AppDBFunc }
 // NewVods builds the repository.
 func NewVods(appDB AppDBFunc) *Vods { return &Vods{appDB: appDB} }
 
-const vodCols = `id, app_id, stream_id, room, name, file_key, s3_url, public_url, size_bytes, duration_s, width, height, format, status, local_path, started_at, ended_at, metatags_json, snapshot_key`
+const vodCols = `id, app_id, stream_id, room, name, file_key, s3_url, public_url, size_bytes, duration_s, width, height, format, status, local_path, started_at, ended_at, metatags_json, snapshot_key, source`
 
 func scanVod(sc interface{ Scan(...any) error }) (*VodRecord, error) {
 	var v VodRecord
-	var sid, room, fk, s3u, pu, fmtS, lp, sa, ea, mj, sk sql.NullString
+	var sid, room, fk, s3u, pu, fmtS, lp, sa, ea, mj, sk, src sql.NullString
 	var size, dur, w, h sql.NullFloat64
-	if err := sc.Scan(&v.ID, &v.AppID, &sid, &room, &v.Name, &fk, &s3u, &pu, &size, &dur, &w, &h, &fmtS, &v.Status, &lp, &sa, &ea, &mj, &sk); err != nil {
+	if err := sc.Scan(&v.ID, &v.AppID, &sid, &room, &v.Name, &fk, &s3u, &pu, &size, &dur, &w, &h, &fmtS, &v.Status, &lp, &sa, &ea, &mj, &sk, &src); err != nil {
 		return nil, err
+	}
+	v.Source = VodSourceRecording
+	if src.Valid && src.String != "" {
+		v.Source = src.String
 	}
 	v.StreamID, v.Room, v.FileKey, v.S3URL, v.PublicURL = ns(sid), ns(room), ns(fk), ns(s3u), ns(pu)
 	v.SizeBytes, v.DurationS, v.Width, v.Height = nf(size), nf(dur), nf(w), nf(h)
@@ -125,9 +141,13 @@ func (r *Vods) Insert(ctx context.Context, app string, v VodInsert) (int64, erro
 	if err != nil {
 		return 0, err
 	}
+	var source any
+	if v.Source != "" && v.Source != VodSourceRecording {
+		source = v.Source
+	}
 	res, err := h.ExecContext(ctx, `INSERT INTO vods
-         (app_id, stream_id, room, name, status, local_path, started_at, metatags_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, v.AppID, v.StreamID, v.Room, v.Name, v.Status, v.LocalPath, v.StartedAt, v.MetatagsJSON)
+         (app_id, stream_id, room, name, status, local_path, started_at, metatags_json, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, v.AppID, v.StreamID, v.Room, v.Name, v.Status, v.LocalPath, v.StartedAt, v.MetatagsJSON, source)
 	if err != nil {
 		return 0, err
 	}
@@ -195,6 +215,14 @@ func buildWhere(f VodFilters) (string, []any) {
 	add("status = ?", f.Status)
 	add("started_at >= ?", f.Since)
 	add("started_at <= ?", f.Until)
+	if f.Source != nil {
+		if *f.Source == VodSourceRecording {
+			clauses = append(clauses, "(source IS NULL OR source = ?)")
+		} else {
+			clauses = append(clauses, "source = ?")
+		}
+		params = append(params, *f.Source)
+	}
 	if len(clauses) == 0 {
 		return "", nil
 	}

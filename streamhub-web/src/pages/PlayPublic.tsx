@@ -21,6 +21,15 @@
  * to <HlsPlayer access="public"> (which resolves the app's Vidstack/player
  * provider) and offers a WebRTC|HLS toggle so viewers of transcoded rooms can
  * still pick sub-second WebRTC. No playlist → WebRTC-only, unchanged.
+ *
+ * SIGNED HLS (G2): an app with public_playback:false serves /hls only with
+ * `?st=`. When the page carries a signed capability (?exp=&sig=) it first
+ * fetches the HLS token (GET hls-token, same gate as play-token) and probes /
+ * plays the tokenized playlist. `?token=` is the viewer's own credential,
+ * forwarded to the app's play-auth webhook (features.play_auth).
+ * DVR (G5, features/dvr-clips.md): the rewindable window (`dvr.m3u8`) is probed
+ * too; when live it is the default HLS source (with the DVR bar) and honours a
+ * `?t=` deep link (epoch instant or `-5m` behind live — lib/dvr).
  */
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -29,7 +38,8 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/api'
 import { HlsPlayer, LivePlayer, MjpegPlayer } from '@/components/player'
 import { pickPlayerMode } from '@/lib/mjpeg'
-import { defaultPlayback, hlsPlaylistPath, probeHls } from '@/lib/share'
+import { defaultPlayback, hlsPlaylistPath, probeHls, withHlsToken } from '@/lib/share'
+import { dvrPlaylistPath } from '@/lib/dvr'
 import { SharePanel } from './Player/SharePanel'
 import { Logo } from '@/components/Logo'
 
@@ -47,6 +57,8 @@ export default function PlayPublic() {
   // forwarded to the WebRTC player; the server validates it (verifyPlayback).
   const exp = params.get('exp') ?? undefined
   const sig = params.get('sig') ?? undefined
+  const viewerToken = params.get('token') ?? undefined
+  const startAt = params.get('t')
   const [audioOnly, setAudioOnly] = useState(false)
 
   // ws-mjpeg detection (public, cheap). While the camera is live we keep
@@ -64,24 +76,47 @@ export default function PlayPublic() {
   // HLS probe — ONE cheap HEAD on the public playlist (no auth, no polling).
   // Passthrough channels have HLS but no LiveKit room; transcoded rooms may
   // have a live HLS egress running alongside WebRTC.
+  // Signed HLS (G2): mint the ?st= of a private app with the capability first.
+  const hlsTok = useQuery({
+    queryKey: ['hls-token', app, room, exp, sig],
+    enabled: Boolean(app && room && sig),
+    queryFn: ({ signal }) => api.hlsToken(app!, room!, { exp, sig, token: viewerToken, signal }),
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+  const st = hlsTok.data?.st
   const hlsProbe = useQuery({
-    queryKey: ['hls-probe', app, room],
-    enabled: Boolean(app && room),
-    queryFn: () => probeHls(hlsPlaylistPath(app!, room!)),
+    queryKey: ['hls-probe', app, room, st ?? ''],
+    enabled: Boolean(app && room) && (!sig || !hlsTok.isPending),
+    queryFn: () => probeHls(withHlsToken(hlsPlaylistPath(app!, room!), st)),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     retry: false,
   })
-  const hlsAvailable = hlsProbe.data?.available === true
+  // DVR window probe (G5): the rewindable playlist, preferred when live.
+  const dvrProbe = useQuery({
+    queryKey: ['hls-dvr-probe', app, room, st ?? ''],
+    enabled: Boolean(app && room) && (!sig || !hlsTok.isPending),
+    queryFn: () => probeHls(withHlsToken(dvrPlaylistPath(app!, room!), st)),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  })
+  const dvr = defaultPlayback(dvrProbe.data) === 'hls'
+  const hlsAvailable = hlsProbe.data?.available === true || dvr
   // The viewer's explicit toggle wins; otherwise default to HLS only when the
   // playlist exists AND looks live (fresh-ish) — see lib/share.defaultPlayback.
+  // A live DVR window is HLS by definition (and what a `?t=` link rewinds).
   const [chosen, setChosen] = useState<'webrtc' | 'hls' | null>(null)
-  const playback = mjpeg ? 'mjpeg' : (chosen ?? defaultPlayback(hlsProbe.data))
+  const playback = mjpeg ? 'mjpeg' : (chosen ?? (dvr ? 'hls' : defaultPlayback(hlsProbe.data)))
 
   function choose(kind: 'webrtc' | 'hls') {
     setChosen(kind)
     // Re-probe on toggle so a playlist that appeared after mount is seen.
-    if (kind === 'hls') void hlsProbe.refetch()
+    if (kind === 'hls') {
+      void hlsProbe.refetch()
+      void dvrProbe.refetch()
+    }
   }
 
   if (!app || !room) {
@@ -174,7 +209,7 @@ export default function PlayPublic() {
 
       {/* Stage + share. */}
       <main className="mx-auto grid w-full max-w-7xl flex-1 gap-5 p-4 sm:p-6 lg:grid-cols-[1fr_320px]">
-        {live.isPending || hlsProbe.isPending ? (
+        {live.isPending || hlsProbe.isPending || dvrProbe.isPending ? (
           /* Don't mount a player until the mode is known (avoids a token mint
              + flicker when the room turns out to be a camera or HLS-only). */
           <div className="relative aspect-video w-full self-start overflow-hidden rounded-xl bg-black/40 ring-1 ring-white/10" />
@@ -184,10 +219,12 @@ export default function PlayPublic() {
           /* HLS playback — resolves the app's player provider (Vidstack, …)
              through the PUBLIC plugins endpoint; video.js is the fallback. */
           <HlsPlayer
-            src={hlsPlaylistPath(app, room)}
+            src={withHlsToken(dvr ? dvrPlaylistPath(app, room) : hlsPlaylistPath(app, room), st)}
             app={app}
             room={room}
             access="public"
+            dvr={dvr}
+            startAt={dvr ? startAt : null}
             className="self-start"
           />
         ) : (
@@ -197,6 +234,7 @@ export default function PlayPublic() {
             access="public"
             exp={exp}
             sig={sig}
+            viewerToken={viewerToken}
             audioOnly={audioOnly}
             audioLabel={room}
             addons={

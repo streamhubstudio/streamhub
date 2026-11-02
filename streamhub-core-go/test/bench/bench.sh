@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Node-vs-Go core benchmark driver (internal design notes).
+# Node-vs-Go core benchmark driver (planning/GO-CORE-BENCHMARK.md).
 # Layout of $ROOT (a scratch dir on the bench box):
 #   streamhub-core/   dist + package*.json + scripts/seed-token.js, `npm ci --omit=dev` (Node 24)
 #                     — the retired NestJS core: build it from branch legacy/node-2.x (tag 2.24.0)

@@ -15,6 +15,13 @@ import {
 } from '@/lib/queryParams'
 import { buildAuditQuery, type AuditQueryInput } from '@/lib/audit'
 import type {
+  Device,
+  DeviceChannel,
+  DeviceCommandRequest,
+  DeviceCommandResult,
+  LinkDeviceChannelRequest,
+} from './types'
+import type {
   AccountInfo,
   App,
   AppPipeline,
@@ -29,6 +36,8 @@ import type {
   CoreBuildInfo,
   CoreChangelog,
   ChangePasswordRequest,
+  Clip,
+  ClipRequest,
   ClusterInfo,
   ClusterNode,
   UpdateNodeRequest,
@@ -85,12 +94,14 @@ import type {
   MetricsHistoryRange,
   MetricsHistoryResponse,
   SessionInfo,
+  TeamInvitation,
   SignupRequest,
   LogQuery,
   LogsPage,
   MintedToken,
   MintTokenRequest,
   PlayToken,
+  HlsToken,
   SignedPlayback,
   RawConfig,
   RecordingHandle,
@@ -979,6 +990,32 @@ const streams = {
   },
 
   /**
+   * G6: cut a clip out of the stream's HLS/DVR segments (async — the clip
+   * starts `queued`; poll clips.get or listen for clip.ready).
+   * POST /apps/:app/streams/:id/clips {from,to} | {eventTs,before,after}.
+   */
+  createClip(app: string, id: string, body: ClipRequest): Promise<Clip> {
+    return request<Clip>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/clips`,
+      { method: 'POST', body },
+    )
+  },
+  /** The stream's clips, newest first. GET /apps/:app/streams/:id/clips. */
+  listClips(app: string, id: string, signal?: AbortSignal): Promise<Clip[]> {
+    return request<Clip[]>(
+      `/apps/${encodeURIComponent(app)}/streams/${encodeURIComponent(id)}/clips`,
+      { signal },
+    )
+  },
+  /** One clip (state + VOD URL once ready). GET /apps/:app/clips/:clipId. */
+  getClip(app: string, clipId: string, signal?: AbortSignal): Promise<Clip> {
+    return request<Clip>(
+      `/apps/${encodeURIComponent(app)}/clips/${encodeURIComponent(clipId)}`,
+      { signal },
+    )
+  },
+
+  /**
    * Get a stream's per-stream plugin opt-out list.
    * GET /apps/:app/streams/:id/plugins → { streamId, disabled }.
    */
@@ -1232,6 +1269,46 @@ const cluster = {
   },
 }
 
+// --- devices (field encoders — app-scoped, features/devices.md) --------------
+
+const devPath = (app: string, id?: string) =>
+  `/apps/${encodeURIComponent(app)}/devices${id ? `/${encodeURIComponent(id)}` : ''}`
+
+const devices = {
+  /** GET /apps/:app/devices (503 while STREAMHUB_DEVICES_ENABLE is off). */
+  list(app: string, signal?: AbortSignal): Promise<Device[]> {
+    return request<Device[]>(devPath(app), { signal })
+  },
+  /** POST /apps/:app/devices/claim — bind the device showing `code`. */
+  claim(app: string, code: string, name?: string): Promise<Device> {
+    return request<Device>(`${devPath(app)}/claim`, {
+      method: 'POST',
+      body: name ? { code, name } : { code },
+    })
+  },
+  rename(app: string, id: string, name: string): Promise<Device> {
+    return request<Device>(devPath(app, id), { method: 'PATCH', body: { name } })
+  },
+  /** DELETE — revoke: credential dead, socket closed, channel ingresses deleted. */
+  revoke(app: string, id: string): Promise<{ id: string; revoked: boolean }> {
+    return request<{ id: string; revoked: boolean }>(devPath(app, id), { method: 'DELETE' })
+  },
+  command(app: string, id: string, body: DeviceCommandRequest): Promise<DeviceCommandResult> {
+    return request<DeviceCommandResult>(`${devPath(app, id)}/commands`, { method: 'POST', body })
+  },
+  linkChannel(app: string, id: string, channel: string, body: LinkDeviceChannelRequest): Promise<DeviceChannel> {
+    return request<DeviceChannel>(`${devPath(app, id)}/channels/${encodeURIComponent(channel)}`, {
+      method: 'PUT',
+      body,
+    })
+  },
+  unlinkChannel(app: string, id: string, channel: string): Promise<void> {
+    return request<void>(`${devPath(app, id)}/channels/${encodeURIComponent(channel)}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
 // --- edge (distributed processing — global/superadmin) ------------------------
 
 const edge = {
@@ -1352,7 +1429,7 @@ const account = {
   get(signal?: AbortSignal): Promise<AccountInfo> {
     return request<AccountInfo>('/account', { signal })
   },
-  /** PATCH /account — update my display name and/or email. */
+  /** PATCH /account — update my display name and/or request an email change (confirmed by mail). */
   update(payload: UpdateAccountRequest): Promise<AccountInfo> {
     return request<AccountInfo>('/account', { method: 'PATCH', body: payload })
   },
@@ -1398,6 +1475,24 @@ const account = {
   /** DELETE /auth/sessions — sign out every OTHER session, keeping this one. */
   revokeOtherSessions(): Promise<{ revoked: number }> {
     return request<{ revoked: number }>('/auth/sessions', { method: 'DELETE' })
+  },
+
+  /** GET /account/invitations — team invitations waiting for my answer. */
+  invitations(signal?: AbortSignal): Promise<TeamInvitation[]> {
+    return request<TeamInvitation[]>('/account/invitations', { signal })
+  },
+  /**
+   * POST /account/invitations/:tenantId/accept|decline — answer one. Accepting
+   * does not move this session to that team.
+   */
+  answerInvitation(
+    tenantId: string,
+    answer: 'accept' | 'decline',
+  ): Promise<{ tenantId: string; status: string }> {
+    return request<{ tenantId: string; status: string }>(
+      `/account/invitations/${encodeURIComponent(tenantId)}/${answer}`,
+      { method: 'POST' },
+    )
   },
 
   // --- Owner item 29: per-user SMTP override ---------------------------------
@@ -1521,6 +1616,11 @@ export interface PlayTokenOptions {
   exp?: string | number
   /** `sig` HMAC from a signed playback URL — rides as ?sig=. */
   sig?: string
+  /**
+   * The viewer's own credential (`?token=` on the /play or /embed URL),
+   * forwarded to the app's play-auth webhook (features.play_auth). Opaque here.
+   */
+  token?: string
   signal?: AbortSignal
 }
 
@@ -1535,7 +1635,33 @@ function playToken(
   // embed is gated by a scoped, expiring token, never a bearer credential.
   return request<PlayToken>(
     `/apps/${encodeURIComponent(app)}/play-token/${encodeURIComponent(room)}`,
-    { auth: false, signal: opts.signal, query: { exp: opts.exp, sig: opts.sig } },
+    {
+      auth: false,
+      signal: opts.signal,
+      query: { exp: opts.exp, sig: opts.sig, token: opts.token },
+    },
+  )
+}
+
+/**
+ * GET /apps/:app/hls-token/:room — PUBLIC (G2). The `?st=` token an app with
+ * public_playback:false needs on its /hls playlist (the core rewrites the
+ * playlist so every segment carries it). Same gate as playToken: the signed
+ * capability (?exp=&sig=), geo, the play-auth webhook. A public app answers
+ * `required: false` with an empty `st`.
+ */
+function hlsToken(
+  app: string,
+  room: string,
+  opts: PlayTokenOptions = {},
+): Promise<HlsToken> {
+  return request<HlsToken>(
+    `/apps/${encodeURIComponent(app)}/hls-token/${encodeURIComponent(room)}`,
+    {
+      auth: false,
+      signal: opts.signal,
+      query: { exp: opts.exp, sig: opts.sig, token: opts.token },
+    },
   )
 }
 
@@ -1562,6 +1688,7 @@ function playTokenSign(
 export const api = {
   playToken,
   playTokenSign,
+  hlsToken,
   auth,
   account,
   teams,
@@ -1585,6 +1712,7 @@ export const api = {
   logs,
   cluster,
   edge,
+  devices,
   security,
   backups,
 }

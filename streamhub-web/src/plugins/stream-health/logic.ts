@@ -7,6 +7,11 @@
  *     GET /apps/:app/plugins/stream-health/live/state?room=overview
  *     → `{ ts, ageMs, payload: { ts, streams: [...] } }`;
  *   - the module's db-backed REST (overview / events / settings).
+ *
+ * Remote probes (3.4, `edge_hls_bases`): the worker also probes every room
+ * THROUGH each configured edge/CDN; those snapshots are keyed
+ * `<room>@<edge>` and carry `origin` / `via` / `url` / `error`.
+ * groupSnapshots() folds them under their origin room for the grid.
  */
 
 export type HealthStatus = 'healthy' | 'degraded' | 'critical' | 'stale'
@@ -20,6 +25,9 @@ export interface StreamFacts {
   sampleRate: number | null
   channels: number | null
   bitrateKbps: number | null
+  /** What the core knows of the publishers: 'none' = the source has no audio
+   * (the egress's silent filler track is not a fault), 'track', or null. */
+  audioSource: string | null
 }
 
 export interface StreamMetrics {
@@ -34,11 +42,27 @@ export interface StreamMetrics {
 }
 
 export interface StreamSnapshot {
+  /** The snapshot key: the room, or `<room>@<edge>` for a remote probe. */
   room: string
   status: HealthStatus
   reasons: string[]
   facts: StreamFacts | null
   metrics: StreamMetrics
+  /** Remote probes only: the on-disk room, the edge name, the probed
+   * playlist URL and the last fetch failure. */
+  origin: string | null
+  via: string | null
+  url: string | null
+  error: string | null
+}
+
+/** One grid card: an origin room and its probes through the edges. */
+export interface StreamGroup {
+  room: string
+  origin: StreamSnapshot | null
+  edges: StreamSnapshot[]
+  /** Worst status of the group (drives the grid order). */
+  status: HealthStatus
 }
 
 /** Worker feed older than this is STALE — grey out, don't trust chips. */
@@ -63,6 +87,7 @@ function parseFacts(v: unknown): StreamFacts | null {
     sampleRate: num(o.sampleRate),
     channels: num(o.channels),
     bitrateKbps: num(o.bitrateKbps),
+    audioSource: str(o.audioSource),
   }
 }
 
@@ -113,22 +138,58 @@ export function parseOverviewLive(
         reasons: Array.isArray(o.reasons) ? o.reasons.map((r) => String(r)) : [],
         facts: parseFacts(o.facts),
         metrics: parseMetrics(o.metrics),
+        origin: str(o.origin),
+        via: str(o.via),
+        url: str(o.url),
+        error: str(o.error),
       })
     }
   }
   return { streams: sortSnapshots(streams), stale }
 }
 
+const RANK: Record<HealthStatus, number> = {
+  critical: 0,
+  degraded: 1,
+  stale: 2,
+  healthy: 3,
+}
+
 /** Worst-first, then alphabetical — the monitor grid order. */
 export function sortSnapshots(list: StreamSnapshot[]): StreamSnapshot[] {
-  const rank: Record<HealthStatus, number> = {
-    critical: 0,
-    degraded: 1,
-    stale: 2,
-    healthy: 3,
-  }
   return [...list].sort(
-    (a, b) => rank[a.status] - rank[b.status] || a.room.localeCompare(b.room),
+    (a, b) => RANK[a.status] - RANK[b.status] || a.room.localeCompare(b.room),
+  )
+}
+
+/**
+ * Fold remote probes under their origin room: one group per room, edges by
+ * name, groups worst-first (a stalled edge surfaces its room) then by room.
+ */
+export function groupSnapshots(list: StreamSnapshot[]): StreamGroup[] {
+  const groups = new Map<string, StreamGroup>()
+  const groupOf = (room: string): StreamGroup => {
+    let g = groups.get(room)
+    if (!g) {
+      g = { room, origin: null, edges: [], status: 'healthy' }
+      groups.set(room, g)
+    }
+    return g
+  }
+  for (const s of list) {
+    if (s.origin) groupOf(s.origin).edges.push(s)
+    else groupOf(s.room).origin = s
+  }
+  for (const g of groups.values()) {
+    g.edges.sort((a, b) => (a.via ?? a.room).localeCompare(b.via ?? b.room))
+    const all = g.origin ? [g.origin, ...g.edges] : g.edges
+    g.status = all.reduce<HealthStatus>(
+      (w, s) => (RANK[s.status] < RANK[w] ? s.status : w),
+      'healthy',
+    )
+  }
+  return [...groups.values()].sort(
+    (a, b) => RANK[a.status] - RANK[b.status] || a.room.localeCompare(b.room),
   )
 }
 
@@ -167,6 +228,17 @@ export function statusDot(status: HealthStatus): string {
 export function formatKbps(v: number | null): string {
   if (v === null) return '—'
   return v >= 1000 ? `${(v / 1000).toFixed(1)} Mbps` : `${v} kbps`
+}
+
+/** "h264/aac"; the audio side says when the SOURCE has no audio at all. */
+export function formatCodecs(
+  f: StreamFacts | null,
+  noAudio: string,
+  noAudioSource: string,
+): string {
+  if (!f) return '—'
+  const audio = f.audioSource === 'none' ? noAudioSource : (f.audioCodec ?? noAudio)
+  return `${f.videoCodec ?? '—'}/${audio}`
 }
 
 export function formatResolution(f: StreamFacts | null): string {

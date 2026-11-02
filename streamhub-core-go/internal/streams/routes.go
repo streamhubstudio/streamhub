@@ -6,10 +6,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 // Module bundles StreamsController + HlsController.
@@ -125,12 +125,14 @@ func (m *Module) Register(a huma.API) {
 			return api.JSON(api.Data[*SnapshotResult]{Data: res}), nil
 		})
 
-	// HlsController: no @RequirePermission (global auth guard only).
+	// HlsController: Node declared no @RequirePermission (any authenticated
+	// principal, any tenant); Go requires stream:start/stop/read (A1,
+	// GO-DIVERGENCES).
 	base := func(ctx context.Context) string {
 		cfg := m.Streams.cfg
 		return BaseURL(cfg.PublicBaseURL, api.Request(ctx), cfg.Host, cfg.Port)
 	}
-	huma.Register(a, *operation("HlsController_start", http.MethodPost, "/apps/{app}/streams/{id}/hls/start", "Start the live HLS egress for a stream room.", http.StatusCreated),
+	huma.Register(a, *authz.Require(operation("HlsController_start", http.MethodPost, "/apps/{app}/streams/{id}/hls/start", "Start the live HLS egress for a stream room.", http.StatusCreated), "stream", "start"),
 		func(ctx context.Context, in *idIn) (*api.Out[api.Envelope[*HlsStartResult]], error) {
 			res, err := m.Hls.Start(ctx, in.App, in.ID, base(ctx))
 			if err != nil {
@@ -138,7 +140,7 @@ func (m *Module) Register(a huma.API) {
 			}
 			return api.OK(res), nil
 		})
-	huma.Register(a, *operation("HlsController_stop", http.MethodPost, "/apps/{app}/streams/{id}/hls/stop", "Stop the live HLS egress for a stream room.", http.StatusOK),
+	huma.Register(a, *authz.Require(operation("HlsController_stop", http.MethodPost, "/apps/{app}/streams/{id}/hls/stop", "Stop the live HLS egress for a stream room.", http.StatusOK), "stream", "stop"),
 		func(ctx context.Context, in *idIn) (*api.Out[api.Envelope[*HlsStopResult]], error) {
 			res, err := m.Hls.Stop(ctx, in.App, in.ID)
 			if err != nil {
@@ -146,7 +148,7 @@ func (m *Module) Register(a huma.API) {
 			}
 			return api.OK(res), nil
 		})
-	huma.Register(a, *operation("HlsController_status", http.MethodGet, "/apps/{app}/streams/{id}/hls", "Live HLS status for a stream.", 0),
+	huma.Register(a, *authz.Require(operation("HlsController_status", http.MethodGet, "/apps/{app}/streams/{id}/hls", "Live HLS status for a stream.", 0), "stream", "read"),
 		func(ctx context.Context, in *idIn) (*api.Out[api.Envelope[*HlsStatusResult]], error) {
 			res, err := m.Hls.Status(ctx, in.App, in.ID, base(ctx))
 			if err != nil {

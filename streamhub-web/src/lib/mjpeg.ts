@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the direct WS MJPEG ingest (ESP32-CAM — see
- * https://streamhub.studio/docs/integrations/ESP32-WS-INGEST).
+ * streamhub-docs/integrations/ESP32-WS-INGEST.md).
  *
  * Two concerns, both dependency-free → node:test-able:
  *  - build the playback / publish URLs of a ws-mjpeg camera (the MJPEG <img>

@@ -300,6 +300,29 @@
       "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes — covered by internal/streamhealth tests"
     },
     {
+      "name": "sh-put-unwrapped",
+      "fingerprint": "sha256:dd38ee0c34d76943",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+        "auth": "globalToken",
+        "body": {
+          "silence_db": -100
+        }
+      },
+      "source": "go",
+      "status": 400,
+      "headers": {
+        "content-type": "application/json;charset=utf-8"
+      },
+      "bodyKind": "json",
+      "body": {
+        "error": "Bad Request",
+        "message": "unknown top-level key 'silence_db': thresholds go inside {\"config\":{…}}",
+        "statusCode": 400
+      }
+    },
+    {
       "name": "sh-put-viewer",
       "fingerprint": "sha256:9043f49dbd560be8",
       "request": {

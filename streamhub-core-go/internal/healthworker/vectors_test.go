@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamhealth"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamhealth"
 )
 
 // Replays testdata/vectors.json, recorded from the Node health-worker by

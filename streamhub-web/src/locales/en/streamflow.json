@@ -60,7 +60,7 @@
   },
   "palette": {
     "title": "Boxes",
-    "dangerous": "Execution node — runs code/commands on the server (enable in Settings)"
+    "dangerous": "Execution node — runs code/commands on the server (enabled by the server operator)"
   },
   "group": {
     "trigger": "Triggers",

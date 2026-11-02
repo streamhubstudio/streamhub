@@ -5,7 +5,7 @@ import (
 	"math/rand/v2"
 	"sort"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
 )
 
 // Pure scheduler logic (edge-scheduler.logic.ts): a deterministic function

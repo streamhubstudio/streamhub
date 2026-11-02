@@ -138,6 +138,7 @@
         "path": "/api/v1/system/settings",
         "auth": "globalToken"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -151,7 +152,7 @@
             "adminUser": "admin",
             "jwtSecretSet": true,
             "smtpConfigured": false,
-            "superadminEmail": "info@streamhub.studio"
+            "superadminEmail": ""
           },
           "cluster": {
             "enabled": false,
@@ -322,6 +323,7 @@
         "path": "/api/v1/system/settings",
         "auth": "adminJwt"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -335,7 +337,7 @@
             "adminUser": "admin",
             "jwtSecretSet": true,
             "smtpConfigured": false,
-            "superadminEmail": "info@streamhub.studio"
+            "superadminEmail": ""
           },
           "cluster": {
             "enabled": false,

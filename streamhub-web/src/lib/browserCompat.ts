@@ -3,7 +3,7 @@
  * quirks, shared by the players (LivePlayer / HlsPlayer / VodPlayer), the
  * Broadcast publisher and the Meeting room.
  *
- * Background (see https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT):
+ * Background (see streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md):
  *  - iOS <video> goes fullscreen unless `playsinline` is set. React's
  *    `playsInline` prop covers modern WebKit; the legacy `webkit-playsinline`
  *    attribute is still needed by some embedded WebViews.

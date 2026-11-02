@@ -40,6 +40,14 @@
     "edit": "Editar",
     "delete": "Eliminar"
   },
+  "cdn": {
+    "title": "Edges CDN",
+    "subtitle": "Nodos caché HLS registrados con install.sh --cdn-edge y su último latido.",
+    "total": "{{count}} de {{of}} reportando",
+    "gbpsOut": "Gbps de salida",
+    "conns": "Conexiones",
+    "badge": "Edge CDN"
+  },
   "relative": {
     "now": "recién",
     "seconds_one": "hace {{count}}s",

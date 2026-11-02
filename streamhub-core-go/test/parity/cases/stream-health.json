@@ -230,6 +230,16 @@
       "skip": "Node bug: VisionController ('apps/:app/plugins/:visionApp', via EdgeModule) registers first and shadows every stream-health route (404 'unknown vision model'); Go serves the real routes \u2014 covered by internal/streamhealth tests"
     },
     {
+      "name": "sh-put-unwrapped",
+      "note": "GO-DIVERGENCE 3.4 (planning/GO-DIVERGENCES.md): thresholds outside the {\"config\":{\u2026}} wrapper are a 400; Node (and Go before 3.4) answered 200 and stored an EMPTY override. Go-only answer (\"source\":\"go\"): the Node oracle never served this route (see the skips above).",
+      "method": "PUT",
+      "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",
+      "auth": "globalToken",
+      "body": {
+        "silence_db": -100
+      }
+    },
+    {
       "name": "sh-put-viewer",
       "method": "PUT",
       "path": "/api/v1/apps/live/plugins/stream-health/streams/room1/settings",

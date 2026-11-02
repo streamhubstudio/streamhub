@@ -14,7 +14,7 @@
     "latencyAlert": {"enabled": true, "thresholdMs": 500, "cooldownSeconds": 0, "intervalSeconds": 5},
     "features": {"chat": true, "publicPlayback": false, "wsIngest": {"enabled": false, "maxCameras": 4, "maxFps": 10, "maxFrameKb": 128, "maxDataBytes": 2048},
                  "drm": {"enabled": true, "provider": "external", "systems": ["playready", "widevine", "playready"], "scheme": "cenc",
-                         "keyServerUrl": " https://keys.example.com ", "keyServerTokenEnv": "DRM_TOKEN",
+                         "keyServerUrl": " https://keys.example.com ", "keyServerTokenEnv": "APP_GOLD_A_DRM_TOKEN",
                          "licenseUrls": {"widevine": "https://wv", "playready": "", "fairplay": ""}, "fairplayCertUrl": "", "failOpen": true}},
     "variables": {"site": "HQ: north", "2": "two", "1": "one", "n": 5, "t": true, "bad-key": "x", "nul": null, "obj": {"a": 1}, "arr": [1, "b", null], "long": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"}
   }]},

@@ -9,20 +9,23 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/web"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/playback"
 )
 
 // Module serves the livekit routes (LiveKitController, RoomsController,
@@ -36,10 +39,13 @@ type Module struct {
 	quotas  Quotas
 	audit   Auditor
 	opt     Optional
+	play    PlaybackGuard
 	log     *slog.Logger
 	stats   *statsSource
 	now     func() time.Time
 	newUUID func() string
+	cuts    bitrateCuts // maxBitrateAccept (publishguard.go)
+	srcMu   sync.Mutex  // serializes the source-track reports (sourcetracks.go)
 }
 
 // New wires the module (and its Service).
@@ -48,7 +54,7 @@ func New(d Deps) *Module {
 	appDB := func(ctx context.Context, app string) (*sql.DB, error) { return d.Store.App(ctx, app) }
 	m := &Module{
 		svc: svc, Auth: NewIngressAuth(appDB), Backup: NewIngressBackup(appDB),
-		cfg: d.Config, apps: d.Apps, quotas: d.Quotas, audit: d.Audit, opt: d.Optional, log: d.Log,
+		cfg: d.Config, apps: d.Apps, quotas: d.Quotas, audit: d.Audit, opt: d.Optional, play: d.Playback, log: d.Log,
 		now: time.Now, newUUID: uuid.NewString,
 	}
 	m.stats = newStatsSource(d.Config, d.Store, svc.clients, d.Log)
@@ -125,6 +131,15 @@ func (m *Module) resolveRoom(ctx context.Context, app, room string) string {
 
 func (m *Module) publicBase() string {
 	return strings.TrimRight(m.cfg.Env("PUBLIC_BASE_URL"), "/")
+}
+
+// hlsBase is the base of an app's /hls playlist URL: a cdn-edge when edge
+// selection is on (Optional.HLSEdge), else publicBase.
+func (m *Module) hlsBase(ctx context.Context, app string) string {
+	if e := get(m.opt.HLSEdge); e != nil {
+		return e.HLSBase(ctx, app, m.publicBase())
+	}
+	return m.publicBase()
 }
 
 type playerURLs struct {
@@ -214,6 +229,9 @@ type roomQueryIn struct {
 	Room string `path:"room"`
 	Exp  string `query:"exp"`
 	Sig  string `query:"sig"`
+	// Token is the viewer's own credential, forwarded verbatim to the app's
+	// play-auth webhook (features.play_auth); ignored without one.
+	Token string `query:"token"`
 }
 
 type roomBodyIn struct {
@@ -258,6 +276,27 @@ type SignedPlayback struct {
 	PlayURL    string `json:"playUrl"`
 	EmbedURL   string `json:"embedUrl"`
 	Iframe     string `json:"iframe"`
+	// G2: the HLS token of a PRIVATE app (public apps need none and omit
+	// these): hlsUrl is the playlist URL with ?st= already appended.
+	HlsToken string `json:"hlsToken,omitempty"`
+	HlsExp   int64  `json:"hlsExp,omitempty"`
+	HlsURL   string `json:"hlsUrl,omitempty"`
+}
+
+// HLSTokenResult is GET hls-token/:room.data.
+type HLSTokenResult struct {
+	App  string `json:"app"`
+	Room string `json:"room"`
+	// Required is false for a public app (St is then "": its /hls needs no token).
+	Required    bool   `json:"required"`
+	St          string `json:"st"`
+	Exp         int64  `json:"exp"`
+	TTLSeconds  int64  `json:"ttlSeconds"`
+	PlaylistURL string `json:"playlistUrl"`
+}
+
+type hlsTokenOut struct {
+	Body api.Data[HLSTokenResult]
 }
 
 func mintTokenRules(b *validate.Body) {
@@ -306,6 +345,18 @@ func (m *Module) registerTokens(a huma.API) {
 			return &corsOut{Body: api.Data[PublicTokenResult]{Data: *res}}, nil
 		})
 
+	huma.Register(a, *corsAnyOrigin(api.Public(op("LiveKitController_hlsToken", http.MethodGet, "/apps/{app}/hls-token/{room}",
+		"Mint the ?st= token the /hls playlist and segments of a room need when the app has public_playback:false (G2). "+
+			"Public — gated like play-token (signed URL ?exp=&sig= for private apps, features.geo, features.play_auth). "+
+			"Public apps answer required:false and an empty st.", "livekit", 0))),
+		func(ctx context.Context, in *roomQueryIn) (*hlsTokenOut, error) {
+			res, err := m.hlsToken(ctx, in)
+			if err != nil {
+				return nil, err
+			}
+			return &hlsTokenOut{Body: api.Data[HLSTokenResult]{Data: *res}}, nil
+		})
+
 	huma.Register(a, *authz.Require(op("LiveKitController_signPlaybackUrl", http.MethodPost, "/apps/{app}/play-token/{room}/sign",
 		"Mint a signed short-TTL playback capability for a room (P0-3).", "livekit", http.StatusCreated), "stream", "read"),
 		func(ctx context.Context, in *roomBodyIn) (*api.Out[api.Data[SignedPlayback]], error) {
@@ -315,7 +366,7 @@ func (m *Module) registerTokens(a huma.API) {
 			if err != nil {
 				return nil, err
 			}
-			res, err := m.SignPlaybackURL(in.App, in.Room, b.Float("ttlSeconds"))
+			res, err := m.SignPlaybackURL(ctx, in.App, in.Room, b.Float("ttlSeconds"))
 			if err != nil {
 				return nil, err
 			}
@@ -340,6 +391,9 @@ func (m *Module) MintTokenRoute(ctx context.Context, app string, b *validate.Bod
 	}
 	// Quota: a publisher token opens a new live stream slot.
 	if canPublish == nil || *canPublish {
+		if err := m.assertPublisherSource(ctx, cfg, app); err != nil {
+			return nil, err
+		}
 		if err := m.quotas.EnforceConcurrentStreams(ctx, p); err != nil {
 			return nil, err
 		}
@@ -421,6 +475,9 @@ func (m *Module) publicToken(ctx context.Context, in *roomQueryIn, mode string) 
 	if err := m.assertPlaybackAllowed(cfg, in.App, in.Room, in.Exp, in.Sig); err != nil {
 		return nil, err
 	}
+	if err := m.checkPlayback(ctx, cfg, in, mode); err != nil {
+		return nil, err
+	}
 	room := namespaceRoom(prefixOf(cfg, in.App), in.Room)
 	f, t := false, true
 	opts := MintTokenOptions{
@@ -439,6 +496,52 @@ func (m *Module) publicToken(ctx context.Context, in *roomQueryIn, mode string) 
 	return &PublicTokenResult{Token: token, App: in.App, Room: room, WsURL: m.cfg.PublicWsURL, Mode: mode}, nil
 }
 
+// maxViewerToken caps the ?token= forwarded to the play-auth webhook.
+const maxViewerToken = 2048
+
+// checkPlayback runs the G2 grant checks (features.geo, the play-auth
+// webhook) for an existing app; no guard or an unknown app → nothing to add.
+func (m *Module) checkPlayback(ctx context.Context, cfg *contracts.AppConfig, in *roomQueryIn, mode string) error {
+	if m.play == nil || cfg == nil {
+		return nil
+	}
+	token := in.Token
+	if len(token) > maxViewerToken {
+		token = token[:maxViewerToken]
+	}
+	return m.play.CheckPlayback(ctx, playback.PlaybackRequest{
+		App: in.App, Room: in.Room, Mode: mode, Token: token, Req: api.Request(ctx),
+	})
+}
+
+// hlsToken is GET /apps/:app/hls-token/:room: the same gate as play-token,
+// then the HLS token bound to the <room> path segment exactly as given (the
+// player fetches /hls/<app>/<room>/…).
+func (m *Module) hlsToken(ctx context.Context, in *roomQueryIn) (*HLSTokenResult, error) {
+	if m.play == nil || m.apps == nil {
+		return nil, httpx.Unavailable("HLS tokens are not available on this node")
+	}
+	cfg, err := m.apps.GetConfig(ctx, in.App)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.assertPlaybackAllowed(cfg, in.App, in.Room, in.Exp, in.Sig); err != nil {
+		return nil, err
+	}
+	if err := m.checkPlayback(ctx, cfg, in, "hls"); err != nil {
+		return nil, err
+	}
+	grant, err := m.play.MintHLS(ctx, in.App, in.Room)
+	if err != nil {
+		return nil, err
+	}
+	playlist := m.hlsBase(ctx, in.App) + "/hls/" + jsx.EncodeURIComponent(in.App) + "/" + jsx.EncodeURIComponent(in.Room) + "/index.m3u8"
+	return &HLSTokenResult{
+		App: in.App, Room: in.Room, Required: grant.Required, St: grant.Token, Exp: grant.Exp,
+		TTLSeconds: grant.TTLSeconds, PlaylistURL: web.WithHLSToken(playlist, grant.Token),
+	}, nil
+}
+
 // assertPlaybackAllowed: public apps pass; private apps need a valid,
 // unexpired signature (403 otherwise, never leaking room existence).
 func (m *Module) assertPlaybackAllowed(cfg *contracts.AppConfig, app, room, exp, sig string) error {
@@ -454,8 +557,9 @@ func (m *Module) assertPlaybackAllowed(cfg *contracts.AppConfig, app, room, exp,
 	return httpx.Forbidden("playback for this app requires a valid signed URL")
 }
 
-// SignPlaybackURL mints a signed playback capability (+ player URLs).
-func (m *Module) SignPlaybackURL(app, room string, ttlSeconds *float64) (*SignedPlayback, error) {
+// SignPlaybackURL mints a signed playback capability (+ player URLs, and the
+// HLS token when the app is private).
+func (m *Module) SignPlaybackURL(ctx context.Context, app, room string, ttlSeconds *float64) (*SignedPlayback, error) {
 	master := m.cfg.JWTSecret
 	if master == "" {
 		return nil, httpx.Unavailable("STREAMHUB_JWT_SECRET is required to mint signed playback URLs")
@@ -467,14 +571,21 @@ func (m *Module) SignPlaybackURL(app, room string, ttlSeconds *float64) (*Signed
 	base := m.publicBase()
 	ea, er := jsx.EncodeURIComponent(app), jsx.EncodeURIComponent(room)
 	embed := base + "/embed/" + ea + "/" + er + "?" + query
-	return &SignedPlayback{
+	out := &SignedPlayback{
 		App: app, Room: room, Exp: exp, TTLSeconds: ttl, Sig: sig,
 		TokenURL: base + "/api/v1/apps/" + ea + "/play-token/" + er + "?" + query,
 		PlayURL:  base + "/play/" + ea + "/" + er + "?" + query,
 		EmbedURL: embed,
 		Iframe: `<iframe src="` + embed + `" width="640" height="360" frameborder="0" ` +
 			`allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`,
-	}, nil
+	}
+	if m.play != nil {
+		if grant, err := m.play.MintHLS(ctx, app, room); err == nil && grant.Required {
+			out.HlsToken, out.HlsExp = grant.Token, grant.Exp
+			out.HlsURL = web.WithHLSToken(m.hlsBase(ctx, app)+"/hls/"+ea+"/"+er+"/index.m3u8", grant.Token)
+		}
+	}
+	return out, nil
 }
 
 // errorsAs is errors.As for *httpx.Error.

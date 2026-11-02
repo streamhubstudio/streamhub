@@ -26,13 +26,13 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logsink"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/mqtt"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logsink"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/mqtt"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 const (
@@ -99,12 +99,14 @@ func New(d Deps) *Service {
 	s := &Service{
 		apps: d.Apps, logs: logsink.Or(d.Logs, d.Log), metrics: d.Metrics, mqtt: d.MQTT, shadow: d.Shadow,
 		Resolve:   security.DefaultHostResolver,
-		Client:    &http.Client{},
 		Sleep:     time.Sleep,
 		Now:       time.Now,
 		NewID:     func() string { return uuid.NewString() },
 		listeners: map[int]Listener{},
 	}
+	// Egress-guarded: the dial re-checks the resolved IP (same Resolve seam)
+	// and re-vets redirects, past the fire-time URL guard (rebinding, 302).
+	s.Client = security.SafeHTTPClient(func(ctx context.Context, host string) ([]string, error) { return s.Resolve(ctx, host) })
 	return s
 }
 

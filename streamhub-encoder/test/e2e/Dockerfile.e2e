@@ -1,0 +1,17 @@
+# e2e test image = the production encoder image + measurement tools
+# (tesseract for burnt-in timecode OCR, tc/netem, jq, curl, srt-tools) and
+# the HLS-push receiver. Build context: streamhub-encoder/
+ARG BASE=enc-encoder:dev
+FROM golang:1.26 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOFLAGS=-buildvcs=false go build -o /out/hlsrecv ./test/e2e/hlsrecv
+
+FROM ${BASE}
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      tesseract-ocr jq curl srt-tools iproute2 iputils-ping bc netcat-openbsd snmptrapd openssl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /out/hlsrecv /usr/bin/hlsrecv

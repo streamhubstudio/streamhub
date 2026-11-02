@@ -7,15 +7,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // SendCommandBody is the POST command body as parsed (JS key order kept).
 //
-// DIVERGENCE (internal design notes): Node's SendCommandDto carries only
+// DIVERGENCE (planning/GO-DIVERGENCES.md): Node's SendCommandDto carries only
 // @ApiProperty decorators, so ValidationPipe({whitelist:true}) strips every
 // property and Node always answers 400 "body must carry an 'agentId'". Go
 // applies the documented contract { agentId, command, args } instead.

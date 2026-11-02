@@ -1,0 +1,73 @@
+{{- if .Values.livekitIngress.enabled }}
+{{- $fullname := include "streamhub.fullname" . -}}
+{{- $i := .Values.livekitIngress -}}
+# LiveKit Ingress — RTMP (1935) / WHIP (8080) / URL pull, host networking on the
+# media nodes: publishers connect to the NODE IP directly (global.mediaHost),
+# and the ingress then publishes into LiveKit over WebRTC. One pod per node.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-ingress
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+spec:
+  replicas: {{ $i.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 0, maxUnavailable: 1 }
+  selector:
+    matchLabels:
+      {{- include "streamhub.selector" (list . "ingress") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "streamhub.selector" (list . "ingress") | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      hostNetwork: {{ $i.hostNetwork }}
+      dnsPolicy: {{ ternary "ClusterFirstWithHostNet" "ClusterFirst" $i.hostNetwork }}
+      {{- include "streamhub.mediaScheduling" (list . $i) | nindent 6 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "streamhub.selector" (list . "ingress") | nindent 18 }}
+        {{- with $i.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: ingress
+          image: {{ include "streamhub.image" $i.image }}
+          imagePullPolicy: {{ $i.image.pullPolicy }}
+          ports:
+            - { name: rtmp, containerPort: {{ $i.rtmpPort }}, protocol: TCP }
+            - { name: whip, containerPort: {{ $i.whipPort }}, protocol: TCP }
+            - { name: relay, containerPort: {{ $i.httpRelayPort }}, protocol: TCP }
+            - { name: metrics, containerPort: {{ $i.prometheusPort }}, protocol: TCP }
+          env:
+            {{- include "streamhub.livekitSecretEnv" . | nindent 12 }}
+            - name: INGRESS_CONFIG_BODY
+              value: |
+                redis:
+                  address: {{ include "streamhub.redisAddress" . }}
+                  password: $(REDIS_PASSWORD)
+                ws_url: {{ include "streamhub.livekitWs" . }}
+                api_key: $(LIVEKIT_API_KEY)
+                api_secret: $(LIVEKIT_API_SECRET)
+                rtmp_port: {{ $i.rtmpPort }}
+                whip_port: {{ $i.whipPort }}
+                http_relay_port: {{ $i.httpRelayPort }}
+                logging:
+                  level: info
+                prometheus_port: {{ $i.prometheusPort }}
+          resources:
+            {{- toYaml $i.resources | nindent 12 }}
+{{- end }}

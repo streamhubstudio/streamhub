@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -19,14 +20,16 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 const (
@@ -97,6 +100,13 @@ func DefaultClientFactory(cfg contracts.S3Config) (Client, Presigner) {
 	}
 	if ep := strings.TrimSpace(cfg.Endpoint); ep != "" {
 		opts.BaseEndpoint = aws.String(ep)
+		// A tenant endpoint: the SDK's default client with the egress-guarded
+		// dial, so the IP actually dialed is re-checked (assertSafeEndpoint
+		// only saw the name once — DNS rebinding). Same opt-out env.
+		guard := &httpx.EgressGuard{AllowPrivate: security.EnvFlag(os.Getenv(security.AllowPrivateS3EndpointEnv))}
+		opts.HTTPClient = awshttp.NewBuildableClient().WithTransportOptions(func(t *http.Transport) {
+			t.DialContext, t.Proxy = guard.DialContext, nil
+		})
 	}
 	c := awss3.New(opts)
 	return c, awss3.NewPresignClient(c)
@@ -140,13 +150,19 @@ func (s *Service) put(ctx context.Context, cfg contracts.S3Config, key, objectKe
 	if contentType == "" {
 		contentType = guessContentType(objectKey)
 	}
-	out, err := s.clientFor(cfg).client.PutObject(ctx, &awss3.PutObjectInput{
+	in := &awss3.PutObjectInput{
 		Bucket:        aws.String(cfg.Bucket),
 		Key:           aws.String(objectKey),
 		Body:          body,
 		ContentLength: aws.Int64(size),
 		ContentType:   aws.String(contentType),
-	})
+	}
+	// s3.storage_class: only a known class reaches the wire (the apps
+	// resolver already drops anything else; this is the last line).
+	if class, ok := NormalizeStorageClass(cfg.StorageClass); ok && class != "" {
+		in.StorageClass = types.StorageClass(class)
+	}
+	out, err := s.clientFor(cfg).client.PutObject(ctx, in)
 	if err != nil {
 		s.onUpload(cfg.Provider, false, 0)
 		return nil, wrap(err, failMsg+objectKey)

@@ -723,15 +723,16 @@
         "path": "/api/v1/apps/live/streams/nope/hls",
         "auth": "strViewerJwt"
       },
-      "status": 404,
+      "source": "go",
+      "status": 403,
       "headers": {
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "Not Found",
-        "message": "stream 'nope' not found",
-        "statusCode": 404
+        "error": "Forbidden",
+        "message": "app 'live' is outside tenant '{{ownerTenantId}}'",
+        "statusCode": 403
       }
     },
     {

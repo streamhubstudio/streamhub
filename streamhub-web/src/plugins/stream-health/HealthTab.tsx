@@ -10,6 +10,10 @@
  *     (PUT …/streams/:room/settings — applied live by the worker).
  *   - events: the recent health.* transition history (per-app db).
  *
+ * Remote probes (3.4, `edge_hls_bases`) are grouped under their room: one
+ * row per edge below the room's card; their drill-down edits / lists the
+ * ORIGIN room's thresholds and events (events carry data.via).
+ *
  * Data in:
  *   GET  …/plugins/stream-health/live/state?room=overview   (worker feed)
  *   GET  …/plugins/stream-health/overview                   (db tiles)
@@ -25,15 +29,18 @@ import {
   buildOverride,
   formFromOverride,
   formatAgo,
+  formatCodecs,
   formatDb,
   formatKbps,
   formatMs,
   formatResolution,
+  groupSnapshots,
   parseOverviewLive,
   statusDot,
   statusTone,
   THRESHOLD_KEYS,
   THRESHOLD_BOUNDS,
+  type StreamGroup,
   type StreamSnapshot,
   type ThresholdKey,
 } from './logic.ts'
@@ -252,6 +259,11 @@ function EventsTable({ app, room }: { app: string; room?: string }) {
                 <span className="font-mono text-xs">{r.event}</span>
               </td>
               <td className="py-1.5 text-xs text-gray-400">
+                {typeof r.data.via === 'string' && (
+                  <span className="mr-1.5 font-mono text-sky-400">
+                    {t('edges.via', { edge: r.data.via })}
+                  </span>
+                )}
                 {r.reasons ?? (typeof r.data.reason === 'string' ? r.data.reason : '')}
               </td>
             </tr>
@@ -290,11 +302,7 @@ function StreamCard({
         <Metric label={t('metric.resolution')} value={formatResolution(snap.facts)} />
         <Metric
           label={t('metric.codecs')}
-          value={
-            snap.facts
-              ? `${snap.facts.videoCodec ?? '—'}/${snap.facts.audioCodec ?? t('metric.noAudio')}`
-              : '—'
-          }
+          value={formatCodecs(snap.facts, t('metric.noAudio'), t('metric.noAudioSource'))}
         />
         <Metric label={t('metric.bitrate')} value={formatKbps(snap.metrics.measuredKbps)} />
         <Metric label={t('metric.volume')} value={formatDb(snap.metrics.meanDb)} />
@@ -308,6 +316,62 @@ function StreamCard({
   )
 }
 
+/** The room's probes through the edges, one compact row each. */
+function EdgeRows({
+  edges,
+  onSelect,
+}: {
+  edges: StreamSnapshot[]
+  onSelect: (key: string) => void
+}) {
+  const { t } = useTranslation('streamHealth')
+  return (
+    <div className="flex flex-col gap-1 rounded-xl border p-2 border-gray-800">
+      <span className="px-1 text-[10px] uppercase tracking-wide text-gray-400">
+        {t('edges.title')}
+      </span>
+      {edges.map((e) => (
+        <button
+          key={e.room}
+          type="button"
+          onClick={() => onSelect(e.room)}
+          data-testid={`health-edge-${e.room}`}
+          className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-gray-800"
+        >
+          <span className="truncate font-mono text-fg">{e.via ?? e.room}</span>
+          <span className="flex items-center gap-2 text-gray-400">
+            {e.error ? (
+              <span className="text-red-400">{e.error}</span>
+            ) : (
+              <span className="tabular-nums">{formatAgo(e.metrics.secondsSinceAdvance)}</span>
+            )}
+            <StatusChip status={e.status} />
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function GroupCard({
+  group,
+  onSelect,
+}: {
+  group: StreamGroup
+  onSelect: (key: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {group.origin ? (
+        <StreamCard snap={group.origin} onClick={() => onSelect(group.origin!.room)} />
+      ) : (
+        <span className="px-1 font-mono text-sm font-semibold text-fg">{group.room}</span>
+      )}
+      {group.edges.length > 0 && <EdgeRows edges={group.edges} onSelect={onSelect} />}
+    </div>
+  )
+}
+
 function DrillDown({
   app,
   snap,
@@ -318,6 +382,8 @@ function DrillDown({
   onBack: () => void
 }) {
   const { t } = useTranslation('streamHealth')
+  // a remote probe's thresholds and events are its origin room's
+  const room = snap.origin ?? snap.room
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
@@ -331,16 +397,19 @@ function DrillDown({
         <span className="font-mono text-base font-semibold text-fg">{snap.room}</span>
         <StatusChip status={snap.status} />
       </div>
+      {snap.via && (
+        <p className="text-xs text-gray-400">
+          <span className="font-mono text-sky-400">{t('edges.via', { edge: snap.via })}</span>
+          {snap.url && <span className="ml-2 break-all font-mono">{snap.url}</span>}
+          {snap.error && <span className="ml-2 text-red-400">{snap.error}</span>}
+        </p>
+      )}
       <ReasonBadges reasons={snap.reasons} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label={t('metric.resolution')} value={formatResolution(snap.facts)} />
         <Metric
           label={t('metric.codecs')}
-          value={
-            snap.facts
-              ? `${snap.facts.videoCodec ?? '—'}/${snap.facts.audioCodec ?? t('metric.noAudio')}`
-              : '—'
-          }
+          value={formatCodecs(snap.facts, t('metric.noAudio'), t('metric.noAudioSource'))}
         />
         <Metric label={t('metric.bitrate')} value={formatKbps(snap.metrics.measuredKbps)} />
         <Metric
@@ -360,11 +429,11 @@ function DrillDown({
       </div>
       <section className="rounded-xl border p-4 border-gray-700">
         <h3 className="mb-3 text-sm font-semibold text-fg">{t('thresholds.title')}</h3>
-        <ThresholdEditor app={app} room={snap.room} />
+        <ThresholdEditor app={app} room={room} />
       </section>
       <section className="rounded-xl border p-4 border-gray-700">
         <h3 className="mb-3 text-sm font-semibold text-fg">{t('events.roomTitle')}</h3>
-        <EventsTable app={app} room={snap.room} />
+        <EventsTable app={app} room={room} />
       </section>
     </div>
   )
@@ -419,6 +488,7 @@ export function HealthTab({ ctx }: PluginComponentProps) {
   const current = selected
     ? (streams.find((s) => s.room === selected) ?? null)
     : null
+  const groups = groupSnapshots(streams)
 
   return (
     <div className="flex flex-col gap-5">
@@ -444,7 +514,7 @@ export function HealthTab({ ctx }: PluginComponentProps) {
         </nav>
         <div className="flex items-center gap-4 text-xs text-gray-400">
           {today !== null && <span>{t('tiles.today', { count: today })}</span>}
-          <span>{t('tiles.tracked', { count: streams.length })}</span>
+          <span>{t('tiles.tracked', { count: groups.length })}</span>
           {stale && (
             <span className="rounded bg-amber-500/15 px-2 py-0.5 font-medium text-amber-400">
               {t('tiles.stale')}
@@ -463,8 +533,8 @@ export function HealthTab({ ctx }: PluginComponentProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {streams.map((s) => (
-            <StreamCard key={s.room} snap={s} onClick={() => setSelected(s.room)} />
+          {groups.map((g) => (
+            <GroupCard key={g.room} group={g} onSelect={setSelected} />
           ))}
         </div>
       )}

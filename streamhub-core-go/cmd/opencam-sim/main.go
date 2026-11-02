@@ -24,7 +24,7 @@ import (
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/cameras/opencamsim"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/cameras/opencamsim"
 )
 
 func main() {

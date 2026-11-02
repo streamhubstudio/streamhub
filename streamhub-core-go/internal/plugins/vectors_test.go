@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Node-generated vectors (testdata/gen.js, run against the compiled
@@ -74,11 +74,18 @@ func TestSpawnVectors(t *testing.T) {
 		}
 		got := meta.Worker.Spawn(ctx)
 		if v.ID == "stream-health" {
-			// Deliberate divergence (internal design notes): Node spawned
+			// Deliberate divergence (planning/GO-DIVERGENCES.md): Node spawned
 			// `node health-worker/src/main.js` in health-worker/; Go spawns
 			// its own `health-worker` subcommand in the app dir. The env
 			// contract stays locked to the Node vector.
 			v.Command, v.Args, v.Cwd = "/app/streamhub-core", []string{"health-worker"}, new(string)
+			// 3.4 added the edge_hls_bases config key (remote probes): its
+			// default rides along in HEALTH_CONFIG_JSON after the Node keys.
+			for i, e := range v.Env {
+				if e[0] == "HEALTH_CONFIG_JSON" {
+					v.Env[i][1] = strings.TrimSuffix(e[1], "}") + `,"edge_hls_bases":""}`
+				}
+			}
 		}
 		env := make([][2]string, len(got.Env))
 		for i, e := range got.Env {

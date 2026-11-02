@@ -7,10 +7,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
 )
 
 var dbIDRE = regexp.MustCompile(`(?i)^[a-z0-9][a-z0-9_-]*$`)
@@ -28,8 +28,8 @@ func actor(ctx context.Context) string {
 
 // Register implements api.Module (BackupsController, global scope only).
 func (s *Service) Register(a huma.API) {
-	huma.Register(a, *op("BackupsController_list", http.MethodGet, "/system/backups",
-		"List available snapshots per database plus the effective backup settings."),
+	huma.Register(a, *api.Global(op("BackupsController_list", http.MethodGet, "/system/backups",
+		"List available snapshots per database plus the effective backup settings.")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[Overview]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err
@@ -41,8 +41,8 @@ func (s *Service) Register(a huma.API) {
 			return api.OK(ov), nil
 		})
 
-	huma.Register(a, *op("BackupsController_run", http.MethodPost, "/system/backups",
-		"Trigger an on-demand backup NOW (VACUUM INTO + gzip of every SQLite DB, then prune)."),
+	huma.Register(a, *api.Global(op("BackupsController_run", http.MethodPost, "/system/backups",
+		"Trigger an on-demand backup NOW (VACUUM INTO + gzip of every SQLite DB, then prune).")),
 		func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[RunResult]], error) {
 			if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 				return nil, err
@@ -51,8 +51,8 @@ func (s *Service) Register(a huma.API) {
 			return api.OK(s.RunBackup(context.WithoutCancel(ctx), "manual", actor(ctx))), nil
 		})
 
-	huma.Register(a, *op("BackupsController_restore", http.MethodPost, "/system/backups/restore",
-		"Restore a snapshot over the LIVE database (destructive; requires confirm:true)."),
+	huma.Register(a, *api.Global(op("BackupsController_restore", http.MethodPost, "/system/backups/restore",
+		"Restore a snapshot over the LIVE database (destructive; requires confirm:true).")),
 		func(ctx context.Context, in *api.RawBodyInput) (*api.Out[api.Envelope[RestoreResult]], error) {
 			b, err := validate.Parse(in.RawBody)
 			if err != nil {

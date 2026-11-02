@@ -7,8 +7,8 @@ transcoding, structured logs, snapshots, signed callbacks, RBAC + quotas and Pro
 metrics — behind a **single domain** with automatic TLS.
 
 This file is the top-level map. The **full, diagrammed architecture** lives in
-[`streamhub-docs/architecture/`](https://streamhub.studio/docs/architecture/README); operations
-runbooks live in [`streamhub-docs/operations/`](https://streamhub.studio/docs/operations/README).
+[`streamhub-docs/architecture/`](./streamhub-docs/architecture/README.md); operations
+runbooks live in [`streamhub-docs/operations/`](./streamhub-docs/operations/README.md).
 
 > **Naming:** product = **StreamHub**; repo = `vision-media-server`. On the production host
 > `stream01` some dirs/units still carry the historical `skyline-*` prefix (aliases).
@@ -54,7 +54,7 @@ flowchart TB
 binary from `streamhub-core-go/`; serves API + compiled React SPA + HLS + SDK + samples +
 `/metrics`). Two deploy shapes: **Docker Compose + Caddy** (default) or **systemd + nginx +
 certbot** (plain-server: `deploy/make-core-bundle.sh` + `deploy/deploy-core.sh`). Details →
-[architecture/services.md](https://streamhub.studio/docs/architecture/services).
+[architecture/services.md](./streamhub-docs/architecture/services.md).
 
 **The core (3.x) is Go.** The NestJS core (2.x) was retired from `main` (branch
 `legacy/node-2.x`, tag `2.24.0`); its responses to the parity corpus are recorded in
@@ -62,7 +62,7 @@ certbot** (plain-server: `deploy/make-core-bundle.sh` + `deploy/deploy-core.sh`)
 (status, headers, normalized JSON — CI job `parity`). The Go core opens the 2.x
 `DATA_DIR` and SQLite schema unchanged, reads the same `.env`, and keeps every `/api/v1`
 contract; deliberate deviations (Node bugs fixed, security hardening, irreproducible runtime
-facts) are listed in internal design notes.
+facts) are listed in `planning/GO-DIVERGENCES.md`.
 
 ## Data — per-app SQLite
 
@@ -70,7 +70,7 @@ A **minimal global** `data/streamhub.db` (tenants, users, memberships, quotas, a
 `nodes` cluster registry, `apps` pointer, server_logs) + **one `apps/<app>/app.db` per app**
 owning all app-scoped state (streams, vods, ingress_auth). The global→per-app **split
 migration** runs idempotently at boot after a `VACUUM INTO` backup of the global DB. Full ERD
-+ flow → [architecture/data-model.md](https://streamhub.studio/docs/architecture/data-model).
++ flow → [architecture/data-model.md](./streamhub-docs/architecture/data-model.md).
 
 ## Target cluster (origin + edge)
 
@@ -79,18 +79,18 @@ Single-node today; designed for an **origin (master) + edge** cluster: a `nodes`
 via shared redis), a control-plane **router**, and pooled ingress/egress workers.
 **Reality check:** WebRTC does not scale to 100k+ viewers — the design pairs **origin WebRTC
 (interactive)** with **LL-HLS + CDN (mass audience)**. Full design →
-[architecture/cluster.md](https://streamhub.studio/docs/architecture/cluster).
+[architecture/cluster.md](./streamhub-docs/architecture/cluster.md).
 
 ## Observability
 
 streamhub-core exposes Prometheus at `/metrics` (root path; optional `METRICS_TOKEN`);
 LiveKit exposes its own native metrics (`prometheus_port`). Prometheus scrapes both, Grafana
 on top. Catalog + setup →
-[operations/OBSERVABILITY.md](https://streamhub.studio/docs/operations/OBSERVABILITY).
+[operations/OBSERVABILITY.md](./streamhub-docs/operations/OBSERVABILITY.md).
 
 ## See also
 
-- Operations: [DEPLOY](https://streamhub.studio/docs/operations/DEPLOY) ·
-  [RUNBOOK](https://streamhub.studio/docs/operations/RUNBOOK) ·
-  [ENV](https://streamhub.studio/docs/operations/ENV)
-- API & config: [docs](https://streamhub.studio/docs/README)
+- Operations: [DEPLOY](./streamhub-docs/operations/DEPLOY.md) ·
+  [RUNBOOK](./streamhub-docs/operations/RUNBOOK.md) ·
+  [ENV](./streamhub-docs/operations/ENV.md)
+- API & config: [`streamhub-docs/`](./streamhub-docs/README.md)

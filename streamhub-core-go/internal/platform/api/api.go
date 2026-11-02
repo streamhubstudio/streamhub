@@ -16,8 +16,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Prefix is the global API prefix (GLOBAL_PREFIX in main.ts).
@@ -47,6 +47,33 @@ func Public(op *huma.Operation) *huma.Operation {
 	return op
 }
 
+// IsPublic reports whether op is marked with Public.
+func IsPublic(op *huma.Operation) bool {
+	pub, _ := op.Metadata[metaPublic].(bool)
+	return pub
+}
+
+const metaGlobal = "global"
+
+// Global declares a global-scope surface: only a superadmin or a global
+// token may call it. It is a declaration, not the check — the handler
+// enforces it with RequireGlobal, after its own body validation (Node's
+// order). cmd/streamhub's guard-coverage test reads it to prove every
+// operation declares who may call it, and checks it against the handlers.
+func Global(op *huma.Operation) *huma.Operation {
+	if op.Metadata == nil {
+		op.Metadata = map[string]any{}
+	}
+	op.Metadata[metaGlobal] = true
+	return op
+}
+
+// IsGlobal reports whether op is marked with Global.
+func IsGlobal(op *huma.Operation) bool {
+	g, _ := op.Metadata[metaGlobal].(bool)
+	return g
+}
+
 // Bearer marks an operation as requiring the bearer token (OpenAPI only; the
 // guard enforces auth on every non-public operation regardless).
 func Bearer(op *huma.Operation) *huma.Operation {
@@ -54,10 +81,19 @@ func Bearer(op *huma.Operation) *huma.Operation {
 	return op
 }
 
+// NoDocs is a New option that mounts neither the OpenAPI document, the docs
+// UI nor the schemas (STREAMHUB_API_DOCS_PUBLIC=false, security 3.3.4): the
+// paths then 404 like any unmounted route. The in-memory spec (a.OpenAPI())
+// is still built.
+func NoDocs(cfg *huma.Config) {
+	cfg.OpenAPIPath, cfg.DocsPath, cfg.SchemasPath = "", "", ""
+}
+
 // New creates the huma API on mux with the Nest-compatible conventions:
 // OpenAPI at /api/v1/openapi.json, docs at /api/v1/docs, no $schema field or
-// Link header injection, and Nest-shaped errors.
-func New(mux *http.ServeMux, version string) huma.API {
+// Link header injection, and Nest-shaped errors. opts tweak the config last
+// (NoDocs).
+func New(mux *http.ServeMux, version string, opts ...func(*huma.Config)) huma.API {
 	httpx.InstallHumaErrors()
 	cfg := huma.DefaultConfig("StreamHub core API", version)
 	cfg.Info.Description = "Management layer over LiveKit (AntMedia-style). SPEC §6."
@@ -69,6 +105,9 @@ func New(mux *http.ServeMux, version string) huma.API {
 		"bearer": {Type: "http", Scheme: "bearer"},
 	}
 	cfg.OnAddOperation = append(cfg.OnAddOperation, OptionalRawBody)
+	for _, o := range opts {
+		o(&cfg)
+	}
 	return humago.New(mux, cfg)
 }
 

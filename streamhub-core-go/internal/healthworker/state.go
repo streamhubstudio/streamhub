@@ -3,8 +3,8 @@ package healthworker
 import (
 	"math"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamhealth"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamhealth"
 )
 
 // Port of state.js: the per-room threshold state machine (time is an
@@ -14,6 +14,12 @@ import (
 // discontinuity (pulse, ≤ 1 event per DiscontinuityCooldownSec). Rollup:
 // critical when stalled or ≥ 2 issues, degraded for 1, healthy after
 // recover_samples clean samples; health.degraded fires on every worsening.
+//
+// NoAudioSource (3.4, not in the Node port): the core says the room's
+// publishers carry no audio track, so neither a missing track nor the
+// egress's injected silent AAC (−91 dB) is a fault — the audio detector is
+// off for that sample (an open audio_lost closes with audio_recovered
+// {reason: no_audio_source}).
 
 // DiscontinuityCooldownSec rate-limits health.discontinuity.
 const DiscontinuityCooldownSec = 60
@@ -46,6 +52,7 @@ type Sample struct {
 	MeanDb               *float64
 	DesyncMs             *float64
 	MeasuredKbps         *float64
+	NoAudioSource        bool
 }
 
 // Event is one emitted domain event (data keeps the Node key order).
@@ -97,7 +104,14 @@ func Evaluate(st *RoomState, s Sample, t streamhealth.HealthThresholds, nowMs fl
 
 	// audio (level)
 	audioIssue := ""
-	if s.HasAudioTrack != nil && !*s.HasAudioTrack {
+	if s.NoAudioSource {
+		// detector off (see the package comment)
+		st.SilentSinceMs, st.AudioCleanStreak = nil, 0
+		if st.AudioLost {
+			st.AudioLost = false
+			emit("health.audio_recovered", obj("reason", "no_audio_source"))
+		}
+	} else if s.HasAudioTrack != nil && !*s.HasAudioTrack {
 		audioIssue = "audio_missing"
 		st.SilentSinceMs = nil
 	} else if s.MeanDb != nil {
@@ -113,7 +127,7 @@ func Evaluate(st *RoomState, s Sample, t streamhealth.HealthThresholds, nowMs fl
 			st.SilentSinceMs = nil
 		}
 	}
-	audioObserved := (s.HasAudioTrack != nil && !*s.HasAudioTrack) || s.MeanDb != nil
+	audioObserved := !s.NoAudioSource && ((s.HasAudioTrack != nil && !*s.HasAudioTrack) || s.MeanDb != nil)
 	switch {
 	case audioIssue != "":
 		reasons = append(reasons, audioIssue)

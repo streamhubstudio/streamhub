@@ -60,7 +60,7 @@
   },
   "palette": {
     "title": "Cajas",
-    "dangerous": "Nodo de ejecución — corre código/comandos en el servidor (activá en Ajustes)"
+    "dangerous": "Nodo de ejecución — corre código/comandos en el servidor (lo habilita el operador del servidor)"
   },
   "group": {
     "trigger": "Disparadores",

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 const genericAck = `{"data":{"message":"If that email is valid, we just sent a sign-in link."}}`
@@ -17,10 +17,11 @@ func TestMagicLink(t *testing.T) {
 	s := newStack(t)
 	ctx := context.Background()
 	t.Setenv("STREAMHUB_APP_URL", "https://dash.example/")
+	t.Setenv("STREAMHUB_PUBLIC_REGISTRATION", "1") // magic links create accounts only with signup on
 
 	s.expect(s.call("POST", "/auth/magic-link", "", `{"email":"New@X.io"}`), 200, genericAck)
-	if u := s.mail.urls[0]; !strings.HasPrefix(u, "https://dash.example/auth/magic?token=") || s.mail.contexts[0].UserID != "" {
-		t.Fatalf("%s %+v", u, s.mail.contexts)
+	if u := s.mail.urls[0]; !strings.HasPrefix(u, "https://dash.example/auth/magic?token=") || s.mail.to[0] != "new@x.io" {
+		t.Fatalf("%s %+v", u, s.mail.to)
 	}
 	token := s.mail.lastToken(t)
 	var stored string
@@ -48,12 +49,8 @@ func TestMagicLink(t *testing.T) {
 	s.expect(s.call("POST", "/auth/magic/verify", "", `{"token":"tampered-token-123"}`), 401, `"Invalid or expired link"`)
 	s.expect(s.call("POST", "/auth/magic/verify", "", `{}`), 400, `"token must be a string"`)
 
-	// The existing user's id is the SMTP-resolution context of their next link.
 	s.g.Exec(`UPDATE magic_tokens SET created_at = '2000-01-01T00:00:00.000Z'`)
 	s.call("POST", "/auth/magic-link", "", `{"email":"new@x.io"}`)
-	if s.mail.contexts[len(s.mail.contexts)-1].UserID != u.ID {
-		t.Fatal("holder context")
-	}
 
 	// Expired link.
 	s.g.Exec(`UPDATE magic_tokens SET created_at = '2000-01-01T00:00:00.000Z', expires_at = '2000-01-01T00:15:00.000Z'`)
@@ -83,11 +80,9 @@ func TestMagicLinkSuperadminAndPending(t *testing.T) {
 		s.call("POST", "/auth/magic-link", "", `{"email":"`+email+`"}`)
 		return s.call("POST", "/auth/magic/verify", "", `{"token":"`+s.mail.lastToken(t)+`"}`)
 	}
-	r := verify("info@streamhub.studio")
-	s.expect(s.call("GET", "/auth/me", r.str("data.token"), ""), 200, `"userId":"admin"`, `"via":"admin_jwt"`)
 	t.Setenv("STREAMHUB_SUPERADMIN_EMAIL", "Boss@X.io")
-	r = verify("boss@x.io")
-	s.expect(s.call("GET", "/auth/me", r.str("data.token"), ""), 200, `"isSuperadmin":true`)
+	r := verify("boss@x.io")
+	s.expect(s.call("GET", "/auth/me", r.str("data.token"), ""), 200, `"userId":"admin"`, `"via":"admin_jwt"`, `"isSuperadmin":true`)
 
 	team, _ := s.ten.CreateTeam(ctx, "T", "")
 	id, _ := s.ten.CreateUser(ctx, tenancy.CreateUserInput{Email: "inv@x.io", Status: "pending"})
@@ -107,7 +102,9 @@ func TestAccountAnd2FA(t *testing.T) {
 
 	s.expect(s.call("GET", "/account", tok, ""), 200, `"email":"me@x.io"`, `"hasPassword":true`, `"twoFactorEnabled":false`, `"status":"active"`, `"role":"owner"`, `"error":null`)
 	s.expect(s.call("PATCH", "/account", tok, `{"name":"  Me  ","email":" ME2@X.io "}`), 400, `"email must be an email"`)
-	s.expect(s.call("PATCH", "/account", tok, `{"name":"  Me  ","email":"ME2@X.io"}`), 200, `"name":"Me"`, `"email":"me2@x.io"`)
+	s.expect(s.call("PATCH", "/account", tok, `{"name":"  Me  ","email":"ME2@X.io"}`), 200, `"name":"Me"`, `"email":"me@x.io"`, `"pendingEmail":"me2@x.io"`)
+	s.expect(s.call("POST", "/auth/magic/verify", "", `{"token":"`+s.mail.lastToken(t)+`"}`), 200) // confirms it
+	s.expect(s.call("GET", "/account", tok, ""), 200, `"email":"me2@x.io"`)
 	s.expect(s.call("PATCH", "/account", tok, `{"email":"taken@x.io"}`), 400, `"email already in use"`)
 	s.expect(s.call("PATCH", "/account", tok, `{"email":"root@x.io"}`), 400, `"email already in use"`)
 	s.expect(s.call("PATCH", "/account", tok, `{"name":""}`), 200, `"name":null`)
@@ -204,8 +201,8 @@ func TestTeamsAndInvites(t *testing.T) {
 	// Tenant invites.
 	inv := s.call("POST", "/tenant/invites", owner, `{"email":"Inv@X.io","role":"editor"}`)
 	s.expect(inv, 201, `"email":"inv@x.io"`, `"role":"editor"`, `"emailSent":true`, `"invitedAt":"`)
-	if s.mail.contexts[len(s.mail.contexts)-1].UserID != s.ten.GetUserByEmail(ctx, "owner@x.io").ID {
-		t.Fatal("inviter's own SMTP context")
+	if s.mail.to[len(s.mail.to)-1] != "inv@x.io" {
+		t.Fatal("invite recipient")
 	}
 	inviteLink := s.mail.lastToken(t)
 	s.expect(s.call("POST", "/tenant/invites", owner, `{"email":"inv@x.io"}`), 400, `"that email is already a member"`)

@@ -1,0 +1,224 @@
+# =============================================================================
+# StreamHub Helm chart — values.
+# Full guide (topology, limits, what was validated): streamhub-docs/operations/HELM.md
+#
+# Shape (mirrors docker-compose.yml):
+#   core      StatefulSet (1 replica, pod network) — REST API + dashboard + HLS,
+#             DATA_DIR on a PVC (SQLite DBs, recordings, HLS segments)
+#   livekit   host-network pods on media nodes (signaling 7880, media 7881/tcp + 7882/udp)
+#   ingress   host-network pods on media nodes (RTMP 1935, WHIP 8080) — LiveKit Ingress
+#   egress    host-network pod ON THE CORE'S NODE (it writes into the core's PVC)
+#   redis     StatefulSet (pod network, password-protected)
+#   Ingress   HTTP(S) for the dashboard/API + /rtc (LiveKit signaling websocket)
+# =============================================================================
+
+nameOverride: ""
+fullnameOverride: ""
+imagePullSecrets: []
+
+# ---- public endpoint ------------------------------------------------------------
+global:
+  # Public hostname of the dashboard, the API and the /rtc signaling (served
+  # through the Kubernetes Ingress below). Required for anything but a lab.
+  domain: streamhub.example.com
+  # true → https:// + wss:// public URLs (TLS terminated by the Ingress).
+  # false → http:// + ws:// (plain-HTTP lab / TLS terminated elsewhere).
+  tls: true
+  # Host that RTMP (1935) / WHIP (8080) clients use. Those ports are served by
+  # the host-network ingress pods, i.e. straight on a MEDIA NODE's IP — not
+  # through the Ingress. Point a DNS record at your media node(s). Empty = domain.
+  mediaHost: ""
+
+# ---- secrets ------------------------------------------------------------------------
+# The chart generates every secret the installer generates (same formats) ONCE
+# and keeps them across upgrades (lookup of the live Secret; the Secret also
+# survives `helm uninstall` via helm.sh/resource-policy: keep). Set a value here
+# to pin it, or point existingSecret at your own Secret.
+secrets:
+  # Name of an existing Secret with ALL of these keys:
+  #   LIVEKIT_API_KEY LIVEKIT_API_SECRET STREAMHUB_JWT_SECRET ADMIN_USER ADMIN_PASS
+  #   STREAMHUB_API_TOKEN METRICS_TOKEN STREAMHUB_CLUSTER_TOKEN REDIS_PASSWORD
+  # (keys map 1:1 to the core's env vars — see streamhub-docs/operations/ENV.md).
+  existingSecret: ""
+  adminUser: admin
+  adminPass: ""             # break-glass dashboard password (generated: 20 chars)
+  apiToken: ""              # global sk_ API token, seeded at boot (generated: sk_ + 43)
+  livekitApiKey: ""         # generated: API + 12
+  livekitApiSecret: ""      # generated: 48
+  jwtSecret: ""             # generated: 48
+  metricsToken: ""          # generated: mtk_ + 28
+  clusterToken: ""          # generated: clt_ + 32
+  redisPassword: ""         # generated: 32
+
+# ---- scheduling shared by the host-network media pods (livekit + ingress) ---------
+# Host networking binds the pod straight onto the node's ports, so dedicate
+# nodes to media: label them and (optionally) taint them, e.g.
+#   kubectl label node <node> streamhub.io/media=true
+#   kubectl taint node <node> streamhub.io/media=true:NoSchedule
+# and set:
+#   nodeSelector: { streamhub.io/media: "true" }
+#   tolerations: [{ key: streamhub.io/media, operator: Equal, value: "true", effect: NoSchedule }]
+media:
+  nodeSelector: {}
+  tolerations: []
+
+# ---- core (streamhub-core) ------------------------------------------------------------
+core:
+  image:
+    # There is no public registry image yet: build it with
+    #   docker build -f deploy/Dockerfile -t <registry>/streamhub-core:<ver> .
+    # and push it to a registry your cluster can pull from (or `kind load`/`k3s ctr import`).
+    repository: streamhub-core
+    tag: ""                 # default: .Chart.AppVersion
+    pullPolicy: IfNotPresent
+  # Plain env for the core (anything from streamhub-docs/operations/ENV.md).
+  # HOST/PORT/DATA_DIR/LIVEKIT_URL/REDIS_URL/public URLs are set by the chart.
+  env:
+    LOG_LEVEL: info
+    NODE_ENV: production
+    STREAMHUB_AUTHZ_ENFORCE: "on"
+  extraEnv: []              # full EnvVar objects (valueFrom etc.)
+  extraEnvFrom: []          # e.g. [{secretRef: {name: streamhub-smtp}}]
+  # Seed the global sk_ API token (secrets.apiToken) into the DB before the core
+  # starts — `streamhub-core seed-token`, a no-op when one already exists.
+  seedToken: true
+  persistence:
+    # DATA_DIR (/data): SQLite DBs, recordings, HLS, snapshots, the SDK copy.
+    # ReadWriteOnce is enough: egress is scheduled on the core's node and mounts
+    # the SAME claim (RWO is per node, not per pod). With an RWX class you may
+    # set egress.colocateWithCore=false.
+    size: 20Gi
+    storageClass: ""        # "" = cluster default
+    accessModes: [ReadWriteOnce]
+    existingClaim: ""       # use this PVC instead of the StatefulSet's volumeClaimTemplate
+  service:
+    type: ClusterIP
+    port: 3020
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 2Gi }
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  startupProbe:  { failureThreshold: 60, periodSeconds: 5 }
+  readinessProbe: { periodSeconds: 10, failureThreshold: 3 }
+  livenessProbe:  { periodSeconds: 20, failureThreshold: 6 }
+
+# ---- LiveKit server (SFU) ------------------------------------------------------------
+livekit:
+  image:
+    repository: livekit/livekit-server
+    tag: v1.13.11           # same pin as docker-compose.yml
+    pullPolicy: IfNotPresent
+  # ONE pod per media node (host ports): replicas ≤ number of eligible nodes.
+  # More than one forms a LiveKit cluster through redis.
+  replicas: 1
+  hostNetwork: true         # required for real WebRTC media; see HELM.md before turning off
+  port: 7880                # signaling/API (also behind the Ingress at /rtc)
+  rtcTcpPort: 7881
+  rtcUdpPort: 7882          # single UDP mux port — open it on the node firewall/security group
+  prometheusPort: 6789      # host port; scrape locally, don't expose
+  # Discover the node's public IP via STUN and advertise it in ICE candidates.
+  # false → advertise the node IP (LAN/private clusters, or a 1:1 NAT you set via extraConfig rtc.node_ip).
+  useExternalIP: true
+  logLevel: info
+  # Extra LiveKit config (YAML string, merged as top-level keys), e.g. TURN:
+  # extraConfig: |
+  #   turn:
+  #     enabled: true
+  #     domain: turn.example.com
+  #     tls_port: 5349
+  extraConfig: ""
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits: { memory: 2Gi }
+  nodeSelector: {}          # merged over media.nodeSelector
+  tolerations: []           # added to media.tolerations
+  affinity: {}
+
+# ---- LiveKit Ingress (RTMP / WHIP / URL pull) ---------------------------------------------
+livekitIngress:
+  enabled: true
+  image:
+    repository: livekit/ingress
+    tag: v1.5.0
+    pullPolicy: IfNotPresent
+  replicas: 1               # ONE per media node (host ports)
+  hostNetwork: true
+  rtmpPort: 1935
+  whipPort: 8080
+  httpRelayPort: 9090
+  prometheusPort: 6790
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits: { cpu: 1500m, memory: 1Gi }   # compose: INGRESS_CPUS / INGRESS_MEM_LIMIT
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---- LiveKit Egress (recordings, HLS, RTMP out) ----------------------------------------------
+egress:
+  enabled: true
+  # CPU reserved per live-HLS/recording composite (LiveKit default 4 → one live HLS per
+  # 8-vCPU pod; a 720p30 composite measured ~0.9 CPU). ENV.md STREAMHUB_EGRESS_COMPOSITE_CPU.
+  compositeCpuCost: 2.0
+  image:
+    repository: livekit/egress
+    tag: v1.15.0
+    pullPolicy: IfNotPresent
+  hostNetwork: true
+  # The core hands egress paths under DATA_DIR and uploads what egress writes
+  # there: egress MUST mount the core's volume at the same path. With an RWO
+  # claim that means the same node → required pod affinity to the core pod.
+  colocateWithCore: true
+  prometheusPort: 6791
+  shmSize: 1Gi              # headless Chrome (room composite)
+  # livekit-egress refuses room-composite (HLS/recording) jobs below 4 available
+  # CPUs — keep the limit ≥ 4 for those (compose: EGRESS_CPUS / EGRESS_MEM_LIMIT).
+  resources:
+    requests: { cpu: "1", memory: 1Gi }
+    limits: { cpu: "4", memory: 2Gi }
+  nodeSelector: {}
+  tolerations: []
+
+# ---- redis -----------------------------------------------------------------------------------
+redis:
+  enabled: true             # false → set externalUrl/externalAddress to your own redis
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 512Mi }
+  nodeSelector: {}
+  tolerations: []
+  # When redis.enabled=false: host:port for LiveKit/ingress/egress and a URL for the core.
+  # REDIS_PASSWORD from the Secret is used for both (empty = no auth).
+  externalAddress: ""       # e.g. redis.infra.svc:6379
+  externalUrl: ""           # e.g. redis://:$(REDIS_PASSWORD)@redis.infra.svc:6379
+
+# ---- Kubernetes Ingress (HTTP + /rtc) ------------------------------------------------------------
+ingress:
+  enabled: true
+  className: ""             # e.g. nginx, traefik ("" = cluster default)
+  # ingress-nginx needs long timeouts for the /rtc websocket and a body size
+  # matching Caddy's 50MB; other controllers ignore these.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # cert-manager.io/cluster-issuer: letsencrypt
+  # TLS secret for global.domain (cert-manager fills it when annotated).
+  # Only rendered when global.tls is true.
+  tlsSecretName: streamhub-tls
+
+# `helm test`: a pod that GETs /api/v1/health on the core service.
+tests:
+  enabled: true
+  image: busybox:1.36

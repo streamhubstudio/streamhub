@@ -20,6 +20,21 @@ export function hlsPlaylistPath(app: string, room: string): string {
   return `/hls/${encodeURIComponent(app)}/${encodeURIComponent(room)}/index.m3u8`
 }
 
+/**
+ * Append the HLS token (`?st=`, G2) of an app with public_playback:false to a
+ * playlist URL. The core rewrites that playlist so every segment carries the
+ * same token — only the playlist URL needs it. Empty/absent `st` (public app)
+ * leaves the URL untouched.
+ */
+export function withHlsToken(url: string, st?: string | null): string {
+  if (!st) return url
+  const hash = url.indexOf('#')
+  const base = hash >= 0 ? url.slice(0, hash) : url
+  const frag = hash >= 0 ? url.slice(hash) : ''
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}st=${encodeURIComponent(st)}${frag}`
+}
+
 /** Absolute public HLS playlist URL. */
 export function hlsPlaylistUrl(origin: string, app: string, room: string): string {
   return `${trimOrigin(origin)}${hlsPlaylistPath(app, room)}`

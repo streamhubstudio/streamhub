@@ -11,13 +11,13 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/dlclark/regexp2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Module serves recording.controller.ts (11 routes).
@@ -344,6 +344,14 @@ func parseListQuery(v map[string][]string) (ListQuery, error) {
 			msgs = append(msgs, "status must be one of the following values: recording, uploading, ready, failed")
 		} else {
 			q.Status = &s
+		}
+	}
+	// G6: ?source=recording|clip (feature without oracle — GO-DIVERGENCES).
+	if s, ok, arr := single("source"); ok {
+		if arr || !in(s, VodSourceRecording, VodSourceClip) {
+			msgs = append(msgs, "source must be one of the following values: recording, clip")
+		} else {
+			q.Source = &s
 		}
 	}
 	for _, name := range []string{"since", "until"} {

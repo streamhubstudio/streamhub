@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/streamhealth"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/streamhealth"
 )
 
 // Ports of health-worker/tests/*.test.js (playlist, tscc, probe, volume,

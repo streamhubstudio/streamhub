@@ -1,7 +1,8 @@
 /**
  * Profile ("Mi cuenta") — the signed-in user's own data from GET /account:
  * display name + email (editable via PATCH /account) and the tenant/role the
- * session acts under (read-only). The break-glass admin's email is env-managed
+ * session acts under (read-only). An email change only applies once the link
+ * mailed to the new address is followed: until then it shows as pending. The break-glass admin's email is env-managed
  * (the backend rejects changing it), so the field is disabled for that account.
  */
 import { useEffect, useState } from 'react'
@@ -49,6 +50,8 @@ export function ProfileCard() {
       }),
     onSuccess: (data: AccountInfo) => {
       qc.setQueryData(['account'], data)
+      // The email only changes on confirmation: show the current one again.
+      setEmail(data.user.email ?? '')
     },
   })
 
@@ -92,7 +95,13 @@ export function ProfileCard() {
           </Field>
           <Field
             label={t('profile.emailLabel')}
-            hint={isAdmin ? t('profile.emailAdminHint') : undefined}
+            hint={
+              isAdmin
+                ? t('profile.emailAdminHint')
+                : user.pendingEmail
+                  ? t('profile.emailPending', { email: user.pendingEmail })
+                  : undefined
+            }
           >
             <TextInput
               type="email"

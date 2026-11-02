@@ -8,10 +8,11 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/security"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/security"
 )
 
 // Port of ai.request.ts (pure request shaping) + ai.client.ts: an
@@ -149,10 +150,31 @@ type KeyResolver interface {
 // AIClient is AiClient.
 type AIClient struct {
 	Usage   UsageTracker
-	Secrets KeyResolver // optional
-	HTTP    *http.Client
+	Secrets KeyResolver  // optional
+	HTTP    *http.Client // nil = the egress-guarded client (tests inject a fake)
 	Resolve security.HostResolver
 	Now     func() time.Time
+
+	once sync.Once
+	safe *http.Client
+}
+
+// client is HTTP, else the egress-guarded client: the dial re-checks the
+// resolved IP through the same Resolve seam (closes DNS rebinding and the
+// 302 bypass of the URL guard).
+func (c *AIClient) client() *http.Client {
+	if c.HTTP != nil {
+		return c.HTTP
+	}
+	c.once.Do(func() {
+		c.safe = security.SafeHTTPClient(func(ctx context.Context, host string) ([]string, error) {
+			if c.Resolve == nil {
+				return security.DefaultHostResolver(ctx, host)
+			}
+			return c.Resolve(ctx, host)
+		})
+	})
+	return c.safe
 }
 
 // AIRequest is one chat call.
@@ -195,7 +217,7 @@ func (c *AIClient) Chat(ctx context.Context, in AIRequest) (text string, tokens 
 	req, _ := http.NewRequestWithContext(rctx, http.MethodPost, url, bytes.NewReader([]byte(jsonString(body))))
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("authorization", "Bearer "+key)
-	res, err := c.HTTP.Do(req)
+	res, err := c.client().Do(req)
 	if err != nil {
 		return "", 0, fmt.Errorf("AI request failed: %s", strings.ReplaceAll(err.Error(), key, "[redacted]"))
 	}

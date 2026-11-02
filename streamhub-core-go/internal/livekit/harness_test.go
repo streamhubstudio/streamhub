@@ -13,12 +13,12 @@ import (
 
 	"github.com/livekit/protocol/livekit"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
 )
 
 // fakeApps is a contracts.AppsService over in-memory configs.
@@ -214,6 +214,7 @@ type harness struct {
 	st   *fakeStreams
 	rec  *fakeRecording
 	pt   *fakePassthrough // nil = plane unavailable
+	src  *fakeSources     // nil = stream-health absent
 	srv  *httptest.Server
 	ptOn bool
 	cfg  func()
@@ -238,6 +239,12 @@ func newHarness(t *testing.T) *harness {
 			Passthrough: func() Passthrough {
 				if h.ptOn {
 					return h.pt
+				}
+				return nil
+			},
+			SourceTracks: func() SourceTracks {
+				if h.src != nil {
+					return h.src
 				}
 				return nil
 			},

@@ -5,9 +5,10 @@ import (
 	"math"
 	"unicode/utf16"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
 )
 
 // The S3 / MQTT / SMTP blocks: non-secret fields in config.yaml, the secret
@@ -38,6 +39,8 @@ type AppMaskedS3 struct {
 	HasSecret      bool    `json:"hasSecret"`
 	PublicVods     bool    `json:"publicVods"`
 	PublicWarning  *string `json:"publicWarning"`
+	// StorageClass is s3.storage_class ("" = provider default, absent in JSON).
+	StorageClass string `json:"storageClass,omitempty"`
 }
 
 // SetS3Input is PUT /apps/:app/s3 (nil = leave untouched).
@@ -52,6 +55,8 @@ type SetS3Input struct {
 	Key            string
 	Secret         string
 	ConfirmPublic  bool
+	// StorageClass: nil = untouched, "" = clear (provider default).
+	StorageClass *string
 }
 
 // AppMaskedMqtt is the MQTT block with the broker password masked.
@@ -131,7 +136,7 @@ func (s *Service) GetS3(ctx context.Context, name string) (*AppMaskedS3, error) 
 	if err != nil {
 		return nil, err
 	}
-	return s.maskedS3(disk), nil
+	return s.maskedS3(name, disk), nil
 }
 
 // SetS3 writes the S3 block to config.yaml and key/secret to secrets.json,
@@ -166,33 +171,41 @@ func (s *Service) SetS3(ctx context.Context, name string, in SetS3Input) (*AppMa
 		}
 		b.Set("public_url", next)
 	}
+	if in.StorageClass != nil {
+		// The DTO already validated it; absent key = default (no diff on disk).
+		if class, _ := s3.NormalizeStorageClass(*in.StorageClass); class != "" {
+			b.Set("storage_class", class)
+		} else {
+			b.Delete("storage_class")
+		}
+	}
 	if err := s.writeDisk(name, disk); err != nil {
 		return nil, err
 	}
-	s.storeSecret(b.Get("access_key_env"), in.Key)
-	s.storeSecret(b.Get("secret_key_env"), in.Secret)
+	s.storeSecret(name, SecretS3Key, in.Key)
+	s.storeSecret(name, SecretS3Secret, in.Secret)
 	s.secrets.Invalidate()
 	s.s3.Evict(nil)
-	return s.maskedS3(disk), nil
+	return s.maskedS3(name, disk), nil
 }
 
-// storeSecret is the setters' writeSecret + secrets.set pair (no-op for an
-// empty value).
-func (s *Service) storeSecret(ref any, value string) {
+// storeSecret is the setters' writeSecret + secrets.set pair under the
+// app's derived ref (no-op for an empty value).
+func (s *Service) storeSecret(app string, kind SecretKind, value string) {
 	if value == "" {
 		return
 	}
-	s.writeSecret(ref, value)
+	s.writeSecret(app, kind, value)
 	s.secrets.Invalidate()
-	if err := s.secrets.Set(y.ToString(ref), value); err != nil {
+	if err := s.secrets.Set(SecretRef(app, kind), value); err != nil {
 		s.log.Error("secrets store failed: " + err.Error())
 	}
 }
 
-func (s *Service) maskedS3(disk *y.Map) *AppMaskedS3 {
+func (s *Service) maskedS3(name string, disk *y.Map) *AppMaskedS3 {
 	b := disk.Get("s3")
-	key := s.resolveSecret(prop(b, "access_key_env"))
-	secret := s.resolveSecret(prop(b, "secret_key_env"))
+	key := s.resolveSecret(name, SecretS3Key)
+	secret := s.resolveSecret(name, SecretS3Secret)
 	publicVods := y.Truthy(prop(b, "public_url")) && len(str(prop(b, "public_url"))) > 0
 	out := &AppMaskedS3{
 		Provider:       str(prop(b, "provider")),
@@ -212,6 +225,7 @@ func (s *Service) maskedS3(disk *y.Map) *AppMaskedS3 {
 		HasKey:         key != "",
 		HasSecret:      secret != "",
 		PublicVods:     publicVods,
+		StorageClass:   storageClassOf(prop(b, "storage_class")),
 	}
 	if publicVods {
 		w := publicVodsWarning
@@ -231,7 +245,7 @@ func (s *Service) GetMqtt(ctx context.Context, name string) (*AppMaskedMqtt, err
 	if err != nil {
 		return nil, err
 	}
-	return s.maskedMqtt(disk), nil
+	return s.maskedMqtt(name, disk), nil
 }
 
 // SetMqtt writes the mqtt + latency_alert blocks and the broker password,
@@ -296,14 +310,14 @@ func (s *Service) SetMqtt(ctx context.Context, name string, in SetMqttInput) (*A
 	if err := s.writeDisk(name, disk); err != nil {
 		return nil, err
 	}
-	s.storeSecret(m.Get("password_env"), in.Password)
+	s.storeSecret(name, SecretMqttPassword, in.Password)
 	s.secrets.Invalidate()
 	s.disconnectMqtt(name)
-	return s.maskedMqtt(disk), nil
+	return s.maskedMqtt(name, disk), nil
 }
 
-func (s *Service) maskedMqtt(disk *y.Map) *AppMaskedMqtt {
-	r := s.resolveMqtt(disk)
+func (s *Service) maskedMqtt(name string, disk *y.Map) *AppMaskedMqtt {
+	r := s.resolveMqtt(name, disk)
 	return &AppMaskedMqtt{
 		Enabled: r.Enabled, URL: r.URL, Username: r.Username, TopicPrefix: r.TopicPrefix,
 		Qos: r.Qos, TLS: r.TLS, Events: r.Events, Logs: r.Logs,
@@ -326,7 +340,7 @@ func (s *Service) GetSmtp(ctx context.Context, name string) (*AppMaskedSmtp, err
 	if err != nil {
 		return nil, err
 	}
-	return s.maskedSmtp(disk), nil
+	return s.maskedSmtp(name, disk), nil
 }
 
 // SetSmtp writes the smtp block and the password (omit Pass to keep it).
@@ -359,13 +373,13 @@ func (s *Service) SetSmtp(ctx context.Context, name string, in SetSmtpInput) (*A
 	if err := s.writeDisk(name, disk); err != nil {
 		return nil, err
 	}
-	s.storeSecret(b.Get("pass_env"), in.Pass)
+	s.storeSecret(name, SecretSmtpPass, in.Pass)
 	s.secrets.Invalidate()
-	return s.maskedSmtp(disk), nil
+	return s.maskedSmtp(name, disk), nil
 }
 
-func (s *Service) maskedSmtp(disk *y.Map) *AppMaskedSmtp {
-	r := s.resolveSmtp(disk)
+func (s *Service) maskedSmtp(name string, disk *y.Map) *AppMaskedSmtp {
+	r := s.resolveSmtp(name, disk)
 	return &AppMaskedSmtp{
 		Enabled: r.Enabled, Host: r.Host, Port: r.Port, User: r.User, From: r.From,
 		PassEnv:    str(prop(disk.Get("smtp"), "pass_env")),

@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Envelope is the StreamHub success wrapper {data, error: null} (SPEC §6).
@@ -53,11 +53,18 @@ const GlobalScopeMessage = "this endpoint requires a global-scope credential"
 // RequireGlobal rejects app-/user-scoped principals with 403 msg. No
 // principal (dev without an authenticator) passes, as in Node.
 func RequireGlobal(ctx context.Context, msg string) error {
-	p := auth.From(ctx)
-	if p != nil && !p.IsSuperadmin && p.Scope != auth.ScopeGlobal {
+	if !HasGlobal(ctx) {
 		return httpx.Forbidden(msg)
 	}
 	return nil
+}
+
+// HasGlobal reports whether the caller passes RequireGlobal, for handlers
+// that narrow their answer for scoped callers instead of refusing them
+// (so the route is not a global-only surface and carries no api.Global).
+func HasGlobal(ctx context.Context) bool {
+	p := auth.From(ctx)
+	return p == nil || p.IsSuperadmin || p.Scope == auth.ScopeGlobal
 }
 
 var intParam = regexp.MustCompile(`^-?\d+$`)

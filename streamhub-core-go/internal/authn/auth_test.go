@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/audit"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/testutil"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/tenancy"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/audit"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authn"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/testutil"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/tenancy"
 )
 
 func TestSignupLoginMe(t *testing.T) {
@@ -81,12 +82,17 @@ func TestBreakGlassAdmin(t *testing.T) {
 		`{"data":{"userId":"admin","tenantId":"platform","role":"superadmin","isSuperadmin":true,"scope":"global","via":"admin_jwt","email":"root@x.io"}}`)
 	s.expect(s.call("POST", "/auth/login", "", `{"user":"root@x.io","password":"wrong"}`), 401)
 
-	// sub=admin is superadmin even without ADMIN_USER; legacy sub=ADMIN_USER too.
+	// sub=admin is superadmin even without ADMIN_USER; legacy sub=ADMIN_USER too
+	// (both with a live session sid — a sid-less JWT is a 401, sid_test.go).
+	sid, err := s.svc.Sessions.Create(context.Background(), "admin", nil, authn.SessionContext{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	s.cfg.AdminUser = ""
-	adminJWT, _ := auth.SignJWT(map[string]any{"sub": "admin"}, jwtSecret, time.Hour)
+	adminJWT, _ := auth.SignJWT(map[string]any{"sub": "admin", "sid": sid}, jwtSecret, time.Hour)
 	s.expect(s.call("GET", "/auth/me", adminJWT, ""), 200, `"via":"admin_jwt"`)
 	s.cfg.AdminUser = adminUser
-	legacy, _ := auth.SignJWT(map[string]any{"sub": adminUser}, jwtSecret, time.Hour)
+	legacy, _ := auth.SignJWT(map[string]any{"sub": adminUser, "sid": sid}, jwtSecret, time.Hour)
 	s.expect(s.call("GET", "/auth/me", legacy, ""), 200, `"userId":"admin"`)
 
 	// No admin creds configured → the break-glass path is closed.
@@ -109,10 +115,11 @@ func TestJWTValidation(t *testing.T) {
 	s.expect(s.call("GET", "/auth/me", expired, ""), 401, `"Invalid or expired token"`)
 	wrong, _ := auth.SignJWT(map[string]any{"sub": uid}, "other", time.Hour)
 	s.expect(s.call("GET", "/auth/me", wrong, ""), 401)
-	ghost, _ := auth.SignJWT(map[string]any{"sub": "usr_ghost"}, jwtSecret, time.Hour)
+	ghostSid, _ := s.svc.Sessions.Create(ctx, "usr_ghost", nil, authn.SessionContext{})
+	ghost, _ := auth.SignJWT(map[string]any{"sub": "usr_ghost", "sid": ghostSid}, jwtSecret, time.Hour)
 	s.expect(s.call("GET", "/auth/me", ghost, ""), 401, `"Invalid or expired token"`)
-	legacy, _ := auth.SignJWT(map[string]any{"sub": uid}, jwtSecret, time.Hour) // no sid: grace
-	s.expect(s.call("GET", "/auth/me", legacy, ""), 200)
+	legacy, _ := auth.SignJWT(map[string]any{"sub": uid}, jwtSecret, time.Hour) // no sid: rejected since 3.3.3
+	s.expect(s.call("GET", "/auth/me", legacy, ""), 401, `"Invalid or expired token"`)
 	unknownSid, _ := auth.SignJWT(map[string]any{"sub": uid, "sid": "nope"}, jwtSecret, time.Hour)
 	s.expect(s.call("GET", "/auth/me", unknownSid, ""), 401, `"Session revoked or expired"`)
 

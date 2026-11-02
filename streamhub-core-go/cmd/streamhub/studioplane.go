@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/livecontrol"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/logs"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/pipeline"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/plugins"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/recording"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/s3"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/transcription"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/visionapps"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/livecontrol"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/logs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/pipeline"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/plugins"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/recording"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/s3"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/transcription"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/visionapps"
 )
 
 // The studio plane: the module-backed halves of three Studio Apps.

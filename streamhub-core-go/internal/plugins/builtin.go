@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Filesystem anchors. The binary resolves them from the environment, then
@@ -89,7 +89,7 @@ func healthWorkerCommand() string {
 // "spawn": "stream-health"; the 2.x plugin.meta.ts closure),
 // except for the command: Node ran `node health-worker/src/main.js` (cwd
 // health-worker/); Go runs `<core binary> health-worker` (cwd = the app dir).
-// The env contract is identical (internal design notes).
+// The env contract is identical (planning/GO-DIVERGENCES.md).
 func streamHealthSpawn(ctx WorkerContext) WorkerSpec {
 	cfg := "{}"
 	if ctx.Config != nil {

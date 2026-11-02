@@ -1,0 +1,58 @@
+{
+  "disabled": {
+    "title": "Los encoders están desactivados en este servidor",
+    "body": "El emparejamiento de dispositivos de campo viene apagado. Poné la variable de abajo en el .env del core y reinicialo para emparejar encoders por código."
+  },
+  "claim": {
+    "title": "Agregar un encoder",
+    "subtitle": "Iniciá el emparejamiento en el encoder: muestra un código de 8 caracteres (vale 10 minutos). Escribilo acá para vincular el encoder a esta app.",
+    "codeLabel": "Código de emparejamiento",
+    "codeHint": "Mayúsculas y guiones dan igual. 5 códigos errados te bloquean un rato.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Móvil 2 — cámara A",
+    "submit": "Vincular",
+    "claiming": "Vinculando…",
+    "error": "No se pudo vincular el encoder.",
+    "done": "{{name}} vinculado — se conecta apenas retira su credencial."
+  },
+  "list": {
+    "empty": "Todavía no hay encoders en esta app.",
+    "error": "No se pudieron cargar los encoders."
+  },
+  "device": {
+    "online": "En línea",
+    "offline": "Desconectado",
+    "awaitingCredential": "Esperando al dispositivo",
+    "lastSeen": "Última vez",
+    "temperature": "Temperatura",
+    "rename": "Renombrar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "reboot": "Reiniciar",
+    "rebootConfirm": "¿Reiniciar {{name}}? Sus canales se cortan hasta que vuelva.",
+    "revoke": "Revocar",
+    "revokeConfirm": "¿Revocar {{name}}? Su credencial deja de funcionar y se borran las stream keys de sus canales. Para volver a usarlo hay que emparejarlo de nuevo."
+  },
+  "channels": {
+    "none": "El encoder todavía no anunció canales (lo hace al conectarse).",
+    "room": "Room",
+    "protocol": "Protocolo",
+    "rtmp": "RTMP — LiveKit (WebRTC + HLS, H.264)",
+    "srt": "SRT — passthrough (HLS, H.264/HEVC)",
+    "link": "Vincular",
+    "relink": "Cambiar",
+    "unlink": "Desvincular",
+    "unlinkConfirm": "¿Desvincular este canal? Se borra su stream key.",
+    "linkedTo": "Publica en {{room}} por {{protocol}}",
+    "publishUrl": "URL de publicación (enviada al encoder)",
+    "error": "No se pudo actualizar el canal."
+  },
+  "command": {
+    "start": "Iniciar",
+    "stop": "Detener",
+    "restart": "Reiniciar",
+    "ok": "Comando ejecutado",
+    "failed": "El encoder rechazó el comando",
+    "error": "El comando falló."
+  }
+}

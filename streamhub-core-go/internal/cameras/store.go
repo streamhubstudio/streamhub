@@ -14,8 +14,8 @@ import (
 
 	_ "modernc.org/sqlite" // "sqlite" driver
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Per-app persistence in apps/<app>/cameras/cameras.db (its own SQLite file,

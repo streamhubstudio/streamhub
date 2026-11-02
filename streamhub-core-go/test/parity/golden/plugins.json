@@ -2032,6 +2032,7 @@
             "config": {
               "bitrate_drop_pct": 50,
               "desync_ms": 200,
+              "edge_hls_bases": "",
               "recover_samples": 2,
               "sample_interval_sec": 10,
               "silence_db": -50,
@@ -2106,6 +2107,14 @@
                   "max": 10,
                   "min": 1,
                   "type": "number"
+                },
+                {
+                  "default": "",
+                  "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                  "key": "edge_hls_bases",
+                  "label": "Edge/CDN bases to probe",
+                  "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                  "type": "string"
                 }
               ],
               "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -2141,7 +2150,6 @@
               "ai_budget_monthly_usd": 20,
               "ai_model": "gpt-4o-mini",
               "ai_provider": "openai",
-              "dangerousNodes": false,
               "max_runs_per_min": 60
             },
             "enabled": false,
@@ -2198,13 +2206,6 @@
                   "max": 100000,
                   "min": 1,
                   "type": "number"
-                },
-                {
-                  "default": false,
-                  "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators.",
-                  "key": "dangerousNodes",
-                  "label": "Enable execution nodes (code / ssh / shell / db)",
-                  "type": "boolean"
                 }
               ],
               "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
@@ -4796,6 +4797,7 @@
             "config": {
               "bitrate_drop_pct": 50,
               "desync_ms": 200,
+              "edge_hls_bases": "",
               "recover_samples": 2,
               "sample_interval_sec": 10,
               "silence_db": -50,
@@ -4870,6 +4872,14 @@
                   "max": 10,
                   "min": 1,
                   "type": "number"
+                },
+                {
+                  "default": "",
+                  "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                  "key": "edge_hls_bases",
+                  "label": "Edge/CDN bases to probe",
+                  "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                  "type": "string"
                 }
               ],
               "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -4905,7 +4915,6 @@
               "ai_budget_monthly_usd": 20,
               "ai_model": "gpt-4o-mini",
               "ai_provider": "openai",
-              "dangerousNodes": false,
               "max_runs_per_min": 60
             },
             "enabled": false,
@@ -4962,13 +4971,6 @@
                   "max": 100000,
                   "min": 1,
                   "type": "number"
-                },
-                {
-                  "default": false,
-                  "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators.",
-                  "key": "dangerousNodes",
-                  "label": "Enable execution nodes (code / ssh / shell / db)",
-                  "type": "boolean"
                 }
               ],
               "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
@@ -7540,6 +7542,7 @@
             "config": {
               "bitrate_drop_pct": 50,
               "desync_ms": 200,
+              "edge_hls_bases": "",
               "recover_samples": 2,
               "sample_interval_sec": 10,
               "silence_db": -50,
@@ -7614,6 +7617,14 @@
                   "max": 10,
                   "min": 1,
                   "type": "number"
+                },
+                {
+                  "default": "",
+                  "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                  "key": "edge_hls_bases",
+                  "label": "Edge/CDN bases to probe",
+                  "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                  "type": "string"
                 }
               ],
               "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -7649,7 +7660,6 @@
               "ai_budget_monthly_usd": 20,
               "ai_model": "gpt-4o-mini",
               "ai_provider": "openai",
-              "dangerousNodes": false,
               "max_runs_per_min": 60
             },
             "enabled": false,
@@ -7706,13 +7716,6 @@
                   "max": 100000,
                   "min": 1,
                   "type": "number"
-                },
-                {
-                  "default": false,
-                  "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators.",
-                  "key": "dangerousNodes",
-                  "label": "Enable execution nodes (code / ssh / shell / db)",
-                  "type": "boolean"
                 }
               ],
               "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
@@ -8604,6 +8607,7 @@
         "path": "/api/v1/apps/live/plugins/stream-health",
         "auth": "globalToken"
       },
+      "source": "go",
       "status": 200,
       "headers": {
         "cache-control": null,
@@ -8615,6 +8619,7 @@
           "config": {
             "bitrate_drop_pct": 50,
             "desync_ms": 200,
+            "edge_hls_bases": "",
             "recover_samples": 2,
             "sample_interval_sec": 10,
             "silence_db": -50,
@@ -8689,6 +8694,14 @@
                 "max": 10,
                 "min": 1,
                 "type": "number"
+              },
+              {
+                "default": "",
+                "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                "key": "edge_hls_bases",
+                "label": "Edge/CDN bases to probe",
+                "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                "type": "string"
               }
             ],
             "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -12344,6 +12357,7 @@
             "config": {
               "bitrate_drop_pct": 50,
               "desync_ms": 200,
+              "edge_hls_bases": "",
               "recover_samples": 2,
               "sample_interval_sec": 10,
               "silence_db": -50,
@@ -12418,6 +12432,14 @@
                   "max": 10,
                   "min": 1,
                   "type": "number"
+                },
+                {
+                  "default": "",
+                  "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                  "key": "edge_hls_bases",
+                  "label": "Edge/CDN bases to probe",
+                  "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                  "type": "string"
                 }
               ],
               "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -12453,7 +12475,6 @@
               "ai_budget_monthly_usd": 20,
               "ai_model": "gpt-4o-mini",
               "ai_provider": "openai",
-              "dangerousNodes": false,
               "max_runs_per_min": 60
             },
             "enabled": false,
@@ -12510,13 +12531,6 @@
                   "max": 100000,
                   "min": 1,
                   "type": "number"
-                },
-                {
-                  "default": false,
-                  "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators.",
-                  "key": "dangerousNodes",
-                  "label": "Enable execution nodes (code / ssh / shell / db)",
-                  "type": "boolean"
                 }
               ],
               "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",
@@ -13449,6 +13463,7 @@
         "path": "/api/v1/apps/live/plugins/stream-health/install",
         "auth": "globalToken"
       },
+      "source": "go",
       "status": 201,
       "headers": {
         "cache-control": null,
@@ -13460,6 +13475,7 @@
           "config": {
             "bitrate_drop_pct": 50,
             "desync_ms": 200,
+            "edge_hls_bases": "",
             "recover_samples": 2,
             "sample_interval_sec": 10,
             "silence_db": -50,
@@ -13534,6 +13550,14 @@
                 "max": 10,
                 "min": 1,
                 "type": "number"
+              },
+              {
+                "default": "",
+                "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                "key": "edge_hls_bases",
+                "label": "Edge/CDN bases to probe",
+                "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                "type": "string"
               }
             ],
             "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -15333,28 +15357,17 @@
           "ingestToken": 3
         }
       },
-      "status": 400,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "Bad Request",
-        "message": [
-          "pluginId should not be empty",
-          "appName must be shorter than or equal to 64 characters",
-          "appName should not be empty",
-          "appName must be a string",
-          "command must be shorter than or equal to 512 characters",
-          "command must be a string",
-          "args must contain no more than 256 elements",
-          "args must be an array",
-          "env must be an object",
-          "ingestToken must be shorter than or equal to 200 characters",
-          "ingestToken must be a string"
-        ],
-        "statusCode": 400
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/grid/workers",
+        "statusCode": 404
       }
     },
     {
@@ -15365,26 +15378,17 @@
         "path": "/api/v1/grid/workers",
         "body": {}
       },
-      "status": 400,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "Bad Request",
-        "message": [
-          "pluginId must be shorter than or equal to 64 characters",
-          "pluginId should not be empty",
-          "pluginId must be a string",
-          "appName must be shorter than or equal to 64 characters",
-          "appName should not be empty",
-          "appName must be a string",
-          "command must be shorter than or equal to 512 characters",
-          "command should not be empty",
-          "command must be a string"
-        ],
-        "statusCode": 400
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/grid/workers",
+        "statusCode": 404
       }
     },
     {
@@ -15394,26 +15398,17 @@
         "method": "POST",
         "path": "/api/v1/grid/workers"
       },
-      "status": 400,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "Bad Request",
-        "message": [
-          "pluginId must be shorter than or equal to 64 characters",
-          "pluginId should not be empty",
-          "pluginId must be a string",
-          "appName must be shorter than or equal to 64 characters",
-          "appName should not be empty",
-          "appName must be a string",
-          "command must be shorter than or equal to 512 characters",
-          "command should not be empty",
-          "command must be a string"
-        ],
-        "statusCode": 400
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/grid/workers",
+        "statusCode": 404
       }
     },
     {
@@ -15435,14 +15430,17 @@
           }
         }
       },
-      "status": 503,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "grid agent disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/grid/workers",
+        "statusCode": 404
       }
     },
     {
@@ -15452,14 +15450,17 @@
         "method": "GET",
         "path": "/api/v1/grid/workers/abc/status"
       },
-      "status": 503,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "grid agent disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/grid/workers/abc/status",
+        "statusCode": 404
       }
     },
     {
@@ -15469,14 +15470,17 @@
         "method": "POST",
         "path": "/api/v1/grid/workers/abc/stop"
       },
-      "status": 503,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "grid agent disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+        "error": "Not Found",
+        "message": "Cannot POST /api/v1/grid/workers/abc/stop",
+        "statusCode": 404
       }
     },
     {
@@ -15486,14 +15490,17 @@
         "method": "GET",
         "path": "/api/v1/grid/workers/abc/logs?limit=5"
       },
-      "status": 503,
+      "source": "go",
+      "status": 404,
       "headers": {
         "cache-control": null,
         "content-type": "application/json;charset=utf-8"
       },
       "bodyKind": "json",
       "body": {
-        "error": "grid agent disabled (STREAMHUB_CLUSTER_TOKEN unset)"
+        "error": "Not Found",
+        "message": "Cannot GET /api/v1/grid/workers/abc/logs?limit=5",
+        "statusCode": 404
       }
     },
     {
@@ -17675,6 +17682,7 @@
             "config": {
               "bitrate_drop_pct": 50,
               "desync_ms": 200,
+              "edge_hls_bases": "",
               "recover_samples": 2,
               "sample_interval_sec": 10,
               "silence_db": -50,
@@ -17749,6 +17757,14 @@
                   "max": 10,
                   "min": 1,
                   "type": "number"
+                },
+                {
+                  "default": "",
+                  "help": "Also probe every live room THROUGH each edge/CDN (GET <base>/hls/<app>/<room>/index.m3u8) with the same detectors — one extra monitored stream per edge, shown as <room>@<edge>. Comma-separated; 'name=url' names an edge (default: its host). Empty = origin only. Public-playback apps only.",
+                  "key": "edge_hls_bases",
+                  "label": "Edge/CDN bases to probe",
+                  "placeholder": "edge1=https://cdn1.example.com, https://cdn2.example.com",
+                  "type": "string"
                 }
               ],
               "description": "Validates ORIGIN stream quality per room: packet loss/discontinuities, audio silence, A/V desync, stalls and bitrate drops — sampled with ffprobe (no full decode), alerting through webhooks/MQTT/Streamflow.",
@@ -17784,7 +17800,6 @@
               "ai_budget_monthly_usd": 20,
               "ai_model": "gpt-4o-mini",
               "ai_provider": "openai",
-              "dangerousNodes": false,
               "max_runs_per_min": 60
             },
             "enabled": false,
@@ -17841,13 +17856,6 @@
                   "max": 100000,
                   "min": 1,
                   "type": "number"
-                },
-                {
-                  "default": false,
-                  "help": "DANGER: allows workflows to run a Node.js snippet (node:vm sandbox), a shell command, an SSH command, or a SQL query ON THE SERVER. OFF by default; when off these boxes are hidden from the palette and refused at run time. node:vm is a guardrail, NOT a hard security boundary — only enable for trusted operators.",
-                  "key": "dangerousNodes",
-                  "label": "Enable execution nodes (code / ssh / shell / db)",
-                  "type": "boolean"
                 }
               ],
               "description": "Chain boxes to turn any StreamHub event into an automation: trigger on a domain event, snapshot the room, analyze it with ChatGPT/DeepSeek, branch on the result, then notify / emit / store — a visual n8n-style builder.",

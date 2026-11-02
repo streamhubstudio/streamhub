@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 var bg = context.Background()
@@ -207,7 +207,7 @@ func TestDangerousExecutors(t *testing.T) {
 		"action.code": `{"source":"output=1"}`, "action.shell": `{"command":"ls"}`,
 		"action.ssh": `{"host":"h","user":"u","command":"c","key":"k"}`, "action.db": `{"dsn":"x","query":"select 1"}`,
 	} {
-		if _, _, err := runBox(t, typ, cfg, bc, f); err == nil || err.Error() != typ+": execution nodes are disabled (enable streamflow.dangerousNodes)" {
+		if _, _, err := runBox(t, typ, cfg, bc, f); err == nil || err.Error() != typ+": execution nodes are disabled for this app (operator setting STREAMHUB_STREAMFLOW_DANGEROUS)" {
 			t.Errorf("%s not refused: %v", typ, err)
 		}
 	}
@@ -648,11 +648,12 @@ func TestServiceCRUDAndBoxes(t *testing.T) {
 	if _, err := w.svc.ListWorkflows(bg, "nope"); err == nil || err.Error() != "app 'nope' not found" {
 		t.Fatal("requireApp")
 	}
-	if len(w.svc.Boxes(bg, "live")) != len(boxSpecs) {
+	t.Setenv(DangerousEnv, "")
+	if len(w.svc.Boxes(auth.WithPrincipal(bg, superadmin), "live")) != len(boxSpecs) {
 		t.Fatal("dangerous shown by default")
 	}
-	w.plugin.config = obj("dangerousNodes", true)
-	if len(w.svc.Boxes(bg, "live")) != len(boxSpecs)+len(dangerousSpecs) {
+	t.Setenv(DangerousEnv, " other, live ")
+	if len(w.svc.Boxes(auth.WithPrincipal(bg, superadmin), "live")) != len(boxSpecs)+len(dangerousSpecs) {
 		t.Fatal("dangerous hidden when enabled")
 	}
 	wf := w.wf(t, `{"boxes":[{"id":"x","type":"logic.delay"},{"id":"m","type":"trigger.manual"}],"edges":[{"from":"m","to":"x"}]}`)
@@ -666,7 +667,7 @@ func TestServiceCRUDAndBoxes(t *testing.T) {
 	if _, err := w.svc.GetRun(bg, "live", "nope"); err == nil || err.Error() != "run 'nope' not found" {
 		t.Fatal("run 404")
 	}
-	imp, err := w.svc.ImportWorkflow(bg, "live", js(t, `{"name":"N","graph":{"boxes":[{"id":"a","type":"action.db"}]}}`), "  Override ")
+	imp, err := w.svc.ImportWorkflow(auth.WithPrincipal(bg, superadmin), "live", js(t, `{"name":"N","graph":{"boxes":[{"id":"a","type":"action.db"}]}}`), "  Override ")
 	if err != nil || imp.Name != "Override" {
 		t.Fatalf("import %+v %v", imp, err)
 	}

@@ -2,7 +2,8 @@
  * node:test — pure logic of the stream-health monitor tab. Locks the live
  * overview normalization (staleness forces 'stale' chips), the worst-first
  * sort, the formatting helpers and the per-room threshold form round-trip
- * (bounds mirror the core contract).
+ * (bounds mirror the core contract), plus (3.4) the remote edge probes'
+ * grouping and the "source has no audio" fact.
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -11,7 +12,9 @@ import {
   buildOverride,
   FEED_STALE_MS,
   formFromOverride,
+  groupSnapshots,
   formatAgo,
+  formatCodecs,
   formatKbps,
   formatResolution,
   parseOverviewLive,
@@ -98,6 +101,10 @@ test('sortSnapshots: critical < degraded < stale < healthy, then alphabetical', 
       discontinuityTags: null,
       baselineKbps: null,
     },
+    origin: null,
+    via: null,
+    url: null,
+    error: null,
   })
   const sorted = sortSnapshots([
     mk('b', 'healthy'),
@@ -133,6 +140,7 @@ test('formatting helpers', () => {
       sampleRate: null,
       channels: null,
       bitrateKbps: null,
+      audioSource: null,
     }),
     '1920×1080@25',
   )
@@ -171,4 +179,59 @@ test('formFromOverride: seeds only stored keys, round-trips with buildOverride',
   assert.deepEqual(form, { silence_db: '-35', stall_sec: '30' })
   assert.deepEqual(buildOverride(form), { silence_db: -35, stall_sec: 30 })
   assert.deepEqual(formFromOverride(null), {})
+})
+
+test('parseOverviewLive: remote probe fields, absent on origin snapshots', () => {
+  const { streams } = parseOverviewLive(
+    liveView([
+      snap('cam-1'),
+      snap('cam-1@edge1', 'critical', {
+        origin: 'cam-1',
+        via: 'edge1',
+        url: 'https://cdn1/hls/live/cam-1/index.m3u8',
+        error: 'HTTP 502',
+      }),
+    ]),
+  )
+  const [remote, origin] = streams
+  assert.equal(remote.room, 'cam-1@edge1')
+  assert.equal(remote.origin, 'cam-1')
+  assert.equal(remote.via, 'edge1')
+  assert.equal(remote.error, 'HTTP 502')
+  assert.equal(origin.origin, null)
+  assert.equal(origin.via, null)
+})
+
+test('groupSnapshots: edges fold under their room; a bad edge surfaces the room', () => {
+  const { streams } = parseOverviewLive(
+    liveView([
+      snap('a-cam'),
+      snap('b-cam'),
+      snap('b-cam@z-edge', 'healthy', { origin: 'b-cam', via: 'z-edge' }),
+      snap('b-cam@edge1', 'critical', { origin: 'b-cam', via: 'edge1' }),
+      snap('c-cam@edge1', 'degraded', { origin: 'c-cam', via: 'edge1' }), // origin not in the feed yet
+    ]),
+  )
+  const groups = groupSnapshots(streams)
+  assert.deepEqual(
+    groups.map((g) => [g.room, g.status, g.origin?.room ?? null, g.edges.map((e) => e.via)]),
+    [
+      ['b-cam', 'critical', 'b-cam', ['edge1', 'z-edge']],
+      ['c-cam', 'degraded', null, ['edge1']],
+      ['a-cam', 'healthy', 'a-cam', []],
+    ],
+  )
+  const stale = groupSnapshots(parseOverviewLive(liveView([snap('a')], FEED_STALE_MS + 1)).streams)
+  assert.equal(stale[0].status, 'stale')
+})
+
+test('formatCodecs: a source with no audio says so instead of the filler codec', () => {
+  const facts = parseOverviewLive(
+    liveView([snap('x', 'healthy', { facts: { videoCodec: 'h264', audioCodec: 'aac', audioSource: 'none' } })]),
+  ).streams[0].facts
+  assert.equal(facts?.audioSource, 'none')
+  assert.equal(formatCodecs(facts, 'none', 'no audio source'), 'h264/no audio source')
+  assert.equal(formatCodecs({ ...facts!, audioSource: 'track' }, 'none', 'nas'), 'h264/aac')
+  assert.equal(formatCodecs({ ...facts!, audioSource: null, audioCodec: null }, 'none', 'nas'), 'h264/none')
+  assert.equal(formatCodecs(null, 'none', 'nas'), '—')
 })

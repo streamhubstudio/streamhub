@@ -1,0 +1,8 @@
+@self
+whip-push
+--bus-port
+41001
+--url
+https://sfu/w
+--no-audio
+ENV ENCODERD_WHIP_BEARER=tok

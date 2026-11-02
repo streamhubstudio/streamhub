@@ -1,0 +1,182 @@
+{{- $fullname := include "streamhub.fullname" . -}}
+{{- $c := .Values.core -}}
+# streamhub-core: ONE replica — the per-app SQLite DBs in DATA_DIR have a
+# single writer, and the plugin workers / passthrough ffmpegs it spawns live
+# inside this pod. Scale media with LiveKit/ingress nodes, not with the core.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullname }}-core
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  replicas: 1
+  serviceName: {{ $fullname }}-core-headless
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      {{- include "streamhub.selector" (list . "core") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "streamhub.selector" (list . "core") | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with $c.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      {{- if $c.seedToken }}
+      initContainers:
+        # Seed the global sk_ token (sha256 into api_tokens) before the core
+        # boots; idempotent — skipped when a non-revoked global token exists.
+        # The token travels on stdin, never in argv.
+        - name: seed-token
+          image: {{ include "streamhub.coreImage" . }}
+          imagePullPolicy: {{ $c.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - umask 002; mkdir -p /data/data && printf '%s' "$STREAMHUB_API_TOKEN" | /app/streamhub-core seed-token - bootstrap
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: STREAMHUB_API_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ include "streamhub.secretName" . }}, key: STREAMHUB_API_TOKEN } }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- end }}
+      containers:
+        - name: core
+          image: {{ include "streamhub.coreImage" . }}
+          imagePullPolicy: {{ $c.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3020
+          envFrom:
+            - secretRef:
+                name: {{ include "streamhub.secretName" . }}
+            {{- with $c.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            # Pod network: listen on all interfaces (compose binds 127.0.0.1
+            # behind host-networked Caddy; here the Service/Ingress front it).
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3020"
+            - name: DATA_DIR
+              value: /data
+            - name: LIVEKIT_URL
+              value: {{ include "streamhub.livekitWs" . | quote }}
+            - name: REDIS_URL
+              value: {{ include "streamhub.redisUrl" . | quote }}
+            - name: STREAMHUB_DOMAIN
+              value: {{ .Values.global.domain | quote }}
+            - name: PUBLIC_WS_URL
+              value: {{ include "streamhub.publicWsUrl" . | quote }}
+            - name: RTMP_PUBLIC_HOST
+              value: {{ include "streamhub.mediaHost" . | quote }}
+            - name: STREAMHUB_PUBLIC_URL
+              value: {{ include "streamhub.publicUrl" . | quote }}
+            - name: STREAMHUB_APP_URL
+              value: {{ include "streamhub.publicUrl" . | quote }}
+            {{- range $k, $v := $c.env }}
+            - name: {{ $k }}
+              value: {{ $v | toString | quote }}
+            {{- end }}
+            {{- with $c.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: {{ $c.startupProbe.periodSeconds }}
+            failureThreshold: {{ $c.startupProbe.failureThreshold }}
+          readinessProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: {{ $c.readinessProbe.periodSeconds }}
+            failureThreshold: {{ $c.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: {{ $c.livenessProbe.periodSeconds }}
+            failureThreshold: {{ $c.livenessProbe.failureThreshold }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- with $c.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $c.persistence.existingClaim }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $c.persistence.existingClaim }}
+      {{- end }}
+  {{- if not $c.persistence.existingClaim }}
+  # PVC data-<fullname>-core-0 — egress mounts it by that name. StatefulSet
+  # claims outlive `helm uninstall` (delete the PVC by hand to wipe the data).
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "streamhub.selector" (list . "core") | nindent 10 }}
+      spec:
+        accessModes:
+          {{- toYaml $c.persistence.accessModes | nindent 10 }}
+        {{- with $c.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $c.persistence.size }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-core
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  type: {{ $c.service.type }}
+  selector:
+    {{- include "streamhub.selector" (list . "core") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $c.service.port }}
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-core-headless
+  labels:
+    {{- include "streamhub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  clusterIP: None
+  selector:
+    {{- include "streamhub.selector" (list . "core") | nindent 4 }}
+  ports:
+    - name: http
+      port: 3020
+      targetPort: http

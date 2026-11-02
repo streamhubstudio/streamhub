@@ -1,7 +1,8 @@
 // Package web mounts every non-API HTTP surface the core serves, mirroring the
 // express mounts in streamhub-core/src/main.ts and the SPA ServeStaticModule:
 //
-//	/hls/<app>/<room>/<file>  → <DATA_DIR>/apps/<app>/hls/<room>/<file>   (public)
+//	/hls/<app>/<room>/<file>  → <DATA_DIR>/apps/<app>/hls/<room>/<file>   (public; ?st= for private apps)
+//	/hls-auth                 → the direct-serve proxies' auth subrequest  (with a Gate)
 //	/samples/<app>/<file>     → <DATA_DIR>/apps/<app>/samples/<file>       (public, sandboxed)
 //	/sdk/<file>               → $SDK_DIR or <DATA_DIR>/sdk                  (public)
 //	/*                        → the React SPA (index.html fallback)
@@ -19,7 +20,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // ByteCounter receives bytes served under /hls, attributed to an app
@@ -35,6 +36,14 @@ type Options struct {
 	WebDir  string // SPA build dir (index.html + assets)
 	HLSCDN  bool   // STREAMHUB_HLS_CDN
 	Counter ByteCounter
+	// Gate authorizes /hls (signed HLS + geo); nil serves everything.
+	Gate HLSGate
+	// DashboardCSP is the SPA's Content-Security-Policy ("" = none); see
+	// csp.go. Embeddable SPA routes get it without the anti-framing part.
+	DashboardCSP string
+	// HLSCache is the live-playlist cache math under HLSCDN
+	// (STREAMHUB_HLS_SEGMENT_S / _PLAYLIST_MAX_AGE); nil = DefaultHLSCache.
+	HLSCache *HLSCachePolicy
 }
 
 // Mount registers the static surfaces on mux. The SPA handler is the "/"
@@ -47,10 +56,17 @@ func Mount(mux *http.ServeMux, o Options) {
 	}
 	_ = os.MkdirAll(sdkDir, 0o775)
 
-	mux.Handle("/hls/", hlsHandler(appsRoot, o.HLSCDN, o.Counter))
+	cache := DefaultHLSCache
+	if o.HLSCache != nil {
+		cache = *o.HLSCache
+	}
+	mux.Handle("/hls/", hlsHandler(appsRoot, o.HLSCDN, cache, o.Counter, o.Gate))
+	if o.Gate != nil {
+		mux.Handle("/hls-auth", hlsAuthHandler(o.Gate))
+	}
 	mux.Handle("/samples/", samplesHandler(appsRoot))
 	mux.Handle("/sdk/", sdkHandler(sdkDir))
-	mux.Handle("/", spaHandler(o.WebDir))
+	mux.Handle("/", spaHandler(o.WebDir, o.DashboardCSP))
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +75,7 @@ func Mount(mux *http.ServeMux, o Options) {
 
 var hlsPath = regexp.MustCompile(`^/hls/([^/]+)/([^/]+)/(.+)$`)
 
-func hlsHandler(appsRoot string, cdn bool, counter ByteCounter) http.Handler {
+func hlsHandler(appsRoot string, cdn bool, cache HLSCachePolicy, counter ByteCounter, gate HLSGate) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
@@ -82,8 +98,21 @@ func hlsHandler(appsRoot string, cdn bool, counter ByteCounter) http.Handler {
 			notFound()
 			return
 		}
-		for k, v := range HLSCacheHeaders(file, cdn, strings.HasSuffix(file, ".m3u8") && playlistIsFinished(file)) {
+		// G2: authorize BEFORE touching the file, so a private app answers 403
+		// whether or not the room/segment exists (no existence oracle).
+		var dec HLSDecision
+		if gate != nil {
+			if dec = gate.AuthorizeHLS(r, m[1], m[2]); !dec.Allowed() {
+				writeDenied(w, dec)
+				return
+			}
+		}
+		playlist := strings.HasSuffix(file, ".m3u8")
+		for k, v := range cache.Headers(file, cdn, playlist && playlistIsFinished(file)) {
 			h.Set(k, v)
+		}
+		if dec.Private {
+			privateCacheHeaders(h, file)
 		}
 		cw := w
 		var counted *countingWriter
@@ -91,7 +120,13 @@ func hlsHandler(appsRoot string, cdn bool, counter ByteCounter) http.Handler {
 			counted = &countingWriter{ResponseWriter: w}
 			cw = counted
 		}
-		if !serveFile(cw, r, file) {
+		var served bool
+		if dec.Private && playlist {
+			served = serveRewrittenPlaylist(cw, r, file, func(b []byte) []byte { return RewritePlaylist(b, dec.Token) })
+		} else {
+			served = serveFile(cw, r, file)
+		}
+		if !served {
 			h.Del("Cache-Control")
 			notFound()
 			return
@@ -179,7 +214,7 @@ func sdkHandler(sdkDir string) http.Handler {
 // unknown paths under them get Nest's "Cannot METHOD path" 404.
 var apiPrefixes = []string{"/api/", "/rtc/", "/hls/", "/live/", "/samples/", "/sdk/"}
 
-func spaHandler(webDir string) http.Handler {
+func spaHandler(webDir, csp string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Path
 		excluded := p == "/metrics" || p == "/api" || p == "/rtc"
@@ -193,6 +228,7 @@ func spaHandler(webDir string) http.Handler {
 			httpx.WriteError(w, httpx.Nest(http.StatusNotFound, fmt.Sprintf("Cannot %s %s", r.Method, p)))
 			return
 		}
+		setDashboardHeaders(w.Header(), csp, p)
 		if file, ok := safeJoin(webDir, strings.TrimPrefix(p, "/")); ok && p != "/" && serveFile(w, r, file) {
 			return
 		}

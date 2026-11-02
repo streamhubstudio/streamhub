@@ -10,10 +10,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/db"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/web"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/db"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/web"
 )
 
 // Wiring is split into "planes" (one file per group of modules, e.g.
@@ -40,6 +40,8 @@ type core struct {
 	middleware []func(http.Handler) http.Handler
 	// hlsCounter receives /hls bytes per app (net-metrics plane sets it).
 	hlsCounter web.ByteCounter
+	// hlsGate authorizes /hls (signed HLS + geo; the playback plane sets it).
+	hlsGate web.HLSGate
 	// starters run after every plane is wired (background timers, boot
 	// re-arm), in plane order, with the root context.
 	starters []func(context.Context)

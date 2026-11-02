@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/netaddr"
 )
 
 // Port of egress-url.guard.ts — the SSRF guard for server-side egress dials
@@ -21,6 +24,7 @@ const (
 	CallbackAllowHostsEnv     = "STREAMHUB_CALLBACK_ALLOW_HOSTS"
 	AllowPrivateS3EndpointEnv = "STREAMHUB_ALLOW_PRIVATE_S3_ENDPOINT"
 	AllowPrivateMQTTBrokerEnv = "STREAMHUB_ALLOW_PRIVATE_MQTT_BROKER"
+	AllowPrivateSMTPHostEnv   = "STREAMHUB_ALLOW_PRIVATE_SMTP_HOST" // tenant (per-app / per-user) SMTP only
 )
 
 // HTTPSchemes are the schemes a callback or S3 endpoint may use.
@@ -66,44 +70,21 @@ type EgressOptions struct {
 	Resolve        HostResolver
 }
 
+// SafeHTTPClient is the outbound client for tenant-controlled URLs: the
+// dial-time half of this guard (httpx.NewSafeClient — the resolved IP is
+// re-checked on every connection, redirects re-vetted and capped at 5) with
+// the STREAMHUB_CALLBACK_ALLOW_HOSTS exemptions, read on every dial. Call
+// sites keep AssertSafeEgressURL in front for the 400 + message; this closes
+// DNS rebinding and the 30x bypass. resolve nil = system DNS.
+func SafeHTTPClient(resolve HostResolver) *http.Client {
+	return httpx.NewSafeClient(&httpx.EgressGuard{
+		Allowlist: func() []string { return ParseAllowlistEnv(os.Getenv(CallbackAllowHostsEnv)) },
+		Resolve:   httpx.Resolver(resolve),
+	})
+}
+
 // IsForbiddenEgressAddress: private/loopback/link-local or unspecified.
-func IsForbiddenEgressAddress(addr string) bool {
-	if IsPrivateOrLoopback(addr) {
-		return true
-	}
-	p := ParseIP(addr)
-	return p != nil && p.Value.Sign() == 0
-}
-
-type compiledAllowlist struct {
-	hostnames map[string]bool
-	cidrs     []*ParsedCIDR
-}
-
-func compileAllowlist(entries []string) compiledAllowlist {
-	c := compiledAllowlist{hostnames: map[string]bool{}}
-	for _, e := range entries {
-		if p := ParseCIDR(e); p != nil {
-			c.cidrs = append(c.cidrs, p)
-		} else {
-			c.hostnames[strings.ToLower(e)] = true
-		}
-	}
-	return c
-}
-
-func (c compiledAllowlist) hasAddress(addr string) bool {
-	ip := ParseIP(addr)
-	if ip == nil {
-		return false
-	}
-	for _, x := range c.cidrs {
-		if InCIDR(ip, x) {
-			return true
-		}
-	}
-	return false
-}
+func IsForbiddenEgressAddress(addr string) bool { return netaddr.IsForbiddenEgress(addr) }
 
 // ParseEgressURL is the synchronous half: parse + scheme check.
 func ParseEgressURL(raw string, opts EgressOptions) (*url.URL, error) {
@@ -200,11 +181,11 @@ func AssertSafeEgressURLSync(raw string, opts EgressOptions) error {
 		return err
 	}
 	host := u.Hostname()
-	allow := compileAllowlist(opts.Allowlist)
-	if allow.hostnames[strings.ToLower(host)] {
+	allow := netaddr.CompileAllowlist(opts.Allowlist)
+	if allow.HasHostname(host) {
 		return nil
 	}
-	if ParseIP(host) != nil && !allow.hasAddress(host) && IsForbiddenEgressAddress(host) {
+	if ParseIP(host) != nil && !allow.HasAddress(host) && IsForbiddenEgressAddress(host) {
 		return httpx.BadRequest(opts.Label + " points at a private/loopback/link-local address")
 	}
 	return nil
@@ -218,12 +199,12 @@ func AssertSafeEgressURL(ctx context.Context, raw string, opts EgressOptions) er
 		return err
 	}
 	host := u.Hostname()
-	allow := compileAllowlist(opts.Allowlist)
-	if allow.hostnames[strings.ToLower(host)] {
+	allow := netaddr.CompileAllowlist(opts.Allowlist)
+	if allow.HasHostname(host) {
 		return nil
 	}
 	if ParseIP(host) != nil {
-		if !allow.hasAddress(host) && IsForbiddenEgressAddress(host) {
+		if !allow.HasAddress(host) && IsForbiddenEgressAddress(host) {
 			return httpx.BadRequest(opts.Label + " points at a private/loopback/link-local address")
 		}
 		return nil
@@ -237,7 +218,7 @@ func AssertSafeEgressURL(ctx context.Context, raw string, opts EgressOptions) er
 		return httpx.BadRequest(fmt.Sprintf("%s host '%s' does not resolve", opts.Label, host))
 	}
 	for _, a := range addrs {
-		if IsForbiddenEgressAddress(a) && !allow.hasAddress(a) {
+		if IsForbiddenEgressAddress(a) && !allow.HasAddress(a) {
 			return httpx.BadRequest(opts.Label + " resolves to a private/loopback/link-local address")
 		}
 	}

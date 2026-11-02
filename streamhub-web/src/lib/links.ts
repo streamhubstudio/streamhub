@@ -10,7 +10,7 @@ export const REPO_URL = 'https://github.com/streamhubstudio/streamhub'
  * Public documentation site.
  *
  * Points at the Laravel marketing site's `/docs` mirror (streamhub-web-laravel,
- * `php artisan docs:sync` — a 1:1 snapshot of this repo's `https://streamhub.studio/docs/`),
+ * `php artisan docs:sync` — a 1:1 snapshot of this repo's `streamhub-docs/`),
  * NOT the `docs.streamhub.studio` subdomain: that subdomain is hosted
  * separately (a hand-curated Astro/Starlight site, repo
  * `digitalhub_com_ar/streamhub-docs`) and does not publish the deep

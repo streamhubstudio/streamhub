@@ -1,9 +1,10 @@
-module github.com/streamhubstudio/streamhub/streamhub-core-go
+module gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go
 
 go 1.26.8
 
 require (
 	github.com/danielgtaylor/huma/v2 v2.40.0
+	github.com/oschwald/maxminddb-golang/v2 v2.8.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	golang.org/x/crypto v0.58.0
 	modernc.org/sqlite v1.61.0

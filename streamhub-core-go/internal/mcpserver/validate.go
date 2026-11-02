@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Input validation reproducing zod 3 (which the TypeScript server's SDK ran

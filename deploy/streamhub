@@ -53,7 +53,8 @@ die()  { printf "${c_err}[streamhub] ERROR:${c_off} %s\n" "$*" >&2; exit 1; }
 
 # ---- install profile (MODE / PROXY) written by install.sh -------------------
 # Tells us which services this node actually runs: an nginx origin must NOT
-# start the compose Caddy service; an edge runs only the media services.
+# start the compose Caddy service; an edge runs only the media services; a CDN
+# edge (MODE=cdn-edge) has no compose stack at all — just nginx + the heartbeat.
 STREAMHUB_PROFILE_MODE="origin"
 STREAMHUB_PROFILE_PROXY="caddy"
 STREAMHUB_PROFILE_EGRESS="0"
@@ -83,7 +84,47 @@ managed_services() {
   # caddy origin: nothing printed → caller manages ALL compose services
 }
 
-compose() { docker compose --project-directory "$INSTALL_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
+# The compose `caddy` service sits behind the `caddy` profile (so an nginx origin
+# never starts it): enable it here on a caddy origin, whatever .env says.
+compose() {
+  local prof=()
+  [ "$MODE" = "origin" ] && [ "$PROXY" = "caddy" ] && prof=(--profile caddy)
+  docker compose --project-directory "$INSTALL_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ${prof[@]+"${prof[@]}"} "$@"
+}
+
+# ---- CDN edge (MODE=cdn-edge): nginx + heartbeat timer, no Docker ----------
+CDN_EDGE_CONF=/etc/nginx/conf.d/streamhub-hls-edge.conf
+cdn_status_url() {
+  local u
+  u="$(sed -n 's/^STREAMHUB_HB_CDN_STATUS_URL=//p' /etc/streamhub/heartbeat.env 2>/dev/null | head -1)"
+  printf '%s' "${u:-http://127.0.0.1:18081/nginx_status}"
+}
+cdn_cmd() { # cdn_cmd <start|stop|restart|status|logs|version|doctor> [args]
+  local sub="$1"; shift || true
+  case "$sub" in
+    start)   log "starting nginx + the heartbeat timer (CDN edge)"
+             systemctl start nginx streamhub-heartbeat.timer; ok "started." ;;
+    stop)    log "stopping nginx + the heartbeat timer (CDN edge)"
+             systemctl stop streamhub-heartbeat.timer nginx; ok "stopped." ;;
+    restart) nginx -t && systemctl restart nginx && systemctl restart streamhub-heartbeat.timer; ok "restarted." ;;
+    status)  systemctl --no-pager status nginx streamhub-heartbeat.timer || true
+             echo; curl -fsS -m3 "$(cdn_status_url)" 2>/dev/null || warn "stub_status unreachable ($(cdn_status_url))" ;;
+    logs)    if [ "${1:-}" = "-f" ] || [ "${1:-}" = "--follow" ]; then journalctl -u nginx -u streamhub-heartbeat -f
+             else journalctl -u nginx -u streamhub-heartbeat --no-pager -n 200; tail -n 50 /var/log/nginx/error.log 2>/dev/null || true; fi ;;
+    version) local v="unknown"; [ -r "$INSTALL_DIR/VERSION" ] && v="$(head -1 "$INSTALL_DIR/VERSION")"
+             ok "StreamHub $v  (dir: $INSTALL_DIR, mode: cdn-edge)"; echo "  $(nginx -v 2>&1)" ;;
+    doctor)
+      local rc=0
+      ok "StreamHub doctor (CDN edge) — $INSTALL_DIR"
+      if nginx -t >/dev/null 2>&1; then echo "  [ok] nginx config valid"; else echo "  [!!] nginx -t FAILED"; rc=1; fi
+      if [ -f "$CDN_EDGE_CONF" ]; then echo "  [ok] $CDN_EDGE_CONF present"; else echo "  [!!] $CDN_EDGE_CONF missing — re-run the installer"; rc=1; fi
+      if systemctl is-active --quiet nginx; then echo "  [ok] nginx active"; else echo "  [!!] nginx NOT active"; rc=1; fi
+      if curl -fsS -m3 "$(cdn_status_url)" >/dev/null 2>&1; then echo "  [ok] stub_status answers ($(cdn_status_url))"; else echo "  [!!] stub_status unreachable"; rc=1; fi
+      if systemctl is-active --quiet streamhub-heartbeat.timer; then echo "  [ok] heartbeat timer active"; else echo "  [!!] heartbeat timer NOT active"; rc=1; fi
+      if [ "$rc" = 0 ]; then ok "doctor: all critical checks passed"; else warn "doctor: some checks FAILED (see above)"; fi
+      return "$rc" ;;
+  esac
+}
 
 require_install() {
   [ -f "$COMPOSE_FILE" ] || die "no StreamHub install at $INSTALL_DIR (missing docker-compose.yml). Set STREAMHUB_DIR or install first."
@@ -112,6 +153,7 @@ opsfmt() {
 
 # ---- subcommands ------------------------------------------------------------
 cmd_start() {
+  [ "$MODE" = "cdn-edge" ] && { cdn_cmd start; return; }
   require_install
   local svcs; mapfile -t svcs < <(managed_services)
   if [ "${#svcs[@]}" -eq 0 ]; then
@@ -127,18 +169,20 @@ cmd_start() {
 }
 
 cmd_stop() {
+  [ "$MODE" = "cdn-edge" ] && { cdn_cmd stop; return; }
   require_install
   log "stopping the stack (containers stay defined; data is kept)"
   compose stop
   ok "stopped."
 }
 
-cmd_restart() { cmd_stop; cmd_start; }
+cmd_restart() { if [ "$MODE" = "cdn-edge" ]; then cdn_cmd restart; else cmd_stop; cmd_start; fi; }
 
-cmd_status() { require_install; compose ps; }
+cmd_status() { if [ "$MODE" = "cdn-edge" ]; then cdn_cmd status; else require_install; compose ps; fi; }
 cmd_ps()     { cmd_status; }
 
 cmd_logs() {
+  [ "$MODE" = "cdn-edge" ] && { cdn_cmd logs "$@"; return; }
   require_install
   local follow=0 save=0 svc="" a
   for a in "$@"; do
@@ -164,6 +208,7 @@ cmd_logs() {
 }
 
 cmd_version() {
+  [ "$MODE" = "cdn-edge" ] && { cdn_cmd version; return; }
   local installed="unknown"
   [ -r "$INSTALL_DIR/VERSION" ] && installed="$(head -1 "$INSTALL_DIR/VERSION" 2>/dev/null || echo unknown)"
   ok "StreamHub $installed  (dir: $INSTALL_DIR, mode: $MODE, proxy: $PROXY)"
@@ -195,6 +240,7 @@ cmd_config() {
 }
 
 cmd_doctor() {
+  [ "$MODE" = "cdn-edge" ] && { cdn_cmd doctor; return; }
   require_install
   local rc=0
   ok "StreamHub doctor — $INSTALL_DIR"
@@ -391,7 +437,7 @@ cmd_cluster() {
   local sub="${1:-status}"; shift || true
   case "$sub" in help|-h|--help) cluster_usage; return 0 ;; esac
   require_install
-  [ "$MODE" = "join" ] && die "cluster admin runs on the MASTER — this is a join-mode node. Run 'streamhub cluster ...' on the origin."
+  case "$MODE" in join|cdn-edge) die "cluster admin runs on the MASTER — this is a join-mode node. Run 'streamhub cluster ...' on the origin." ;; esac
   command -v curl >/dev/null 2>&1 || die "curl is required for cluster commands."
   case "$sub" in
     status)   cluster_status ;;
@@ -669,7 +715,7 @@ cmd_app() {
   local sub="${1:-help}"; shift || true
   case "$sub" in help|-h|--help) app_usage; return 0 ;; esac
   require_install
-  [ "$MODE" = "join" ] && die "appstore admin runs on the MASTER — this is a join-mode node. Run 'streamhub app ...' on the origin."
+  case "$MODE" in join|cdn-edge) die "appstore admin runs on the MASTER — this is a join-mode node. Run 'streamhub app ...' on the origin." ;; esac
   command -v curl >/dev/null 2>&1 || die "curl is required for app commands."
   case "$sub" in
     versions)       app_versions "$@" ;;

@@ -27,7 +27,8 @@
     "desync": "A/V drift",
     "ccErrors": "CC errors",
     "lastSegment": "Last segment",
-    "noAudio": "none"
+    "noAudio": "none",
+    "noAudioSource": "no audio source"
   },
   "tiles": {
     "today": "{{count}} events today",
@@ -62,5 +63,9 @@
     "roomTitle": "Recent events for this stream"
   },
   "noStreams": "No live streams with HLS output right now. Start publishing to see health here.",
-  "noFeed": "No worker feed. Install and enable the app (and check the worker status in the Marketplace) — the monitor needs the stream-health worker running."
+  "noFeed": "No worker feed. Install and enable the app (and check the worker status in the Marketplace) — the monitor needs the stream-health worker running.",
+  "edges": {
+    "title": "Through the edges / CDN",
+    "via": "via {{edge}}"
+  }
 }

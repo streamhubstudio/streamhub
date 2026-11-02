@@ -2,18 +2,19 @@ package livekit
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"net/http"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/authz"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/validate"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/authz"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/validate"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // longEmptyTimeout is the fallback emptyTimeout of a pre-created persistent
@@ -629,6 +630,22 @@ func (m *Module) backupFields(ctx context.Context, app, ingressID string, all []
 		}
 	}
 	return info.Role, &paired, bf
+}
+
+// CreateIngressFor is POST /apps/:app/ingress for an internal caller (the
+// device plane links an encoder channel to a room): the body is validated
+// with the same DTO rules, then runs the route's logic (quotas, passthrough,
+// MediaMTX) for principal p.
+func (m *Module) CreateIngressFor(ctx context.Context, app string, body map[string]any, p *auth.Principal) (any, error) {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	b, err := parseBody(raw, createIngressRules)
+	if err != nil {
+		return nil, err
+	}
+	return m.CreateIngressRoute(ctx, app, b, p)
 }
 
 // DeleteIngressRoute is DELETE /apps/:app/ingress/:id.

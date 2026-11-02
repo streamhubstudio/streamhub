@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/contracts"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/jsx"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/timezone"
-	y "github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/yamljs"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/contracts"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/jsx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/timezone"
+	y "gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/yamljs"
 )
 
 // Resolution of the on-disk tree into the cross-module AppConfig: every
@@ -135,6 +135,88 @@ func stringMap(m *y.Map) map[string]string {
 	return out
 }
 
+// --- G2 (3.4.0): features.hls_token_ttl_seconds / geo / play_auth ---------
+// config.yaml-only blocks, nil/0 when absent so the resolved JSON of an app
+// that never set them is unchanged.
+
+// HLS token TTL bounds (seconds) for features.hls_token_ttl_seconds.
+const (
+	MinHlsTokenTTL = 60
+	MaxHlsTokenTTL = 86400
+)
+
+// resolveHlsTokenTTL clamps a configured TTL into [60, 86400]; absent or
+// garbage → 0 (the hlsauth default applies).
+func resolveHlsTokenTTL(v any) int64 {
+	n := math.Floor(y.ToNumber(v))
+	if !finite(n) || n <= 0 {
+		return 0
+	}
+	return int64(math.Min(math.Max(n, MinHlsTokenTTL), MaxHlsTokenTTL))
+}
+
+var countryCode = regexp.MustCompile(`^[A-Z]{2}$`)
+
+// countryList keeps the valid ISO alpha-2 codes, upper-cased and deduped.
+func countryList(v any) []string {
+	out := []string{}
+	list, ok := v.([]any)
+	if !ok {
+		return out
+	}
+	seen := map[string]bool{}
+	for _, e := range list {
+		s, ok := e.(string)
+		if !ok {
+			continue
+		}
+		c := strings.ToUpper(y.Trim(s))
+		if countryCode.MatchString(c) && !seen[c] {
+			seen[c] = true
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// ResolveGeoFeatures resolves features.geo (nil when the block is absent).
+func ResolveGeoFeatures(d any) *contracts.GeoFeatures {
+	if m, ok := d.(*y.Map); !ok || m == nil {
+		return nil
+	}
+	return &contracts.GeoFeatures{
+		Allow:   countryList(prop(d, "allow")),
+		Deny:    countryList(prop(d, "deny")),
+		Publish: prop(d, "publish") == true,
+	}
+}
+
+// Play-auth webhook timeout bounds (ms).
+const (
+	DefaultPlayAuthTimeoutMs = 3000
+	MaxPlayAuthTimeoutMs     = 10000
+)
+
+// ResolvePlayAuthFeatures resolves features.play_auth (nil when the block
+// is absent or carries no webhook_url).
+func ResolvePlayAuthFeatures(d any) *contracts.PlayAuthFeatures {
+	if m, ok := d.(*y.Map); !ok || m == nil {
+		return nil
+	}
+	url := ""
+	if s, ok := prop(d, "webhook_url").(string); ok {
+		url = y.Trim(s)
+	}
+	if url == "" {
+		return nil
+	}
+	timeout := int64(DefaultPlayAuthTimeoutMs)
+	if n := math.Floor(y.ToNumber(prop(d, "timeout_ms"))); finite(n) && n > 0 {
+		timeout = int64(math.Min(n, MaxPlayAuthTimeoutMs))
+	}
+	return &contracts.PlayAuthFeatures{WebhookURL: url, TimeoutMs: timeout, FailOpen: prop(d, "fail_open") == true}
+}
+
 func resolveLinear(d any) *contracts.LinearChannelFeatures {
 	posInt := func(v any, fallback float64) float64 {
 		n := math.Floor(y.ToNumber(v))
@@ -149,6 +231,82 @@ func resolveLinear(d any) *contracts.LinearChannelFeatures {
 		AlwaysOnHls:             prop(d, "always_on_hls") == true,
 		Dvr:                     prop(d, "dvr") == true,
 		DvrWindowSeconds:        posInt(prop(d, "dvr_window_seconds"), 3600),
+	}
+}
+
+// clampInt floors v into [lo, hi]; garbage (or non-finite) → fallback.
+func clampInt(v any, fallback, lo, hi float64) float64 {
+	n := math.Floor(y.ToNumber(v))
+	if !finite(n) {
+		return fallback
+	}
+	return math.Min(math.Max(n, lo), hi) + 0
+}
+
+// Limits of the G5/G6 blocks (features/dvr-clips.md).
+const (
+	DefaultDvrWindowMinutes = 60
+	MaxDvrWindowMinutes     = 1440
+	DefaultHlsSegmentS      = 4
+	MaxHlsSegmentS          = 30
+	MaxHlsListSize          = 10000
+	DefaultClipMaxSeconds   = 120
+	MaxClipMaxSeconds       = 600
+)
+
+// isBlock: a YAML mapping (arrays / scalars are not a block).
+func isBlock(d any) bool {
+	m, ok := d.(*y.Map)
+	return ok && m != nil
+}
+
+// resolveDvr is features.dvr: nil when the block is absent (or not an
+// object), so an app that never opted in is untouched.
+func resolveDvr(d any) *contracts.DvrFeatures {
+	if !isBlock(d) {
+		return nil
+	}
+	w := prop(d, "window_minutes")
+	if y.IsNullish(w) {
+		w = float64(DefaultDvrWindowMinutes)
+	}
+	return &contracts.DvrFeatures{
+		Enabled:       prop(d, "enabled") == true,
+		WindowMinutes: clampInt(w, DefaultDvrWindowMinutes, 1, MaxDvrWindowMinutes),
+	}
+}
+
+// resolveHls is features.hls (hlsTime / hlsListSize): nil when absent.
+func resolveHls(d any) *contracts.HlsFeatures {
+	if !isBlock(d) {
+		return nil
+	}
+	seg := prop(d, "segment_seconds")
+	if y.IsNullish(seg) {
+		seg = float64(DefaultHlsSegmentS)
+	}
+	return &contracts.HlsFeatures{
+		SegmentSeconds: clampInt(seg, DefaultHlsSegmentS, 1, MaxHlsSegmentS),
+		ListSize:       clampInt(y.Coalesce(prop(d, "list_size"), 0.0), 0, 0, MaxHlsListSize),
+	}
+}
+
+// resolveClips is features.clips: nil when absent.
+func resolveClips(d any) *contracts.ClipsFeatures {
+	if !isBlock(d) {
+		return nil
+	}
+	or := func(k string, fallback float64) any {
+		if v := prop(d, k); !y.IsNullish(v) {
+			return v
+		}
+		return fallback
+	}
+	return &contracts.ClipsFeatures{
+		Enabled:       prop(d, "enabled") == true,
+		MaxSeconds:    clampInt(or("max_seconds", DefaultClipMaxSeconds), DefaultClipMaxSeconds, 1, MaxClipMaxSeconds),
+		MaxConcurrent: clampInt(or("max_concurrent", 2), 2, 1, 8),
+		MaxQueued:     clampInt(or("max_queued", 20), 20, 1, 200),
 	}
 }
 
@@ -207,7 +365,7 @@ func resolveTranscoding(t any) contracts.TranscodingConfig {
 
 var mqttLogLevels = map[string]bool{"trace": true, "debug": true, "info": true, "warn": true, "error": true, "fatal": true}
 
-func (s *Service) resolveMqtt(disk *y.Map) contracts.MqttConfig {
+func (s *Service) resolveMqtt(name string, disk *y.Map) contracts.MqttConfig {
 	m := disk.Get("mqtt")
 	qos := 0
 	if q := prop(m, "qos"); q == 1.0 || q == 2.0 {
@@ -237,7 +395,7 @@ func (s *Service) resolveMqtt(disk *y.Map) contracts.MqttConfig {
 		Enabled:     boolOf(prop(m, "enabled")),
 		URL:         y.Trim(orEmpty(prop(m, "url"))),
 		Username:    orEmpty(prop(m, "username")),
-		Password:    s.resolveSecret(prop(m, "password_env")),
+		Password:    s.resolveSecret(name, SecretMqttPassword),
 		TopicPrefix: topic,
 		Qos:         qos,
 		TLS:         boolOf(prop(m, "tls")),
@@ -246,7 +404,7 @@ func (s *Service) resolveMqtt(disk *y.Map) contracts.MqttConfig {
 	}
 }
 
-func (s *Service) resolveSmtp(disk *y.Map) contracts.SmtpConfig {
+func (s *Service) resolveSmtp(name string, disk *y.Map) contracts.SmtpConfig {
 	sm := disk.Get("smtp")
 	port := y.ToNumber(prop(sm, "port"))
 	if !(finite(port) && port == math.Trunc(port) && port > 0 && port < 65536) {
@@ -258,7 +416,7 @@ func (s *Service) resolveSmtp(disk *y.Map) contracts.SmtpConfig {
 		Port:    port,
 		User:    orEmpty(prop(sm, "user")),
 		From:    orEmpty(prop(sm, "from")),
-		Pass:    s.resolveSecret(orEmpty(prop(sm, "pass_env"))),
+		Pass:    s.resolveSecret(name, SecretSmtpPass),
 	}
 }
 
@@ -306,7 +464,7 @@ func layersOf(v any) []contracts.WebrtcLayer {
 }
 
 // toResolved resolves the disk tree into AppConfig (credentials resolved).
-func (s *Service) toResolved(disk *y.Map) *contracts.AppConfig {
+func (s *Service) toResolved(name string, disk *y.Map) *contracts.AppConfig {
 	rec := disk.Get("recording")
 	s3 := disk.Get("s3")
 	webrtc := disk.Get("webrtc")
@@ -338,8 +496,9 @@ func (s *Service) toResolved(disk *y.Map) *contracts.AppConfig {
 			ForcePathStyle: boolOf(prop(s3, "force_path_style")),
 			Prefix:         str(prop(s3, "prefix")),
 			PublicURL:      orEmpty(prop(s3, "public_url")),
-			AccessKey:      s.resolveSecret(prop(s3, "access_key_env")),
-			SecretKey:      s.resolveSecret(prop(s3, "secret_key_env")),
+			AccessKey:      s.resolveSecret(name, SecretS3Key),
+			SecretKey:      s.resolveSecret(name, SecretS3Secret),
+			StorageClass:   storageClassOf(prop(s3, "storage_class")),
 		},
 		Webrtc: contracts.WebrtcConfig{
 			Adaptive:           boolOf(prop(webrtc, "adaptive")),
@@ -353,21 +512,29 @@ func (s *Service) toResolved(disk *y.Map) *contracts.AppConfig {
 		},
 		Transcoding:  resolveTranscoding(disk.Get("transcoding")),
 		Callbacks:    contracts.CallbacksConfig{URL: str(prop(cb, "url")), Secret: str(prop(cb, "secret"))},
-		Mqtt:         s.resolveMqtt(disk),
-		Smtp:         s.resolveSmtp(disk),
+		Mqtt:         s.resolveMqtt(name, disk),
+		Smtp:         s.resolveSmtp(name, disk),
 		LatencyAlert: resolveLatencyAlert(disk.Get("latency_alert")),
 		Quotas:       resolveQuotas(disk.Get("quotas")),
 		Features: contracts.AppFeatures{
-			RtmpPassword:   boolOf(prop(f, "rtmp_password")),
-			ViewerCounter:  boolOf(prop(f, "viewer_counter")),
-			Chat:           boolOf(prop(f, "chat")),
-			Reactions:      boolOf(prop(f, "reactions")),
-			HiddenQc:       boolOf(prop(f, "hidden_qc")),
-			AdaptivePlayer: boolOf(prop(f, "adaptive_player")),
-			PublicPlayback: prop(f, "public_playback") != false,
-			WsIngest:       resolveWsIngest(prop(f, "ws_ingest")),
-			Drm:            ptr(ResolveDrmFeatures(prop(f, "drm"))),
-			Linear:         resolveLinear(prop(f, "linear")),
+			RtmpPassword:         boolOf(prop(f, "rtmp_password")),
+			ViewerCounter:        boolOf(prop(f, "viewer_counter")),
+			Chat:                 boolOf(prop(f, "chat")),
+			Reactions:            boolOf(prop(f, "reactions")),
+			HiddenQc:             boolOf(prop(f, "hidden_qc")),
+			AdaptivePlayer:       boolOf(prop(f, "adaptive_player")),
+			PublicPlayback:       prop(f, "public_playback") != false,
+			WsIngest:             resolveWsIngest(prop(f, "ws_ingest")),
+			Drm:                  ptr(ResolveDrmFeatures(prop(f, "drm"))),
+			Linear:               resolveLinear(prop(f, "linear")),
+			HlsTokenTTLSeconds:   resolveHlsTokenTTL(prop(f, "hls_token_ttl_seconds")),
+			Geo:                  ResolveGeoFeatures(prop(f, "geo")),
+			PlayAuth:             ResolvePlayAuthFeatures(prop(f, "play_auth")),
+			Dvr:                  resolveDvr(prop(f, "dvr")),
+			Hls:                  resolveHls(prop(f, "hls")),
+			Clips:                resolveClips(prop(f, "clips")),
+			AllowedPublisherCidr: resolvePublisherCIDR(prop(f, "allowed_publisher_cidr")),
+			MaxBitrateAccept:     resolveMaxBitrateAccept(prop(f, "max_bitrate_accept")),
 		},
 		Variables: stringMap(resolveVariables(disk.Get("variables"))),
 	}

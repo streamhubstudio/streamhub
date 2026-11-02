@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/fleet"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/fleet"
 )
 
 // MemBroker is an in-memory MQTT broker for tests: topic filters with + and

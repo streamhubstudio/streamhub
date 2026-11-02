@@ -8,7 +8,7 @@
  * functions so `StreamHubAdaptor` stays a thin LiveKit mapping and every
  * branch is coverable under node:test.
  *
- * See https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT for the full analysis
+ * See streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md for the full analysis
  * (which quirks livekit-client already absorbs vs what this SDK must do).
  */
 
@@ -139,7 +139,7 @@ const CONNECT_FAILURE_RE =
 export const TURN_HINT =
   "hint: if this client is behind a strict NAT/VPN/firewall (Safari is the " +
   "strictest), the server needs a TURN relay — enable `turn:` (TURN/TLS :5349 " +
-  "or :443) in livekit.yaml. See https://streamhub.studio/docs/features/WEBRTC-BROWSER-COMPAT.";
+  "or :443) in livekit.yaml. See streamhub-docs/features/WEBRTC-BROWSER-COMPAT.md.";
 
 /**
  * Append the TURN hint to connection-level failure messages so integrators

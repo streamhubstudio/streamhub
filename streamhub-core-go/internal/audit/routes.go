@@ -7,10 +7,10 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/auth"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/api"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/config"
-	"github.com/streamhubstudio/streamhub/streamhub-core-go/internal/platform/httpx"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/auth"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/api"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/config"
+	"gitlab.com/digitalhub_com_ar/vision-media-server/streamhub-core-go/internal/platform/httpx"
 )
 
 // Routes is the read API over the trail (audit.controller.ts): GET
@@ -32,13 +32,13 @@ type listInput struct {
 
 // Register implements api.Module.
 func (m *Routes) Register(a huma.API) {
-	huma.Register(a, *api.Bearer(&huma.Operation{
+	huma.Register(a, *api.Global(api.Bearer(&huma.Operation{
 		OperationID: "AuditController_list",
 		Method:      http.MethodGet,
 		Path:        api.Prefix + "/system/audit",
 		Summary:     "Query the append-only security audit trail (newest first).",
 		Tags:        []string{"system"},
-	}), func(ctx context.Context, in *listInput) (*api.Out[api.Envelope[AuditPage]], error) {
+	})), func(ctx context.Context, in *listInput) (*api.Out[api.Envelope[AuditPage]], error) {
 		if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 			return nil, err
 		}
@@ -61,13 +61,13 @@ func (m *Routes) Register(a huma.API) {
 		return api.OK(page), nil
 	})
 
-	huma.Register(a, *api.Bearer(&huma.Operation{
+	huma.Register(a, *api.Global(api.Bearer(&huma.Operation{
 		OperationID: "AuditController_verify",
 		Method:      http.MethodGet,
 		Path:        api.Prefix + "/system/audit/verify",
 		Summary:     "Verify the audit-trail hash chain (tamper evidence).",
 		Tags:        []string{"system"},
-	}), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[AuditChainReport]], error) {
+	})), func(ctx context.Context, _ *struct{}) (*api.Out[api.Envelope[AuditChainReport]], error) {
 		if err := api.RequireGlobal(ctx, api.GlobalScopeMessage); err != nil {
 			return nil, err
 		}
