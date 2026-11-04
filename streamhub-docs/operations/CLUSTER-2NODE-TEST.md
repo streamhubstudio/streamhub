@@ -1,21 +1,21 @@
 # Cluster 2-nodos — prueba real + cómo funciona el balanceo
 
 **Fecha:** 2026-07-02. **Nodos:** `node01` (203.0.113.11, 4c/8GB, docker-compose, origin de
-prueba) y `stream01-prod` (203.0.113.10, 8c/8GB, **producción con cámaras en vivo**, deploy
-nativo systemd). IPs **contiguas en la misma subred OVH** → latencia inter-nodo mínima.
+prueba) y `media01-prod` (203.0.113.10, 8c/8GB, **producción con cámaras en vivo**, deploy
+nativo systemd). IPs **contiguas en la misma subred VPS** → latencia inter-nodo mínima.
 
 ## Qué se probó (plano de control — SIN tocar la media de prod)
 
 Se ejercitó **el módulo `cluster` end-to-end entre los dos servidores reales**, sin reiniciar
-ni reconfigurar nada de producción (a stream01 sólo le salió un `curl` saliente):
+ni reconfigurar nada de producción (a media01 sólo le salió un `curl` saliente):
 
 | Paso | Resultado |
 |---|---|
-| `POST /cluster/join` (X-Cluster-Token) desde stream01 → node01 | 200, `nodeId`, devuelve las **LiveKit keys cluster-wide** + `publicWsUrl` |
+| `POST /cluster/join` (X-Cluster-Token) desde media01 → node01 | 200, `nodeId`, devuelve las **LiveKit keys cluster-wide** + `publicWsUrl` |
 | `POST /cluster/heartbeat` con `stats` reales (cpu/ram/cores) | `{ok:true}`, guardó los stats |
 | node01 auto-registrado | registro de **2 nodos** |
 | `GET /cluster/nodes` (Bearer sk_ global) | ambos `active`, `stale:false`, con stats |
-| `PATCH /cluster/nodes/:id {status:'draining'}` | stream01 → `draining` (deja de recibir rooms nuevos), verificado, restaurado a `active` |
+| `PATCH /cluster/nodes/:id {status:'draining'}` | media01 → `draining` (deja de recibir rooms nuevos), verificado, restaurado a `active` |
 | Staleness | `stale=true` automático si `last_seen_at` > 90s (nodo caído) |
 
 **Conclusión:** el plano de control del cluster (alta por token, registry, heartbeat con
@@ -38,12 +38,12 @@ nodos reales**. Es lo que el feature implementa hoy.
 
 ## Qué falta para un mesh de MEDIA real (y por qué no se hizo contra prod)
 
-El plano de **media** (que un room se sirva en node01 y stream01 lo "vea") requiere:
+El plano de **media** (que un room se sirva en node01 y media01 lo "vea") requiere:
 1. **Redis compartido y alcanzable** entre nodos (hoy prod bindea `127.0.0.1` sin password).
 2. **Mismas LiveKit keys** en todos los nodos (el `join` ya las reparte — ✔).
 3. Ambos `livekit-server` apuntando al **mismo Redis** (prod usa `redis: address: localhost:6379`).
 
-Hacer esto contra **stream01 (prod)** implica **reiniciar su Redis y su LiveKit** →
+Hacer esto contra **media01 (prod)** implica **reiniciar su Redis y su LiveKit** →
 **se cortan TODAS las cámaras en vivo** unos segundos, y activa dos **gaps conocidos**:
 
 - **Grabación cross-node (bug real):** el egress de una grabación puede caer en el OTRO nodo y
@@ -56,7 +56,7 @@ Hacer esto contra **stream01 (prod)** implica **reiniciar su Redis y su LiveKit*
   instalado con defaults. El `--with-egress` re-abre el gap (warning ruidoso). **Fix definitivo:
   S3 como transporte** (egress escribe directo a S3, el core resuelve el objeto en vez de un path
   local) — Wave C en [../architecture/CLUSTER-ROADMAP.md](../architecture/CLUSTER-ROADMAP.md).
-- **Shape distinto:** stream01 es nativo systemd; node01 es docker-compose. Funciona (coordinan
+- **Shape distinto:** media01 es nativo systemd; node01 es docker-compose. Funciona (coordinan
   por Redis+keys), pero conviene homogeneizar.
 - **Sin router capacity/region-aware:** la colocación es la interna de LiveKit; no hay steering
   propio por carga/región todavía.
@@ -82,7 +82,7 @@ curl -fsSL https://www.streamhub.studio/install.sh | sudo bash -s -- --join \
 ```
 
 Con eso los rooms se reparten entre nodos por afinidad LiveKit. **Recomendación:** validar el
-mesh de media en **dos cajas frescas** (ambas tipo node01), o en stream01 sólo en una ventana de
+mesh de media en **dos cajas frescas** (ambas tipo node01), o en media01 sólo en una ventana de
 mantenimiento con aceptación explícita del corte de cámaras + del gap de grabación cross-node.
 El **plano de control** (lo probado acá) ya sirve para inventario/anuncio/salud/drain de nodos.
 
@@ -90,15 +90,15 @@ El **plano de control** (lo probado acá) ya sirve para inventario/anuncio/salud
 
 # Full media-mesh test node01+node02 (2026-07-03)
 
-**Nodos (ambos NO-producción; stream01/prod no se tocó):**
+**Nodos (ambos NO-producción; media01/prod no se tocó):**
 
 | Nodo | IP | Shape | Rol |
 |---|---|---|---|
-| `node01` (host `stream02`) | 203.0.113.11 | Ubuntu 26.04, 4c/8GB, docker-compose | **origin/master** — core+redis+nginx+livekit+ingress+egress |
-| `node02` (host `stream03`) | 203.0.113.12 | Ubuntu 26.04, 8c/4GB, caja virgen | **edge** — sólo livekit+ingress+egress (join día-1) |
+| `node01` (host `media02`) | 203.0.113.11 | Ubuntu 26.04, 4c/8GB, docker-compose | **origin/master** — core+redis+nginx+livekit+ingress+egress |
+| `node02` (host `media03`) | 203.0.113.12 | Ubuntu 26.04, 8c/4GB, caja virgen | **edge** — sólo livekit+ingress+egress (join día-1) |
 
 Todo por el **installer publicado** (`curl -fsSL https://www.streamhub.studio/install.sh | sudo bash -s -- ...`).
-RTT inter-nodo: **0.22 ms** (misma subred OVH).
+RTT inter-nodo: **0.22 ms** (misma subred VPS).
 
 ## Matriz de resultados
 
@@ -221,10 +221,10 @@ SUYO. Dos sabores reproducidos:
 - node01: origin completo, healthy, 5 apps intactas; redis cluster-ready (127.0.0.1 +
   203.0.113.11, password); `EGRESS_CPUS=4` en `.env`.
 - node02: edge unido (livekit+ingress+egress contra el redis del origin), healthy,
-  `EGRESS_CPUS=4`; hostname del SO sigue siendo `stream03` (se registró como `node02` vía
+  `EGRESS_CPUS=4`; hostname del SO sigue siendo `media03` (se registró como `node02` vía
   `--node-name`).
 - Registry: `node01` y `node02` **active / stale=false** (heartbeat cron activo en ambos); la
-  fila vieja `stream01-prod` del test de control-plane se borró.
+  fila vieja `media01-prod` del test de control-plane se borró.
 - Streams de prueba (mesh-a…g) detenidos; los ingress quedan definidos (inactivos) en la app
   `live`; VODs 1 y 2 quedan como evidencia del gap (`failed`).
 - Publicado en la landing: `install.sh` y `streamhub-src.tar.gz` con los 3 fixes (pendientes

@@ -2,18 +2,18 @@
 # Diseño: streamhub-docs/operations/CLUSTER-OBSERVABILITY.md.
 #
 # NO reemplaza a prometheus.yml (single-node, Fase 1). Este archivo lo usa SOLO
-# el master (stream01) cuando corre en modo cluster — lo monta el overlay
+# el master (media01) cuando corre en modo cluster — lo monta el overlay
 # cluster/docker-compose.cluster.yml en lugar de prometheus.yml.
 #
 # Topología (IPs reales):
-#   stream01 / 203.0.113.10  = MASTER. core + livekit NATIVOS (systemd),
+#   media01 / 203.0.113.10  = MASTER. core + livekit NATIVOS (systemd),
 #                               ingress/egress/redis en docker. Corre este
 #                               Prometheus. Se scrapea TODO por 127.0.0.1.
-#   stream02 / 203.0.113.11  = nodo. core+livekit+ingress+egress+redis en
+#   media02 / 203.0.113.11  = nodo. core+livekit+ingress+egress+redis en
 #                               docker, nginx delante. /metrics de core es
 #                               loopback-only en el nodo -> se expone vía nginx
 #                               (TLS, allow-master) — ver cluster/nginx-metrics-export.conf.
-#   stream03 / 203.0.113.12  = idem stream02.
+#   media03 / 203.0.113.12  = idem media02.
 #
 # Cómo se scrapea cada nodo remoto:
 #   - core / livekit / ingress / egress  -> nginx del nodo, HTTPS :443, con
@@ -22,7 +22,7 @@
 #   - node_exporter                      -> directo al :9100 del nodo (http),
 #     protegido por ufw (allow from 203.0.113.10). Ver cluster/node-agent-compose.yml.
 #
-# Convención de labels: cada target lleva `node` (stream01|stream02|stream03) y
+# Convención de labels: cada target lleva `node` (media01|media02|media03) y
 # `service`. Los jobs se mantienen por-servicio (job constante) para que las
 # queries `up{job="streamhub-core"}` funcionen agregando por `node`. El master
 # scrapea localhost sobre http; los nodos remotos sobre https — el override
@@ -45,7 +45,7 @@ global:
   external_labels:
     stack: streamhub
     role: cluster-master
-    node: stream01        # nodo donde corre este Prometheus
+    node: media01        # nodo donde corre este Prometheus
 
 rule_files:
   - /etc/prometheus/alerts.yml
@@ -66,11 +66,11 @@ scrape_configs:
       insecure_skip_verify: true        # scrape por IP -> CN no matchea (sigue cifrado)
     static_configs:
       - targets: ["127.0.0.1:3020"]
-        labels: { node: stream01, service: streamhub-core, __scheme__: "http" }
+        labels: { node: media01, service: streamhub-core, __scheme__: "http" }
       - targets: ["203.0.113.11:443"]
-        labels: { node: stream02, service: streamhub-core }
+        labels: { node: media02, service: streamhub-core }
       - targets: ["203.0.113.12:443"]
-        labels: { node: stream03, service: streamhub-core }
+        labels: { node: media03, service: streamhub-core }
 
   # ==========================================================================
   # LiveKit — SFU. Master local :6789; nodos vía nginx path /metrics/livekit.
@@ -82,11 +82,11 @@ scrape_configs:
       insecure_skip_verify: true
     static_configs:
       - targets: ["127.0.0.1:6789"]
-        labels: { node: stream01, service: livekit, __scheme__: "http", __metrics_path__: "/metrics" }
+        labels: { node: media01, service: livekit, __scheme__: "http", __metrics_path__: "/metrics" }
       - targets: ["203.0.113.11:443"]
-        labels: { node: stream02, service: livekit }
+        labels: { node: media02, service: livekit }
       - targets: ["203.0.113.12:443"]
-        labels: { node: stream03, service: livekit }
+        labels: { node: media03, service: livekit }
 
   # ==========================================================================
   # LiveKit ingress. Master local :6790; nodos vía nginx path /metrics/ingress.
@@ -98,11 +98,11 @@ scrape_configs:
       insecure_skip_verify: true
     static_configs:
       - targets: ["127.0.0.1:6790"]
-        labels: { node: stream01, service: ingress, __scheme__: "http", __metrics_path__: "/metrics" }
+        labels: { node: media01, service: ingress, __scheme__: "http", __metrics_path__: "/metrics" }
       - targets: ["203.0.113.11:443"]
-        labels: { node: stream02, service: ingress }
+        labels: { node: media02, service: ingress }
       - targets: ["203.0.113.12:443"]
-        labels: { node: stream03, service: ingress }
+        labels: { node: media03, service: ingress }
 
   # ==========================================================================
   # LiveKit egress. Master local :6791; nodos vía nginx path /metrics/egress.
@@ -114,11 +114,11 @@ scrape_configs:
       insecure_skip_verify: true
     static_configs:
       - targets: ["127.0.0.1:6791"]
-        labels: { node: stream01, service: egress, __scheme__: "http", __metrics_path__: "/metrics" }
+        labels: { node: media01, service: egress, __scheme__: "http", __metrics_path__: "/metrics" }
       - targets: ["203.0.113.11:443"]
-        labels: { node: stream02, service: egress }
+        labels: { node: media02, service: egress }
       - targets: ["203.0.113.12:443"]
-        labels: { node: stream03, service: egress }
+        labels: { node: media03, service: egress }
 
   # ==========================================================================
   # node_exporter — CPU/RAM/swap/disco/red del HOST de cada nodo. Directo al
@@ -128,11 +128,11 @@ scrape_configs:
   - job_name: node
     static_configs:
       - targets: ["127.0.0.1:9100"]
-        labels: { node: stream01, service: host }
+        labels: { node: media01, service: host }
       - targets: ["203.0.113.11:9100"]
-        labels: { node: stream02, service: host }
+        labels: { node: media02, service: host }
       - targets: ["203.0.113.12:9100"]
-        labels: { node: stream03, service: host }
+        labels: { node: media03, service: host }
 
   # ==========================================================================
   # Self-monitoring del stack del master. Bound a 9091 (NO 9090: en un nodo con
@@ -141,18 +141,18 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["127.0.0.1:9091"]
-        labels: { node: stream01, service: prometheus }
+        labels: { node: media01, service: prometheus }
 
   # Loki (master) self-metrics — health del almacén de logs.
   - job_name: loki
     metrics_path: /metrics
     static_configs:
       - targets: ["127.0.0.1:3100"]
-        labels: { node: stream01, service: loki }
+        labels: { node: media01, service: loki }
 
   # Promtail del master — health del agente de logs local.
   - job_name: promtail
     metrics_path: /metrics
     static_configs:
       - targets: ["127.0.0.1:9080"]
-        labels: { node: stream01, service: promtail }
+        labels: { node: media01, service: promtail }

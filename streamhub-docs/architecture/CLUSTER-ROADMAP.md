@@ -163,7 +163,7 @@ the orphaned-recording + cross-node-HLS-404 bugs. Unlocks #1, #2(multi-region), 
 **Key premise correction:** **edges run NO core today** (only livekit+ingress+egress + a
 heartbeat timer). So "an edge serves the portal but blocks login" first requires making edges
 **run a core** (the heavy enabling change, "A0"). *(Note: on our current test cluster, node
-`stream02`/.57 already runs a full stack incl. a core — a convenient place to prototype.)*
+`media02`/.11 already runs a full stack incl. a core — a convenient place to prototype.)*
 
 **No role concept exists in core today** — standalone and master are indistinguishable; edge
 isn't representable. Design: a DB-driven role.

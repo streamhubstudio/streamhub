@@ -1,4 +1,4 @@
-# Overlay de CLUSTER para el master (stream01). Extiende — no reemplaza — el
+# Overlay de CLUSTER para el master (media01). Extiende — no reemplaza — el
 # stack base docker-compose.observability.yml:
 #   * cambia Prometheus a la config de cluster (prometheus.cluster.yml, 3 nodos)
 #   * agrega Loki (almacén de logs) + Promtail (agente de logs del master)

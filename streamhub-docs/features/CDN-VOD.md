@@ -52,7 +52,7 @@ edge nodes** and send viewers to the nearest edge. The cache config ships in the
 `deploy/nginx-hls-edge.conf` (nginx `proxy_cache` with request-collapsing +
 stale-while-revalidate) / `deploy/Caddyfile.edge`.
 
-Per edge node (e.g. stream02/stream03):
+Per edge node (e.g. media02/media03):
 1. Add `deploy/nginx-hls-edge.conf` to the node's nginx: it proxies `/hls/*` to the origin
    (`proxy_pass https://<origin>/hls/…`) with a local `proxy_cache`, honouring the origin's
    `Cache-Control` (`.ts` cached hard, `.m3u8` briefly). Reload nginx.

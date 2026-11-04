@@ -14,7 +14,7 @@ func TestSecretRefDerivation(t *testing.T) {
 	}{
 		{"live", SecretS3Key, "APP_LIVE_S3_KEY"},
 		{"streambuy", SecretS3Secret, "APP_STREAMBUY_S3_SECRET"},
-		{"vivet", SecretMqttPassword, "APP_VIVET_MQTT_PASSWORD"},
+		{"meet", SecretMqttPassword, "APP_MEET_MQTT_PASSWORD"},
 		{"live", SecretSmtpPass, "APP_LIVE_SMTP_PASS"},
 		{"live", SecretDrmToken, "APP_LIVE_DRM_TOKEN"},
 		{"my-app", SecretS3Key, "APP_MY_APP_S3_KEY"},

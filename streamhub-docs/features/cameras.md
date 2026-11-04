@@ -156,7 +156,7 @@ autostart = 1
 
 [streamhub]
 api = 1
-app = storehub
+app = cameras
 ```
 
 Host/port/TLS come from `brokerPublicUrl` (or the app's `mqtt.url` + `mqtt.tls`);

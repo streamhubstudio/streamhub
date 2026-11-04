@@ -14,7 +14,7 @@ egress as containers) see [DEPLOY.md §B](./DEPLOY.md#b-systemd--nginx--certbot-
 
 ## 1. Prerequisites
 
-- A **Linux host with a public IP** (OVH/Hetzner/DigitalOcean/EC2, etc.).
+- A **Linux host with a public IP** (VPS/Hetzner/DigitalOcean/EC2, etc.).
   LiveKit uses host networking for UDP media and STUN external-IP detection, so
   Docker Desktop on macOS/Windows is **not** a deployment target — build there if
   you like, but run the stack on Linux.

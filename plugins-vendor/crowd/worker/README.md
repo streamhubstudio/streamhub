@@ -252,11 +252,11 @@ imported lazily only in runtime paths.
 
 ## Provenance & license
 
-The vision algorithms are ports of **Vision One** (`storehub-vision-one`):
+The vision algorithms are ports of **Vision One**:
 occupancy pipeline + POI-zone sessions, `LineCrossingCounter`, crowd
 `CrowdStateManager`, demography buffalo_l/softmax/emotion, and the
 AdaptiveFrameSampler — re-expressed over normalized coordinates and upgraded to
-polygons/tags, with StoreHub coupling removed.
+polygons/tags, with the client-specific coupling removed.
 
 **YOLO11 (ultralytics) is AGPL-3.0**, so this runtime is licensed
 **AGPL-3.0-or-later**. RT-DETR / YOLOX are documented as future non-AGPL swaps.

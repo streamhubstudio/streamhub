@@ -1,9 +1,9 @@
-# Promtail de NODO (stream02 / stream03). Corre en cluster/node-agent-compose.yml.
+# Promtail de NODO (media02 / media03). Corre en cluster/node-agent-compose.yml.
 # Empuja al Loki del MASTER (a través del nginx del master, TLS + allowlist).
 #
 # Config parametrizada por variables de entorno (el compose corre promtail con
 # -config.expand-env=true):
-#   NODE_NAME             -> stream02 | stream03  (label `node`)
+#   NODE_NAME             -> media02 | media03  (label `node`)
 #   MASTER_LOKI_PUSH_URL  -> https://<fqdn-del-master>/loki/api/v1/push
 #                            (default seguro: vía nginx del master, TLS).
 #                            Alternativa directa (cleartext): http://203.0.113.10:3100/loki/api/v1/push

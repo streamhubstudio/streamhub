@@ -24,7 +24,7 @@ For the REST surface see the `api-*.md` docs; for the runtime config file per ap
 ## Naming note
 
 The **product** is **StreamHub**; the **repository** is `vision-media-server`. On the
-original production host (`stream01`) some directories and systemd units still carry the
+original production host (`media01`) some directories and systemd units still carry the
 historical `skyline-*` prefix — treat those as aliases of the `streamhub-*` names used
 throughout these docs.
 

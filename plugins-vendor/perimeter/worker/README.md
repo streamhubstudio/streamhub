@@ -219,7 +219,7 @@ PERIMETER_APP=live PERIMETER_ROOM=cam-1 PERIMETER_DATA_DIR=./data \
 CPU-only is the intended default — intrusion detection does not need every
 frame, it needs *recent* frames:
 
-- **CPU (no GPU, e.g. stream01):** `yolov8n` at **1–2 fps** costs roughly
+- **CPU (no GPU, e.g. media01):** `yolov8n` at **1–2 fps** costs roughly
   **0.5–1 modern x86 core per camera** (~100–300 ms/frame inference on one
   core plus HLS decode; ~1.5 GB RAM resident with torch + weights, ~1 GB
   disk for the CPU torch stack). Budget ~1 core + 2 GB RAM per watched room

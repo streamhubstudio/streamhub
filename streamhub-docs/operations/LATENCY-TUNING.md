@@ -9,7 +9,7 @@ Método: **reloj quemado en píxeles** — harness reproducible en
 codificados en bloques, decodificados frame a frame en el subscriber;
 publisher y subscriber en la misma máquina ⇒ mismo reloj, red real).
 
-## Mediciones (2026-07-02 · stream01 OVH 8c/8GB · cliente con RTT 158ms · 30s c/u)
+## Mediciones (2026-07-02 · media01 VPS 8c/8GB · cliente con RTT 158ms · 30s c/u)
 
 | # | Path / configuración | p50 | p95 | muestras |
 |---|---|---|---|---|
@@ -50,7 +50,7 @@ nginx solo proxya la señalización `/rtc`), congestion control default,
 
 | # | Palanca | Estado | Efecto |
 |---|---|---|---|
-| L1 | **Buffers UDP kernel 4MB→16MB** (`net.core.rmem_max/wmem_max=16777216`) | ✅ aplicado en stream01 (`/etc/sysctl.d/99-streamhub-webrtc.conf`) y **en install.sh** para todo nodo nuevo | evita drops/NACK bajo carga múltiple; protege p95/p99 |
+| L1 | **Buffers UDP kernel 4MB→16MB** (`net.core.rmem_max/wmem_max=16777216`) | ✅ aplicado en media01 (`/etc/sysctl.d/99-streamhub-webrtc.conf`) y **en install.sh** para todo nodo nuevo | evita drops/NACK bajo carga múltiple; protege p95/p99 |
 | L2 | **Aislar egress (Chrome)**: hoy corre sin límite de CPU/RAM en el mismo host | pendiente (G2) | un Chrome sin límite puede comerse los 7.7GB / robar ciclos al SFU; poner `mem_limit`+`cpus` o mover al nodo GPU |
 | L3 | **playout delay bajo** — no es config del server yaml; se setea por track/room desde el SDK | pendiente (preset "low-latency" en G4) | fuerza el jitter buffer a mínimo; útil en redes con jitter, riesgo de frames congelados |
 | L4 | Codecs: dejar VP8 default; no habilitar AV1 para casos low-latency con clientes débiles | documentado | AV1/VP9 suben encode/decode en hardware débil |

@@ -4,7 +4,7 @@ Line-crossing geometry — pure functions over NORMALIZED [0,1] coordinates.
 PROVENANCE: ported from Vision One's production people-counting model
 (streamhub-vision-one repo: vision_one/models/people_counting/counting.py,
 class ``LineCrossingCounter`` — itself a faithful copy of the validated
-storehub-people-counting counter). The cross-product side test, the buffered
+original people-counting counter). The cross-product side test, the buffered
 segment-intersection check and the side-based IN/OUT resolution are the same
 math, re-expressed over normalized coordinates so the worker is
 resolution-independent (Vision One worked in pixels of a fixed frame).

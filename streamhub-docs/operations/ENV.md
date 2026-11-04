@@ -77,7 +77,7 @@ external coturn — out of scope for v1. See
 | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis for LiveKit ingress/egress coordination. (The 3.x Go core runs its own jobs/schedules in-process and never dials it; the value is only reported, host:port, in `GET /system/settings`.) |
 | `NODE_ENV` | `production` | Node environment. |
 | `STREAMHUB_SHADOW` | `off` | **Go core only.** `1/true/on/yes` = serve HTTP but start **no** background work (timers, watchdogs, reconcilers, worker resume, boot re-arm; callbacks/MQTT don't publish). For running a second core side by side with a live one on the same LiveKit/host (e.g. the Go-vs-Node comparison instance) without both acting on shared media state. Never set it on the serving core. |
-| `SYSTEMD_UNIT` | `streamhub-core` | Unit restarted by `POST /admin/restart` (`systemctl restart <unit> \|\| sudo -n systemctl restart <unit>`) — plain-server installs only (e.g. `skyline` on stream01). |
+| `SYSTEMD_UNIT` | `streamhub-core` | Unit restarted by `POST /admin/restart` (`systemctl restart <unit> \|\| sudo -n systemctl restart <unit>`) — plain-server installs only (e.g. `skyline` on media01). |
 | `STREAMHUB_HLS_WATCHDOG` | `on` | `off` disables the always-on HLS / DVR watchdog: every interval it reconciles apps whose `features.linear` opts into always-on HLS (relaunches a dead egress once — one LiveKit no longer lists, or one it still lists whose `index.m3u8` stopped advancing for 3 segment durations) and/or DVR (prunes expired segments). Also off under `NODE_ENV=test`. |
 | `STREAMHUB_HLS_WATCHDOG_INTERVAL_S` | `30` | Watchdog pass interval in seconds (values < 5 or invalid → 30). |
 

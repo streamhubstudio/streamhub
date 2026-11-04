@@ -420,7 +420,7 @@ on re-runs behave as usual. Re-running `--prepare-image` itself is idempotent. S
 
 ## Hosting the installer
 
-The one-liner URL is the landing site (Ploi `srv01-cloudhub` = `203.0.113.20`, repo
+The one-liner URL is the landing site (`203.0.113.20`, repo
 `streamhub-site` / `digitalhub_com_ar/streamhub-web`): the script lives at `public/install.sh`
 there and ships with the site build — `https://www.streamhub.studio/install.sh` (the `www`
 host 301s to the apex; `curl -fsSL` follows it).

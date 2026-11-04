@@ -6,7 +6,7 @@
 > a escala, la **matriz de decisión** por caso de uso, el **modelo de config** y un **roadmap
 > honesto** para un equipo chico.
 >
-> **Realidad hoy:** 1 nodo (OVH 8c/8GB), LiveKit SFU (WebRTC p50 **193 ms**), HLS por egress
+> **Realidad hoy:** 1 nodo (VPS 8c/8GB), LiveKit SFU (WebRTC p50 **193 ms**), HLS por egress
 > (~**15 s**, bajable a ~6–8 s — matriz [B1](../features/ANTMEDIA-APP-SETTINGS-MATRIX.md)),
 > grabación→S3, módulo `cluster` (registry `nodes` + join por API) **diseñado pero no
 > multi-nodo en vivo**. Ver [cluster.md](./cluster.md) y

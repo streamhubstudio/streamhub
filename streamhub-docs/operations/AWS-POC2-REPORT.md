@@ -5,7 +5,7 @@ node via the published landing one-liner** (`curl -fsSL https://www.streamhub.st
 never a direct build). Complements [AWS-API-TEST-REPORT.md](./AWS-API-TEST-REPORT.md) (round 1).
 
 > **Environment.** Shared account, region `us-east-1`, from the maintainer's CLI. The
-> account also holds **12 unrelated production instances** (srv01.greenflame, mail-server, client
+> account also holds **12 unrelated production instances** (mail, web and client
 > apps). Hard rule this round: **every object tagged `Project=streamhub-poc2`; all destructive ops
 > filter by that tag, never by state.** Nothing outside the tag was read or touched. Budget ceiling
 > USD 25; **actual PoC spend ≈ USD 1** (6 instances, ~1–2 h).

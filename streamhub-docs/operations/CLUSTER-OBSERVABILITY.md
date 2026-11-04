@@ -16,9 +16,9 @@ el stack single-node de [`deploy/observability/`](../../deploy/observability/) (
 
 | Nodo | IP | Rol | Forma de despliegue |
 |---|---|---|---|
-| **stream01** | `203.0.113.10` | **master** — corre el stack de observabilidad | core + livekit **nativos** (systemd: `skyline-core.service`, `livekit.service`); ingress/egress/redis en **docker**; nginx delante |
-| **stream02** | `203.0.113.11` | nodo | core+livekit+ingress+egress+redis en **docker** (compose); nginx delante |
-| **stream03** | `203.0.113.12` | nodo | idem stream02 |
+| **media01** | `203.0.113.10` | **master** — corre el stack de observabilidad | core + livekit **nativos** (systemd: `skyline-core.service`, `livekit.service`); ingress/egress/redis en **docker**; nginx delante |
+| **media02** | `203.0.113.11` | nodo | core+livekit+ingress+egress+redis en **docker** (compose); nginx delante |
+| **media03** | `203.0.113.12` | nodo | idem media02 |
 
 **La restricción que define todo el diseño:** en cada nodo, `streamhub-core` expone
 `/metrics` **sólo en `127.0.0.1:3020`** — no es alcanzable de afuera. Por eso el
@@ -27,7 +27,7 @@ sus métricas por su propio nginx (TLS, allowlist del master) y su node_exporter
 `:9100` (firewalled al master). Los logs viajan al revés: cada nodo **empuja** a Loki.
 
 ```
-                          MASTER stream01 (203.0.113.10)
+                          MASTER media01 (203.0.113.10)
    ┌──────────────────────────────────────────────────────────────────┐
    │  Prometheus(:9091)  Grafana(:3001)  Loki(:3100)  Promtail(:9080)  │
    │  node_exporter(:9100)      todo bindeado a 127.0.0.1              │
@@ -36,7 +36,7 @@ sus métricas por su propio nginx (TLS, allowlist del master) y su node_exporter
             │ https://nodo/metrics* (Bearter/TLS)  │ https://master/loki/api/v1/push
             │ http://nodo:9100  (ufw allow-master) │ (nginx master, allow node IPs)
    ┌────────┴──────────────┐              ┌────────┴──────────────┐
-   │  stream02 .57         │              │  stream03 .58         │
+   │  media02 .11          │              │  media03 .12          │
    │  nginx  ─► core:3020  │              │  nginx  ─► core:3020  │
    │         ─► lk:6789…   │              │         ─► lk:6789…   │
    │  node_exporter:9100   │              │  node_exporter:9100   │
@@ -44,7 +44,7 @@ sus métricas por su propio nginx (TLS, allowlist del master) y su node_exporter
    └───────────────────────┘              └───────────────────────┘
 ```
 
-Cada serie (métrica y log) lleva un label **`node`** = `stream01|stream02|stream03`, así
+Cada serie (métrica y log) lleva un label **`node`** = `media01|media02|media03`, así
 los dashboards agregan/filtran por nodo.
 
 ### 1.1 Nodos EDGE (Vision Edge, tras NAT) — se monitorean VÍA EL MASTER
@@ -108,7 +108,7 @@ Snippet nginx del master: [`cluster/nginx-loki-push.conf`](../../deploy/observab
 
 **Loki no tiene auth propia** (`auth_enabled: false`) → la allowlist de nginx (o el ufw de
 la Opción B) **ES** el control de acceso. Preferí la Opción A (TLS): los logs pueden
-contener datos sensibles y en cleartext viajan expuestos por Internet entre nodos OVH.
+contener datos sensibles y en cleartext viajan expuestos por Internet entre nodos VPS.
 
 ### 2.3 Resumen de puertos
 
@@ -142,7 +142,7 @@ master lo proxya a `127.0.0.1:3100` sin reescribir el path (`proxy_pass http://1
 
 ## 4. Desplegar
 
-### 4.1 En el master (stream01)
+### 4.1 En el master (media01)
 
 ```bash
 cd deploy/observability
@@ -168,7 +168,7 @@ El overlay `cluster/docker-compose.cluster.yml`:
 Aplicá en el master el snippet [`cluster/nginx-loki-push.conf`](../../deploy/observability/cluster/nginx-loki-push.conf)
 (salvo que uses la Opción B directa).
 
-### 4.2 En cada nodo (stream02 / stream03)
+### 4.2 En cada nodo (media02 / media03)
 
 ```bash
 # 1) nginx: pegar cluster/nginx-metrics-export.conf en el server{} 443 del nodo
@@ -176,7 +176,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 # 2) agente node_exporter + promtail
 cd deploy/observability/cluster
-cp .env.node.example .env.node           # NODE_NAME=stream02|stream03 + MASTER_LOKI_PUSH_URL
+cp .env.node.example .env.node           # NODE_NAME=media02|media03 + MASTER_LOKI_PUSH_URL
 ./install-node-agent.sh
 
 # 3) ufw
@@ -203,17 +203,17 @@ En Grafana: dashboards **StreamHub — Cluster overview** y **Cluster logs**.
 
 ## 5. Agregar / quitar un nodo
 
-**Agregar `stream04` (ej. `203.0.113.13`):**
+**Agregar `media04` (ej. `203.0.113.13`):**
 
 1. **Prometheus** (`deploy/observability/prometheus.cluster.yml`): en cada job
    (`streamhub-core`, `livekit`, `livekit-ingress`, `livekit-egress`, `node`) sumá un
-   target con `labels: { node: stream04, ... }` (para core/livekit/ingress/egress:
+   target con `labels: { node: media04, ... }` (para core/livekit/ingress/egress:
    `"203.0.113.13:443"`; para node: `"203.0.113.13:9100"`). Recargá Prometheus:
    `curl -X POST http://127.0.0.1:9091/-/reload` (lifecycle habilitado) o
    `install-cluster-observability.sh`.
 2. **nginx del nodo nuevo**: pegar `cluster/nginx-metrics-export.conf` (con `allow` del
    master); **nginx del master**: agregar `allow 203.0.113.13;` en `nginx-loki-push.conf`.
-3. **Agente del nodo**: `install-node-agent.sh` con `NODE_NAME=stream04`.
+3. **Agente del nodo**: `install-node-agent.sh` con `NODE_NAME=media04`.
 4. **ufw del nodo**: `allow from 203.0.113.10 to any port 9100`.
 5. Los dashboards y el template var `$node` se autopoblan (`label_values(up, node)`);
    nada que editar en Grafana.
@@ -232,7 +232,7 @@ master. Sus series históricas expiran con la retención (15d métricas / 30d lo
 - [ ] **node_exporter firewalled**: `ufw allow from 203.0.113.10 to any port 9100`; no dejarlo abierto al mundo.
 - [ ] **Loki nunca público**: bindea `127.0.0.1:3100`; push sólo vía nginx allowlisted (Opción A) o ufw a las IPs de nodo (Opción B). `auth_enabled: false` → la allowlist ES el control.
 - [ ] **Puertos de métricas de LiveKit** (`6789/6790/6791`) **no públicos**: con host-networking LiveKit puede bindearlos a `0.0.0.0`; `ufw deny` esos puertos — se alcanzan sólo por nginx/loopback.
-- [ ] **Grafana/Prometheus sin puerto público**: túnel SSH (`ssh -L 3001:127.0.0.1:3001 stream01`) o nginx con auth. `GRAFANA_ADMIN_PASSWORD` es la 2ª capa, no la 1ª.
+- [ ] **Grafana/Prometheus sin puerto público**: túnel SSH (`ssh -L 3001:127.0.0.1:3001 media01`) o nginx con auth. `GRAFANA_ADMIN_PASSWORD` es la 2ª capa, no la 1ª.
 - [ ] **Secretos fuera de git**: `secrets/metrics_token`, `secrets/metrics_token_*`, `.env`, `cluster/.env.node` están gitignoreados. Nunca commitear el token real.
 
 ---

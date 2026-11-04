@@ -239,7 +239,7 @@ min 60).
 
 ### Filename templates (`filename_template` / `snapshot_template`)
 
-StoreHub-style naming with a `${}` token dialect. The template renders to a
+Naming with a `${}` token dialect. The template renders to a
 **single safe filename segment** — path separators and `..` are neutralized, so
 a template can **never** traverse out of the recordings/snapshots dir or the
 app's S3 prefix. The container extension (`.mp4` / `.jpg`) is always appended by

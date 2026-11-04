@@ -5,7 +5,7 @@ three time-boxed PoCs. **Account-agnostic:** this doc contains no account IDs, n
 no AMI IDs (resolved live via SSM) — every command is copy-pasteable against any AWS account.
 
 This validates on **real cloud VMs** what `CLUSTER-2NODE-TEST.md` validated on two adjacent
-bare-metal OVH boxes (cluster control-plane + media-mesh), extends it to 5 nodes across mixed
+bare-metal VPS boxes (cluster control-plane + media-mesh), extends it to 5 nodes across mixed
 instance sizes, and adds two things not covered elsewhere: GPU transcode numbers on a real
 NVIDIA T4, and a full S3 recording round-trip against real AWS S3 (not Wasabi/MinIO).
 

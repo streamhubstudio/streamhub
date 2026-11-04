@@ -1,4 +1,4 @@
-# Agente de observabilidad de NODO — corre en stream02 y stream03 (NO en el
+# Agente de observabilidad de NODO — corre en media02 y media03 (NO en el
 # master). Expone las señales del nodo al master:
 #   - node_exporter : métricas de host en :9100 (protegido por ufw allow-master).
 #   - promtail      : logs de docker (core/livekit/ingress/egress/redis) + nginx
@@ -46,7 +46,7 @@ services:
       - -config.file=/etc/promtail/promtail-node.yml
       - -config.expand-env=true
     environment:
-      NODE_NAME: "${NODE_NAME:?Definí NODE_NAME (stream02|stream03) en .env.node}"
+      NODE_NAME: "${NODE_NAME:?Definí NODE_NAME (media02|media03) en .env.node}"
       MASTER_LOKI_PUSH_URL: "${MASTER_LOKI_PUSH_URL:?Definí MASTER_LOKI_PUSH_URL en .env.node}"
     volumes:
       - ./promtail-node.yml:/etc/promtail/promtail-node.yml:ro

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# install-node-agent.sh — NODO del cluster (stream02 / stream03)
+# install-node-agent.sh — NODO del cluster (media02 / media03)
 # ----------------------------------------------------------------------------
 # Levanta el agente de observabilidad del nodo: node_exporter (:9100) + Promtail
 # (empuja logs al Loki del master). Idempotente. NO toca el media stack.
@@ -43,7 +43,7 @@ if [ ! -f .env.node ]; then
 fi
 
 # Chequeo mínimo de que se editó
-grep -q '^NODE_NAME=stream0[23]' .env.node || warn "NODE_NAME no parece stream02/stream03 en .env.node — verificá."
+grep -q '^NODE_NAME=stream0[23]' .env.node || warn "NODE_NAME no parece media02/media03 en .env.node — verificá."
 grep -q 'example.com' .env.node && warn "MASTER_LOKI_PUSH_URL parece el placeholder (example.com) — poné el FQDN real del master."
 
 say "Validando compose del agente..."

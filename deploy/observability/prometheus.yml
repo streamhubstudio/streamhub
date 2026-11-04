@@ -2,7 +2,7 @@
 # Diseño: streamhub-docs/operations/OBSERVABILITY-ROADMAP.md §4.4.
 # Distinto de deploy/prometheus.yml (config de referencia para
 # despliegues en red docker-compose, con targets `streamhub-core:3020` /
-# `livekit:6789`). Este archivo asume el nodo de referencia (`stream01`):
+# `livekit:6789`). Este archivo asume el nodo de referencia (`media01`):
 # streamhub-core y LiveKit corren nativos (systemd) → se scrapea todo por
 # `127.0.0.1` con `network_mode: host` (ver docker-compose.observability.yml).
 
@@ -12,7 +12,7 @@ global:
   evaluation_interval: 15s
   external_labels:
     stack: streamhub
-    node: stream01        # ajustar por nodo si esto se replica en un cluster
+    node: media01        # ajustar por nodo si esto se replica en un cluster
 
 rule_files:
   - /etc/prometheus/alerts.yml

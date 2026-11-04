@@ -185,7 +185,7 @@ el mismo equipo conserva los secretos; en otro equipo hay que completarlos en el
 
 ## Desarrollo y pruebas
 
-**No se compila ni corre en macOS**: todo va en contenedores en un host Linux (el .50).
+**No se compila ni corre en macOS**: todo va en contenedores en un host Linux.
 
 ```bash
 test/unit.sh                       # gofmt + vet + go test -race ./... (golang:1.26, sin red ni GStreamer)

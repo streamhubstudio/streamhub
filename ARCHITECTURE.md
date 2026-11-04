@@ -11,7 +11,7 @@ This file is the top-level map. The **full, diagrammed architecture** lives in
 runbooks live in [`streamhub-docs/operations/`](./streamhub-docs/operations/README.md).
 
 > **Naming:** product = **StreamHub**; repo = `vision-media-server`. On the production host
-> `stream01` some dirs/units still carry the historical `skyline-*` prefix (aliases).
+> `media01` some dirs/units still carry the historical `skyline-*` prefix (aliases).
 
 ## Single node (today)
 

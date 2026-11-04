@@ -1,4 +1,4 @@
-# Promtail del MASTER (stream01). Corre en el overlay cluster/docker-compose.cluster.yml.
+# Promtail del MASTER (media01). Corre en el overlay cluster/docker-compose.cluster.yml.
 # Empuja al Loki LOCAL (127.0.0.1:3100, network_mode: host).
 #
 # Fuentes en el master:
@@ -35,7 +35,7 @@ scrape_configs:
       max_age: 12h
       matches: _SYSTEMD_UNIT=skyline-core.service
       labels:
-        node: stream01
+        node: media01
         service: streamhub-core
         container: skyline-core
     pipeline_stages:
@@ -60,7 +60,7 @@ scrape_configs:
       max_age: 12h
       matches: _SYSTEMD_UNIT=livekit.service
       labels:
-        node: stream01
+        node: media01
         service: livekit
         container: livekit
     pipeline_stages:
@@ -89,7 +89,7 @@ scrape_configs:
         target_label: container
         replacement: '${1}'
       - target_label: node
-        replacement: stream01
+        replacement: media01
     pipeline_stages:
       - match:
           selector: '{service=~"ingress|egress"}'
@@ -107,7 +107,7 @@ scrape_configs:
     static_configs:
       - targets: [localhost]
         labels:
-          node: stream01
+          node: media01
           service: nginx
           container: nginx
           __path__: /var/log/nginx/*.log

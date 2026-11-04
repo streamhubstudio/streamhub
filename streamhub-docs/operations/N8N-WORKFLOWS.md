@@ -59,7 +59,7 @@ Create these under **Credentials → Add credential**, with these exact names
   Paste it into the "Trigger Ploi deploy" HTTP node of `build-docs`, replacing
   `REPLACE-WITH-PLOI-DEPLOY-WEBHOOK-TOKEN`.
 
-Notification recipient defaults to `dev@greenflame.com.ar` in all "Notify"
+Notification recipient defaults to `ops@example.com` in all "Notify"
 nodes — change there if the ops inbox moves.
 
 ## Execution model / build-host assumptions
@@ -74,7 +74,7 @@ commands in the nodes if the layout differs:
 - Landing host (Ploi) serves `https://streamhub.studio/` from
   `/home/ploi/streamhub.studio/public/` — static files dropped there are served
   at the domain root (`/install.sh`, `/latest.json`, `/agent/...`).
-- The production `stream01` box can act as build host, but a dedicated builder
+- The production `media01` box can act as build host, but a dedicated builder
   is preferred so releases never compete with live media traffic.
 
 ## 1. `build-platform` (id `PbaCXsoSoYk5wkQA`)

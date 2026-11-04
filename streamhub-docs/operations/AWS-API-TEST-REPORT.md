@@ -49,7 +49,7 @@ tree.
 
 ## 3. Were all features tested on the cluster?
 
-**Partially — and this is called out honestly.** The cluster rounds (OVH node01+node02, and the AWS
+**Partially — and this is called out honestly.** The cluster rounds (VPS node01+node02, and the AWS
 5-node) exercised the **cluster mechanics** thoroughly at scale: node registration, media mesh, room
 distribution across every LiveKit, drain, and node-failure re-allocation. The **application features**
 shipped this cycle (deface, MQTT, active sessions, conference sample) were validated against the

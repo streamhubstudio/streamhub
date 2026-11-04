@@ -1408,7 +1408,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -2704,7 +2704,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -4173,7 +4173,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -5469,7 +5469,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -6918,7 +6918,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -8214,7 +8214,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -11733,7 +11733,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -13029,7 +13029,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -17058,7 +17058,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"
@@ -18354,7 +18354,7 @@
                 },
                 {
                   "default": false,
-                  "help": "On uses the GPU; off runs on CPU. stream01 has no GPU — leave off there.",
+                  "help": "On uses the GPU; off runs on CPU. media01 has no GPU — leave off there.",
                   "key": "cuda",
                   "label": "Use CUDA (GPU)",
                   "type": "boolean"

@@ -225,9 +225,9 @@ hacer **en el repo de perimeter**:
 4. Eso destraba el clip en workers remotos/edge (hoy se saltea si el HLS no es local) y
    lo deja en el S3 de la app con retención/listado de VODs.
 
-## Prueba manual con media (srv03)
+## Prueba manual con media (media01)
 
-Los tests no corren LiveKit/egress/ffmpeg (todo con fakes). Pendiente en srv03:
+Los tests no corren LiveKit/egress/ffmpeg (todo con fakes). Pendiente en media01:
 
 1. App con `features.dvr {enabled: true, window_minutes: 60}` + un stream RTMP/RTSP
    activo: `POST …/hls/start` → `playlistUrl` termina en `dvr.m3u8`; tras unos minutos

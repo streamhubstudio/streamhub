@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# install-cluster-observability.sh — MASTER (stream01)
+# install-cluster-observability.sh — MASTER (media01)
 # ----------------------------------------------------------------------------
 # Levanta el stack de observabilidad en MODO CLUSTER: Prometheus (config de 3
 # nodos) + Grafana + node_exporter + Loki + Promtail(master). Idempotente:
@@ -22,7 +22,7 @@ BASE="docker-compose.observability.yml"
 OVERLAY="cluster/docker-compose.cluster.yml"
 
 MASTER_IP="203.0.113.10"
-NODE_IPS=("203.0.113.11" "203.0.113.12")       # stream02, stream03
+NODE_IPS=("203.0.113.11" "203.0.113.12")       # media02, media03
 
 c_reset=$'\033[0m'; c_bold=$'\033[1m'; c_grn=$'\033[32m'; c_ylw=$'\033[33m'; c_red=$'\033[31m'
 say()  { printf '%s\n' "$*"; }
@@ -35,7 +35,7 @@ compose() { docker compose -f "${BASE}" -f "${OVERLAY}" --env-file .env "$@"; }
 print_node_steps() {
   cat <<EOF
 
-${c_bold}=== PASOS EN CADA NODO DEL CLUSTER (stream02=${NODE_IPS[0]}, stream03=${NODE_IPS[1]}) ===${c_reset}
+${c_bold}=== PASOS EN CADA NODO DEL CLUSTER (media02=${NODE_IPS[0]}, media03=${NODE_IPS[1]}) ===${c_reset}
 
 Correr en el NODO (no en el master). Ver también cluster/install-node-agent.sh.
 
@@ -57,7 +57,7 @@ Correr en el NODO (no en el master). Ver también cluster/install-node-agent.sh.
    # el core es loopback-only y livekit/ingress/egress salen sólo por nginx.
    sudo ufw deny 6789 ; sudo ufw deny 6790 ; sudo ufw deny 6791   # por las dudas
 
-${c_bold}=== FIREWALL DEL MASTER (stream01=${MASTER_IP}) ===${c_reset}
+${c_bold}=== FIREWALL DEL MASTER (media01=${MASTER_IP}) ===${c_reset}
 
 Ingreso de logs (elegí UNA opción de push en cada nodo):
   A) Vía nginx TLS (recomendado): pegá cluster/nginx-loki-push.conf en el
@@ -68,7 +68,7 @@ Ingreso de logs (elegí UNA opción de push en cada nodo):
        sudo ufw allow from ${NODE_IPS[1]} to any port 3100 proto tcp
 
 Grafana/Prometheus del master siguen SIN puerto público (127.0.0.1). Entrá por
-túnel SSH (ssh -L 3001:127.0.0.1:3001 stream01) o nginx con auth.
+túnel SSH (ssh -L 3001:127.0.0.1:3001 media01) o nginx con auth.
 
 ${c_bold}=== VERIFICAR (en el master) ===${c_reset}
   curl -s http://127.0.0.1:9091/api/v1/targets | jq '.data.activeTargets[]|{job:.labels.job,node:.labels.node,health}'
@@ -125,4 +125,4 @@ if curl -sf http://127.0.0.1:9091/-/ready >/dev/null 2>&1; then ok "Prometheus r
 if curl -sf http://127.0.0.1:3100/ready   >/dev/null 2>&1; then ok "Loki ready (:3100)."; else warn "Loki aún no ready en :3100 (el primer boot tarda)."; fi
 
 print_node_steps
-ok "Listo. Los targets de stream02/03 pasarán a UP cuando apliques los pasos por-nodo."
+ok "Listo. Los targets de media02/03 pasarán a UP cuando apliques los pasos por-nodo."

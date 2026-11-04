@@ -34,7 +34,7 @@ matrix:
 The P0 tenant-isolation (closed in code + unit-locked) is now **proven on a running install** — an
 app-scoped token cannot read, read-S3, or purge another tenant. Note: enforcement depends on
 `AUTHZ_ENFORCE=on` (the fresh-install default). In `log` mode the guard would allow-and-log — so prod
-(`stream01`) must be on `on` for the same guarantee.
+(`media01`) must be on `on` for the same guarantee.
 
 ## 3. RTMPS ingest (C8) — PASS (end-to-end)
 

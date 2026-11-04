@@ -7,7 +7,7 @@ tocan sus servicios). Materializa la Fase 1 de
 (§4). Leé ese documento para el diseño completo (inventario de métricas,
 tableros panel-por-panel, alerting, fases 2/3) — acá sólo el **cómo desplegar**.
 
-Nodo de referencia (`stream01`): 8 GB RAM + 8 GB swap, sin GPU, compartido con
+Nodo de referencia (`media01`): 8 GB RAM + 8 GB swap, sin GPU, compartido con
 el media stack (LiveKit + core nativos por systemd; `ingress`/`egress`/`redis`
 en Docker). Cuello de botella = RAM (cada `egress` es un Chrome headless) → **todo
 este stack bindea a `127.0.0.1` y nunca se expone directo a Internet.**
@@ -75,7 +75,7 @@ publicado al mundo**. Dos formas de entrar, elegí una:
 ### Opción A — túnel SSH (más simple, sin tocar nginx)
 
 ```bash
-ssh -N -L 3001:127.0.0.1:3001 usuario@stream01
+ssh -N -L 3001:127.0.0.1:3001 usuario@media01
 # abrir http://127.0.0.1:3001 en el browser local
 ```
 
@@ -113,7 +113,7 @@ Retención de Prometheus: `--storage.tsdb.retention.time=15d` (default, override
 con `PROMETHEUS_RETENTION_TIME` en `.env`) + tope duro de disco
 `--storage.tsdb.retention.size=4GB` (`PROMETHEUS_RETENTION_SIZE`). 30 días de
 retención es el objetivo **al mover la observabilidad a un nodo dedicado**, no
-en `stream01` (mismo criterio que el roadmap para Loki, §3.4).
+en `media01` (mismo criterio que el roadmap para Loki, §3.4).
 
 ## 5. Qué incluye este directorio
 
@@ -131,7 +131,7 @@ en `stream01` (mismo criterio que el roadmap para Loki, §3.4).
 
 ## 6. Modo cluster (multi-nodo + logs)
 
-Para monitorear una **flota de 3 nodos** (master `stream01` + `stream02`/`stream03`)
+Para monitorear una **flota de 3 nodos** (master `media01` + `media02`/`media03`)
 con **un solo** Prometheus + Grafana + **Loki** en el master, este directorio trae un
 set **aditivo** de assets bajo `cluster/` + `prometheus.cluster.yml` + `alerts.cluster.yml`
 + los dashboards `cluster-overview.json` / `cluster-logs.json` + el datasource Loki. El
@@ -152,7 +152,7 @@ cluster/install-cluster-observability.sh   # o: docker compose -f docker-compose
 
 Aplicar en el master el snippet `cluster/nginx-loki-push.conf` (ingreso de logs de los nodos).
 
-**En cada nodo** (`stream02`/`stream03`):
+**En cada nodo** (`media02`/`media03`):
 
 ```bash
 # nginx: pegar cluster/nginx-metrics-export.conf en el server{} 443 del nodo → reload

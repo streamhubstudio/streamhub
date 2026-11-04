@@ -78,7 +78,7 @@ enseguida.
 No cubre: publishers WebRTC (el bitrate lo elige el cliente; usá las capas de
 simulcast) ni el plano passthrough (remux `-c copy`, sin medición).
 
-## Prueba manual con media (srv03)
+## Prueba manual con media (media01)
 
 Los tests Go cubren la lógica con fakes (ver
 [UNIT-TESTS.md](../testing/UNIT-TESTS.md)); queda para la prueba con media real:

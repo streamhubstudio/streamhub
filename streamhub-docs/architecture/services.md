@@ -121,8 +121,8 @@ Two supported shapes, same architecture:
    `egress`, `core`, `caddy`. One `docker compose up -d`; Caddy gets certs automatically.
    LiveKit uses host networking for UDP media + STUN external-IP detection → **Linux host
    with a public IP** (not Docker Desktop on macOS).
-2. **systemd + nginx + certbot** (plain-server, e.g. `stream01`): LiveKit + core as systemd
+2. **systemd + nginx + certbot** (plain-server, e.g. `media01`): LiveKit + core as systemd
    units, ingress/egress as Docker containers, redis native, nginx+certbot for TLS. Used on
-   the Ploi-managed OVH host.
+   the Ploi-managed VPS host.
 
 See [`../operations/DEPLOY.md`](../operations/DEPLOY.md).

@@ -46,7 +46,7 @@ Node under test: **4 vCPU / 8 GB RAM**, CPU transcode (no GPU), single node.
 
 ---
 
-## Sim 1 — StoreHub: N cameras, view + snapshots + recording
+## Sim 1 — Retail: N cameras, view + snapshots + recording
 
 **Shape:** many fixed cameras (IDs `C000001`, `C000002`, …), each an `ffmpeg`
 source pushing test content over RTMP into the ingress (which transcodes), then
@@ -75,7 +75,7 @@ Verify the stream is live and singular:
 ```bash
 # Publisher-only stream count (must be 1 per camera, no duplicates)
 curl -s -H "Authorization: Bearer $SK" \
-  http://127.0.0.1:3020/api/v1/apps/storehub/streams | jq '.data | length, .data[].id'
+  http://127.0.0.1:3020/api/v1/apps/retail/streams | jq '.data | length, .data[].id'
 ```
 
 Open a real viewer and screenshot for latency (Playwright + system Chrome):
@@ -83,7 +83,7 @@ Open a real viewer and screenshot for latency (Playwright + system Chrome):
 ```bash
 # Loads the app's generated player page for the room and snapshots the frame
 npx playwright screenshot --wait-for-timeout=8000 \
-  "http://127.0.0.1:3020/api/v1/play/storehub/C000001" /tmp/c1-view.png
+  "http://127.0.0.1:3020/api/v1/play/retail/C000001" /tmp/c1-view.png
 # Read the server clock at the same instant:
 curl -s http://127.0.0.1:3020/api/v1/health | jq -r .ts
 ```
@@ -93,10 +93,10 @@ Trigger a recording and confirm the VOD lands in S3:
 ```bash
 curl -s -X POST -H "Authorization: Bearer $SK" -H 'content-type: application/json' \
   -d '{"roomName":"C000001"}' \
-  http://127.0.0.1:3020/api/v1/apps/storehub/recordings/start
+  http://127.0.0.1:3020/api/v1/apps/retail/recordings/start
 # ...let it run, then stop; poll the vod until status:ready
 curl -s -H "Authorization: Bearer $SK" \
-  http://127.0.0.1:3020/api/v1/apps/storehub/vods | jq '.data[0]'
+  http://127.0.0.1:3020/api/v1/apps/retail/vods | jq '.data[0]'
 ```
 
 ### What it validates
@@ -106,7 +106,7 @@ curl -s -H "Authorization: Bearer $SK" \
 - **Latency ≈ 2 s** glass-to-glass (method above).
 - **RTMP ingress + transcode** path works (source H.264 → ingress → WebRTC).
 - **Snapshots**: one JPEG every 60 s uploaded to
-  `streamhub/storehub/snapshots/*.jpeg` in S3.
+  `streamhub/retail/snapshots/*.jpeg` in S3.
 - **Recording**: produced an **82 MB MP4**, uploaded to S3, VOD reached
   `ready` (the `onEgressEvent` → upload → `vod_ready` path from
   `recording.service.spec.ts`, but end-to-end with real egress).
@@ -173,7 +173,7 @@ rendered. Fan-out of 13 subscribers cost the node almost nothing (see capacity).
 
 ---
 
-## Sim 3 — Vivet: 1:1 bidirectional meeting
+## Sim 3 — Meeting: 1:1 bidirectional meeting
 
 **Shape:** the `/meeting` room — two participants (operator + client) publishing
 and subscribing to each other, with simulcast, chat, reactions and screenshare.
@@ -188,7 +188,7 @@ meeting room:
 # Operator (repeat with a second identity=client for the other side)
 google-chrome --headless=new --no-sandbox \
   --use-fake-ui-for-media-stream --use-fake-device-for-media-stream \
-  "http://127.0.0.1:3020/api/v1/meeting/vivet/room42?identity=operator"
+  "http://127.0.0.1:3020/api/v1/meeting/meet/room42?identity=operator"
 ```
 
 (Driven via Playwright so both sessions run concurrently and can be screenshotted

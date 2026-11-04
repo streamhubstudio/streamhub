@@ -1,7 +1,7 @@
 # Reglas de alerta ADICIONALES para modo cluster (3 nodos).
 # Se cargan junto con alerts.yml (que ya cubre host/servicio single-node).
 # Referenciado desde prometheus.cluster.yml (rule_files). Todas las series de
-# cluster llevan label `node` (stream01|stream02|stream03) — las alertas lo
+# cluster llevan label `node` (media01|media02|media03) — las alertas lo
 # propagan para saber QUÉ nodo está afectado.
 
 groups:

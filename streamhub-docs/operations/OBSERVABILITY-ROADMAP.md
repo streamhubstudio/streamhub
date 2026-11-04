@@ -10,7 +10,7 @@ alerting y un camino de logs, **priorizado y realizable en el nodo actual**.
 > Aquí va lo que **falta**: qué medir además, cómo tratar los logs, qué desplegar, qué
 > paneles construir, qué alertar y en qué orden.
 
-**Nodo de referencia (`stream01`)**: OVH `203.0.113.10`, plain-server (Ploi), **8 cores
+**Nodo de referencia (`media01`)**: VPS `203.0.113.10`, plain-server (Ploi), **8 cores
 AMD EPYC 7351P, 8 GB RAM + 8 GB swap, SIN GPU**. Forma de despliegue: LiveKit + core
 nativos (systemd), `ingress`/`egress`/`redis` en Docker, nginx + certbot para TLS.
 **Cuello de botella = RAM** (cada `egress` es un Chrome headless). Prometheus/Grafana/Loki
@@ -175,7 +175,7 @@ objetivo de retención de logs de la app.
   `GET /api/v1/logs` + `journalctl`/`docker logs` para forense puntual. Cierra además el gap
   de retención con un **job de purga 30 días de `server_logs`** en el core (hoy inexistente).
 - **Fase 2 (cuando haya headroom o exista nodo de observabilidad aparte): Opción B.** Loki +
-  Alloy, retención 30 días, chunks en S3. Idealmente **no en `stream01`** sino en el nodo de
+  Alloy, retención 30 días, chunks en S3. Idealmente **no en `media01`** sino en el nodo de
   observabilidad (§4.1) — encaja con el diseño origin+edge (Prometheus/Loki central scrapea
   todos los nodos).
 
@@ -187,8 +187,8 @@ objetivo de retención de logs de la app.
 
 | Escenario | Dónde corre la observabilidad | Cuándo |
 |---|---|---|
-| **Fase 1 — un nodo** | Prometheus + Grafana + node_exporter **en `stream01`**, todo bindeado a `127.0.0.1`, expuesto vía nginx (subdominio/subpath con auth). Retención Prometheus ajustada (15 días). | Ahora. Cabe en 8 GB si se vigila (§4.6). |
-| **Fase 2+ — nodo de observabilidad** | VM chica (2 GB) dedicada: Prometheus + Grafana + Loki. Scrapea `stream01` y futuros edges por su IP privada. | Al agregar Loki o el 2º nodo. Libera RAM de `stream01` y es el patrón de cluster.md. |
+| **Fase 1 — un nodo** | Prometheus + Grafana + node_exporter **en `media01`**, todo bindeado a `127.0.0.1`, expuesto vía nginx (subdominio/subpath con auth). Retención Prometheus ajustada (15 días). | Ahora. Cabe en 8 GB si se vigila (§4.6). |
+| **Fase 2+ — nodo de observabilidad** | VM chica (2 GB) dedicada: Prometheus + Grafana + Loki. Scrapea `media01` y futuros edges por su IP privada. | Al agregar Loki o el 2º nodo. Libera RAM de `media01` y es el patrón de cluster.md. |
 
 Convención: **compose separado** para no mezclar el ciclo de vida del media stack con el de
 la observabilidad. Propuesta de ubicación en el repo (no crear aún):
@@ -290,7 +290,7 @@ las reglas de alerta.
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
-  external_labels: { stack: streamhub, node: stream01 }
+  external_labels: { stack: streamhub, node: media01 }
 
 rule_files:
   - /etc/prometheus/alerts.yml
@@ -503,8 +503,8 @@ groups:
 | Fase | Objetivo | Entregables | Esfuerzo | Requiere más RAM |
 |---|---|---|---|---|
 | **0 (hecho)** | Instrumentación base | `/metrics` + catálogo + `deploy/prometheus.yml` | — | No |
-| **1** | **Tablero operativo en `stream01`** | Prometheus+Grafana+node_exporter (compose §4.2, localhost+nginx, 15d); habilitar `prometheus_port` en livekit/ingress/egress (§4.3); token en scrape (§4.4); métricas core fase 1 (§2: build_info, viewers{app}, active_recordings, media_endpoint/sessions, storage_*, disk, **log_events_total**); dashboards A y C base + community LiveKit; alertas host/target/recording (§6); job de purga 30d de `server_logs` | **~1–2 días** (config + ~200 líneas de core) | **No** (cabe, §4.6) |
-| **2** | **Tablero per-app completo + logs** | Métricas fase 2 (§2: bytes_ingest/egress por app, recording_duration); dashboard B completo; **Loki + Alloy** (retención 30d, chunks en S3) para "logs recientes por app"; alertas basadas en logs; evaluar **mover la observabilidad a nodo aparte** | **~3–5 días** | Sí (Loki) — preferible fuera de `stream01` |
+| **1** | **Tablero operativo en `media01`** | Prometheus+Grafana+node_exporter (compose §4.2, localhost+nginx, 15d); habilitar `prometheus_port` en livekit/ingress/egress (§4.3); token en scrape (§4.4); métricas core fase 1 (§2: build_info, viewers{app}, active_recordings, media_endpoint/sessions, storage_*, disk, **log_events_total**); dashboards A y C base + community LiveKit; alertas host/target/recording (§6); job de purga 30d de `server_logs` | **~1–2 días** (config + ~200 líneas de core) | **No** (cabe, §4.6) |
+| **2** | **Tablero per-app completo + logs** | Métricas fase 2 (§2: bytes_ingest/egress por app, recording_duration); dashboard B completo; **Loki + Alloy** (retención 30d, chunks en S3) para "logs recientes por app"; alertas basadas en logs; evaluar **mover la observabilidad a nodo aparte** | **~3–5 días** | Sí (Loki) — preferible fuera de `media01` |
 | **3** | **Cluster / avanzado** | Prometheus central scrapeando todos los nodos (origin+edge, cluster.md); ingest latency histogram, `s3_bucket_bytes`; Alertmanager con routing; dashboards por-nodo + agregado cluster; opcional exemplars/tracing | **~1–2 semanas** | Depende del cluster |
 
 **Fase 1 es autocontenida y realizable en el nodo actual sin más RAM** — es el 80% del valor

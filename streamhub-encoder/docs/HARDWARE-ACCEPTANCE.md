@@ -1,6 +1,6 @@
 # Checklist de aceptación con hardware de captura (SDI / HDMI)
 
-El banco de pruebas (.50: Ryzen 5900XT + RTX 3090, Ubuntu 26.04) **no tiene tarjeta SDI ni capturadora HDMI**. Las rutas
+El banco de pruebas (Ryzen 5900XT + RTX 3090, Ubuntu 26.04) **no tiene tarjeta SDI ni capturadora HDMI**. Las rutas
 DeckLink y V4L2 están cubiertas por tests unitarios (goldens del pipeline exacto: `internal/pipeline/testdata/golden/
 engine-decklink-*.txt`, `engine-v4l2-*.txt`) y por el mismo `fallbackswitch`+slate que sí se ejecuta en e2e con la
 entrada de test. **Nada de esto reemplaza esta checklist**: hay que correrla en el primer equipo con tarjeta antes de

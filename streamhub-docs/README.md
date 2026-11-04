@@ -95,7 +95,7 @@ Native/device clients (Android, iOS, C++, ESP32-CAM) and which protocol each use
 ## Naming
 
 The product is **StreamHub**; the repository is `vision-media-server`. On the original
-production host (`stream01`) some directories and systemd units still use the historical
+production host (`media01`) some directories and systemd units still use the historical
 `skyline-*` prefix — treat them as aliases of the `streamhub-*` names in these docs.
 
 ---

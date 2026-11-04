@@ -124,7 +124,7 @@ time-series occupancy without replaying crossings.
 YOLOv8n + ByteTrack per frame on a modern x86 CPU core costs roughly
 150–300 ms at `imgsz=640`. Realistic budgets:
 
-- **CPU only (default, e.g. stream01):** `yolov8n`, `PC_FPS` **3–5**, input
+- **CPU only (default, e.g. media01):** `yolov8n`, `PC_FPS` **3–5**, input
   ≤ 720p, `PC_IMGSZ=640`. That is enough for walking-pace entrances (a person
   needs ≥2 sampled frames on each side of the line — at 4 FPS that's anyone
   slower than ~2 m/s through the door). Expect ~0.5–1.5 CPU cores per

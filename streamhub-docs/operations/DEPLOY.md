@@ -3,7 +3,7 @@
 Two supported shapes for the same single-node architecture:
 
 - **A. Docker Compose + Caddy** — the OSS quick-install (recommended). One command, auto-TLS.
-- **B. systemd + nginx + certbot** — plain-server / Ploi path (e.g. `stream01`).
+- **B. systemd + nginx + certbot** — plain-server / Ploi path (e.g. `media01`).
 
 Both need a **Linux host with a public IP**. LiveKit uses host networking for UDP media +
 STUN external-IP detection, so Docker Desktop on macOS is not a target.
@@ -98,7 +98,7 @@ For a full walk-through see [`self-hosting.md`](./self-hosting.md).
 
 ## B. systemd + nginx + certbot (plain-server)
 
-Used on `stream01` (OVH, Ploi-managed, Ubuntu). LiveKit + core run as **systemd units**,
+Used on `media01` (VPS, Ploi-managed, Ubuntu). LiveKit + core run as **systemd units**,
 ingress/egress as **Docker containers**, redis native, TLS via **nginx + certbot**.
 
 > On a Ploi **plain-server** there is no Ploi-managed web stack, so TLS is nginx+certbot's
@@ -163,7 +163,7 @@ restarts.
 ```bash
 # On the build side (go + node/npm): binary + SPA + SDK + composed apps in one tarball
 deploy/make-core-bundle.sh                 # → dist/streamhub-core-<ver>-linux-amd64.tar.gz
-scp dist/streamhub-core-*-linux-amd64.tar.gz deploy@stream01:/tmp/
+scp dist/streamhub-core-*-linux-amd64.tar.gz deploy@media01:/tmp/
 
 # On the host (root — it writes a systemd drop-in):
 APP_DIR=/opt/skyline-core SERVICE_NAME=skyline \

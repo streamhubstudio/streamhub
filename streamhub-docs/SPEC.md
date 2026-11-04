@@ -2,7 +2,7 @@
 
 StreamHub es la **app core** que ordena un servidor LiveKit self-hosted y lo hace comportarse como
 AntMedia: gestión por **Apps**, grabación a **S3 por app**, API propia (global + por app), player
-embebible, transcoding adaptativo, logs, snapshots, callbacks. Corre en `stream01` (203.0.113.10,
+embebible, transcoding adaptativo, logs, snapshots, callbacks. Corre en `media01` (203.0.113.10,
 Ubuntu 26.04, Ploi plain-server) **arriba** del LiveKit ya desplegado.
 
 > Spec original (2.x). Desde 3.x el core es **Go** (`streamhub-core-go/`); la UI Laravel (§9)

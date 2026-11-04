@@ -100,6 +100,6 @@ everything: `helm uninstall sh`, then delete the Secret and the PVCs by hand.
 
 | What | How | Result |
 |---|---|---|
-| `helm lint` / `helm template` (defaults, existingSecret, external redis, RWX/no-colocate) | `alpine/helm` container | **pending** — the test host (.50) went down before this step |
-| `helm install` on an ephemeral `kind` cluster, core Ready + `/api/v1/health`, `helm test` | kind in Docker on the .50, core image built there and `kind load`ed | **pending** |
-| real media (WebRTC/RTMP through host-network pods) | — | not tested; expected to need a real multi-node cluster (k3s on the homelab is the roadmap's "done" criterion) |
+| `helm lint` / `helm template` (defaults, existingSecret, external redis, RWX/no-colocate) | `alpine/helm` container | **pending** — the test host went down before this step |
+| `helm install` on an ephemeral `kind` cluster, core Ready + `/api/v1/health`, `helm test` | kind in Docker, core image built there and `kind load`ed | **pending** |
+| real media (WebRTC/RTMP through host-network pods) | — | not tested; expected to need a real multi-node cluster (k3s on a lab cluster is the roadmap's "done" criterion) |

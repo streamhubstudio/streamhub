@@ -111,7 +111,7 @@ nodes and matches a worker's requirements against them (`matchGridNode` is a
 pure, exported, unit-tested function; deterministic order: preferred region →
 larger VRAM → name).
 
-> Example: VM200 (RTX 3090) joins the cluster with the standard installer,
+> Example: a GPU node (RTX 3090) joins the cluster with the standard installer,
 > its heartbeat timer adds the `grid` block, and it instantly becomes
 > selectable for every `placement: 'grid'` worker — no core redeploy.
 
@@ -163,9 +163,9 @@ subscribe by plugin id with no extra registry.
 
 ```
 1. Operator enables `babel` on app `tv` (room `live`), engine faster-whisper.
-2. Framework start: placement 'grid' → PluginGridService picks node VM200
+2. Framework start: placement 'grid' → PluginGridService picks node gpu01
    (advertises grid.gpu + 'whisper'). [Today: dispatch stub → local fall-back;
-   after GRID-1: spec POSTed to VM200's grid agent.]
+   after GRID-1: spec POSTed to gpu01's grid agent.]
 3. babel-worker on the GPU node subscribes to the room's audio
    (BABEL_LIVEKIT_URL), runs streaming whisper, emits caption cues:
        { room:'live', seq:412, tStartMs:812_400, tEndMs:814_100,
@@ -196,7 +196,7 @@ the HLS latency window, and roughly one utterance behind on pure WebRTC.
 
 ### 4.1 StreamHub Vision — retail & CCTV intelligence
 
-**What it does.** Turns any camera app (RTSP/RTMP ingest, e.g. the StoreHub
+**What it does.** Turns any camera app (RTSP/RTMP ingest, e.g. a store's
 5-cam layout) into retail/CCTV analytics: people counting on virtual lines,
 zone occupancy, dwell time, traffic heatmaps. Dashboard `app-tab` with live
 KPIs + a zone editor; events out through the existing signed callbacks/MQTT.

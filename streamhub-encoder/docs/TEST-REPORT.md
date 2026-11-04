@@ -4,12 +4,12 @@
 |---|---|
 | Fecha | 2026-10-29 (soak largo `soak24`: 2026-10-30/31) |
 | Rama / commit | `feat/encoder`, e2e completo (`full2`) sobre `c8ba1796`; regresión `reg1`, prueba real `sh9` y `soak3` sobre `812e427d`/`f422c14c`; soak largo `soak24` sobre `90fb22b5` (densidad y VMAF sobre el commit indicado en cada sección) |
-| Banco (`BENCH_HOST`) | .50 (`pc50-ai`): VM Proxmox con **28 vCPU de un AMD Ryzen 9 5900XT** (16C/32T), 94 GB RAM, **NVIDIA RTX 3090 24 GB** (passthrough, driver 615.71.09), Ubuntu 26.04, kernel 7.0, Docker 29.9 con runtime `nvidia` |
+| Banco (`BENCH_HOST`) | VM con **28 vCPU de un AMD Ryzen 9 5900XT** (16C/32T), 94 GB RAM, **NVIDIA RTX 3090 24 GB** (passthrough, driver 615.71.09), Ubuntu 26.04, kernel 7.0, Docker 29.9 con runtime `nvidia` |
 | Motor (`ENGINE_VERSION`) | GStreamer 1.28.2 (Ubuntu 26.04), x264 0.165, x265 4.1, gst-plugins-rs fallbackswitch 0.14.3, FFmpeg 8.0.1; `encoderd` 0.1.0-dev (Go 1.26) |
 | StreamHub real | core construido desde `feat/3.4.0` (incluye `internal/devices`), LiveKit 1.13.11, ingress 1.5.0, egress 1.15.0, MediaMTX 1.19.2 |
 | Hardware de captura | **ninguno**: no hay DeckLink ni capturadora HDMI en el banco. SDI/HDMI/V4L2 quedan cubiertos por goldens + `HARDWARE-ACCEPTANCE.md` |
 
-Todo se corre en contenedores en el .50; nada en la Mac. GPU compartida con otro agente (ComfyUI): los tests de NVENC son
+Todo se corre en contenedores en un host Linux. GPU compartida con otro agente (ComfyUI): los tests de NVENC son
 cortos y de pocas sesiones.
 
 ## Cifras para la landing
@@ -35,7 +35,7 @@ cortos y de pocas sesiones.
 ## Cómo re-correr
 
 ```bash
-# en el host Linux con Docker (el .50), desde streamhub-encoder/
+# en el host Linux con Docker, desde streamhub-encoder/
 test/unit.sh                                                     # unit + race
 REAL_MEDIA=~/ai/at20v.mp4 test/e2e/run.sh formats outputs hotswap failover crash latency netem pro
 REAL_MEDIA=~/ai/at20v.mp4 test/e2e/run.sh density

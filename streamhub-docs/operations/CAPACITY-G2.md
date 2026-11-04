@@ -1,6 +1,6 @@
 # Capacidad y recursos (G2) — mediciones reales + techo por nodo
 
-**Resumen ejecutivo:** en el nodo de producción (stream01, 8 vCPU / 8 GB, **sin GPU**)
+**Resumen ejecutivo:** en el nodo de producción (media01, 8 vCPU / 8 GB, **sin GPU**)
 el **cuello de botella es la RAM del egress room-composite (Chrome headless)**: **cada
 grabación cuesta ~1.27 GB** medido. Con eso, un nodo de 8 GB aguanta **~4-5 grabaciones
 room-composite concurrentes**. La palanca #1 es usar **track-egress (ffmpeg, sin
@@ -39,7 +39,7 @@ para egress**.
 
 ⚠️ **Nota Fase 0:** el `docker-compose.yml` pone `mem_limit: 2g` al contenedor egress — con
 room-composite a 1.27 GB eso cae a **~1 grabación concurrente**. Para un nodo de grabación
-subí `EGRESS_MEM_LIMIT` (o movés a track-egress). En stream01 (plain-server, `docker run` sin
+subí `EGRESS_MEM_LIMIT` (o movés a track-egress). En media01 (plain-server, `docker run` sin
 límite) no aplica ese cap hoy.
 
 ## 3. Palanca #1 — track-egress (ffmpeg) en vez de Chrome
@@ -67,18 +67,18 @@ procesos Chrome**. Recomendación:
   → **cientos de cámaras** por nodo de 1 Gbps (315 Mbps para 615 cám QVGA — entra); VGA 15 fps
   (~2-3 Mbps) satura la NIC mucho antes. Para flotas grandes: QVGA + varios nodos.
 
-## 5. Offload al nodo GPU (VM200 · RTX 3090 · ~90 GB RAM)
+## 5. Offload al nodo GPU (RTX 3090 · ~90 GB RAM)
 
 Qué conviene mover al nodo GPU (se une al cluster con `install.sh --join`, comparte el redis
 del origin):
 
-| Carga | En 8c/8GB (stream01) | En RTX 3090 | Ganancia |
+| Carga | En 8c/8GB (media01) | En RTX 3090 | Ganancia |
 |---|---|---|---|
 | **Transcode ladder** (RTMP ingest, VOD adaptativo) | CPU x264, caro | **NVENC** paralelo (docenas de encodes) | libera el CPU del origin; ladder "gratis" |
 | **Egress/grabación** | Chrome 1.27 GB c/u | GPU-accel + 90 GB RAM | decenas de grabaciones concurrentes |
 | **YOLO** (plugin) | CPU, lento | CUDA | tiempo real multi-cámara |
 
-Con el transcode y el egress en el 3090, stream01 queda para el **plano de control + SFU +
+Con el transcode y el egress en el 3090, media01 queda para el **plano de control + SFU +
 ws-mjpeg** (donde ya es eficiente).
 
 ## 6. Traducción a números de negocio (defaults de quota / pricing por nodo)

@@ -3,7 +3,7 @@
 **Goal.** Add remote GPU machines — behind NAT, outside the server's network, on reused ethereum-mining cards — to
 the cluster as **compute** nodes that offload YOLO / Vision One models / transcoding / plugin workers from the media
 server. Encrypted, churn-tolerant, private. Think "vast.ai / Salad, but a private pool running *your own* models
-([Vision One](../integrations/VISION-ONE.md)) and configs."
+(Vision One) and configs."
 
 ## Verdict
 

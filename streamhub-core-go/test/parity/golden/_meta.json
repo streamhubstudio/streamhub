@@ -1,7 +1,7 @@
 {
   "oracle": "streamhub-core (NestJS) 2.x — branch legacy/node-2.x, tag 2.24.0",
   "appVersion": "99.0.0-parity",
-  "vendorDigest": "sha256:f91f547de2efdde3ec6eedba48b8341798cab1e0ac433ff323dc5cbdcd80f676",
+  "vendorDigest": "sha256:e41e0d5d734ecd21fee035012e6dc986f3cef588449bc461a8ee557cfc72db60",
   "vendorApps": [
     "counting",
     "crowd",

@@ -146,7 +146,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [`streamhub-docs/testing/`](streamhub
 
 StreamHub follows an **open-core** model: the self-hosted core in this repository — everything
 under `streamhub-core-go/`, `streamhub-web/`, `deploy/` and this Compose stack — is open source
-under **AGPL-3.0-only** (see [`LICENSE`](LICENSE)). Copyright © 2026 digitalhub / Cubiq Digital.
+under **AGPL-3.0-only** (see [`LICENSE`](LICENSE)). Copyright © 2026 digitalhub.
 The worker-backed Studio Apps (`yolo`, `deface`, `lpr`, `perimeter`, `presence`,
 `people-counter`, `safety-ppe`, `transcription`, `occupancy`, `counting`, `crowd`, `demography`)
 are developed in their own AGPL-3.0 repos and ship **pre-composed** in this repository

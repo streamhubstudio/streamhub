@@ -229,7 +229,7 @@ Out of scope for G3 — the AMI build is ready for it.
 
 | What | How | Result |
 |---|---|---|
-| `install.sh --prepare-image` | Ubuntu 24.04 container + host Docker daemon (on the .50), source from a local tarball via `file://` | PASS — real pull of the 5 stack images + full core build, marker written, no `.env`/`data`/`.install_id`/log, nothing started; a second run is idempotent |
+| `install.sh --prepare-image` | Ubuntu 24.04 container + host Docker daemon, source from a local tarball via `file://` | PASS — real pull of the 5 stack images + full core build, marker written, no `.env`/`data`/`.install_id`/log, nothing started; a second run is idempotent |
 | shell scripts | `shellcheck` (installer, first-boot, all Packer steps, MOTD, login hook) | clean |
 | first boot → installer (fake Docker) | container e2e: pending without user-data, user-data → install, secrets generated, marker removed, re-runs idempotent | **pending** — the test host went down mid-run |
 | `packer validate` | `hashicorp/packer` container | **pending** |

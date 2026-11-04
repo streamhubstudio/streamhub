@@ -954,7 +954,7 @@ edge never listens. See [fleet.md](./fleet.md) for managing the Agents and
 
 ## License (AGPL)
 
-The vision algorithms are ports of **Vision One** (`storehub-vision-one`):
+The vision algorithms are ports of **Vision One**:
 the occupancy pipeline + POI-zone sessions, `LineCrossingCounter`, the crowd
 `CrowdStateManager`, buffalo_l/softmax/emotion demography, and the adaptive
 frame sampler — re-expressed over normalized coordinates and upgraded to

@@ -6,7 +6,7 @@ no Docker) see [`../INSTALL.md`](../INSTALL.md). For the API, see
 
 ## 1. Requirements
 
-- A **Linux server with a public IP** (an OVH/Hetzner/DO VM, etc.). Host networking is used for
+- A **Linux server with a public IP** (an VPS/Hetzner/DO VM, etc.). Host networking is used for
   LiveKit's UDP media + STUN external-IP detection, so this is Linux-only (not Docker Desktop).
 - **Docker** + the **Docker Compose v2** plugin (`docker compose version`).
 - For a real domain: a DNS `A` record (DNS-only — do **not** proxy through Cloudflare, WebRTC is

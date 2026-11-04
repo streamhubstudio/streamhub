@@ -33,7 +33,7 @@ curl -s -X POST -H "Authorization: Bearer sk_..." -H "Content-Type: application/
 
 Salida (una línea en stdout; la consola de la página va a stderr): JSON con `samples, p50, p90, p95, min, max, mean, badDecodes`.
 
-## Resultados medidos (2026-07-02, stream01 OVH 8c/8GB, RTT cliente↔server 158ms)
+## Resultados medidos (2026-07-02, media01 VPS 8c/8GB, RTT cliente↔server 158ms)
 
 | Path | Config | p50 | p95 | Notas |
 |---|---|---|---|---|
