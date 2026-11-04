@@ -1,0 +1,15 @@
+# StreamHub Agent — EDGE-mode detection dependencies.
+#
+# Only needed on devices that run a camera in edge detection mode
+# (detect.mode: edge). Remote and off modes need NONE of these — do not
+# install them for a remote-only agent (no torch/CUDA required there).
+#
+#   pip install -r scripts/requirements.txt
+#
+ultralytics>=8.3.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+
+# Optional — per-frame CPU/memory telemetry in detections.json. The worker runs
+# without it (resource stats are simply omitted).
+psutil>=5.9.0

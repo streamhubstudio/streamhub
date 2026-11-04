@@ -1,0 +1,133 @@
+# StreamHub Agent — example configuration.
+#
+# Copy to `config.yml` and fill in your values. `config.yml` and `secrets.ini`
+# hold real credentials and are gitignored — NEVER commit them.
+#
+# The agent pulls each camera's RTSP feed and pushes it to a StreamHub instance
+# (RTMP/RTMPS ingest). AI detection is a per-camera MODE (see `detect.mode`
+# below):
+#   remote  (default) — the StreamHub server runs the yolo/deface plugin and the
+#                        agent only SUBSCRIBES to the results. No GPU/inference
+#                        on the device. Best for demos / a few cameras.
+#   edge              — the agent runs inference ON the device (scripts/detect.py,
+#                        ultralytics + opencv). No continuous upload needed. Best
+#                        for many cameras / limited bandwidth / privacy. Requires
+#                        the ML deps: pip install -r scripts/requirements.txt
+#   off               — no detection.
+
+agent:
+  id: agent-0001                 # unique id for this agent/device
+  timezone: America/Argentina/Buenos_Aires
+  records_enabled: true
+  records_transcode: false      # false = copy the camera's H.264 (low CPU/RAM); true = 5 fps libx264 re-encode (rkipc / low-res only)
+  records_ttl: 30                # days to keep local records
+
+  # StreamHub media ingest. The agent builds: <stream_server><app>-<cam_id>
+  # e.g. rtmps://media.example.com:443/live/  →  .../live/myapp-c001
+  rtmps: true
+  stream_server: rtmps://media.example.com:443/live/
+
+  # StreamHub control plane. `callback_url` is the StreamHub host WITHOUT scheme;
+  # the REST API lives at https://<callback_url>/api/v1. `tenant` is the
+  # StreamHub app name (alias: `app:`). The sk_ API token is NOT kept here — it
+  # lives in secrets.ini under [streamhub] (see secrets.example.ini).
+  callback_url: media.example.com
+  tenant: myapp
+
+  # Optional: encrypt local records at rest (32 hex chars). Leave empty to disable.
+  encryption_key: ""
+
+# Optional MQTT control/telemetry (StreamHub or your own broker).
+mqtt:
+  host: media.example.com
+  port: 1883
+
+# StreamHub FLEET management (scripts/fleet_agent.py + paho-mqtt).
+# When `interval` > 0 the agent spawns + supervises the fleet companion, which
+# connects to the mqtt broker above and publishes health telemetry + handles
+# remote commands (restart / OTA update / config push / ping) on:
+#   streamhub/<agent.tenant>/agents/<agent.id>/{telemetry,status,cmd,cmd/result}
+# The StreamHub dashboard's Fleet tab drives it. See streamhub-docs/features/fleet.md.
+# Deps: pip install -r scripts/requirements-fleet.txt (or install.sh --fleet).
+fleet:
+  interval: 0                 # telemetry seconds; 0 = fleet management OFF
+  # Broker credentials for the fleet plane (default: username = agent.id, no pw).
+  # Use per-agent creds + tls in production; the topic namespace is not a trust
+  # boundary on its own — scope each agent with broker ACLs.
+  username: ""
+  password: ""
+  tls: false
+  # OTA: absolute path to the agent binary to atomically replace on an `ota`
+  # command (default: streamhub-agent next to this install), and the systemd
+  # unit to restart afterwards.
+  binary: ""                  # empty → <install>/streamhub-agent
+  unit: streamhub-agent
+
+# Optional off-box object storage for records (S3-compatible). BYO bucket.
+# The access_key / secret_key live in secrets.ini under [s3] — not here.
+storage:
+  endpoint: s3.us-east-1.amazonaws.com
+  bucket: my-records-bucket
+  region: us-east-1
+
+# ONVIF camera discovery + StreamHub auto-registration (scripts/onvif.py):
+#   streamhub-agent onvif scan   # WS-Discovery probe + per-camera RTSP URIs
+#   streamhub-agent onvif sync   # scan + register each camera in StreamHub
+# Registration targets the StreamHub above (agent.callback_url + agent.tenant,
+# sk_ token from secrets.ini). Sync is idempotent: onvif-cameras.json (next to
+# this file) maps serial/MAC → ingressId, so re-runs update, never duplicate.
+onvif:
+  # How discovered cameras are registered in StreamHub:
+  #   url          (default) StreamHub PULLS the camera's RTSP itself
+  #                (transcode plane — WebRTC/HLS/recording/plugins). Needs the
+  #                server to REACH the camera IP (on-prem/VPN; StreamHub
+  #                rejects private pull URLs it cannot serve — see README).
+  #   passthrough  StreamHub mints an RTMP push key + remuxes to HLS (~0 CPU,
+  #                mosaic/HLS-wall use); the agent relays RTSP→RTMP to it.
+  register_mode: url
+  # Which stream to register: main (highest resolution) | sub (lowest).
+  prefer_stream: main
+  # Periodic re-scan by the agent daemon in seconds (0 = disabled). When set,
+  # the agent spawns `onvif.py sync --quiet` in the background at this cadence.
+  rescan_interval: 0
+  # WS-Discovery listen window (seconds) and optional bind address.
+  discovery_timeout: 4
+  # State file for idempotent sync. Empty → onvif-cameras.json next to config.
+  state_file: ""
+  # Credentials tried IN ORDER against cameras with no per-camera entry
+  # (then anonymous). Cameras usually ship with an admin user — set yours.
+  default_credentials:
+    - user: admin
+      password: admin
+  # Per-camera overrides. `match` is the camera's IP or MAC (serial also works
+  # for mode/stream once discovered). user/password win over the defaults;
+  # mode/stream override register_mode/prefer_stream for that camera only.
+  cameras:
+    - match: 192.168.1.50
+      user: admin
+      password: change_me
+      mode: passthrough        # url | passthrough (optional)
+      stream: sub              # main | sub (optional)
+
+cameras:
+  - id: c001
+    ip: 192.168.1.50
+    status: true
+    record_path: /var/lib/streamhub-agent/records/c001
+    rtsp: 'rtsp://USER:PASSWORD@192.168.1.50:554/Streaming/Channels/101'
+    resolution: '1920:1080'
+    # StreamHub room this camera maps to (default: <tenant>-<cam_id>)
+    room: ''
+    detect:
+      enabled: true              # master on/off for this camera's detection
+      mode: remote               # remote | edge | off  (default: remote)
+      # ── remote mode: which server-side plugin analyses this feed ──
+      plugin: yolo               # yolo | deface
+      poll_interval: 2           # seconds between /live event polls
+      notify_mqtt: false         # publish a compact MQTT alert on detections
+      # ── edge mode: on-device inference settings (ignored in remote mode) ──
+      model: yolo11n             # yolo11n/s/m/l/x — larger = more accurate/slower
+      confidence: 0.5            # 0.0–1.0 detection threshold
+      targets: ''                # comma-separated COCO classes, e.g. person,car
+      tracker: bytetrack         # bytetrack | none
+      fps: 2                     # inference frames per second

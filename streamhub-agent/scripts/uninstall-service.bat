@@ -1,0 +1,6 @@
+@echo off
+echo Stopping StreamHub Agent service...
+net stop StreamHubAgent 2>NUL
+echo Uninstalling service...
+"%~dp0..\streamhub-agent.exe" --uninstall
+pause

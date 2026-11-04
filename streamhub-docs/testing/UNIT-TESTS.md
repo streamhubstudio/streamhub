@@ -110,7 +110,7 @@ empty/non-string/unknown sid — is a 401; signup, login and break-glass tokens 
 `sid`; a session-table sid is accepted); `TestJWTValidation` no longer grandfathers sid-less
 tokens.
 
-Top-level test functions per package (976 total; table-driven subtests not counted):
+Top-level test functions per package (984 total; table-driven subtests not counted):
 
 **Memberships by consent (security 3.3.4, M2).** `internal/authn` `membership_test.go`:
 `TestExistingAccountJoinsOnlyByConsent` (an owner adding an existing account as `owner` via
@@ -164,6 +164,7 @@ Top-level test functions per package (901 total; table-driven subtests not count
 | `internal/buildinfo` | 5 |
 | `internal/callbacks` | 14 |
 | `internal/cameras` | 17 |
+| `internal/camgw` | 8 |
 | `internal/clips` | 10 |
 | `internal/cluster` | 23 |
 | `internal/dbadmin` | 6 |
@@ -703,6 +704,27 @@ Encoder pairing by code, the `dk_` device credential and the device WS
   channel list (announced ∪ linked, numeric order).
 - `cmd/streamhub` `TestEveryOperationDeclaresItsGuard`: the two pairing routes are
   `publicByDesign`, every `/apps/{app}/devices…` route declares `app:read|write`.
+
+### RTSP/ONVIF camera gateway — `streamhub-agent` (`internal/camgw`)
+
+The gateway that turns standard RTSP/ONVIF cameras into OpenCam devices
+([cmd/streamhub-agent/README.md](../../streamhub-core-go/cmd/streamhub-agent/README.md)).
+Pure functions and file I/O under `t.TempDir()`; no MQTT broker, camera or ffmpeg.
+- Topics + push URL: `mqtt.base_topic` `%device` expansion, default `opencam/<id>`,
+  `stream.url` + `stream.key` join (`TestTopicAndPushURL`).
+- ffmpeg argv: one RTSP session teed to RTMP (`onfail=ignore`) and MP4 segments,
+  stream copy, stream-only / record-only shapes (`TestPipelineArgs`); audio policy —
+  AAC copied, other codecs re-encoded, `off` drops it (`TestAudioArgs`).
+- SECURITY: RTSP credentials and the RTMP stream key never reach logs or command
+  answers (`TestRedactURL`); host resolution keeps userinfo and IP literals intact
+  (`TestResolveURLHostKeepsIPsAndCredentials`).
+- Enrolment JSON loaded from a relative `credentials` file; a duplicate device is
+  rejected (`TestLoadCredentialsFile`).
+- Command expiry compares whole seconds, like the core stamps `ts`
+  (`TestExpired`).
+- `config/import` persists the rotated webhook token in the 0600 overlay and
+  refuses a stale `if_rev` (`TestConfigImportPersistsWebhookAndChecksRev`).
+- Field results on a Luckfox Pico Max: [AGENT-FIELD-TESTS.md](AGENT-FIELD-TESTS.md).
 
 ### SRT behind MediaMTX with key auth — E2 (`internal/passthrough`, `srt_mediamtx_test.go`)
 

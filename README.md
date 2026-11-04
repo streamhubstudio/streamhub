@@ -107,6 +107,8 @@ Per-app S3 credentials are set in `data/secrets.json` (chmod 600) referenced fro
 | `plugins-vendor/`, `streamhub-web/src/plugins-vendor/` | Python + TS | the 12 worker-backed Studio Apps, pre-composed |
 | `streamhub-core-go/cmd/streamhub-mcp/` | Go | MCP server exposing the REST API to AI clients (`streamhub-mcp`) |
 | `streamhub-encoder/` | Go + GStreamer | **StreamHub Encoder**: software live encoder for Linux (SDI/NDI/SRT/RTSP in → RTMP/SRT/WHIP/HLS/UDP out), pairs with the core; `.deb` + Docker |
+| `streamhub-core-go/cmd/streamhub-agent/` | Go | **Camera gateway**: makes standard RTSP/ONVIF cameras behave as OpenCam devices (relay, recording, snapshots, ONVIF PTZ); one static binary, runs on Luckfox Pico boards — [README](streamhub-core-go/cmd/streamhub-agent/README.md) |
+| `streamhub-agent/` | C | **Embedded agent** (1.14) for low-memory ARM boards (Luckfox Pico Pro/Max), Linux and Windows: recording, relay, S3 upload, ONVIF discovery, fleet management — [README](streamhub-agent/README.md) |
 | `streamhub-app-sdk/` | Python | SDK for writing worker-backed Studio Apps |
 | `examples/` | HTML + JS | runnable sample apps: WebRTC publish/play, HLS player, conference, CCTV grid, live shopping, telemedicine, radio |
 | `streamhub-docs/` | Markdown | the full documentation (same text as [streamhub.studio/docs](https://streamhub.studio/docs)) |

@@ -1,0 +1,7 @@
+# StreamHub fleet-management companion (scripts/fleet_agent.py) deps.
+# Install with: python3 -m pip install -r scripts/requirements-fleet.txt
+# (or run install.sh --fleet). Only needed when config.yml sets fleet.interval > 0.
+paho-mqtt>=1.6.1
+# Optional: nicer host metrics (cpu/mem/temp/disk). Without it the companion
+# falls back to /proc + /sys (stdlib only), so this is not strictly required.
+psutil>=5.9.0

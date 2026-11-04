@@ -1,0 +1,144 @@
+#!/bin/sh
+#
+# S95streamhub — BusyBox init script for streamhub-agent (embedded/Luckfox).
+# Install to: /etc/init.d/S95streamhub
+#
+# For systemd hosts (Debian/Ubuntu/generic Linux x64) use the systemd unit
+# etc/streamhub-agent.service installed by scripts/install.sh instead.
+#
+
+DAEMON=/userdata/streamhub/streamhub-agent
+CONFIG=/userdata/streamhub/config.yml
+SECRETS=/userdata/streamhub/secrets.ini
+PIDFILE=/var/run/streamhub.pid
+LOGFILE=/tmp/agent.log
+LOG_MAX_SIZE=524288  # 512KB — /tmp is tmpfs (RAM-backed), keep small
+RESPAWN_DELAY=5
+
+rotate_log() {
+    if [ -f "$LOGFILE" ]; then
+        SIZE=$(wc -c < "$LOGFILE" 2>/dev/null || echo 0)
+        if [ "$SIZE" -gt "$LOG_MAX_SIZE" ]; then
+            # Keep last 100 lines, discard the rest
+            tail -100 "$LOGFILE" > "${LOGFILE}.tmp" 2>/dev/null
+            mv -f "${LOGFILE}.tmp" "$LOGFILE" 2>/dev/null
+        fi
+    fi
+}
+
+ensure_dns() {
+    # Ensure DNS resolvers are configured (Luckfox has no local resolver)
+    if ! grep -q 'nameserver' /tmp/resolv.conf 2>/dev/null; then
+        echo 'nameserver 8.8.8.8' > /tmp/resolv.conf
+        echo 'nameserver 8.8.4.4' >> /tmp/resolv.conf
+    fi
+}
+
+sync_time() {
+    # Wait for network (up to 15s)
+    for i in 1 2 3 4 5; do
+        ping -c1 -W2 8.8.8.8 >/dev/null 2>&1 && break
+        sleep 3
+    done
+
+    # Sync via HTTP Date header (no ntpd on this platform)
+    HTTP_DATE=$(wget -qS --spider http://google.com 2>&1 | grep -i "Date:" | sed 's/.*Date: //' | tr -d '\r')
+    # BusyBox date cannot parse the RFC 1123 header ("Tue, 03 Nov 2026
+    # 20:50:14 GMT") with a bare -s: give it the format with -D.
+    if [ -n "$HTTP_DATE" ] && date -u -D '%a, %d %b %Y %H:%M:%S' -s "${HTTP_DATE% GMT}" >/dev/null 2>&1; then
+        printf "Time sync: OK (%s)\n" "$(date)"
+        return 0
+    fi
+
+    echo "WARNING: time sync failed, clock may be wrong"
+    return 1
+}
+
+start() {
+    printf "Starting streamhub-agent: "
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "already running (pid $(cat "$PIDFILE"))"
+        return 0
+    fi
+
+    # Ensure DNS is available before network operations
+    ensure_dns
+
+    # Sync clock before starting (S3 requires accurate time)
+    sync_time
+
+    # Kill any orphaned agent processes (prevents duplicate instances)
+    killall -q streamhub-agent 2>/dev/null
+    killall -q ffmpeg 2>/dev/null
+    sleep 1
+
+    # Truncate log before fresh start
+    > "$LOGFILE"
+
+    # Respawn loop: restart agent if it exits unexpectedly
+    (
+        while true; do
+            rotate_log
+            "$DAEMON" "$CONFIG" "$SECRETS" >> "$LOGFILE" 2>&1
+            EXIT_CODE=$?
+            # If pidfile was removed, stop was called — exit the loop
+            [ ! -f "$PIDFILE" ] && break
+            rotate_log
+            echo "$(date) [respawn] agent exited with code $EXIT_CODE, restarting in ${RESPAWN_DELAY}s..." >> "$LOGFILE"
+            # A killed agent leaves its ffmpeg children running (reparented to
+            # init); the new one would start a second recorder/relay per camera.
+            killall -q ffmpeg 2>/dev/null
+            sleep "$RESPAWN_DELAY"
+        done
+    ) &
+    echo "$!" > "$PIDFILE"
+    echo "OK (pid $!)"
+}
+
+stop() {
+    printf "Stopping streamhub-agent: "
+    if [ -f "$PIDFILE" ]; then
+        PID=$(cat "$PIDFILE")
+        rm -f "$PIDFILE"
+        # Kill the respawn shell and all children
+        kill -- -"$PID" 2>/dev/null || kill "$PID" 2>/dev/null
+        # Also kill any running agent binary
+        killall -q streamhub-agent 2>/dev/null
+        sleep 1
+        # Force kill stragglers; the agent's ffmpeg children outlive it
+        killall -q -9 streamhub-agent 2>/dev/null
+        killall -q ffmpeg 2>/dev/null
+        echo "OK"
+    else
+        # No pidfile but maybe still running
+        killall -q streamhub-agent 2>/dev/null
+        echo "OK (no pidfile)"
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+status() {
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "streamhub-agent is running (pid $(cat "$PIDFILE"))"
+        # Show the actual agent process too
+        ps | grep streamhub-agent | grep -v grep
+    else
+        echo "streamhub-agent is not running"
+    fi
+}
+
+case "$1" in
+    start)   start ;;
+    stop)    stop ;;
+    restart) restart ;;
+    status)  status ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac

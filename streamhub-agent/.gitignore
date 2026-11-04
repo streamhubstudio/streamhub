@@ -1,0 +1,18 @@
+# Binaries / build artifacts
+streamhub-agent
+streamhub-agent.exe
+streamhub-updater
+streamhub-updater.exe
+*.o
+*.exe
+.DS_Store
+
+# Real credentials — NEVER commit (use config.example.yml as the template)
+config.yml
+secrets.ini
+# ONVIF sync state — RTSP URIs carry embedded camera credentials
+onvif-cameras.json
+
+# Python
+__pycache__/
+.pytest_cache/

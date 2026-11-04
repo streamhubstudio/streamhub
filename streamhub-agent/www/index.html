@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamHub Agent</title>
+  <script src="/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a5f'},
+            dark: {700:'#334155',800:'#1e293b',900:'#0f172a'}
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .gauge-ring { transition: stroke-dashoffset 0.8s ease; }
+      .nav-btn { @apply px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 border-2 border-transparent; }
+      .nav-active { @apply bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30; }
+      .section { display:none; }
+      .section.active { display:block; }
+      .card { @apply bg-white rounded-2xl shadow-md border border-gray-100 p-6; }
+      .field-label { @apply block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5; }
+      .field-input { @apply w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all bg-white; }
+      .btn-primary { @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl text-sm font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 active:scale-95; }
+      .btn-danger { @apply bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-500/25 active:scale-95; }
+      .btn-outline { @apply border-2 border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all active:scale-95; }
+      .btn-success { @apply bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 active:scale-95; }
+      .toast { position:fixed;top:1.5rem;right:1.5rem;z-index:9999;padding:1rem 1.5rem;border-radius:1rem;color:#fff;font-weight:600;transition:all 0.3s;transform:translateY(-20px);opacity:0;backdrop-filter:blur(8px); }
+      .toast.show { transform:translateY(0);opacity:1; }
+      .toast-success { background:rgba(22,163,74,0.95); }
+      .toast-error { background:rgba(220,38,38,0.95); }
+      .badge { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold; }
+      .badge-green { @apply bg-emerald-100 text-emerald-700; }
+      .badge-red { @apply bg-red-100 text-red-700; }
+      .badge-gray { @apply bg-gray-100 text-gray-500; }
+      .badge-blue { @apply bg-blue-100 text-blue-700; }
+      .badge-yellow { @apply bg-amber-100 text-amber-700; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- ============= LOGIN OVERLAY ============= -->
+  <div id="login-overlay" class="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-sm mx-4">
+      <div class="flex justify-center mb-6">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/30">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+      <h2 class="text-2xl font-extrabold text-gray-900 text-center mb-1">StreamHub Agent</h2>
+      <p class="text-sm text-gray-400 text-center mb-8">Sign in to manage your device</p>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="field-label">Username</label>
+          <input id="login-user" type="text" class="field-input" value="admin" autocomplete="username">
+        </div>
+        <div>
+          <label class="field-label">Password</label>
+          <input id="login-pass" type="password" class="field-input" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <div id="login-error" class="text-red-500 text-sm font-medium hidden">Invalid credentials</div>
+        <button type="submit" class="btn-primary w-full text-center justify-center">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============= HEADER ============= -->
+  <header class="bg-gradient-to-r from-dark-900 to-dark-800 text-white shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-extrabold tracking-tight">StreamHub Agent</h1>
+          <div class="flex items-center gap-3 mt-0.5">
+            <span id="h-agent-id" class="text-xs text-blue-300 font-mono"></span>
+            <span id="h-version" class="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-blue-200"></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+          <svg class="w-4 h-4 text-amber-300" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"/></svg>
+          <span id="h-temp" class="text-xs font-bold text-white">--</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+          <span id="h-mqtt-dot" class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+          <span id="h-mqtt-label" class="text-xs font-semibold text-white/80">MQTT</span>
+        </div>
+        <button onclick="doLogout()" class="text-xs text-white/50 hover:text-white/90 transition">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============= NAVIGATION ============= -->
+  <nav class="bg-white border-b-2 border-gray-100 shadow-sm sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 flex gap-2 py-3 overflow-x-auto">
+      <button onclick="navigate('dashboard')" data-nav="dashboard" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 nav-active whitespace-nowrap">Dashboard</button>
+      <button onclick="navigate('config')" data-nav="config" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Configuration</button>
+      <button onclick="navigate('cameras')" data-nav="cameras" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Cameras</button>
+      <button onclick="navigate('network')" data-nav="network" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Network</button>
+      <button onclick="navigate('detection')" data-nav="detection" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Detection</button>
+      <button onclick="navigate('speedtest')" data-nav="speedtest" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Speed Test</button>
+      <button onclick="navigate('recordings')" data-nav="recordings" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Recordings</button>
+      <button onclick="navigate('storage')" data-nav="storage" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">Storage</button>
+      <button onclick="navigate('system')" data-nav="system" class="nav-btn text-gray-500 hover:text-gray-800 hover:bg-gray-100 whitespace-nowrap">System</button>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="sec-dashboard" class="section active space-y-6">
+      <!-- Gauge cards row -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="gauge-row">
+        <!-- CPU Gauge -->
+        <div class="card flex flex-col items-center py-5">
+          <svg viewBox="0 0 100 100" class="w-20 h-20">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="g-cpu-ring" cx="50" cy="50" r="42" fill="none" stroke="#3b82f6" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              transform="rotate(-90 50 50)" class="gauge-ring"/>
+            <text x="50" y="48" text-anchor="middle" class="text-lg font-bold fill-gray-800" font-size="18"><tspan id="g-cpu-val">0</tspan><tspan font-size="10">%</tspan></text>
+            <text x="50" y="62" text-anchor="middle" font-size="8" class="fill-gray-400">CPU</text>
+          </svg>
+          <p id="g-cpu-freq" class="text-[10px] text-gray-400 mt-1">-- MHz</p>
+        </div>
+        <!-- RAM Gauge -->
+        <div class="card flex flex-col items-center py-5">
+          <svg viewBox="0 0 100 100" class="w-20 h-20">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="g-ram-ring" cx="50" cy="50" r="42" fill="none" stroke="#8b5cf6" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              transform="rotate(-90 50 50)" class="gauge-ring"/>
+            <text x="50" y="48" text-anchor="middle" class="text-lg font-bold fill-gray-800" font-size="18"><tspan id="g-ram-val">0</tspan><tspan font-size="10">%</tspan></text>
+            <text x="50" y="62" text-anchor="middle" font-size="8" class="fill-gray-400">RAM</text>
+          </svg>
+          <p id="g-ram-detail" class="text-[10px] text-gray-400 mt-1">-- / -- MB</p>
+        </div>
+        <!-- Temp Gauge -->
+        <div class="card flex flex-col items-center py-5">
+          <svg viewBox="0 0 100 100" class="w-20 h-20">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="g-temp-ring" cx="50" cy="50" r="42" fill="none" stroke="#f59e0b" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              transform="rotate(-90 50 50)" class="gauge-ring"/>
+            <text x="50" y="48" text-anchor="middle" class="text-lg font-bold fill-gray-800" font-size="18"><tspan id="g-temp-val">0</tspan><tspan font-size="10">&deg;</tspan></text>
+            <text x="50" y="62" text-anchor="middle" font-size="8" class="fill-gray-400">TEMP</text>
+          </svg>
+          <p id="g-temp-label" class="text-[10px] text-gray-400 mt-1">CPU Temp</p>
+        </div>
+        <!-- Disk Gauge -->
+        <div class="card flex flex-col items-center py-5">
+          <svg viewBox="0 0 100 100" class="w-20 h-20">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="g-disk-ring" cx="50" cy="50" r="42" fill="none" stroke="#10b981" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              transform="rotate(-90 50 50)" class="gauge-ring"/>
+            <text x="50" y="48" text-anchor="middle" class="text-lg font-bold fill-gray-800" font-size="18"><tspan id="g-disk-val">0</tspan><tspan font-size="10">%</tspan></text>
+            <text x="50" y="62" text-anchor="middle" font-size="8" class="fill-gray-400">DISK</text>
+          </svg>
+          <p id="g-disk-detail" class="text-[10px] text-gray-400 mt-1">-- MB free</p>
+        </div>
+        <!-- Load -->
+        <div class="card flex flex-col items-center py-5">
+          <svg viewBox="0 0 100 100" class="w-20 h-20">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+            <circle id="g-load-ring" cx="50" cy="50" r="42" fill="none" stroke="#06b6d4" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round"
+              transform="rotate(-90 50 50)" class="gauge-ring"/>
+            <text x="50" y="48" text-anchor="middle" class="text-lg font-bold fill-gray-800" font-size="16"><tspan id="g-load-val">0.0</tspan></text>
+            <text x="50" y="62" text-anchor="middle" font-size="8" class="fill-gray-400">LOAD</text>
+          </svg>
+          <p id="g-load-detail" class="text-[10px] text-gray-400 mt-1">1-min avg</p>
+        </div>
+      </div>
+
+      <!-- Info bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border-2 border-blue-100 px-4 py-3">
+          <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Agent Uptime</p>
+          <p id="st-agent-uptime" class="text-xl font-extrabold text-gray-900 mt-1">-</p>
+        </div>
+        <div class="bg-white rounded-xl border-2 border-indigo-100 px-4 py-3">
+          <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">System Uptime</p>
+          <p id="st-uptime" class="text-xl font-extrabold text-gray-900 mt-1">-</p>
+        </div>
+        <div class="bg-white rounded-xl border-2 border-emerald-100 px-4 py-3">
+          <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">MQTT</p>
+          <p id="st-mqtt" class="text-xl font-extrabold mt-1">-</p>
+        </div>
+        <div class="bg-white rounded-xl border-2 border-amber-100 px-4 py-3">
+          <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Cameras</p>
+          <p id="st-cameras" class="text-xl font-extrabold text-gray-900 mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- Camera cards -->
+      <div id="dash-cameras" class="space-y-5">
+        <p class="text-sm text-gray-400">Loading cameras...</p>
+      </div>
+
+      <!-- Hardware + NPU -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="card">
+          <h2 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Hardware Info
+          </h2>
+          <div id="hw-info" class="space-y-2 text-sm"></div>
+        </div>
+        <div class="card">
+          <h2 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            NPU & Processing
+          </h2>
+          <div id="npu-info" class="space-y-2 text-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CONFIGURATION ===== -->
+    <div id="sec-config" class="section">
+      <div class="card">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="font-bold text-gray-800 text-lg">Agent Configuration</h2>
+          <button onclick="showSetupModal()" class="btn-outline">Setup from URL</button>
+        </div>
+        <form id="config-form" class="space-y-6">
+          <fieldset class="border-2 border-gray-100 rounded-2xl p-5">
+            <legend class="text-xs font-extrabold text-gray-400 px-3 uppercase tracking-widest">Agent</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label class="field-label">Agent ID</label><input name="agent.id" class="field-input bg-gray-50" readonly></div>
+              <div><label class="field-label">Tenant</label><input name="agent.tenant" class="field-input"></div>
+              <div><label class="field-label">Store ID</label><input name="agent.store_id" class="field-input" placeholder="store-001"></div>
+              <div><label class="field-label">Alias</label><input name="agent.alias" class="field-input" placeholder="My Store"></div>
+              <div><label class="field-label">Timezone</label><input name="agent.timezone" class="field-input"></div>
+              <div><label class="field-label">Records TTL (days)</label><input name="agent.records_ttl" type="number" class="field-input"></div>
+              <div><label class="field-label">Latitude</label><input name="agent.latitude" type="number" step="any" class="field-input" placeholder="-34.6037"></div>
+              <div><label class="field-label">Longitude</label><input name="agent.longitude" type="number" step="any" class="field-input" placeholder="-58.3816"></div>
+              <div class="flex items-center gap-6 pt-5">
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer"><input name="agent.records_enabled" type="checkbox" class="w-5 h-5 rounded-lg text-blue-600"> Records</label>
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer"><input name="agent.rtmps" type="checkbox" class="w-5 h-5 rounded-lg text-blue-600"> RTMPS</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 gap-4 mt-4">
+              <div><label class="field-label">Stream Server</label><input name="agent.stream_server" class="field-input"></div>
+              <div><label class="field-label">Snapshots URL</label><input name="agent.snapshots_url" class="field-input"></div>
+              <div><label class="field-label">Callback URL</label><input name="agent.callback_url" class="field-input"></div>
+            </div>
+          </fieldset>
+          <fieldset class="border-2 border-gray-100 rounded-2xl p-5">
+            <legend class="text-xs font-extrabold text-gray-400 px-3 uppercase tracking-widest">MQTT</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label class="field-label">Host</label><input name="mqtt.host" class="field-input"></div>
+              <div><label class="field-label">Port</label><input name="mqtt.port" type="number" class="field-input"></div>
+            </div>
+          </fieldset>
+          <fieldset class="border-2 border-gray-100 rounded-2xl p-5">
+            <legend class="text-xs font-extrabold text-gray-400 px-3 uppercase tracking-widest">S3 Storage</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label class="field-label">Endpoint</label><input name="storage.endpoint" class="field-input"></div>
+              <div><label class="field-label">Bucket</label><input name="storage.bucket" class="field-input"></div>
+              <div><label class="field-label">Region</label><input name="storage.region" class="field-input"></div>
+              <div><label class="field-label">Access Key</label><input name="storage.access_key" class="field-input" placeholder="****"></div>
+              <div><label class="field-label">Secret Key</label><input name="storage.secret_key" type="password" class="field-input" placeholder="****"></div>
+            </div>
+          </fieldset>
+          <button type="submit" class="btn-primary">Save Configuration</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== CAMERAS ===== -->
+    <div id="sec-cameras" class="section">
+      <div class="card">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="font-bold text-gray-800 text-lg">Camera Configuration</h2>
+          <button onclick="addCamera()" class="btn-success">+ Add Camera</button>
+        </div>
+        <div id="cameras-list" class="space-y-4"></div>
+        <div class="mt-5 pt-4 border-t-2 border-gray-100">
+          <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Resolution Presets</p>
+          <div class="flex gap-2 flex-wrap">
+            <span class="px-3 py-1.5 bg-blue-50 rounded-lg text-xs font-bold text-blue-600 cursor-pointer hover:bg-blue-100 transition" onclick="setAllResolution('1920x1080')">1080p</span>
+            <span class="px-3 py-1.5 bg-blue-50 rounded-lg text-xs font-bold text-blue-600 cursor-pointer hover:bg-blue-100 transition" onclick="setAllResolution('1280x720')">720p</span>
+            <span class="px-3 py-1.5 bg-blue-50 rounded-lg text-xs font-bold text-blue-600 cursor-pointer hover:bg-blue-100 transition" onclick="setAllResolution('640x480')">480p</span>
+            <span class="px-3 py-1.5 bg-blue-50 rounded-lg text-xs font-bold text-blue-600 cursor-pointer hover:bg-blue-100 transition" onclick="setAllResolution('640x360')">360p</span>
+          </div>
+        </div>
+        <button onclick="saveCameras()" class="btn-primary mt-5">Save Cameras</button>
+      </div>
+    </div>
+
+    <!-- ===== NETWORK ===== -->
+    <div id="sec-network" class="section space-y-5">
+      <div class="card">
+        <h2 class="font-bold text-gray-800 text-lg mb-4">Network Settings</h2>
+        <form id="network-form" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="field-label">IP Address</label><input name="ip" class="field-input"></div>
+            <div><label class="field-label">Subnet Mask</label><input name="netmask" class="field-input"></div>
+            <div><label class="field-label">Gateway</label><input name="gateway" class="field-input"></div>
+            <div><label class="field-label">DNS Server</label><input name="dns" class="field-input"></div>
+          </div>
+          <button type="submit" class="btn-primary">Apply Network Settings</button>
+        </form>
+      </div>
+      <!-- Network Traffic -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+            <svg class="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+            Network Traffic
+          </h2>
+          <span id="traffic-status" class="badge badge-gray">Stopped</span>
+        </div>
+        <div id="traffic-data" class="space-y-3"></div>
+      </div>
+      <div class="card">
+        <details>
+          <summary class="cursor-pointer text-sm font-semibold text-gray-500 hover:text-gray-700">Raw ifconfig output</summary>
+          <pre id="raw-ifconfig" class="mt-3 bg-gray-900 text-green-400 rounded-xl p-4 text-xs overflow-x-auto"></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- ===== DETECTION ===== -->
+    <div id="sec-detection" class="section">
+      <!-- Camera selector -->
+      <div class="mb-4">
+        <label class="field-label">Camera</label>
+        <select id="detect-cam-select" onchange="loadCameraDetection(this.value)" class="field-input text-sm w-64">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Detection config -->
+        <div class="card">
+          <h2 class="font-bold text-gray-800 text-lg mb-4">YOLO11 Detection</h2>
+          <form id="yolo-form" class="space-y-4">
+            <label class="flex items-center gap-3 text-sm font-medium text-gray-700 cursor-pointer">
+              <input name="enabled" type="checkbox" id="yolo-enabled" class="w-5 h-5 rounded-lg text-blue-600"> Enable Detection
+            </label>
+            <div>
+              <label class="field-label">Model</label>
+              <select name="model" class="field-input">
+                <option value="yolo11n">YOLO11 Nano (fastest)</option>
+                <option value="yolo11s">YOLO11 Small</option>
+                <option value="yolo11m">YOLO11 Medium</option>
+                <option value="yolo11l">YOLO11 Large</option>
+                <option value="yolo11x">YOLO11 Extra (most accurate)</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Confidence: <span id="conf-value" class="text-blue-600">0.50</span></label>
+              <input name="confidence" type="range" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-blue-600 h-2"
+                oninput="document.getElementById('conf-value').textContent=parseFloat(this.value).toFixed(2)">
+            </div>
+            <div>
+              <label class="field-label">Inference FPS</label>
+              <select name="fps" class="field-input">
+                <option value="1">1 FPS</option>
+                <option value="2" selected>2 FPS</option>
+                <option value="3">3 FPS</option>
+                <option value="5">5 FPS</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Tracker</label>
+              <select name="tracker" class="field-input">
+                <option value="bytetrack">ByteTrack</option>
+                <option value="botsort">BoTSORT</option>
+              </select>
+            </div>
+            <label class="flex items-center gap-3 text-sm font-medium text-gray-700 cursor-pointer">
+              <input name="notify_mqtt" type="checkbox" id="yolo-notify" class="w-5 h-5 rounded-lg text-blue-600"> MQTT Events
+            </label>
+            <div>
+              <label class="field-label">Target Classes</label>
+              <div id="target-classes" class="grid grid-cols-2 gap-2 mt-2"></div>
+            </div>
+            <div class="flex gap-2">
+              <button type="submit" class="btn-primary">Save Detection</button>
+              <button type="button" id="detect-toggle-btn" onclick="toggleDetection()" class="btn-outline text-xs">Start Detection</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Zones & Lines -->
+        <div class="card">
+          <h2 class="font-bold text-gray-800 mb-3">Detection Zones & Lines</h2>
+          <div class="relative bg-gray-900 rounded-xl overflow-hidden aspect-video mb-3">
+            <img id="zone-bg" src="" class="absolute inset-0 w-full h-full object-contain opacity-60">
+            <canvas id="zone-canvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+          </div>
+          <div class="flex gap-2 mb-3 flex-wrap">
+            <button onclick="zoneMode='polygon'" class="btn-outline text-xs">Draw Zone</button>
+            <button onclick="zoneMode='line'" class="btn-outline text-xs">Draw Line</button>
+            <button onclick="finishShape()" class="btn-outline text-xs">Finish Shape</button>
+            <button onclick="clearZones()" class="btn-outline text-xs text-red-600 border-red-200">Clear All</button>
+            <button onclick="saveZones()" class="btn-primary text-xs">Save</button>
+          </div>
+          <div id="zones-list" class="space-y-1 text-xs text-gray-600"></div>
+        </div>
+      </div>
+
+      <!-- Live detection preview -->
+      <div id="detect-preview-card" class="card mt-5 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-gray-800 text-lg">Live Detection Preview</h2>
+          <div id="detect-badge" class="text-sm font-medium text-gray-500"></div>
+        </div>
+        <div class="relative bg-gray-900 rounded-xl overflow-hidden aspect-video">
+          <img id="detect-preview-img" class="w-full h-full object-contain">
+        </div>
+        <div id="detect-events-info" class="mt-3 text-sm text-gray-600"></div>
+        <div id="detect-resources" class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+          <div class="bg-gray-50 rounded-xl p-3">
+            <div class="text-gray-400 mb-1">CPU</div>
+            <div id="detect-cpu" class="text-lg font-bold text-blue-600">--</div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3">
+            <div class="text-gray-400 mb-1">RAM</div>
+            <div id="detect-ram" class="text-lg font-bold text-emerald-600">--</div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-3">
+            <div class="text-gray-400 mb-1">Process</div>
+            <div id="detect-proc-mem" class="text-lg font-bold text-amber-600">--</div>
+          </div>
+          <div id="detect-gpu-card" class="bg-gray-50 rounded-xl p-3 hidden">
+            <div class="text-gray-400 mb-1">GPU</div>
+            <div id="detect-gpu" class="text-lg font-bold text-purple-600">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SPEED TEST ===== -->
+    <div id="sec-speedtest" class="section space-y-5">
+      <div class="card">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+            <svg class="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Internet Speed Test
+          </h2>
+          <button onclick="runSpeedTest()" id="speedtest-btn" class="btn-primary">Run Speed Test</button>
+        </div>
+        <p class="text-sm text-gray-400 mb-5">Tests the device's download speed from Wasabi S3 and measures network latency. Rating: 2 Mbps per camera required.</p>
+        <div id="speedtest-running" class="hidden mb-5">
+          <div class="flex items-center gap-3">
+            <svg class="animate-spin h-5 w-5 text-blue-500" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <span class="text-sm font-medium text-gray-600">Running speed test... This may take up to 15 seconds.</span>
+          </div>
+        </div>
+        <div id="speedtest-results" class="hidden">
+          <div class="flex items-center justify-center mb-6">
+            <div id="speedtest-stars" class="flex gap-1 text-4xl"></div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+            <div class="bg-emerald-50 rounded-xl p-4 text-center">
+              <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Download</p>
+              <p id="st-download" class="text-2xl font-extrabold text-gray-900 mt-1">-</p>
+              <p class="text-[10px] text-gray-400">Mbps</p>
+            </div>
+            <div class="bg-blue-50 rounded-xl p-4 text-center">
+              <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Upload</p>
+              <p id="st-upload" class="text-2xl font-extrabold text-gray-900 mt-1">-</p>
+              <p class="text-[10px] text-gray-400">Mbps</p>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-4 text-center">
+              <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Ping</p>
+              <p id="st-ping" class="text-2xl font-extrabold text-gray-900 mt-1">-</p>
+              <p class="text-[10px] text-gray-400">ms</p>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-4 text-center">
+              <p class="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Latency</p>
+              <p id="st-latency" class="text-2xl font-extrabold text-gray-900 mt-1">-</p>
+              <p class="text-[10px] text-gray-400">ms</p>
+            </div>
+          </div>
+          <div id="speedtest-detail" class="text-xs text-gray-400 text-center"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RECORDINGS ===== -->
+    <div id="sec-recordings" class="section space-y-5">
+      <div class="card">
+        <h2 class="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Recordings
+        </h2>
+        <div class="flex gap-3 flex-wrap mb-4">
+          <div>
+            <label class="field-label">Camera</label>
+            <select id="rec-camera" onchange="loadRecDates()" class="field-input text-sm w-48">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <select id="rec-date" onchange="loadRecFiles()" class="field-input text-sm w-48">
+              <option value="">Select camera first</option>
+            </select>
+          </div>
+        </div>
+        <div id="rec-files" class="divide-y divide-gray-100"></div>
+        <div id="rec-empty" class="text-sm text-gray-400 py-4 text-center hidden">No recordings found</div>
+      </div>
+      <div id="rec-player-card" class="card hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h3 id="rec-player-title" class="font-bold text-gray-800">Video Player</h3>
+          <div class="flex items-center gap-2">
+            <a id="rec-download" href="#" download class="btn-outline text-xs flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Download
+            </a>
+            <button onclick="document.getElementById('rec-player-card').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        <video id="rec-video" controls class="w-full rounded-xl bg-black max-h-[70vh]"></video>
+      </div>
+    </div>
+
+    <!-- ===== STORAGE ===== -->
+    <div id="sec-storage" class="section space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="card">
+          <h2 class="font-bold text-gray-800 text-lg mb-4">Storage Usage</h2>
+          <div id="storage-info" class="space-y-4"></div>
+        </div>
+        <div class="card">
+          <h2 class="font-bold text-gray-800 text-lg mb-4">MicroSD Card</h2>
+          <div id="sdcard-info" class="mb-5 text-sm text-gray-600"></div>
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="formatSD('ext4')" class="btn-outline">Format (ext4)</button>
+            <button onclick="formatSD('vfat')" class="btn-outline">Format (FAT32)</button>
+            <button onclick="eraseSD()" class="btn-danger">Erase Contents</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-gray-800 text-lg">File Browser</h2>
+          <div id="file-browser-btns" class="flex items-center gap-2"></div>
+        </div>
+        <div id="file-path" class="text-xs text-gray-400 mb-2 font-mono bg-gray-50 px-3 py-1.5 rounded-lg"></div>
+        <div id="file-list" class="divide-y divide-gray-100"></div>
+      </div>
+    </div>
+
+    <!-- ===== SYSTEM ===== -->
+    <div id="sec-system" class="section space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="card">
+          <h2 class="font-bold text-gray-800 text-lg mb-4">Device Info</h2>
+          <div id="system-info" class="space-y-2.5 text-sm"></div>
+        </div>
+        <div class="card">
+          <h2 class="font-bold text-gray-800 text-lg mb-4">Actions</h2>
+          <div class="space-y-3">
+            <button onclick="showPasswordModal()" class="btn-outline w-full">Change Password</button>
+            <button onclick="doReboot()" class="btn-danger w-full">Reboot Device</button>
+            <button onclick="doFactoryReset()" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg shadow-orange-500/25 active:scale-95 w-full">Factory Reset</button>
+          </div>
+          <div class="mt-6 pt-5 border-t-2 border-gray-100">
+            <h3 class="text-sm font-bold text-gray-700 mb-3">Firmware Update</h3>
+            <div id="firmware-info" class="text-xs text-gray-500 mb-3"></div>
+            <input type="file" id="firmware-file" accept=".bin,*" class="block w-full text-xs text-gray-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3">
+            <div class="flex gap-2 flex-wrap">
+              <button onclick="uploadFirmware()" class="btn-primary text-xs">Upload</button>
+              <button onclick="applyFirmware()" class="btn-outline text-xs">Apply Pending</button>
+              <button onclick="rollbackFirmware()" class="btn-outline text-xs text-red-600 border-red-200">Rollback</button>
+            </div>
+            <div id="upload-progress" class="hidden mt-3">
+              <div class="w-full bg-gray-200 rounded-full h-2.5"><div id="upload-bar" class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:0%"></div></div>
+              <p id="upload-status" class="text-xs text-gray-500 mt-1"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-gray-800 text-lg">System Logs</h2>
+          <button onclick="loadLogs()" class="btn-outline text-xs">Refresh</button>
+        </div>
+        <pre id="system-logs" class="bg-gray-900 text-green-400 rounded-xl p-4 text-xs overflow-x-auto max-h-80 overflow-y-auto font-mono">Loading...</pre>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Password Modal -->
+  <div id="password-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+      <h3 class="font-bold text-gray-800 text-lg mb-4">Change Password</h3>
+      <div class="space-y-4">
+        <div><label class="field-label">Current Password</label><input id="pw-current" type="password" class="field-input"></div>
+        <div><label class="field-label">New Password</label><input id="pw-new" type="password" class="field-input"></div>
+        <div><label class="field-label">Confirm New Password</label><input id="pw-confirm" type="password" class="field-input"></div>
+      </div>
+      <div class="flex gap-3 justify-end mt-5">
+        <button onclick="hidePasswordModal()" class="btn-outline">Cancel</button>
+        <button onclick="changePassword()" class="btn-primary">Change Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup Modal -->
+  <div id="setup-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+      <h3 class="font-bold text-gray-800 text-lg mb-2">Setup from URL</h3>
+      <p class="text-sm text-gray-400 mb-4">Paste the setup URL to auto-configure this device.</p>
+      <input id="setup-url" class="field-input mb-4" placeholder="https://api.example.com/setup/device-id">
+      <div class="flex gap-3 justify-end">
+        <button onclick="hideSetupModal()" class="btn-outline">Cancel</button>
+        <button onclick="runSetup()" class="btn-primary">Apply Setup</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="max-w-7xl mx-auto px-4 py-4 text-center">
+    <p id="auto-refresh-badge" class="text-[10px] text-gray-300">Auto-refresh: <span id="refresh-countdown">30</span>s</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

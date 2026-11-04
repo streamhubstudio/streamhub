@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# S90netbird — Init script for NetBird VPN client on Luckfox Pico Max
+# Install to: /etc/init.d/S90netbird
+# Starts BEFORE S95streamhub so the VPN is up when the agent starts.
+#
+# LEGACY / OPTIONAL: the StreamHub Agent reaches its StreamHub instance directly
+# over HTTPS/RTMPS, so a VPN mesh is not required. Keep this only if you tunnel
+# camera/agent traffic through NetBird. Provide the setup key and management URL
+# via the environment (NETBIRD_SETUP_KEY / NETBIRD_MGMT_URL) — do NOT hardcode
+# credentials in a committed file.
+#
+
+NETBIRD_BIN=/userdata/streamhub/netbird
+NETBIRD_CONFIG=/userdata/streamhub/netbird-config
+PIDFILE=/var/run/netbird.pid
+LOGFILE=/tmp/netbird.log
+
+# Setup key and management URL — override via env, never commit real values.
+NETBIRD_SETUP_KEY="${NETBIRD_SETUP_KEY:-}"
+NETBIRD_MGMT_URL="${NETBIRD_MGMT_URL:-https://vpn.example.com:443}"
+
+start() {
+    printf "Starting NetBird VPN: "
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "already running (pid $(cat "$PIDFILE"))"
+        return 0
+    fi
+
+    if [ ! -x "$NETBIRD_BIN" ]; then
+        echo "FAIL (binary not found: $NETBIRD_BIN)"
+        return 1
+    fi
+
+    # Run NetBird in foreground mode (no systemd on Luckfox)
+    "$NETBIRD_BIN" up \
+        --setup-key "$NETBIRD_SETUP_KEY" \
+        --management-url "$NETBIRD_MGMT_URL" \
+        --config "$NETBIRD_CONFIG/config.json" \
+        --foreground-mode \
+        >> "$LOGFILE" 2>&1 &
+    echo "$!" > "$PIDFILE"
+
+    # Wait briefly for connection
+    sleep 3
+    if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "OK (pid $(cat "$PIDFILE"))"
+    else
+        rm -f "$PIDFILE"
+        echo "FAIL (check $LOGFILE)"
+        return 1
+    fi
+}
+
+stop() {
+    printf "Stopping NetBird VPN: "
+    if [ -f "$PIDFILE" ]; then
+        PID=$(cat "$PIDFILE")
+        rm -f "$PIDFILE"
+        kill "$PID" 2>/dev/null
+        sleep 2
+        kill -9 "$PID" 2>/dev/null
+        echo "OK"
+    else
+        killall -q netbird 2>/dev/null
+        echo "OK (no pidfile)"
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+status() {
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "NetBird VPN is running (pid $(cat "$PIDFILE"))"
+        "$NETBIRD_BIN" status --config "$NETBIRD_CONFIG/config.json" 2>/dev/null
+    else
+        echo "NetBird VPN is not running"
+    fi
+}
+
+case "$1" in
+    start)   start ;;
+    stop)    stop ;;
+    restart) restart ;;
+    status)  status ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac

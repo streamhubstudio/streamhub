@@ -1,0 +1,38 @@
+# StreamHub Edge Agent — systemd unit (Debian / Ubuntu / generic Linux x64/ARM).
+#
+# Canonical unit for hosts that run systemd. scripts/install.sh writes an
+# equivalent unit to /etc/systemd/system/streamhub-agent.service (regenerating
+# the ExecStart path when --bindir differs from the default). Embedded BusyBox
+# devices (Luckfox) use etc/S95streamhub instead — systemd is not available there.
+#
+# Default layout (see scripts/install.sh):
+#   binary   /usr/local/bin/streamhub-agent
+#   config   /etc/streamhub-agent/config.yml
+#   secrets  /etc/streamhub-agent/secrets.ini
+#   data     /var/lib/streamhub-agent  (records, snapshots)
+
+[Unit]
+Description=StreamHub Edge Agent (CCTV ingest + remote detection subscriber)
+Documentation=https://streamhub.studio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/streamhub-agent /etc/streamhub-agent/config.yml /etc/streamhub-agent/secrets.ini
+WorkingDirectory=/var/lib/streamhub-agent
+
+# Auto-restart on crash/exit; the agent already back-offs its own ffmpeg children.
+Restart=on-failure
+RestartSec=5s
+# Give the agent time to tear down ffmpeg subprocesses on stop.
+KillMode=mixed
+TimeoutStopSec=15s
+
+# Logs go to the journal: `journalctl -u streamhub-agent -f`.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=streamhub-agent
+
+[Install]
+WantedBy=multi-user.target
